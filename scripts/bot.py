@@ -186,6 +186,34 @@ def get_update_report(update, context):
         update.message.reply_text("Enter you Uber OTP code from SMS:")
         uber.run()
         aut_handler(update, context)
+def location(update: Update, context: CallbackContext):
+    user = update.effective_user
+    msg_type = 0
+    current_pos = (update.message.location.latitude, update.message.location.longitude)
+    # phone_number = update.message.contact.phone_number
+    context.bot.send_message(user.id, current_pos)
+    # context.bot.send_message(user.id, phone_number)
+    if update.edited_message:
+        message = update.edited_message
+    else:
+        message = update.message
+
+    if message["edit_date"] is not None:
+        msg_type += 1
+    if message["location"]["live_period"] is not None:
+        msg_type += 1 << 1
+
+    if msg_type == 0:
+        context.bot.send_message(user.id, "Single (non-live) location update.")
+    elif msg_type == 1:
+        context.bot.send_message(user.id, "End of live period.")
+    elif msg_type == 2:
+        context.bot.send_message(user.id, "Start of live period")
+    elif msg_type == 3:
+        context.bot.send_message(user.id, "Live location update.")
+
+def location1(update,context):
+    location(update, context)
 
 def start(update, context):
     update.message.reply_text('Hi!')
