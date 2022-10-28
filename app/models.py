@@ -171,19 +171,17 @@ class User(models.Model):
         SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
 
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255, null=True)
-    second_name = models.CharField(max_length=255, null=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    second_name = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(blank=True, max_length=254)
     phone_number = models.CharField(blank=True, max_length=13)
     chat_id = models.CharField(blank=True, max_length=9)
     created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now())
     updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(blank=True , editable=True)
+    deleted_at = models.DateTimeField(blank=True, editable=True)
 
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.role = self.base_role
-            return super().save(*args, **kwargs)
+    def __str__(self) -> str:
+        return f'{self.name} {self.second_name}'
 
     @staticmethod
     def get_by_chat_id(chat_id):
@@ -213,12 +211,11 @@ class User(models.Model):
         
         
 class Driver(User):
-    user_id = models.ForeignKey(User, null=True,related_name='user_id_%(class)s_related', on_delete=models.CASCADE)
-    fleet_id = models.ForeignKey('Fleet',  null=True, on_delete=models.SET_NULL)
-    driver_manager_id = models.ManyToManyField('DriverManager', null=True)
-    partner_id = models.ManyToManyField('Partner', null=True)
-    vehicle_id = models.ForeignKey('Vehicle',  null=True, on_delete=models.SET_NULL)
-    role = models.IntegerField(choices=User.Role.choices, default=User.Role.DRIVER)
+    fleet_id = models.ForeignKey('Fleet',  blank=True, null=True, on_delete=models.SET_NULL)
+    driver_manager_id = models.ManyToManyField('DriverManager',  blank=True)
+    partner_id = models.ManyToManyField('Partner',  blank=True)
+    vehicle_id = models.ForeignKey('Vehicle',  blank=True, null=True, on_delete=models.SET_NULL)
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
 
     def get_driver_external_id(self, vendor:str) -> str:
         if Fleets_drivers_vehicles_rate.objects.filter(fleet__name=vendor, driver=self, deleted_at=None).exists():
@@ -231,46 +228,38 @@ class Driver(User):
             rate = float(Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self, deleted_at=None).rate)
         return rate
 
-    def __str__(self) -> str:
-        return f'{self.full_name}'
-
 class Fleet(PolymorphicModel):
     name = models.CharField(max_length=255)
     fees = models.DecimalField(decimal_places=2, max_digits=3, default=0)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self) -> str:
         return f'{self.name}'
 
 class Client(User):
-    user_id = models.ForeignKey(User, null=True, related_name='user_id_%(class)s_related',on_delete=models.CASCADE)
-    support_manager_id = models.ManyToManyField('SupportManager')
-    role = models.IntegerField(choices=User.Role.choices, default=User.Role.CLIENT)
+    support_manager_id = models.ManyToManyField('SupportManager',  blank=True)
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.CLIENT)
 
 class Partner(User):
-    user_id = models.ForeignKey(User, null=True, related_name='user_id_%(class)s_related',on_delete=models.CASCADE)
-    fleet_id = models.ForeignKey(Fleet,  null=True, on_delete=models.SET_NULL)
-    driver_id = models.ManyToManyField(Driver)
-    role = models.IntegerField(choices=User.Role.choices, default=User.Role.PARTNER)
+    fleet_id = models.ForeignKey(Fleet,  blank=True, null=True, on_delete=models.SET_NULL)
+    driver_id = models.ManyToManyField(Driver,  blank=True)
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.PARTNER)
 
 class DriverManager(User):
-    user_id = models.ForeignKey(User, null=True, related_name='user_id_%(class)s_related',on_delete=models.CASCADE)
-    driver_id = models.ManyToManyField(Driver)
-    role = models.IntegerField(choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
+    driver_id = models.ManyToManyField(Driver,  blank=True)
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
 
 class ServiceStationManager(User):
-    user_id = models.ForeignKey(User, null=True, related_name='user_id_%(class)s_related',on_delete=models.CASCADE)
-    driver_id = models.ManyToManyField(Driver)
-    fleet_id = models.ManyToManyField(Fleet)
-    role = models.IntegerField(choices=User.Role.choices, default=User.Role.SERVICE_STATION_MANAGER)
+    driver_id = models.ManyToManyField(Driver,  blank=True)
+    fleet_id = models.ManyToManyField(Fleet,  blank=True)
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.SERVICE_STATION_MANAGER)
 
 class SupportManager(User):
-    user_id = models.ForeignKey(User, null=True, related_name='user_id_%(class)s_related',on_delete=models.CASCADE )
-    client_id = models.ManyToManyField(Client)
-    driver_id = models.ManyToManyField(Driver)
-    role = models.IntegerField(choices=User.Role.choices, default=User.Role.SUPPORT_MANAGER)
+    client_id = models.ManyToManyField(Client,  blank=True)
+    driver_id = models.ManyToManyField(Driver,  blank=True)
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.SUPPORT_MANAGER)
 
 class UberFleet(Fleet):
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
