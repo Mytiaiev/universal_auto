@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import Fleet, UberFleet, BoltFleet, UklonFleet
-from .models import Driver, Vehicle, Fleets_drivers_vehicles_rate, User
+from .models import *
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 
 
