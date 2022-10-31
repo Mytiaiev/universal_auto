@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.views.generic import TemplateView
 from scripts.driversrating import DriversRatingMixin
+from django.shortcuts import render 
 
 
 
@@ -29,3 +30,15 @@ class GpsData(APIView):
 
     def post(self, request):
         return Response('OK')
+
+def index(request):
+    return render(request,'app/index.html')
+
+def about(request):
+    return render(request,'app/about.html')
+
+def blog(request):
+    return render(request,'app/blog.html')
+
+def why(request):
+    return render(request,'app/why.html')
