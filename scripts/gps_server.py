@@ -1,16 +1,13 @@
 import logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+import os
 from socket import * 
-from threading import Thread
-from time import sleep
 
-
-UDP_IP = "fly-global-services"
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+UDP_IP = os.environ['UDP_IP']
 UDP_PORT = 44300
 
-def tcp_function():
+def run():
     sockfd = socket(AF_INET, SOCK_STREAM)
     sockfd.bind(("0.0.0.0", UDP_PORT))
     logging.info(msg="Hello TCP THREAD on Fly.io!")
@@ -19,21 +16,10 @@ def tcp_function():
         newsockfd, address = sockfd.accept() 
         data = newsockfd.recv(1024)
         logging.info(msg=data)
-        message = "TCP OK"
+        
+        message = "TCP OK".encode()
         logging.info(msg=message)
-        newsockfd.send(message.encode())
+        
+        newsockfd.send(message)
         newsockfd.close()
-
-def run():
-    thread = Thread(target = tcp_function)
-    thread.start()
-
-    sockfd = socket(AF_INET, SOCK_DGRAM)
-    sockfd.bind((UDP_IP, UDP_PORT))
-    logging.info(msg="Hello UDP on Fly.io!")
-    while True:
-        data, client_addr = sockfd.recvfrom(1024)
-        message = "UDP OK"
-        logging.info(msg=data)
-        logging.info(msg=message)
-        sockfd.sendto(message.encode(), client_addr)
+    

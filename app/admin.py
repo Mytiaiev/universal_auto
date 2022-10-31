@@ -36,7 +36,7 @@ class FleetParentAdmin(PolymorphicParentModelAdmin):
 admin.site.register(User)
 admin.site.register(Driver)
 admin.site.register(Client)
-admin.site.register(Partner)
+#admin.site.register(Partner)
 admin.site.register(DriverManager)
 admin.site.register(ServiceStationManager)
 admin.site.register(SupportManager)

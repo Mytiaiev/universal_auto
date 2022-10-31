@@ -8,15 +8,8 @@ DRIVERS_MAP = {
     ],
     'drivers': [
         {
-            'full_name': 'Сергій Куцко',
-            'vehicle': {'licence_plate': 'KA8443EA', 'vin_code': 'VF1RFB00057077644', 'name': '2017 Renault Megane'},
-            'fleets_drivers_vehicles_rate':
-                [
-                    {'fleet': 'Uber', 'driver_external_id': '49dffc54-e8d9-47bd-a1e5-52ce16241cb6', 'rate': 0.50},
-                ]
-        },
-        {
-            'full_name': 'Олександр Холін',
+            'full_name': 'Олександр',
+            'second_name': 'Холін',
             'vehicle': {'licence_plate': 'AA3108YA', 'vin_code': 'LS6A2E0F1NA003113', 'name': '2022 Chang\'an Eado'},
             'fleets_drivers_vehicles_rate':
                 [
@@ -26,7 +19,8 @@ DRIVERS_MAP = {
                 ]
         },
         {
-            'full_name': 'Анатолій Мухін',
+            'full_name': 'Анатолій',
+            'second_name': 'Мухін',
             'vehicle': {'licence_plate': 'KA4897BM', 'vin_code': 'VF1KZ140652639946', 'name': '2015 Renault Megane'},
             'fleets_drivers_vehicles_rate':
                 [
@@ -36,7 +30,8 @@ DRIVERS_MAP = {
                 ]
         },
         {
-            'full_name': 'Сергій Желамський',
+            'name': 'Сергій',
+            'second_name': 'Желамський',
             'vehicle': {'licence_plate': 'AA3107YA', 'vin_code': 'LS6A2E0F1NA003113', 'name': '2022 Chang\'an Eado'},
             'fleets_drivers_vehicles_rate':
                 [
@@ -46,7 +41,8 @@ DRIVERS_MAP = {
                 ]
         },
         {
-            'full_name': 'Олег Філіппов',
+            'name': 'Олег',
+            'second_name': 'Філіппов',
             'vehicle': {'licence_plate': 'AA3410YA', 'vin_code': 'LC0CE4DC1N0090623', 'name': '2022 BYD E2'},
             'fleets_drivers_vehicles_rate':
                 [
@@ -56,8 +52,9 @@ DRIVERS_MAP = {
                 ]
         },
         {
-            'full_name': 'Юрій Філіппов',
-            'vehicle': {'licence_plate': 'KA6047EI', 'vin_code': 'VF1RFB00X57177685', 'name': '2016 Renault Megane'},
+            'name': 'Юрій',
+            'second_name': 'Філіппов',
+            'vehicle': {'licence_plate': 'KA8443EA', 'vin_code': 'VF1RFB00X57177685', 'name': '2016 Renault Megane'},
             'fleets_drivers_vehicles_rate':
                 [
                     {'fleet': 'Uber', 'driver_external_id': '49dffc54-e8d9-47bd-a1e5-52ce16241cb6', 'rate': 0.65},
@@ -66,7 +63,8 @@ DRIVERS_MAP = {
                 ]
         },
         {
-            'full_name': 'Володимир Золотніков',
+            'name': 'Володимир',
+            'second_name': 'Золотніков',
             'vehicle': {'licence_plate': 'KA1644CT', 'vin_code': 'VF1RFB00357090131', 'name': '2016 Renault Megane'},
             'fleets_drivers_vehicles_rate':
                 [   
@@ -97,7 +95,7 @@ def init_models():
         fleets[item['name']] = fleet
 
     for item in DRIVERS_MAP['drivers']:
-        driver = get_or_create_object(Driver, ['full_name'], full_name=item['full_name'])
+        driver = get_or_create_object(Driver, ['full_name'], name=item['name'], second_name=item['second_name'])
         vehicle = get_or_create_object(Vehicle, ['licence_plate', 'vin_code'],
                                        licence_plate=item['vehicle']['licence_plate'],
                                        vin_code=item['vehicle']['vin_code'],
