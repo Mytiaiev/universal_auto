@@ -66,6 +66,45 @@ class UklonPaymentsOrder(models.Model):
     def kassa(self):
         return float(self.total_amount) * 0.81
 
+class NewUklonPaymentsOrder(models.Model):
+    report_from = models.DateTimeField()
+    report_to = models.DateTimeField()
+    report_file_name = models.CharField(max_length=255)
+    full_name = models.CharField(max_length=255) # "Водій"
+    signal = models.CharField(max_length=8) # "Позивний"
+    total_rides = models.PositiveIntegerField() # "Кількість поїздок"
+    total_distance =  models.DecimalField(decimal_places=2, max_digits=10) # "Пробіг під замовленнями, км"
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10) # "Готівкою, грн"
+    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10) # "На гаманець, грн"
+    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10)   # "На картку, грн"
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10) # "Всього, грн"
+    tips =  models.DecimalField(decimal_places=2, max_digits=10) # "Чайові, грн"
+    bonuses = models.DecimalField(decimal_places=2, max_digits=10) # "Бонуси, грн"
+    fares = models.DecimalField(decimal_places=2, max_digits=10) # "Штрафи, грн"
+    comission  = models.DecimalField(decimal_places=2, max_digits=10) # "Комісія Уклон, грн"
+    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10) #" Разом, грн"
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def driver_id(self):
+        return self.signal
+
+    def report_text(self, name=None, rate=0.35):
+        return f'New Uklon {self.full_name} {self.signal}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+
+    def total_drivers_amount(self, rate=0.35):
+        return -(self.kassa()) * rate
+
+    def vendor(self):
+        return 'new_uklon'
+
+    def total_owner_amount(self, rate=0.35):
+        return -self.total_drivers_amount(rate)
+
+    def kassa(self):
+        return float(self.total_amount) * 0.81
+
 
 class BoltPaymentsOrder(models.Model):
     report_from = models.DateTimeField()
@@ -94,7 +133,7 @@ class BoltPaymentsOrder(models.Model):
         return self.mobile_number
 
     def report_text(self, name=None, rate=0.65):
-        name = name or self.driver_full_name
+        name = name or self.full_name()
         return f'Bolt {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
@@ -134,7 +173,7 @@ class UberPaymentsOrder(models.Model):
         return self.driver_uuid
 
     def report_text(self, name=None, rate=0.65):
-        name = name or f'{self.first_name} {self.last_name}'
+        name = name or self.full_name()
         return f'Uber {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные({float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
@@ -235,10 +274,6 @@ class Driver(User):
             rate = float(Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self, deleted_at=None).rate)
         return rate
 
-
-    def __str__(self) -> str:
-        return f'{self.name} {self.second_name}'
-
     @staticmethod
     def save_driver_status(status):
         driver = Driver.objects.create(driver_status=status)
@@ -312,6 +347,11 @@ class UklonFleet(Fleet):
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return Uklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
+class NewUklonFleet(Fleet):
+    def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
+        return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
+
+
 
 class Vehicle(models.Model):
     name = models.CharField(max_length=255)
@@ -336,7 +376,7 @@ class Fleets_drivers_vehicles_rate(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
-        return f'{self.driver.full_name} {self.fleet.name} {int(self.rate * 100)}%'
+        return f'{self.driver.full_name()} {self.fleet.name} {int(self.rate * 100)}%'
 
 
 class WeeklyReportFile(models.Model):
@@ -971,7 +1011,7 @@ class Uklon(SeleniumTools):
                                            signal=row[0],
                                            licence_plate=row[1],
                                            total_rides=row[2],
-                                           total_distance=row[3],
+                                           total_distance = int(row[3]),
                                            total_amount_cach=row[4],
                                            total_amount_cach_less=row[5],
                                            total_amount=row[6],
@@ -1010,6 +1050,119 @@ class Uklon(SeleniumTools):
     def status(self):
         pass
 
+class NewUklon(SeleniumTools):    
+    def __init__(self, week_number=None, driver=True, sleep=3, headless=False, base_url="https://fleets.uklon.com.ua"):
+        super().__init__('nuklon', week_number=week_number)
+        self.sleep = sleep
+        if driver:
+            self.driver = self.build_driver(headless)
+            self.base_url = base_url
+
+    def quit(self):
+        self.driver.quit()
+
+    def login(self):
+        self.driver.get(self.base_url + '/auth/login')
+        if self.sleep:
+            time.sleep(self.sleep)
+        self.driver.get_screenshot_as_file(f'new_uklon1.png')
+        element = self.driver.find_element(By.ID,'login')
+        element.send_keys('')
+        for c in os.environ["UKLON_NAME"]:
+            element.send_keys(c)
+            time.sleep(0.1)
+
+        self.driver.get_screenshot_as_file(f'new_uklon2.png')
+
+        element = self.driver.find_element(By.ID, "password")
+        element.send_keys('')
+        element.send_keys(os.environ["UKLON_PASSWORD"])
+        self.driver.get_screenshot_as_file(f'new_uklon3.png')
+        
+        self.driver.find_element(By.XPATH, '//button[@data-cy="login-btn"]').click()
+        self.driver.get_screenshot_as_file(f'new_uklon4.png')
+        if self.sleep:
+            time.sleep(self.sleep)
+        self.driver.get_screenshot_as_file(f'new_uklon5.png')
+
+    def download_payments_order(self):
+        url = f'{self.base_url}/workspace/orders'
+        self.driver.get(url)
+        if self.sleep:
+            time.sleep(self.sleep)
+        
+        self.driver.find_element(By.XPATH, '//upf-order-report-list-filters/form/mat-form-field[1]').click()
+        self.driver.get_screenshot_as_file(f'new_uklon6.png')
+        self.driver.find_element(By.XPATH, '//mat-option/span[text()=" Минулий тиждень "]').click()
+        self.driver.get_screenshot_as_file(f'new_uklon7.png')
+        self.driver.find_element(By.XPATH, '//span[text()="Експорт CSV"]').click()
+        self.driver.get_screenshot_as_file(f'new_uklon8.png')
+
+        
+    def save_report(self):
+        if self.sleep:
+            time.sleep(self.sleep)
+        items = []
+        print(self.file_patern())
+        report = open(self.report_file_name(self.file_patern()))
+
+        with report as file:
+            reader = csv.reader(file)
+            next(reader)
+            for row in reader:
+                print(row)
+
+                order = NewUklonPaymentsOrder(
+                    report_from=self.start_of_week(),
+                    report_to=self.end_of_week(),
+                    report_file_name=file.name,
+                    full_name=row[0],
+                    signal=row[1],
+                    total_rides=float((row[2] or '0').replace(',','')),
+                    total_distance=float((row[3] or '0').replace(',','')),
+                    total_amount_cach=float((row[4] or '0').replace(',','')),
+                    total_amount_cach_less=float((row[5] or '0').replace(',','')),
+                    total_amount_on_card=float((row[6] or '0').replace(',','')),
+                    total_amount=float((row[7] or '0').replace(',','')),
+                    tips=float((row[8] or '0').replace(',','') ),
+                    bonuses=float((row[9] or '0').replace(',','')),
+                    fares=float((row[10] or '0').replace(',','')),
+                    comission=float((row[11] or '0').replace(',','')),
+                    total_amount_without_comission=float((row[12] or '0').replace(',','')))
+                order.save()
+                print(vars(order))
+                items.append(order)
+
+        return items
+    
+    def start_of_week_timestamp(self):
+        return round(self.start_of_week().timestamp())
+
+    def end_of_week_timestamp(self):
+        return round(self.end_of_week().timestamp())
+    
+    def payments_order_file_name(self):
+        return self.report_file_name(self.file_patern())
+
+    def file_patern(self):
+        start = self.start_of_week()
+        end = self.end_of_week().end_of('day')
+        sd, sy, sm = start.strftime("%d"), start.strftime("%y"), start.strftime("%m")
+        ed, ey, em = end.strftime("%d"), end.strftime("%y"), end.strftime("%m")
+        return f'00.00.{sd}.{sm}.{sy}.+23.59.{ed}.{em}.{ey}'
+
+    @staticmethod
+    def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
+        u = NewUklon(week_number=week_number, driver=False, sleep=0, headless=headless)
+        if u.payments_order_file_name() not in os.listdir(os.curdir):
+            u = NewUklon(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
+            u.login()
+            u.download_payments_order()
+        return u.save_report()
+
+    def status(self):
+        pass
+
 
 def get_report(week_number = None, driver=True, sleep=5, headless=True):
     owner =   {"Fleet Owner": 0}
@@ -1023,7 +1176,8 @@ def get_report(week_number = None, driver=True, sleep=5, headless=True):
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:
                 r = r[0]
-                name = rate.driver.full_name
+                print(r)
+                name = rate.driver.full_name()
                 reports[name] = reports.get(name, '') + r.report_text(name, float(rate.rate)) + '\n'
                 totals[name] = totals.get(name, 0) + r.kassa()
                 salary[name] = salary.get(name, 0) + r.total_drivers_amount(float(rate.rate))

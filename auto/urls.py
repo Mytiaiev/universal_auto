@@ -15,7 +15,6 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-
 from app.views import *
 
 
@@ -24,5 +23,5 @@ urlpatterns = [
     path('rating/', DriversRatingView.as_view()),
     path('gps/data', GpsData.as_view()),
     path('fake_uklon/', include('fake_uklon.urls')),
-    path('', include('app.urls')),
+    path('', include('taxi_service.urls')),
 ]

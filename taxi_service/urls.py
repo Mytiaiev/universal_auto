@@ -1,5 +1,5 @@
 from django.urls import path
-from app.views import index, about, why, blog
+from taxi_service.views import index, about, why, blog
 
 
 urlpatterns = [
