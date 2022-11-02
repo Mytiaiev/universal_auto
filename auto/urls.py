@@ -15,7 +15,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from app.views import *
+from app.views import DriversRatingView
+from app.views import GpsData
 
 
 urlpatterns = [
