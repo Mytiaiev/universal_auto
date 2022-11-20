@@ -6,6 +6,7 @@ docker-compose.yml
 pgadmin/
 pgdata/
 data/
+app/migrations
 *.png
 
 # C extensions

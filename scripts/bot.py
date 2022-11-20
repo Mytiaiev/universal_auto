@@ -197,6 +197,8 @@ def get_update_report(update, context):
         update.message.reply_text("Enter you Uber OTP code from SMS:")
         uber.run()
         aut_handler(update, context)
+
+
 def location(update: Update, context: CallbackContext):
     user = update.effective_user
     msg_type = 0
@@ -222,6 +224,7 @@ def location(update: Update, context: CallbackContext):
         context.bot.send_message(user.id, "Start of live period")
     elif msg_type == 3:
         context.bot.send_message(user.id, "Live location update.")
+
 
 def location1(update,context):
     location(update, context)
@@ -262,32 +265,191 @@ def status(update, context):
                              reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
 
 
+STATUS, LICENCE_PLACE = range(2)
+
+
+def status_car(update, context):
+    buttons = [[KeyboardButton('Serviceable')], [KeyboardButton('Broken')]]
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Choice your status of car',
+                             reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+    return STATUS
+
+
+def numberplate(update, context):
+    context.user_data[STATUS] = update.message.text
+    update.message.reply_text('Please, enter the number of your car that broke down', reply_markup=ReplyKeyboardRemove())
+    return LICENCE_PLACE
+
+
+def change_status_car(update, context):
+    """This func change status_car and only for the role of drivers"""
+    chat_id = update.message.chat.id
+    context.user_data[LICENCE_PLACE] = update.message.text.upper()
+    number_car = context.user_data[LICENCE_PLACE]
+    status_car = context.user_data[STATUS]
+    queryset = Vehicle.objects.all()
+    numberplates = [i.licence_plate for i in queryset]
+    if number_car in numberplates:
+        driver = Driver.get_by_chat_id(chat_id)
+        if driver.role == 'DRIVER':
+            vehicle = Vehicle.get_by_numberplate(number_car)
+            vehicle.car_status = status_car
+            vehicle.save()
+            numberplates.clear()
+            update.message.reply_text('Your status of car has been changed')
+    else:
+        update.message.reply_text('This number is not in the database or incorrect data was sent. Contact the manager or repeat the command')
+
+    return ConversationHandler.END
+
+
+def cancel_status_car(update: Update, context: CallbackContext):
+    """ Cancel the entire dialogue process. Data will be lost
+    """
+    update.message.reply_text('Cancel. To start from scratch press /status_car')
+    return ConversationHandler.END
+
+
 def get_status_driver_and_change(update, context):
     status = update.message.text
     chat_id = update.message.chat.id
-    Driver.get_by_chat_id(chat_id=chat_id)
-    if driver.role == 'Driver':
-        driver[driver_status] = status
+    driver = Driver.get_by_chat_id(chat_id)
+    if driver.role == 'DRIVER':
+        driver.driver_status = status
         driver.save()
-        update.message.reply_text('Your status has been changed')
+        update.message.reply_text('Your status has been changed', reply_markup=ReplyKeyboardRemove())
     else:
-        try:
-            driver = Driver.objects.get(driver_status=status)
-            return update.message.reply_text(driver)
-        except Driver.DoesNotExist:
-            return update.message.reply_text('There are currently no drivers with this status')
+        driver = Driver.objects.filter(driver_status=status)
+        report = ''
+        result = [f'{i.name} {i.second_name}: {i.fleet}' for i in driver]
+        if len(result) == 0:
+            update.message.reply_text('There are currently no drivers with this status', reply_markup=ReplyKeyboardRemove())
+        else:
+            for i in result:
+                report += f'{i}\n'
+        update.message.reply_text(f'{report}', reply_markup=ReplyKeyboardRemove())
+
+
+NUMBERPLATE, PHOTO, START_OF_REPAIR, END_OF_REPAIR = range(4)
+
+
+def numberplate_car(update, context):
+    chat_id = update.message.chat.id
+    manager = ServiceStationManager.get_by_chat_id(chat_id)
+    if manager.role == 'SERVICE_STATION_MANAGER':
+        update.message.reply_text('Please enter numberplate car ')
+    else:
+        update.message.reply_text('This commands only for service station manager')
+        return ConversationHandler.END
+    return NUMBERPLATE
+
+
+def photo(update, context):
+    context.user_data[NUMBERPLATE] = update.message.text.upper()
+    queryset = Vehicle.objects.all()
+    numberplates = [i.licence_plate for i in queryset]
+    if context.user_data[NUMBERPLATE] not in numberplates:
+        update.message.reply_text('The number you wrote is not in the database, contact the park manager')
+        return ConversationHandler.END
+    update.message.reply_text('Please, send me report  photo on repair (One photo)')
+    return PHOTO
+
+
+def start_of_repair(update, context):
+    context.user_data[PHOTO] = update.message.photo[-1].get_file()
+    update.message.reply_text('Please, enter date and time start of repair in format: %Y-%m-%d %H:%M:%S')
+    return START_OF_REPAIR
+
+
+def end_of_repair(update, context):
+    context.user_data[START_OF_REPAIR] = update.message.text + "+00"
+    try:
+        time.strptime(context.user_data[START_OF_REPAIR], "%Y-%m-%d %H:%M:%S+00")
+    except ValueError:
+        update.message.reply_text('Invalid date')
+        return ConversationHandler.END
+    update.message.reply_text("Please, enter date and time end of repair in format: %Y-%m-%d %H:%M:%S")
+    return END_OF_REPAIR
+
+
+def send_report_to_db_and_driver(update, context):
+    context.user_data[END_OF_REPAIR] = update.message.text + '+00'
+    try:
+        time.strptime(context.user_data[END_OF_REPAIR], "%Y-%m-%d %H:%M:%S+00")
+    except ValueError:
+        update.message.reply_text('Invalid date')
+        return ConversationHandler.END
+    order = RepairReport(
+                    repair=context.user_data[PHOTO]["file_path"],
+                    numberplate=context.user_data[NUMBERPLATE],
+                    start_of_repair=context.user_data[START_OF_REPAIR],
+                    end_of_repair=context.user_data[END_OF_REPAIR])
+    order.save()
+    vehicle = Vehicle.get_by_numberplate(context.user_data[NUMBERPLATE])
+    chat_id_driver = vehicle.driver.chat_id
+    context.bot.send_message(chat_id=chat_id_driver, text=f'Your car {context.user_data[NUMBERPLATE]} renovated')
+    return ConversationHandler.END
+
+
+def cancel_send_report(update, context):
+    update.message.reply_text('/cancel. To start from scratch press /send_report')
+    return ConversationHandler.END
 
 
 def main():
     updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
     dp = updater.dispatcher
+
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CommandHandler('status_car', status_car),
+        ],
+        states={
+            STATUS: [
+                MessageHandler(Filters.all, numberplate, pass_user_data=True),
+            ],
+            LICENCE_PLACE: [
+                MessageHandler(Filters.all, change_status_car, pass_user_data=True),
+                CommandHandler('cancel', cancel_status_car)
+            ],
+        },
+        fallbacks=[
+            CommandHandler('cancel', cancel_status_car),
+        ],
+    )
+
+    conv_handler_1 = ConversationHandler(
+        entry_points=[
+            CommandHandler('send_report', numberplate_car),
+        ],
+        states={
+            NUMBERPLATE: [
+                MessageHandler(Filters.all, photo, pass_user_data=True),
+            ],
+            PHOTO: [
+                MessageHandler(Filters.all, start_of_repair, pass_user_data=True),
+            ],
+            START_OF_REPAIR: [
+                MessageHandler(Filters.all, end_of_repair, pass_user_data=True),
+            ],
+            END_OF_REPAIR: [
+                MessageHandler(Filters.all, send_report_to_db_and_driver, pass_user_data=True),
+            ],
+        },
+        fallbacks=[
+            CommandHandler('cancel', cancel_send_report),
+        ],
+    )
+
+    dp.add_handler(conv_handler)
+    dp.add_handler(conv_handler_1)
     dp.add_handler(CommandHandler("help", get_help))
     dp.add_handler(CommandHandler("start",  start))
     dp.add_handler(CommandHandler("report", report, run_async=True))
     dp.add_handler(CommandHandler('update', update_db, run_async=True))
     dp.add_handler(CommandHandler("status", status))
     dp.add_handler(CommandHandler("save_reports", save_reports))
-    dp.add_handler(MessageHandler(Filters.text, code))
+    #dp.add_handler(MessageHandler(Filters.text, code))
     dp.add_handler(MessageHandler(Filters.text('Get all today statistic'), get_manager_today_report))
     dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_today_report))
     dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))

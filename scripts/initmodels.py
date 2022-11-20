@@ -1,11 +1,13 @@
-from app.models import Driver, Vehicle, Fleets_drivers_vehicles_rate, BoltFleet, UberFleet, UklonFleet, NewUklonFleet
+
+from app.models import Driver, Vehicle, Fleets_drivers_vehicles_rate, BoltFleet, UberFleet, UklonFleet, NewUklonFleet, \
+    DriverRateLevels
 
 DRIVERS_MAP = {
     'fleets': [
-        {'name': 'Uber', 'model': UberFleet},
-        {'name': 'Bolt', 'model': BoltFleet},
-        {'name': 'Uklon', 'model': UklonFleet},
-        {'name': 'NewUklon', 'model': NewUklonFleet},
+        {'name': 'Uber', 'model': UberFleet, 'min_fee': 3000},
+        {'name': 'Bolt', 'model': BoltFleet, 'min_fee': 4000},
+        {'name': 'Uklon', 'model': UklonFleet, 'min_fee': 5000},
+        {'name': 'NewUklon', 'model': NewUklonFleet, 'min_fee': 6000},
     ],
     'drivers': [
         {
@@ -82,14 +84,32 @@ DRIVERS_MAP = {
         },
 
     ],
+    'driver_rate_levels': [
+        {'fleet': 'Uber', 'threshold_value': 10500, 'rate_delta': -0.05},
+        {'fleet': 'Uber', 'threshold_value': 9000, 'rate_delta': -0.05},
+        {'fleet': 'Uber', 'threshold_value': 7000, 'rate_delta': -0.05},
+        {'fleet': 'Bolt', 'threshold_value': 10500, 'rate_delta': -0.05},
+        {'fleet': 'Bolt', 'threshold_value': 9000, 'rate_delta': -0.05},
+        {'fleet': 'Bolt', 'threshold_value': 7000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 10500, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 9000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 7000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 5000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 3000, 'rate_delta': -0.05},
+    ],
+
 }
 
 
 def get_or_create_object(model, search_fields, **kwargs):
     try:
+        print('+++++++++++++++++++++++++++++++++++++')
+        print(kwargs)
         search_kwargs = {key: val for key, val in kwargs.items() if key in search_fields}
         obj = model.objects.get(**search_kwargs)
     except model.DoesNotExist:
+        print('+++++++++++++++++++++++++++++++++++++')
+        print(kwargs)
         obj = model.objects.create(**kwargs)
         print(f"--{model.__name__}--> {obj}")
     return obj
@@ -98,7 +118,7 @@ def get_or_create_object(model, search_fields, **kwargs):
 def init_models():
     fleets = {}
     for item in DRIVERS_MAP['fleets']:
-        fleet = get_or_create_object(item['model'], ['name'], name=item['name'])
+        fleet = get_or_create_object(item['model'], ['name'], name=item['name'], min_fee=item['min_fee'])
         fleets[item['name']] = fleet
 
     for item in DRIVERS_MAP['drivers']:
@@ -106,9 +126,12 @@ def init_models():
         vehicle = get_or_create_object(Vehicle, ['licence_plate', 'vin_code'],
                                        licence_plate=item['vehicle']['licence_plate'],
                                        vin_code=item['vehicle']['vin_code'],
-                                       name=item['vehicle']['name']
+                                       name=item['vehicle']['name'],
+                                       driver=driver
                                        )
         for rate in item['fleets_drivers_vehicles_rate']:
+            print('+++++++++++++++++++++++++++++++++++++')
+            print(driver)
             get_or_create_object(Fleets_drivers_vehicles_rate,
                                  ['fleet', 'driver', 'vehicle'],
                                  fleet=fleets[rate['fleet']],
@@ -117,6 +140,12 @@ def init_models():
                                  driver_external_id=rate['driver_external_id'],
                                  rate=rate['rate']
                                  )
+    for item in DRIVERS_MAP['driver_rate_levels']:
+        get_or_create_object(DriverRateLevels, ['fleet', 'threshold_value']
+                             , fleet=fleets[item['fleet']]
+                             , threshold_value=item['threshold_value']
+                             , rate_delta=item['rate_delta']
+                             )
 
 
 def run():

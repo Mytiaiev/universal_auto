@@ -11,6 +11,7 @@ services:
     build: .
     ports:
       - "8080:8080"
+      - "44300:44300"
     command: honcho start
     volumes:
       - .:/app
@@ -28,7 +29,10 @@ services:
       POSTGRES_DB: "universal_auto_dev"
       POSTGRES_USER: "universal_auto_dev"
       POSTGRES_PASSWORD: "pass"
-      SECRET_KEY: 
+      SECRET_KEY:
+      UDP_IP: 0.0.0.0
+      CELERY_BROKER_URL: redis://redis
+      CELERY_RESULT_BACKEND: redis://redis
 
   redis:
     container_name: universal_auto_redis

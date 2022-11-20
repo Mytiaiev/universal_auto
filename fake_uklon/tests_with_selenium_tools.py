@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from app.libs.selenium_tools import Uklon
+from app.models import Uklon
 from app.models import UklonPaymentsOrder
 from django.contrib.auth.models import User
 from django.test import TestCase

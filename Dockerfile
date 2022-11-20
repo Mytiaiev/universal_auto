@@ -3,6 +3,7 @@ ARG PYTHON_VERSION=3.9.10
 FROM python:${PYTHON_VERSION}
 
 RUN apt-get update && apt-get install -y \
+    postgresql-contrib \
     redis-tools \
     python3-pip \
     python3-venv \
@@ -30,6 +31,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 EXPOSE 8080 44300
-ENTRYPOINT honcho start
-
-
+ENTRYPOINT honcho start 
