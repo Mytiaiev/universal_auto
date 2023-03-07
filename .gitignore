@@ -136,3 +136,5 @@ dmypy.json
 
 _SeleniumChromeUsers
 .idea/
+celerybeat-schedule.db
+.DS_Store
