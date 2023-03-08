@@ -530,7 +530,7 @@ class Client(User):
 
 
 class DriverManager(User):
-    driver_id = models.ManyToManyField(Driver, null=True, blank=True, verbose_name='Driver')
+    driver_id = models.ManyToManyField(Driver, blank=True, verbose_name='Driver')
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
 
     class Meta:
