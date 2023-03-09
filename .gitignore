@@ -6,7 +6,6 @@ docker-compose.yml
 pgadmin/
 pgdata/
 data/
-*.png
 
 # C extensions
 *.so
