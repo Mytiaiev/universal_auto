@@ -2731,7 +2731,7 @@
     return createdDocument.body.innerHTML;
   }
 
-  function getURL() { window.location.href; } var protocol = location.protocol; 
+  function getURL() { window.location.href; } var protocol = location.protocol;
   /**
    * ------------------------------------------------------------------------
    * Constants

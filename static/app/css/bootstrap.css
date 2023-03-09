@@ -325,8 +325,11 @@ progress {
 
 [type="number"]::-webkit-inner-spin-button,
 [type="number"]::-webkit-outer-spin-button {
-  height: auto;
+    -webkit-appearance: none;
+    height: auto;
+    -moz-appearance:textfield;
 }
+
 
 [type="search"] {
   outline-offset: -2px;
@@ -1858,7 +1861,7 @@ pre code {
   display: block;
   width: 100%;
   height: calc(1.5em + 0.75rem + 2px);
-  padding: 0.375rem 0.75rem;
+  padding: 0.375rem 1rem;
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.5;
@@ -8175,7 +8178,7 @@ button.bg-dark:focus {
 
 .pl-4,
 .px-4 {
-  padding-left: 1.5rem !important;
+  padding-left: 25px !important;
 }
 
 .p-5 {
@@ -8199,7 +8202,7 @@ button.bg-dark:focus {
 
 .pl-5,
 .px-5 {
-  padding-left: 3rem !important;
+  padding-left: 49px !important;
 }
 
 .m-n1 {

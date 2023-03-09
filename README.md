@@ -24,8 +24,9 @@ docker exec -it universal_auto_web python3 manage.py runscript weekly
 
 1. Take an issue from the list  https://github.com/SergeyKutsko/universal_auto/issues and ask questions
 2. Fork project and create a new branch from a master branch with the name in the format: issues-12-your_last_name
-3. After work is finished and covered by tests create a Pull Request with good description what exactly you did and how and add Sergey Kutsko as reviewer. 
-4. After review fix found problems
-5. Manual QA stage need to be done by other person to confirm solutions works as expected
-6. We will deploy to staging server to confirm it works in pre-pod ENV
-7. Merge into master and deploy to production instance. 
+3. Ensure you run makemigrations by `docker exec -it universal_auto_web python3 manage.py makemigrations`
+4. After work is finished and covered by tests create a Pull Request with good description what exactly you did and how and add Sergey Kutsko as reviewer. 
+5. After review fix found problems
+6. Manual QA stage need to be done by other person to confirm solutions works as expected
+7. We will deploy to staging server to confirm it works in pre-pod ENV
+8. Merge into master and deploy to production instance. 

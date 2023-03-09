@@ -14,7 +14,7 @@
   <meta name="keywords" content="" />
   <meta name="description" content="" />
   <meta name="author" content="" />
-  <link rel="shortcut icon" href="{% static 'app/images/favicon.png' %}" type="image/x-icon">
+  <link rel="shortcut icon" href="{% static 'app/images/favicon.ico' %}"/>
 
   <title>{% trans "Ninja Taxi" %}</title>
 
@@ -31,6 +31,10 @@
   <link href="{% static 'app/css/style.css' %}" rel="stylesheet" />
   <!-- responsive style -->
   <link href="{% static 'app/css/responsive.css' %}" rel="stylesheet" />
+  <script
+  src="https://code.jquery.com/jquery-3.6.3.min.js"
+  integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU="
+  crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -177,51 +181,35 @@
     <div class="container">
       <div class="col-md-11 col=lg-9 mx-auto px-0">
         <div class="book_form ">
-          <form>
-            <div class="form-row">
-              <div class="form-group col-md-6">
-                <div class="input-group ">
-                  <div class="input-group-prepend">
-                    <div class="input-group-text">
-                      <i class="fa fa-car" aria-hidden="true"></i>
-                    </div>
-                  </div>
-                  <input type="text" class="form-control" id="inputCar" placeholder="{% trans 'Тип авто' %}">
-                </div>
-              </div>
-              <div class="form-group col-md-6">
+          <form method="post" id="order-form" action="" novalidate>
+            {% csrf_token %}
+
+              <div class="form-group col-md-11">
                 <div class="input-group ">
                   <div class="input-group-prepend">
                     <div class="input-group-text">
                       <i class="fa fa-phone" aria-hidden="true"></i>
                     </div>
                   </div>
-                  <input type="text" class="form-control" id="inputPhone" placeholder="{% trans 'Номер телефону' %}">
+                  {{ order_form.phone_number }}
+                  </div>
+                <div class="input-group pl-3" id="phone_number-error">
                 </div>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group col-md-6">
+              <div class="form-group col-md-11">
                 <div class="input-group ">
                   <div class="input-group-prepend">
                     <div class="input-group-text">
                       <i class="fa fa-map-marker" aria-hidden="true"></i>
                     </div>
                   </div>
-                  <input type="text" class="form-control" id="inputAddress" placeholder="{% trans 'Ваша адреса' %}">
+                  {{ order_form.from_address }}
+                </div>
+                <div class="input-group pl-3" id="from_address-error">
                 </div>
               </div>
-              <div class="form-group col-md-6">
-                <div class="input-group ">
-                  <div class="input-group-prepend">
-                    <div class="input-group-text">
-                      <i class="fa fa-map-marker" aria-hidden="true"></i>
-                    </div>
-                  </div>
-                  <input type="text" class="form-control" id="inputLocation" placeholder="{% trans 'Куди їхати' %}">
-                </div>
-              </div>
-            </div>
+
+
             <div class="btn-box">
               <button type="submit" class="">{% trans "Замовити зараз" %}</button>
             </div>
@@ -508,9 +496,16 @@
               <h4>
                 {% trans "Підписатись на розсилку" %}
               </h4>
-              <form action="">
-                <input type="text" placeholder="{% trans 'Введіть пошту' %}" />
-                <button type="submit">
+              <form method="post" id="sub-form" action="" novalidate>
+
+                {% csrf_token %}
+                {{ subscribe_form.email }}
+
+                <p class="text-danger small pl-4" id="email-error"></p>
+
+
+
+                <button type="submit" name="subscribe_form">
                   {% trans "Підписатись" %}
                 </button>
               </form>
@@ -540,5 +535,65 @@
   <script src="{% static 'app/js/custom.js' %}"></script>
 
 </body>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('#order-form').on('submit', function(event){
+    event.preventDefault();
+    $.ajax({
+      type: "POST",
+      url: "{% url 'index' %}",
+      data: {
+        'from_address': $('#address').val(),
+        'phone_number': $('#phone').val(),
+        'action': 'order',
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(data){
+        $('#from_address-error').html('');
+        $('#phone_number-error').html('');
+        $('#order-form')[0].reset();
+      },
 
+      error: function(data){
+       $('#from_address-error').html('');
+       $('#phone_number-error').html('');
+        var errors = data.responseJSON;
+        $.each(errors, function(key, value) {
+          $('#' + key + '-error').html('<p class="text-danger small pl-5">' + value + '</p>');
+
+        });
+      }
+    });
+  });
+});
+</script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('#sub-form').on('submit', function(event){
+    event.preventDefault();
+    $.ajax({
+      type: "POST",
+      url: "{% url 'index' %}",
+      data: {
+        'email': $('#sub_email').val(),
+        'action': 'subscribe',
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(data){
+        $('#email-error').html('');
+        $('#sub-form')[0].reset();
+      },
+
+      error: function(data){
+       $('#email-error').html('');
+        var errors = data.responseJSON;
+        $.each(errors, function(key, value) {
+          $('#' + key + '-error').html(value);
+
+        });
+      }
+    });
+  });
+});
+</script>
 </html>
