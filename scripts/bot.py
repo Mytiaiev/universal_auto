@@ -1616,11 +1616,9 @@ def webhook(request):
         dp.process_update(update)
         return HttpResponse(status=200)
 
-    updater.idle()
-
 
 def main():
-    pass
+    updater.idle()
 
 
 def run():
