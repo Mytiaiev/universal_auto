@@ -1458,6 +1458,7 @@ def get_update_report(update, context):
         aut_handler(update, context)
 
 
+WEBHOOK_URL = os.environ['WEBHOOK_URL']
 bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
 dp = updater.dispatcher
@@ -1618,6 +1619,12 @@ def webhook(request):
 
 
 def main():
+
+    updater.start_webhook(
+        listen='0.0.0.0',
+        port=PORT,
+        webhook_url=f'{WEBHOOK_URL}/webhook'
+    )
     updater.idle()
 
 
