@@ -16,7 +16,7 @@
   <meta name="author" content="" />
   <link rel="shortcut icon" href="{% static 'app/images/favicon.png' %}" type="image/x-icon">
 
-  <title>{% trans "Універсальне таксі" %}</title>
+  <title>{% trans "Ninja Taxi" %}</title>
 
   <!-- slider stylesheet -->
   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.1.3/assets/owl.carousel.min.css" />
@@ -40,9 +40,7 @@
       <div class="container">
         <nav class="navbar navbar-expand-lg custom_nav-container">
           <a class="navbar-brand" href="{% url 'index' %}">
-            <span>
-              {% trans "Універсальне таксі" %}
-            </span>
+            <img src="{% static 'app/images/logo.svg' %}" alt="">
           </a>
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span></span>
@@ -53,15 +51,21 @@
                 <a class="nav-link" href="{% url 'index' %}">{% trans "Головна" %} </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'about' %}">{% trans "Про нас" %}</a>
+                <a class="nav-link" href="{% url 'about' %}">{% trans "Партнерам" %}</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'why' %}">{% trans "Чому саме ми" %}</a>
+                <a class="nav-link" href="{% url 'why' %}">{% trans "Клієнтам" %}</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'index' %}">{% trans "Бізнес" %}</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'index' %}">{% trans "Автопаркам" %}</a>
               </li>
             </ul>
             <div class="user_option ">
-              <a href="" class="">
-                {% trans "Замовити таксі" %}
+              <a href="#order" class="">
+                {% trans "Замовити через сайт" %}
               </a>
             </div>
           </div>
@@ -82,10 +86,10 @@
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Вітаємо у Elaxi" %}
+                        {% trans "Екологічно чисті" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        Quidem, porro ipsam. Voluptatem nihil assumenda consectetur consequatur tempora officia expedita, voluptate vitae beatae possimus sunt ullam vel? Ex dolor corrupti fugit atque.
+                        Електротаксі не викидають вихлопні гази, що допомагає знизити забруднення навколишнього середовища і покращити якість повітря в містах.
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -100,16 +104,16 @@
                 </div>
               </div>
             </div>
-            <div class="carousel-item ">
+            <div class="carousel-item">
               <div class="container">
                 <div class="row">
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Вітаємо у Elaxi" %}
+                        {% trans "Покращений комфорт" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        Quidem, porro ipsam. Voluptatem nihil assumenda consectetur consequatur tempora officia expedita, voluptate vitae beatae possimus sunt ullam vel? Ex dolor corrupti fugit atque.
+                        Електротаксі можуть бути більш тихими, ніж традиційні таксі, що створює більш комфортні умови для пасажирів.
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -118,7 +122,7 @@
                   </div>
                   <div class="col-md-6">
                     <div class="img-box">
-                      <img src="{% static 'app/images/slider-img.png' %}" alt="">
+                      <img src="{% static 'app/images/slider-img-2.png' %}" alt="">
                     </div>
                   </div>
                 </div>
@@ -130,10 +134,10 @@
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Вітаємо у Elaxi" %}
+                        {% trans "Інноваційність" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        Quidem, porro ipsam. Voluptatem nihil assumenda consectetur consequatur tempora officia expedita, voluptate vitae beatae possimus sunt ullam vel? Ex dolor corrupti fugit atque.
+                        Електротаксі – це інноваційний підхід, який може підвищити Ваш рівень задоволеності під час поїздок.
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -142,7 +146,7 @@
                   </div>
                   <div class="col-md-6">
                     <div class="img-box">
-                      <img src="{% static 'app/images/slider-img.png' %}" alt="">
+                      <img src="{% static 'app/images/slider-img-3.png' %}" alt="">
                     </div>
                   </div>
                 </div>
@@ -169,7 +173,7 @@
 
   <!-- book section -->
 
-  <section class="book_section ">
+  <section class="book_section " id="order">
     <div class="container">
       <div class="col-md-11 col=lg-9 mx-auto px-0">
         <div class="book_form ">
@@ -238,7 +242,7 @@
       <div class="row">
         <div class="col-md-6">
           <div class="img-box">
-            <img src="{% static 'app/images/about-img.png' %}" alt="">
+            <img src="{% static 'app/images/about-img.svg' %}" alt="">
           </div>
         </div>
         <div class="col-md-6">
@@ -249,10 +253,8 @@
               </h2>
             </div>
             <p>
-              It is a long established fact that a reader will be distracted by
-              the readable content of a page when looking at its layout. The point
-              of using Lorem Ipsum is that it has a more-or-less normal
-              distribution of letters
+              Наша місія – надати пасажирам швидкий, зручний та безпечний транспорт, який буде відповідати найвищим стандартам.
+Наші електротаксі оснащені новітніми безпековими технологіями, що забезпечує максимальний захист пасажирів на дорозі. Крім того, ми гарантуємо швидкий та комфортний трансфер у будь-який час дня та ночі. Наші водії - це професіонали своєї справи, які мають високий рівень досвіду та знань про місто, що забезпечує швидку та безпечну поїздку для наших пасажирів.
             </p>
             <a href="">
               {% trans "Дізнатися більше" %}
@@ -336,9 +338,11 @@
         <div class="col-md-6">
           <div class="detail-box">
             <div class="heading_container">
-              <h2>
-                {% trans "Завантажити нашу апку" %}
-              </h2>
+              <h5>
+                {% trans "Будь На Зв'язку" %}
+              </h5>
+              <h2>Завантажуй наш додаток</h2>
+              <p>Мобільний застосунок постійно вдосконалюються та додаються нові функції, які дозволяють замовляти таксі ще більш зручно та ефективно.</p>
             </div>
             <p>
               
@@ -368,11 +372,11 @@
 
   <section class="client_section layout_padding-bottom">
     <div class="container">
-      <div class="heading_container heading_center">
+      <!-- <div class="heading_container heading_center">
         <h2>
           {% trans "Наші клієнти кажуть" %}
         </h2>
-      </div>
+      </div> -->
     </div>
     <div class="container">
       <div class="col-md-9 mx-auto px-0">
@@ -392,15 +396,14 @@
             <div class="carousel-item active">
               <div class="detail-box">
                 <h5>
-                  {% trans "Джейн Аддамс" %}
+                  {% trans "Юлія" %}
                 </h5>
                 <h6>
-                  Officia dolom
+                  46 поїздок
                 </h6>
                 <p>
                   <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  Atque itaque deserunt beatae ab! Officia sapiente reiciendis quia amet inventore error dolorem esse nisi asperiores laborum sit odit quae facilis nemo, quo maxime quasi harum officiis, nihil corrupti ab.
-                  Optio omnis officia dolorum voluptatibus nisi praesentium et, fugiat ducimus ea doloribus quam ut architecto temporibus unde vitae, autem accusamus illum esse
+                  Я була приємно здивована електротаксі - комфорт, тиша та екологічність відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити.
                   <i class="fa fa-quote-right" aria-hidden="true"></i>
                 </p>
               </div>
@@ -408,15 +411,14 @@
             <div class="carousel-item">
               <div class="detail-box">
                 <h5>
-                  {% trans "Джон Кевілл" %}
+                  {% trans "Євгеній" %}
                 </h5>
                 <h6>
-                  Officia dolom
+                  127 поїздок
                 </h6>
                 <p>
                   <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  Atque itaque deserunt beatae ab! Officia sapiente reiciendis quia amet inventore error dolorem esse nisi asperiores laborum sit odit quae facilis nemo, quo maxime quasi harum officiis, nihil corrupti ab.
-                  Optio omnis officia dolorum voluptatibus nisi praesentium et, fugiat ducimus ea doloribus quam ut architecto temporibus unde vitae, autem accusamus illum esse
+                  Я був приємно здивований, коли вперше використав електротаксі - це було так комфортно та тихо. Я відчував себе більш екологічно свідомими, використовуючи таксі, що не виділяє викидів.
                   <i class="fa fa-quote-right" aria-hidden="true"></i>
                 </p>
               </div>
@@ -424,15 +426,14 @@
             <div class="carousel-item">
               <div class="detail-box">
                 <h5>
-                  {% trans "Ліза Джой" %}
+                  {% trans "Ліза" %}
                 </h5>
                 <h6>
-                  Officia dolom
+                  8 поїздок
                 </h6>
                 <p>
                   <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  Atque itaque deserunt beatae ab! Officia sapiente reiciendis quia amet inventore error dolorem esse nisi asperiores laborum sit odit quae facilis nemo, quo maxime quasi harum officiis, nihil corrupti ab.
-                  Optio omnis officia dolorum voluptatibus nisi praesentium et, fugiat ducimus ea doloribus quam ut architecto temporibus unde vitae, autem accusamus illum esse
+                  Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно приємним додатком до мого досвіду використання таксі. Я би, безперечно, рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних альтернатив.
                   <i class="fa fa-quote-right" aria-hidden="true"></i>
                 </p>
               </div>
@@ -455,11 +456,11 @@
             <div class="info_detail">
               <a href="{% url 'index' %}">
                 <h4>
-                  Elaxi
+                  Ninja Taxi
                 </h4>
               </a>
               <p>
-                Soluta odit exercitationem rerum aperiam eos consectetur impedit delectus qui reiciendis, distinctio, asperiores fuga labore a? Magni natus.
+                Хочете бути екологічно свідомими та зручно подорожувати містом? Спробуйте електротаксі!
               </p>
               <div class="social_box">
                 <a href="">
@@ -481,9 +482,6 @@
             <h4>
               {% trans "Наші Контакти" %}
             </h4>
-            <p>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit
-            </p>
             <div class="contact_nav">
               <a href="">
                 <i class="fa fa-map-marker" aria-hidden="true"></i>
@@ -530,7 +528,7 @@
     <div class="container">
       <p>
         &copy; <span id="displayYear"></span> All Rights Reserved By
-        <a href="https://html.design/">Free Html Templates</a>
+        <a href="https://ninja-taxi.kyiv.ua/">Ninja Taxi</a>
       </p>
     </div>
   </footer>
