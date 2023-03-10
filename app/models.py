@@ -537,7 +537,7 @@ class Client(User):
 
 
 class DriverManager(User):
-    driver_id = models.ManyToManyField(Driver, null=True, blank=True, verbose_name='Driver')
+    driver_id = models.ManyToManyField(Driver, blank=True, verbose_name='Driver')
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
 
     class Meta:
@@ -1656,12 +1656,15 @@ class Uber(SeleniumTools):
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         u = Uber(week_number=week_number, driver=False, sleep=0, headless=headless)
-        if u.payments_order_file_name() not in os.listdir(os.curdir) and driver:
+        report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+        if not report:
             u = Uber(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
             # u.login_v2()
             u.download_payments_order()
+            u.save_report()
             u.quit()
-        return u.save_report()
+            report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+        return list(report)
 
 
 class Bolt(SeleniumTools):    
@@ -1725,6 +1728,8 @@ class Bolt(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
+        self.logger.info(f'Щотижневий звіт Bolt – {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+
         if self.payments_order_file_name() is not None:
             with open(self.payments_order_file_name(), encoding="utf-8") as file:
                 reader = csv.reader(file)
@@ -1814,13 +1819,15 @@ class Bolt(SeleniumTools):
     def download_weekly_report(week_number=None, day=None,  driver=True, sleep=5, headless=True):
         """Can save weekly and daily report"""
         b = Bolt(week_number=week_number, day=day, driver=False, sleep=0, headless=headless)
-        if b.payments_order_file_name() not in os.listdir(os.curdir) and driver:
+        report = BoltPaymentsOrder.objects.filter(report_file_name=f'Щотижневий звіт Bolt – {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        if not report:
             b = Bolt(week_number=week_number, day=day, driver=driver, sleep=sleep, headless=headless)
             # b.login()
             b.download_payments_order()
             b.quit()
-        return b.save_report()
-
+            b.save_report()
+            report = BoltPaymentsOrder.objects.filter(report_file_name=f'Щотижневий звіт Bolt – {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        return list(report)
 
 class Uklon(SeleniumTools):
     def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://partner.uklon.com.ua"):
@@ -2020,11 +2027,14 @@ class NewUklon(SeleniumTools):
             time.sleep(self.sleep)
         items = []
 
-        file = self.report_file_name('01.70.csv')
-        os.rename(file, f'Звіт по поїздкам - {self.file_patern()}.csv')
+        try:
+            file = self.report_file_name('01.70.csv')
+            os.rename(file, f'Uklon {self.file_patern()}.csv')
+        except:
+            pass
 
-        self.logger.info(self.file_patern())
-        report = open(self.report_file_name(self.file_patern()))
+        self.logger.info(f'Uklon {self.file_patern()}.csv')
+        report = open(self.report_file_name(f'Uklon {self.file_patern()}.csv'))
 
         with report as file:
             reader = csv.reader(file)
@@ -2049,10 +2059,37 @@ class NewUklon(SeleniumTools):
                     fares=float((row[10] or '0').replace(',','')),
                     comission=float((row[11] or '0').replace(',','')),
                     total_amount_without_comission=float((row[12] or '0').replace(',','')))
-                order.save()
+                try:
+                    order.save()
+                except IntegrityError:
+                    pass
                 items.append(order)
 
+        if not items:
+            order = NewUklonPaymentsOrder(
+                report_from=self.start_of_week(),
+                report_to=self.end_of_week(),
+                report_file_name='',
+                full_name='',
+                signal='',
+                total_rides=0,
+                total_distance=0,
+                total_amount_cach=0,
+                total_amount_cach_less=0,
+                total_amount_on_card=0,
+                total_amount=0,
+                tips=0,
+                bonuses=0,
+                fares=0,
+                comission=0,
+                total_amount_without_comission=0)
+            try:
+                order.save()
+            except IntegrityError:
+                pass
+
         return items
+
 
     def save_report_v2(self):
         if self.sleep:
@@ -2137,13 +2174,16 @@ class NewUklon(SeleniumTools):
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         u = NewUklon(week_number=week_number, driver=False, sleep=0, headless=headless)
-        if u.payments_order_file_name() not in os.listdir(os.curdir) and driver:
+        report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        if not report:
             u = NewUklon(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
             # u.login()
             u.download_payments_order()
             u.quit()
-        # return u.save_report()
-        return u.save_report_v2()
+            u.save_report()
+            report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        return list(report)
+        #return u.save_report_v2()
 
     @staticmethod
     def download_daily_report(day=None, driver=True, sleep=5, headless=True):
@@ -2235,8 +2275,7 @@ class Privat24(SeleniumTools):
             return None
 
 
-def get_report(week_number = None, driver=True, sleep=5, headless=True):
-    driver = False
+def get_report(week_number=None, driver=True, sleep=5, headless=True):
     owner =   {"Fleet Owner": 0}
     reports = {}
     totals =  {}
@@ -2248,7 +2287,7 @@ def get_report(week_number = None, driver=True, sleep=5, headless=True):
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:
                 r = r[0]
-                # print(r)
+                #print(r)
                 name = rate.driver.full_name()
                 reports[name] = reports.get(name, '') + r.report_text(name, float(rate.rate)) + '\n'
                 totals[name] = totals.get(name, 0) + r.kassa()
