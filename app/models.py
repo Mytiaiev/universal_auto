@@ -2249,7 +2249,6 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     fleets =  Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
-        print(fleet)
         for rate in Fleets_drivers_vehicles_rate.objects.filter(fleet_id=fleet.id, deleted_at=None):
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:
