@@ -606,6 +606,49 @@ a:focus {
   color: #ff7070;
 }
 
+
+
+/**
+ * 
+**/
+
+.social_header {
+  background-color: #ffffff;
+}
+
+.social_header .social_box {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+.social_header .social_box a {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  border-radius: 100%;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #1b1f71;
+  color: #1b1f71;
+  font-size: 18px;
+  margin-right: 10px;
+}
+
+.social_header .social_box a:hover {
+  color: #ff7070;
+  border-color: #ff7070;
+}
+/**
+ * 
+**/
+
 .info_section {
   background-color: #1b1f71;
   color: #ffffff;

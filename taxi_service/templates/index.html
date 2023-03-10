@@ -42,36 +42,37 @@
     <!-- header section strats -->
     <header class="header_section ">
       <div class="container">
-        <nav class="navbar navbar-expand-lg custom_nav-container">
+        <nav class="navbar navbar-expand-lg custom_nav-container navbar navbar-expand-sm sticky-top navbar-light bg-light">
           <a class="navbar-brand" href="{% url 'index' %}">
             <img src="{% static 'app/images/logo.svg' %}" alt="">
           </a>
+
+           
+            
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span></span>
           </button>
           <div class="collapse navbar-collapse ml-auto  " id="navbarSupportedContent">
             <ul class="navbar-nav  ">
-              <li class="nav-item ">
-                <a class="nav-link" href="{% url 'index' %}">{% trans "Головна" %} </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'about' %}">{% trans "Партнерам" %}</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'why' %}">{% trans "Клієнтам" %}</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'index' %}">{% trans "Бізнес" %}</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'index' %}">{% trans "Автопаркам" %}</a>
+              <li class="nav-item" style="float: left;">
+                <div class="social_header">
+                  <div class="social_box">
+                    <a href="">
+                      <i class="fa fa-facebook" aria-hidden="true"></i>
+                    </a>
+                    <a href="">
+                      <i class="fa fa-twitter" aria-hidden="true"></i>
+                    </a>
+                    <a href="">
+                      <i class="fa fa-linkedin" aria-hidden="true"></i>
+                    </a>
+                    <a href="">
+                      <i class="fa fa-instagram" aria-hidden="true"></i>
+                    </a>
+                  </div>
+                </div>
               </li>
             </ul>
-            <div class="user_option ">
-              <a href="#order" class="">
-                {% trans "Замовити через сайт" %}
-              </a>
-            </div>
           </div>
         </nav>
       </div>
@@ -435,7 +436,7 @@
   <!-- end client section -->
 
   <!-- info section -->
-  <section class="info_section ">
+  <section class="info_section">
 
     <div class="container">
       <div class="info_top ">
@@ -480,13 +481,13 @@
               <a href="">
                 <i class="fa fa-phone" aria-hidden="true"></i>
                 <span>
-                  {% trans "Телефон" %}: 000007854635
+                  {% trans "Телефон" %}: +380681373335
                 </span>
               </a>
               <a href="">
                 <i class="fa fa-envelope" aria-hidden="true"></i>
                 <span>
-                  {% trans "Електронна пошта" %} : demo@gmail.com
+                  {% trans "Електронна пошта" %} : office@ninja-taxi.kyiv.ua
                 </span>
               </a>
             </div>
