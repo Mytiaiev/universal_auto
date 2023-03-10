@@ -38,23 +38,19 @@
 </head>
 
 <body>
-  <div class="hero_area">
-    <!-- header section strats -->
-    <header class="header_section ">
+  <header class="header_section navbar navbar-expand-sm sticky-top navbar-light bg-light">
       <div class="container">
         <nav class="navbar navbar-expand-lg custom_nav-container navbar navbar-expand-sm sticky-top navbar-light bg-light">
           <a class="navbar-brand" href="{% url 'index' %}">
             <img src="{% static 'app/images/logo.svg' %}" alt="">
           </a>
-
-           
             
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span></span>
           </button>
           <div class="collapse navbar-collapse ml-auto  " id="navbarSupportedContent">
             <ul class="navbar-nav  ">
-              <li class="nav-item" style="float: left;">
+              <li class="nav-item">
                 <div class="social_header">
                   <div class="social_box">
                     <a href="">
@@ -72,11 +68,26 @@
                   </div>
                 </div>
               </li>
+              <li class="nav-item">
+                <section class="book_header_section">
+                  <div class="book_form">
+                    <div class="btn-box">
+                      <a href="#order_from_header">
+                        <button >{% trans "Замовити зараз" %}</button>
+                      </a>
+                    </div>
+     
+                  </div>
+                </section>
+              </li>
             </ul>
           </div>
         </nav>
       </div>
     </header>
+  <div class="hero_area">
+    <!-- header section strats -->
+    
     <!-- end header section -->
 
 
@@ -158,7 +169,7 @@
               </div>
             </div>
           </div>
-          <div class="container">
+          <div class="container" id="order_from_header">
             <div class="carousel-btn-box">
               <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
                 <i class="fa fa-angle-left" aria-hidden="true"></i>

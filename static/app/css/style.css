@@ -281,6 +281,40 @@ a:focus {
 }
 
 /* end slider section */
+
+/*
+
+header button start
+*/
+
+.book_header_section .book_form {
+  margin-top: 18px;
+}
+
+
+.book_header_section .book_form .btn-box {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+}
+
+.book_header_section .book_form .btn-box button {
+  display: inline-block;
+  background-color: #E96F24;
+  border: 1px solid #E96F24;
+  color: #ffffff;
+  border-radius: 0;
+}
+
+.book_header_section .book_form .btn-box button:hover {
+  background-color: transparent;
+  color: #E96F24;
+}
+
+/* END*/
 .book_section .book_form {
   background-color: #ffffff;
   padding: 45px 25px 40px 25px;
@@ -613,7 +647,8 @@ a:focus {
 **/
 
 .social_header {
-  background-color: #ffffff;
+  margin: 0px 100px;
+  padding-top: 10px;
 }
 
 .social_header .social_box {
