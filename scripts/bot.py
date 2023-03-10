@@ -1298,8 +1298,9 @@ def drivers_rating(update, context):
 
 
 def report(update, context):
-    # update.message.reply_text("Введіть ваш Uber OTP код з SMS:")
     update.message.reply_text('Ваш запит прийнято.\nМи надішлемо вам звіт, як тільки він сформується')
+    update.message.reply_text("Введіть ваш Uber OTP код з SMS, якщо ви отримали його")
+    
     report = get_report()
     owner, totals = report[0], report[1]
     drivers = {f'{i.name} {i.second_name}': i.chat_id for i in Driver.objects.all()}

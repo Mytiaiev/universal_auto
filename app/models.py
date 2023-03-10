@@ -289,7 +289,7 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         unique_together = (('report_from', 'report_to', 'driver_uuid'))
 
     def driver_id(self):
-        return self.driver_uuid
+        return str(self.driver_uuid)
 
     def report_text(self, name=None, rate=0.65):
         name = name or self.full_name()
