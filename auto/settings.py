@@ -120,6 +120,7 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'data/staticfiles'
 
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'data/mediafiles'
 

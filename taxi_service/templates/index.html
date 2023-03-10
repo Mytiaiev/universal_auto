@@ -14,9 +14,9 @@
   <meta name="keywords" content="" />
   <meta name="description" content="" />
   <meta name="author" content="" />
-  <link rel="shortcut icon" href="{% static 'app/images/favicon.png' %}" type="image/x-icon">
+  <link rel="shortcut icon" href="{% static 'app/images/favicon.png' %}"/>
 
-  <title>{% trans "Універсальне таксі" %}</title>
+  <title>{% trans "Ninja Taxi" %}</title>
 
   <!-- slider stylesheet -->
   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.1.3/assets/owl.carousel.min.css" />
@@ -31,43 +31,63 @@
   <link href="{% static 'app/css/style.css' %}" rel="stylesheet" />
   <!-- responsive style -->
   <link href="{% static 'app/css/responsive.css' %}" rel="stylesheet" />
+  <script
+  src="https://code.jquery.com/jquery-3.6.3.min.js"
+  integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU="
+  crossorigin="anonymous"></script>
 </head>
 
 <body>
-  <div class="hero_area">
-    <!-- header section strats -->
-    <header class="header_section ">
+  <header class="header_section navbar navbar-expand-sm sticky-top navbar-light bg-light">
       <div class="container">
-        <nav class="navbar navbar-expand-lg custom_nav-container">
+        <nav class="container navbar navbar-expand-lg custom_nav-container navbar navbar-expand-sm sticky-top navbar-light bg-light">
           <a class="navbar-brand" href="{% url 'index' %}">
-            <span>
-              {% trans "Універсальне таксі" %}
-            </span>
+            <img src="{% static 'app/images/logo.svg' %}" alt="">
           </a>
+            
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span></span>
           </button>
           <div class="collapse navbar-collapse ml-auto  " id="navbarSupportedContent">
             <ul class="navbar-nav  ">
-              <li class="nav-item ">
-                <a class="nav-link" href="{% url 'index' %}">{% trans "Головна" %} </a>
+              <li class="nav-item">
+                <div class="social_header">
+                  <div class="social_box">
+                    <a href="">
+                      <i class="fa fa-facebook" aria-hidden="true"></i>
+                    </a>
+                    <a href="">
+                      <i class="fa fa-twitter" aria-hidden="true"></i>
+                    </a>
+                    <a href="">
+                      <i class="fa fa-linkedin" aria-hidden="true"></i>
+                    </a>
+                    <a href="">
+                      <i class="fa fa-instagram" aria-hidden="true"></i>
+                    </a>
+                  </div>
+                </div>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'about' %}">{% trans "Про нас" %}</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'why' %}">{% trans "Чому саме ми" %}</a>
+                <section class="book_header_section">
+                  <div class="book_form">
+                    <div class="btn-box">
+                      <a href="#order_from_header">
+                        <button >{% trans "Замовити зараз" %}</button>
+                      </a>
+                    </div>
+     
+                  </div>
+                </section>
               </li>
             </ul>
-            <div class="user_option ">
-              <a href="" class="">
-                {% trans "Замовити таксі" %}
-              </a>
-            </div>
           </div>
         </nav>
       </div>
     </header>
+  <div class="hero_area">
+    <!-- header section strats -->
+    
     <!-- end header section -->
 
 
@@ -82,10 +102,10 @@
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Вітаємо у Elaxi" %}
+                        {% trans "Екологічно чисті" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        Quidem, porro ipsam. Voluptatem nihil assumenda consectetur consequatur tempora officia expedita, voluptate vitae beatae possimus sunt ullam vel? Ex dolor corrupti fugit atque.
+                        Електротаксі не викидають вихлопні гази, що допомагає знизити забруднення навколишнього середовища і покращити якість повітря в містах.
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -100,16 +120,16 @@
                 </div>
               </div>
             </div>
-            <div class="carousel-item ">
+            <div class="carousel-item">
               <div class="container">
                 <div class="row">
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Вітаємо у Elaxi" %}
+                        {% trans "Покращений комфорт" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        Quidem, porro ipsam. Voluptatem nihil assumenda consectetur consequatur tempora officia expedita, voluptate vitae beatae possimus sunt ullam vel? Ex dolor corrupti fugit atque.
+                        Електротаксі можуть бути більш тихими, ніж традиційні таксі, що створює більш комфортні умови для пасажирів.
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -118,7 +138,7 @@
                   </div>
                   <div class="col-md-6">
                     <div class="img-box">
-                      <img src="{% static 'app/images/slider-img.png' %}" alt="">
+                      <img src="{% static 'app/images/slider-img-2.png' %}" alt="">
                     </div>
                   </div>
                 </div>
@@ -130,10 +150,10 @@
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Вітаємо у Elaxi" %}
+                        {% trans "Інноваційність" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        Quidem, porro ipsam. Voluptatem nihil assumenda consectetur consequatur tempora officia expedita, voluptate vitae beatae possimus sunt ullam vel? Ex dolor corrupti fugit atque.
+                        Електротаксі – це інноваційний підхід, який може підвищити Ваш рівень задоволеності під час поїздок.
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -142,14 +162,14 @@
                   </div>
                   <div class="col-md-6">
                     <div class="img-box">
-                      <img src="{% static 'app/images/slider-img.png' %}" alt="">
+                      <img src="{% static 'app/images/slider-img-3.png' %}" alt="">
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="container">
+          <div class="container" id="order_from_header">
             <div class="carousel-btn-box">
               <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
                 <i class="fa fa-angle-left" aria-hidden="true"></i>
@@ -169,55 +189,39 @@
 
   <!-- book section -->
 
-  <section class="book_section ">
+  <section class="book_section " id="order">
     <div class="container">
       <div class="col-md-11 col=lg-9 mx-auto px-0">
         <div class="book_form ">
-          <form>
-            <div class="form-row">
-              <div class="form-group col-md-6">
-                <div class="input-group ">
-                  <div class="input-group-prepend">
-                    <div class="input-group-text">
-                      <i class="fa fa-car" aria-hidden="true"></i>
-                    </div>
-                  </div>
-                  <input type="text" class="form-control" id="inputCar" placeholder="{% trans 'Тип авто' %}">
-                </div>
-              </div>
-              <div class="form-group col-md-6">
+          <form method="post" id="order-form" action="" novalidate>
+            {% csrf_token %}
+
+              <div class="form-group col-md-11">
                 <div class="input-group ">
                   <div class="input-group-prepend">
                     <div class="input-group-text">
                       <i class="fa fa-phone" aria-hidden="true"></i>
                     </div>
                   </div>
-                  <input type="text" class="form-control" id="inputPhone" placeholder="{% trans 'Номер телефону' %}">
+                  {{ order_form.phone_number }}
+                  </div>
+                <div class="input-group pl-3" id="phone_number-error">
                 </div>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group col-md-6">
+              <div class="form-group col-md-11">
                 <div class="input-group ">
                   <div class="input-group-prepend">
                     <div class="input-group-text">
                       <i class="fa fa-map-marker" aria-hidden="true"></i>
                     </div>
                   </div>
-                  <input type="text" class="form-control" id="inputAddress" placeholder="{% trans 'Ваша адреса' %}">
+                  {{ order_form.from_address }}
+                </div>
+                <div class="input-group pl-3" id="from_address-error">
                 </div>
               </div>
-              <div class="form-group col-md-6">
-                <div class="input-group ">
-                  <div class="input-group-prepend">
-                    <div class="input-group-text">
-                      <i class="fa fa-map-marker" aria-hidden="true"></i>
-                    </div>
-                  </div>
-                  <input type="text" class="form-control" id="inputLocation" placeholder="{% trans 'Куди їхати' %}">
-                </div>
-              </div>
-            </div>
+
+
             <div class="btn-box">
               <button type="submit" class="">{% trans "Замовити зараз" %}</button>
             </div>
@@ -238,7 +242,7 @@
       <div class="row">
         <div class="col-md-6">
           <div class="img-box">
-            <img src="{% static 'app/images/about-img.png' %}" alt="">
+            <img src="{% static 'app/images/about-img.svg' %}" alt="">
           </div>
         </div>
         <div class="col-md-6">
@@ -249,10 +253,8 @@
               </h2>
             </div>
             <p>
-              It is a long established fact that a reader will be distracted by
-              the readable content of a page when looking at its layout. The point
-              of using Lorem Ipsum is that it has a more-or-less normal
-              distribution of letters
+              Наша місія – надати пасажирам швидкий, зручний та безпечний транспорт, який буде відповідати найвищим стандартам.
+Наші електротаксі оснащені новітніми безпековими технологіями, що забезпечує максимальний захист пасажирів на дорозі. Крім того, ми гарантуємо швидкий та комфортний трансфер у будь-який час дня та ночі. Наші водії - це професіонали своєї справи, які мають високий рівень досвіду та знань про місто, що забезпечує швидку та безпечну поїздку для наших пасажирів.
             </p>
             <a href="">
               {% trans "Дізнатися більше" %}
@@ -336,9 +338,11 @@
         <div class="col-md-6">
           <div class="detail-box">
             <div class="heading_container">
-              <h2>
-                {% trans "Завантажити нашу апку" %}
-              </h2>
+              <h5>
+                {% trans "Будь На Зв'язку" %}
+              </h5>
+              <h2>Завантажуй наш додаток</h2>
+              <p>Мобільний застосунок постійно вдосконалюються та додаються нові функції, які дозволяють замовляти таксі ще більш зручно та ефективно.</p>
             </div>
             <p>
               
@@ -368,11 +372,11 @@
 
   <section class="client_section layout_padding-bottom">
     <div class="container">
-      <div class="heading_container heading_center">
+      <!-- <div class="heading_container heading_center">
         <h2>
           {% trans "Наші клієнти кажуть" %}
         </h2>
-      </div>
+      </div> -->
     </div>
     <div class="container">
       <div class="col-md-9 mx-auto px-0">
@@ -392,15 +396,14 @@
             <div class="carousel-item active">
               <div class="detail-box">
                 <h5>
-                  {% trans "Джейн Аддамс" %}
+                  {% trans "Юлія" %}
                 </h5>
                 <h6>
-                  Officia dolom
+                  46 поїздок
                 </h6>
                 <p>
                   <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  Atque itaque deserunt beatae ab! Officia sapiente reiciendis quia amet inventore error dolorem esse nisi asperiores laborum sit odit quae facilis nemo, quo maxime quasi harum officiis, nihil corrupti ab.
-                  Optio omnis officia dolorum voluptatibus nisi praesentium et, fugiat ducimus ea doloribus quam ut architecto temporibus unde vitae, autem accusamus illum esse
+                  Я була приємно здивована електротаксі - комфорт, тиша та екологічність відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити.
                   <i class="fa fa-quote-right" aria-hidden="true"></i>
                 </p>
               </div>
@@ -408,15 +411,14 @@
             <div class="carousel-item">
               <div class="detail-box">
                 <h5>
-                  {% trans "Джон Кевілл" %}
+                  {% trans "Євгеній" %}
                 </h5>
                 <h6>
-                  Officia dolom
+                  127 поїздок
                 </h6>
                 <p>
                   <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  Atque itaque deserunt beatae ab! Officia sapiente reiciendis quia amet inventore error dolorem esse nisi asperiores laborum sit odit quae facilis nemo, quo maxime quasi harum officiis, nihil corrupti ab.
-                  Optio omnis officia dolorum voluptatibus nisi praesentium et, fugiat ducimus ea doloribus quam ut architecto temporibus unde vitae, autem accusamus illum esse
+                  Я був приємно здивований, коли вперше використав електротаксі - це було так комфортно та тихо. Я відчував себе більш екологічно свідомими, використовуючи таксі, що не виділяє викидів.
                   <i class="fa fa-quote-right" aria-hidden="true"></i>
                 </p>
               </div>
@@ -424,15 +426,14 @@
             <div class="carousel-item">
               <div class="detail-box">
                 <h5>
-                  {% trans "Ліза Джой" %}
+                  {% trans "Ліза" %}
                 </h5>
                 <h6>
-                  Officia dolom
+                  8 поїздок
                 </h6>
                 <p>
                   <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  Atque itaque deserunt beatae ab! Officia sapiente reiciendis quia amet inventore error dolorem esse nisi asperiores laborum sit odit quae facilis nemo, quo maxime quasi harum officiis, nihil corrupti ab.
-                  Optio omnis officia dolorum voluptatibus nisi praesentium et, fugiat ducimus ea doloribus quam ut architecto temporibus unde vitae, autem accusamus illum esse
+                  Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно приємним додатком до мого досвіду використання таксі. Я би, безперечно, рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних альтернатив.
                   <i class="fa fa-quote-right" aria-hidden="true"></i>
                 </p>
               </div>
@@ -446,7 +447,7 @@
   <!-- end client section -->
 
   <!-- info section -->
-  <section class="info_section ">
+  <section class="info_section">
 
     <div class="container">
       <div class="info_top ">
@@ -455,11 +456,11 @@
             <div class="info_detail">
               <a href="{% url 'index' %}">
                 <h4>
-                  Elaxi
+                  Ninja Taxi
                 </h4>
               </a>
               <p>
-                Soluta odit exercitationem rerum aperiam eos consectetur impedit delectus qui reiciendis, distinctio, asperiores fuga labore a? Magni natus.
+                Хочете бути екологічно свідомими та зручно подорожувати містом? Спробуйте електротаксі!
               </p>
               <div class="social_box">
                 <a href="">
@@ -481,9 +482,6 @@
             <h4>
               {% trans "Наші Контакти" %}
             </h4>
-            <p>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit
-            </p>
             <div class="contact_nav">
               <a href="">
                 <i class="fa fa-map-marker" aria-hidden="true"></i>
@@ -494,13 +492,13 @@
               <a href="">
                 <i class="fa fa-phone" aria-hidden="true"></i>
                 <span>
-                  {% trans "Телефон" %}: 000007854635
+                  {% trans "Телефон" %}: +380681373335
                 </span>
               </a>
               <a href="">
                 <i class="fa fa-envelope" aria-hidden="true"></i>
                 <span>
-                  {% trans "Електронна пошта" %} : demo@gmail.com
+                  {% trans "Електронна пошта" %} : office@ninja-taxi.kyiv.ua
                 </span>
               </a>
             </div>
@@ -510,9 +508,16 @@
               <h4>
                 {% trans "Підписатись на розсилку" %}
               </h4>
-              <form action="">
-                <input type="text" placeholder="{% trans 'Введіть пошту' %}" />
-                <button type="submit">
+              <form method="post" id="sub-form" action="" novalidate>
+
+                {% csrf_token %}
+                {{ subscribe_form.email }}
+
+                <p class="text-danger small pl-4" id="email-error"></p>
+
+
+
+                <button type="submit" name="subscribe_form">
                   {% trans "Підписатись" %}
                 </button>
               </form>
@@ -530,7 +535,7 @@
     <div class="container">
       <p>
         &copy; <span id="displayYear"></span> All Rights Reserved By
-        <a href="https://html.design/">Free Html Templates</a>
+        <a href="https://ninja-taxi.kyiv.ua/">Ninja Taxi</a>
       </p>
     </div>
   </footer>
@@ -542,5 +547,65 @@
   <script src="{% static 'app/js/custom.js' %}"></script>
 
 </body>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('#order-form').on('submit', function(event){
+    event.preventDefault();
+    $.ajax({
+      type: "POST",
+      url: "{% url 'index' %}",
+      data: {
+        'from_address': $('#address').val(),
+        'phone_number': $('#phone').val(),
+        'action': 'order',
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(data){
+        $('#from_address-error').html('');
+        $('#phone_number-error').html('');
+        $('#order-form')[0].reset();
+      },
 
+      error: function(data){
+       $('#from_address-error').html('');
+       $('#phone_number-error').html('');
+        var errors = data.responseJSON;
+        $.each(errors, function(key, value) {
+          $('#' + key + '-error').html('<p class="text-danger small pl-5">' + value + '</p>');
+
+        });
+      }
+    });
+  });
+});
+</script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('#sub-form').on('submit', function(event){
+    event.preventDefault();
+    $.ajax({
+      type: "POST",
+      url: "{% url 'index' %}",
+      data: {
+        'email': $('#sub_email').val(),
+        'action': 'subscribe',
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(data){
+        $('#email-error').html('');
+        $('#sub-form')[0].reset();
+      },
+
+      error: function(data){
+       $('#email-error').html('');
+        var errors = data.responseJSON;
+        $.each(errors, function(key, value) {
+          $('#' + key + '-error').html(value);
+
+        });
+      }
+    });
+  });
+});
+</script>
 </html>

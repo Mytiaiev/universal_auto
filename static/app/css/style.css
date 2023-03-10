@@ -1,5 +1,5 @@
 body {
-  font-family: "Poppins", sans-serif;
+  font-family:  NAMU-Pro,Helvetica,Arial,sans-serif;
   color: #040000;
   background-color: #ffffff;
 }
@@ -52,7 +52,6 @@ body {
 
 /*header section*/
 .hero_area {
-  min-height: 100vh;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -68,7 +67,7 @@ body {
 }
 
 .header_section {
-  padding: 15px 0;
+  background-color: #fff;
 }
 
 .navbar-nav {
@@ -78,9 +77,10 @@ body {
 .navbar-nav .nav-item .nav-link {
   padding: 10px 20px;
   text-align: center;
-  color: #ffffff;
+  color: #222426;
   position: relative;
-  text-transform: uppercase;
+  font-size: 16px;
+  font-family: sans-serif;
 }
 
 a,
@@ -122,7 +122,7 @@ a:focus {
   display: block;
   width: 35px;
   height: 4px;
-  background-color: #ffffff;
+  background-color: #000000;
   margin: 7px 0;
   -webkit-transition: all 0.3s;
   transition: all 0.3s;
@@ -137,7 +137,7 @@ a:focus {
   left: 0;
   height: 100%;
   width: 100%;
-  background-color: #ffffff;
+  background-color: #000000;
   top: -10px;
   border-radius: 5px;
   -webkit-transition: all 0.3s;
@@ -177,17 +177,18 @@ a:focus {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-  text-transform: uppercase;
+  -webkit-box-align: end;
+      -ms-flex-align: end;
+          align-items: end;
 }
 
 .user_option a {
-  background-color: #ff7070;
-  padding: 7px 30px;
-  border-radius: 5px;
-  color: #ffffff;
+  background-color: #f1f1f1;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: #222426;
+  font-size: 16px;
+  font-family: sans-serif;
 }
 
 /*end header section*/
@@ -235,8 +236,8 @@ a:focus {
 .slider_section .detail-box a {
   display: inline-block;
   padding: 8px 35px;
-  background-color: #ff7070;
-  border: 1px solid #ff7070;
+  background-color: #E96F24;
+  border: 1px solid #E96F24;
   color: #ffffff;
   border-radius: 5px;
   text-transform: uppercase;
@@ -245,7 +246,7 @@ a:focus {
 
 .slider_section .detail-box a:hover {
   background-color: transparent;
-  color: #ff7070;
+  color: #E96F24;
 }
 
 .slider_section .img-box img {
@@ -278,6 +279,40 @@ a:focus {
 }
 
 /* end slider section */
+
+/*
+
+header button start
+*/
+
+.book_header_section .book_form {
+  margin-top: 18px;
+}
+
+
+.book_header_section .book_form .btn-box {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+}
+
+.book_header_section .book_form .btn-box button {
+  display: inline-block;
+  background-color: #E96F24;
+  border: 1px solid #E96F24;
+  color: #ffffff;
+  border-radius: 0;
+}
+
+.book_header_section .book_form .btn-box button:hover {
+  background-color: transparent;
+  color: #E96F24;
+}
+
+/* END*/
 .book_section .book_form {
   background-color: #ffffff;
   padding: 45px 25px 40px 25px;
@@ -349,8 +384,8 @@ a:focus {
 .book_section .book_form .btn-box button {
   display: inline-block;
   padding: 8px 65px;
-  background-color: #ff7070;
-  border: 1px solid #ff7070;
+  background-color: #E96F24;
+  border: 1px solid #E96F24;
   color: #ffffff;
   border-radius: 0;
   margin-top: 15px;
@@ -358,7 +393,7 @@ a:focus {
 
 .book_section .book_form .btn-box button:hover {
   background-color: transparent;
-  color: #ff7070;
+  color: #E96F24;
 }
 
 .about_section .row {
@@ -450,12 +485,16 @@ a:focus {
           align-items: center;
 }
 
-.app_section .detail-box {
-  color: #ffffff;
+.app_section .detail-box h5 {
+  color: #E96F24;
 }
 
 .app_section .detail-box .heading_container h2 {
-  color: #ffffff;
+  color: #fff;
+}
+
+.app_section .detail-box .heading_container p {
+  color: #fff;
 }
 
 .app_section .detail-box .btn-box {
@@ -599,6 +638,51 @@ a:focus {
   color: #ff7070;
 }
 
+
+
+/**
+ * 
+**/
+
+.social_header {
+  justify-content: center;
+  padding-top: 10px;
+}
+
+.social_header .social_box {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  justify-content: center;
+}
+
+.social_header .social_box a {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  border-radius: 100%;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #1b1f71;
+  color: #1b1f71;
+  font-size: 18px;
+  margin-right: 10px;
+}
+
+.social_header .social_box a:hover {
+  color: #ff7070;
+  border-color: #ff7070;
+}
+/**
+ * 
+**/
+
 .info_section {
   background-color: #1b1f71;
   color: #ffffff;
@@ -691,8 +775,8 @@ a:focus {
   width: 100%;
   border: none;
   height: 45px;
-  margin-bottom: 15px;
-  padding-left: 25px;
+  margin-bottom: 0px;
+  padding-left: 24px;
   background-color: #eaeaea;
   outline: none;
   color: #101010;

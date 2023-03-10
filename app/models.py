@@ -4,6 +4,8 @@ import glob
 import os
 import shutil
 import sys
+
+
 from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
@@ -248,9 +250,9 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
     def vendor(self):
         return 'bolt'
-    
+
     def kassa(self):
-        return (self.total_cach_less_drivers_amount()) 
+        return (self.total_cach_less_drivers_amount())
 
     def total_owner_amount(self, rate=0.65):
         return self.total_cach_less_drivers_amount() * (1 - rate) - self.total_drivers_amount(rate)
@@ -386,7 +388,7 @@ class User(models.Model):
 
     @staticmethod
     def email_validator(email) -> str:
-        pattern = r"^[-\w\.]+@([-\w]+\.)+[-\w]{2,4}$"
+        pattern = r"^([a-zA-Z0-9]+\.?[a-zA-Z0-9]+)+@([a-zA-Z0-9]+\.)+[a-zA-Z0-9]{2,4}$"
         if re.match(pattern, email) is not None:
             return email
         else:
@@ -394,9 +396,10 @@ class User(models.Model):
 
     @staticmethod
     def phone_number_validator(phone_number) -> str:
+
         pattern = r"^(\+380|380|80|0)+\d{9}$"
         if re.match(pattern, phone_number) is not None:
-            if len(phone_number) <= 13:
+            if len(phone_number) == 13:
                 return phone_number
             elif len(phone_number) == 10:
                 valid_phone_number = f'+38{phone_number}'
@@ -409,15 +412,19 @@ class User(models.Model):
                 return valid_phone_number
         else:
             return None
-        
-        
+
+
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
     WAIT_FOR_CLIENT = 'Очікую клієнта'
     OFFLINE = 'Не працюю'
-   
+
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
+    #driver_manager_id: ManyToManyField already exists in DriverManager
+    #we have to delete this
+    driver_manager_id = models.ManyToManyField('DriverManager', blank=True)
+    #partner = models.ManyToManyField('Partner', blank=True)
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
 
@@ -738,7 +745,6 @@ class DriverRateLevels(models.Model):
         verbose_name = 'Рівень рейтингу водія'
         verbose_name_plural = 'Рівень рейтингу водіїв'
 
-
 class RawGPS(models.Model):
     imei = models.CharField(max_length=100)
     client_ip = models.CharField(max_length=100)
@@ -812,7 +818,7 @@ class WeeklyReportFile(models.Model):
         return converted_list
 
     def save_weekly_reports_to_db(self):
-        
+
         for file in csv_list:
             rows = []
             try:
@@ -1032,8 +1038,8 @@ class Comment(models.Model):
 
     class Meta:
         verbose_name = 'Відгук'
-        verbose_name_plural='Відгуки'
-        ordering=['-created_at']
+        verbose_name_plural = 'Відгуки'
+        ordering = ['-created_at']
 
 
 class Order(models.Model):
@@ -1089,6 +1095,30 @@ class Event(models.Model):
         verbose_name_plural = 'Події'
 
 
+
+class SubscribeUsers(models.Model):
+    email = models.EmailField(max_length=254, verbose_name='Електрона пошта')
+    created_at = models.DateTimeField(editable=False, auto_now=True, verbose_name='Створено')
+
+    class Meta:
+        verbose_name = 'Підписник'
+        verbose_name_plural = 'Підписники'
+
+    @staticmethod
+    def get_by_email(email):
+        """
+        Returns subscriber by email
+        :param email: email by which we need to find the subscriber
+        :type email: str
+        :return: subscriber object or None if a subscriber with such email does not exist
+        """
+        try:
+            subscriber = SubscribeUsers.objects.get(email=email)
+            return subscriber
+        except SubscribeUsers.DoesNotExist:
+            return None
+
+
 class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
@@ -1104,6 +1134,7 @@ class JobApplication(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
 
 
 from selenium import webdriver
