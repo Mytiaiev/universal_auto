@@ -1712,9 +1712,9 @@ class Bolt(SeleniumTools):
             self.driver.get(f"{self.base_url}/company/58225/reports/weekly/{self.file_patern()}")
             time.sleep(self.sleep)
             if self.remote:
-                self.get_last_downloaded_file_frome_remote()
+                self.get_last_downloaded_file_frome_remote(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
             else:
-                self.get_last_downloaded_file()
+                self.get_last_downloaded_file(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
 
     def file_patern(self):
         if self.day:
@@ -1728,7 +1728,8 @@ class Bolt(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
-        self.logger.info(f'Щотижневий звіт Bolt – {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+
+        self.logger.info(f'{self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
 
         if self.payments_order_file_name() is not None:
             with open(self.payments_order_file_name(), encoding="utf-8") as file:
@@ -1819,15 +1820,17 @@ class Bolt(SeleniumTools):
     def download_weekly_report(week_number=None, day=None,  driver=True, sleep=5, headless=True):
         """Can save weekly and daily report"""
         b = Bolt(week_number=week_number, day=day, driver=False, sleep=0, headless=headless)
-        report = BoltPaymentsOrder.objects.filter(report_file_name=f'Щотижневий звіт Bolt – {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        report = BoltPaymentsOrder.objects.filter(report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
         if not report:
             b = Bolt(week_number=week_number, day=day, driver=driver, sleep=sleep, headless=headless)
             # b.login()
             b.download_payments_order()
             b.quit()
             b.save_report()
-            report = BoltPaymentsOrder.objects.filter(report_file_name=f'Щотижневий звіт Bolt – {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            report = BoltPaymentsOrder.objects.filter(
+            report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
         return list(report)
+
 
 class Uklon(SeleniumTools):
     def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://partner.uklon.com.ua"):
@@ -2026,12 +2029,6 @@ class NewUklon(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
-
-        try:
-            file = self.report_file_name('01.70.csv')
-            os.rename(file, f'Uklon {self.file_patern()}.csv')
-        except:
-            pass
 
         self.logger.info(f'Uklon {self.file_patern()}.csv')
         report = open(self.report_file_name(f'Uklon {self.file_patern()}.csv'))
