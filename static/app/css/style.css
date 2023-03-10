@@ -68,7 +68,6 @@ body {
 }
 
 .header_section {
-  padding: 15px 0;
   background-color: #fff;
 }
 
@@ -647,7 +646,7 @@ header button start
 **/
 
 .social_header {
-  margin: 0px 100px;
+  justify-content: center;
   padding-top: 10px;
 }
 
@@ -655,6 +654,7 @@ header button start
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
+  justify-content: center;
 }
 
 .social_header .social_box a {
