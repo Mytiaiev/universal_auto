@@ -286,7 +286,7 @@ header button start
 */
 
 .book_header_section .book_form {
-  margin-top: 18px;
+  margin-top: 15px;
 }
 
 
@@ -304,7 +304,7 @@ header button start
   background-color: #E96F24;
   border: 1px solid #E96F24;
   color: #ffffff;
-  border-radius: 0;
+  border-radius: 10px;
 }
 
 .book_header_section .book_form .btn-box button:hover {
