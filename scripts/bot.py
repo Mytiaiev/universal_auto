@@ -22,6 +22,7 @@ from scripts.driversrating import DriversRatingMixin
 import traceback
 import hashlib
 from django.db import IntegrityError
+from django.utils import timezone
 
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = 803129892
@@ -115,7 +116,7 @@ def location(update: Update, context: CallbackContext):
 
 STATE = None # range (1-50)
 LOCATION, FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 5)
-U_NAME, U_SECOND_NAME, U_EMAIL = range(5, 8)
+U_NAME, U_SECOND_NAME, U_EMAIL, V_ID, V_GPS = range(5, 10)
 
 
 def the_confirmation_of_location(update, context):
@@ -189,12 +190,12 @@ def order_create(update, context):
     drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
 
     order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
-            f"Спосіб оплати: {context.user_data['payment_method']}\nСума: test"
+            f"Спосіб оплати: {context.user_data['payment_method']}\n"
 
     if len(drivers) != 0:
         for driver in drivers:
-            context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
-            #context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)
+            #context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
+            context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)
     else:
         update.message.reply_text('Вибачте, але вільних водіїв незалишилось')
 
@@ -223,10 +224,10 @@ def inline_buttons(update, context):
         if order is not None:
             query.edit_message_text(text=f"Ви обрали: Прийняти замовлення")
 
-            #driver = Driver.get_by_chat_id(chat_id=73620427)
-            #order.driver = Driver.objects.get(chat_id=73620427) for develop
-            driver = Driver.get_by_chat_id(chat_id=chat_id)
-            order.driver = Driver.objects.get(chat_id=chat_id)
+            driver = Driver.get_by_chat_id(chat_id=736204274)
+            order.driver = Driver.objects.get(chat_id=736204274) #for develop
+            #driver = Driver.get_by_chat_id(chat_id=chat_id)
+            #order.driver = Driver.objects.get(chat_id=chat_id)
             order.status_order = 'Виконується'
             order.save()
             driver.driver_status = Driver.WAIT_FOR_CLIENT
@@ -234,8 +235,8 @@ def inline_buttons(update, context):
 
             vehicle = Vehicle.objects.get(driver=driver.id)
 
-            report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\nМодель: {vehicle.model}\n' \
-                                f'Номер машини: {vehicle}\nПрибуде через: test'
+            report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\n' \
+                                f'Номер машини: {vehicle}\n'
 
             context.bot.send_message(chat_id=chat_id, text=f'Водій ваш статус зміненно на <<{Driver.WAIT_FOR_CLIENT}>>')
             context.bot.send_message(chat_id=context.user_data['chat_id'], text=report_for_client)
@@ -250,16 +251,25 @@ def status(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        buttons = [[KeyboardButton(Driver.ACTIVE)],
-                    [KeyboardButton(Driver.WITH_CLIENT)],
-                    [KeyboardButton(Driver.WAIT_FOR_CLIENT)],
-                    [KeyboardButton(Driver.OFFLINE)]
-                ]
-
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
-                                 reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+        record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+        if not record:
+            get_vehicle_licence_plate(update, context)
+        else:
+            send_set_status(update, context)
     else:
         update.message.reply_text(f'Зареєструйтесь як водій')
+
+
+def send_set_status(update, context):
+    chat_id = update.message.chat.id
+    buttons = [[KeyboardButton(Driver.ACTIVE)],
+               [KeyboardButton(Driver.WITH_CLIENT)],
+               [KeyboardButton(Driver.WAIT_FOR_CLIENT)],
+               [KeyboardButton(Driver.OFFLINE)]
+               ]
+
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
+                             reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
 
 
 def set_status(update, context):
@@ -277,6 +287,68 @@ def set_status(update, context):
     driver.driver_status = status
     driver.save()
     update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
+
+
+def get_vehicle_licence_plate(update, context):
+    global STATE
+    vehicles = {i.id: i.licence_plate for i in Vehicle.objects.all()}
+    vehicles = {k: vehicles[k] for k in sorted(vehicles)}
+    report_list_vehicles = ''
+    if vehicles:
+        for k, v in vehicles.items():
+            report_list_vehicles += f'{k}: {v}\n'
+        update.message.reply_text(f'{report_list_vehicles}')
+        update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, яку ви будете використовувати сьогодні ')
+        STATE = V_ID
+    else:
+        update.message.reply_text("Не здайдено жодного авто у автопарку. Зверніться до Менеджера автопарку")
+
+
+def get_imei(update, context):
+    global STATE
+    global STATE_D
+    id_vehicle = update.message.text
+    chat_id = update.message.chat.id
+    driver = Driver.get_by_chat_id(chat_id=chat_id)
+    try:
+        id_vehicle = int(id_vehicle)
+        context.user_data['vehicle'] = Vehicle.objects.get(id=id_vehicle)
+    except:
+        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+    if context.user_data['vehicle'].gps_imei:
+        UseOfCars.objects.create(
+            user_vehicle=driver,
+            licence_plate=context.user_data['vehicle'])
+        update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня')
+        STATE = None
+        send_set_status(update, context)
+    else:
+        update.message.reply_text('Введіть <<Gps imei>>. Ви його можете знайти на самому GPS трекері\n')
+        update.message.reply_text('Якщо ви його не знайшли, або він відсутній зверніться до Менеджера автопарку')
+        STATE = V_GPS
+
+
+def get_gps_imea(update, context):
+    global STATE
+    global STATE_D
+    gps_imea = update.message.text
+    chat_id = update.message.chat.id
+    driver = Driver.get_by_chat_id(chat_id=chat_id)
+    gps_imea = Vehicle.gps_imei_validator(gps_imei=gps_imea)
+    if gps_imea is not None:
+        context.user_data['vehicle'].gps_imea = gps_imea
+        context.user_data['vehicle'].save()
+        update.message.reply_text('Ми встановили GPS imei до авто, яке ви вказали')
+
+        UseOfCars.objects.create(
+            user_vehicle=driver,
+            licence_plate=context.user_data['vehicle'])
+        update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня')
+        STATE = None
+        send_set_status(update, context)
+    else:
+        update.message.reply_text('Ви ввели занадто довне значення. Спробуйте ще раз')
+
 
 
 JOB_DRIVER = 'Водій'
@@ -1230,6 +1302,10 @@ def text(update, context):
             return update_email(update, context)
         elif STATE == U_EMAIL:
             return update_user_information(update, context)
+        elif STATE == V_ID:
+            return get_imei(update, context)
+        elif STATE == V_GPS:
+            return get_gps_imea(update, context)
     elif STATE_D is not None:
         if STATE_D == NUMBERPLATE:
             return change_status_car(update, context)

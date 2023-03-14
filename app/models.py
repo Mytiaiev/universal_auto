@@ -421,8 +421,6 @@ class Driver(User):
     OFFLINE = 'Не працюю'
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
-    #driver_manager_id: ManyToManyField already exists in DriverManager
-    #we have to delete this
     driver_manager_id = models.ManyToManyField('DriverManager', blank=True)
     #partner = models.ManyToManyField('Partner', blank=True)
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
@@ -686,7 +684,7 @@ class Vehicle(models.Model):
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
             return vehicle
         except Vehicle.DoesNotExist:
-            pass
+            return None
 
     @staticmethod
     def name_validator(name):
@@ -716,6 +714,12 @@ class Vehicle(models.Model):
         else:
             return None
 
+    @staticmethod
+    def gps_imei_validator(gps_imei):
+        if len(gps_imei) <= 100:
+            return gps_imei.upper()
+        else:
+            return None
 
 class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE)
@@ -1095,7 +1099,6 @@ class Event(models.Model):
         verbose_name_plural = 'Події'
 
 
-
 class SubscribeUsers(models.Model):
     email = models.EmailField(max_length=254, verbose_name='Електрона пошта')
     created_at = models.DateTimeField(editable=False, auto_now=True, verbose_name='Створено')
@@ -1134,6 +1137,19 @@ class JobApplication(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+
+class UseOfCars(models.Model):
+    user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
+    licence_plate = models.CharField(max_length=24, verbose_name='Номерний знак')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата використання авто')
+
+    class Meta:
+        verbose_name = 'Користувачі автомобіля'
+        verbose_name_plural = 'Користувачі автомобілів'
+
+    def __str__(self):
+        return f"{self.user_vehicle}: {self.licence_plate}"
 
 
 
