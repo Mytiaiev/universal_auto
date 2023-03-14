@@ -21,6 +21,8 @@ from . import bolt, uklon, uber
 from scripts.driversrating import DriversRatingMixin
 import traceback
 import hashlib
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
 from django.db import IntegrityError
 
 PORT = int(os.environ.get('PORT', '8443'))
@@ -1458,10 +1460,14 @@ def get_update_report(update, context):
         aut_handler(update, context)
 
 
-def main():
-    updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
-    dp = updater.dispatcher
+WEBHOOK_URL = os.environ['WEBHOOK_URL']
+bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
+updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
+dp = updater.dispatcher
 
+
+@csrf_exempt
+def webhook(request):
     # Command for Owner
     dp.add_handler(CommandHandler("report", report, run_async=True))
     dp.add_handler(CommandHandler("download_report", download_report))
@@ -1470,13 +1476,17 @@ def main():
     # Transfer money
     dp.add_handler(CommandHandler("payment", payments))
     dp.add_handler(MessageHandler(Filters.text(f"{TRANSFER_MONEY}"), get_card))
-    dp.add_handler(MessageHandler(Filters.text(f"{THE_DATA_IS_CORRECT}"), correct_transfer))
-    dp.add_handler(MessageHandler(Filters.text(f"{THE_DATA_IS_WRONG}"), wrong_transfer))
+    dp.add_handler(MessageHandler(Filters.text(f"{THE_DATA_IS_CORRECT}"),
+                                  correct_transfer))
+    dp.add_handler(
+        MessageHandler(Filters.text(f"{THE_DATA_IS_WRONG}"), wrong_transfer))
 
     # Generate link debt
     dp.add_handler(MessageHandler(Filters.text(f"{GENERATE_LINK}"), commission))
-    dp.add_handler(MessageHandler(Filters.text(f"{COMMISSION_ONLY_PORTMONE}"), get_sum_for_portmone))
-    dp.add_handler(MessageHandler(Filters.text(f"{MY_COMMISSION}"), get_my_commission))
+    dp.add_handler(MessageHandler(Filters.text(f"{COMMISSION_ONLY_PORTMONE}"),
+                                  get_sum_for_portmone))
+    dp.add_handler(
+        MessageHandler(Filters.text(f"{MY_COMMISSION}"), get_my_commission))
 
     # Publicly available commands
     # Getting id
@@ -1485,7 +1495,6 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("get_information", get_information))
 
-
     # Commands for Users
     # Ordering taxi
     dp.add_handler(CommandHandler("start", start))
@@ -1493,21 +1502,26 @@ def main():
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
     dp.add_handler(MessageHandler(Filters.location, location, run_async=True))
-    dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_adress))
-    dp.add_handler(MessageHandler(Filters.text(f"\u274c {LOCATION_WRONG}"), from_address))
+    dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"),
+                                  to_the_adress))
+    dp.add_handler(
+        MessageHandler(Filters.text(f"\u274c {LOCATION_WRONG}"), from_address))
     dp.add_handler(MessageHandler(
         Filters.text(f"\U0001f4b7 {Order.CASH}") |
         Filters.text(f"\U0001f4b8 {Order.CARD}"),
         order_create))
     # sending comment
-    dp.add_handler(MessageHandler(Filters.text("\U0001f4e2 Залишити відгук"), comment))
+    dp.add_handler(
+        MessageHandler(Filters.text("\U0001f4e2 Залишити відгук"), comment))
     # Add job application
-    dp.add_handler(MessageHandler(Filters.text("\U0001F4E8 Залишити заявку на роботу"), role_for_job_application))
-    dp.add_handler(MessageHandler(Filters.text(f'{JOB_DRIVER}'), job_application))
+    dp.add_handler(
+        MessageHandler(Filters.text("\U0001F4E8 Залишити заявку на роботу"),
+                       role_for_job_application))
+    dp.add_handler(
+        MessageHandler(Filters.text(f'{JOB_DRIVER}'), job_application))
 
     # Update information for users
     dp.add_handler(CommandHandler("upd_informations", update_name))
-
 
     # Commands for Drivers
     # Changing status of driver
@@ -1528,7 +1542,8 @@ def main():
 
     # Sending report(payment debt)
     dp.add_handler(CommandHandler("sending_report", sending_report))
-    dp.add_handler(MessageHandler(Filters.text(f'{SEND_REPORT_DEBT}'), get_debt_photo))
+    dp.add_handler(
+        MessageHandler(Filters.text(f'{SEND_REPORT_DEBT}'), get_debt_photo))
     dp.add_handler(MessageHandler(Filters.photo, save_debt_report))
 
     # Take a day off/Take sick leave
@@ -1537,7 +1552,6 @@ def main():
         Filters.text(f'{TAKE_A_DAY_OFF}') |
         Filters.text(f'{TAKE_SICK_LEAVE}'),
         take_a_day_off_or_sick_leave))
-
 
     # Commands for Driver Managers
     # Returns status cars
@@ -1563,15 +1577,15 @@ def main():
         Filters.text(f'{F_UKLON}') |
         Filters.text(f'{F_UBER}') |
         Filters.text(f'{F_BOLT}'),
-       get_driver_external_id))
+        get_driver_external_id))
 
     # The job application on driver sent to fleet
-    dp.add_handler(CommandHandler("add_job_application_to_fleets", get_list_job_application))
+    dp.add_handler(CommandHandler("add_job_application_to_fleets",
+                                  get_list_job_application))
     dp.add_handler(MessageHandler(
         Filters.text(f'- {F_BOLT}') |
         Filters.text(f'- {F_UBER}'),
         add_job_application_to_fleet))
-
 
     # Commands for Service Station Manager
     # Sending report on repair
@@ -1587,14 +1601,32 @@ def main():
     dp.add_handler(CommandHandler('update', update_db, run_async=True))
     dp.add_handler(CommandHandler("save_reports", save_reports))
 
-    dp.add_handler(MessageHandler(Filters.text('Get all today statistic'), get_manager_today_report))
-    dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_today_report))
-    dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
-    dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
+    dp.add_handler(MessageHandler(Filters.text('Get all today statistic'),
+                                  get_manager_today_report))
+    dp.add_handler(MessageHandler(Filters.text('Get today statistic'),
+                                  get_driver_today_report))
+    dp.add_handler(MessageHandler(Filters.text('Choice week number'),
+                                  get_driver_week_report))
+    dp.add_handler(
+        MessageHandler(Filters.text('Update report'), get_update_report))
 
-    updater.job_queue.run_daily(auto_report_for_driver_and_owner, time=datetime.time(7, 0, 0), days=(1,))
+    updater.job_queue.run_daily(auto_report_for_driver_and_owner,
+                                time=datetime.time(7, 0, 0), days=(1,))
 
-    updater.start_polling()
+    if request.method == 'POST':
+        json_string = request.body.decode('utf-8')
+        update = Update.de_json(json.loads(json_string), bot)
+        dp.process_update(update)
+        return HttpResponse(status=200)
+
+
+def main():
+
+    updater.start_webhook(
+        listen='0.0.0.0',
+        port=PORT,
+        webhook_url=f'{WEBHOOK_URL}/webhook/'
+    )
     updater.idle()
 
 
