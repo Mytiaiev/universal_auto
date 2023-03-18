@@ -683,6 +683,10 @@ header button start
  * 
 **/
 
+.info_section_header {
+  color: #ffffff;
+}
+
 .info_section {
   background-color: #1b1f71;
   color: #ffffff;
