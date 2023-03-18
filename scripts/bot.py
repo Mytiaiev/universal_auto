@@ -38,6 +38,7 @@ processed_files = []
 #Ordering taxi
 def start(update, context):
     update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
+    menu(update, context)
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
     keyboard = [KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True),
@@ -85,7 +86,7 @@ LOCATION_CORRECT = "Місце посадки - вірне"
 
 
 def location(update: Update, context: CallbackContext):
-    active_drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == f'{Driver.ACTIVE}']
+    active_drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == f'{Driver.ACTIVE}' or i.driver_status == f'{Driver.WITH_CLIENT}']
 
     if len(active_drivers) == 0:
         report = update.message.reply_text('Вибачте, але зараз немає вільний водіїв. Скористайтеся послугою пізніше', reply_markup=ReplyKeyboardRemove())
@@ -148,10 +149,34 @@ def to_the_adress(update, context):
     STATE = TO_THE_ADDRESS
 
 
-def payment_method(update, context):
+CONTINUE = 'Продовжити замовлення'
+CANCEL = 'Скасувати замовлення'
+
+
+def continue_order(update, context):
     global STATE
     STATE = None
     context.user_data['to_the_address'] = update.message.text
+    update.message.reply_text(f"Ціна поїздки в місті {os.environ['TARIFF_IN_THE_CITY']}грн/км\n" +
+                              f"Ціна поїздки за містом {os.environ['TARIFF_OUTSIDE_THE_CITY']}грн/км")
+
+    keyboard = [KeyboardButton(text=f"{CONTINUE}"),
+                KeyboardButton(text=f"{CANCEL}")]
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=[keyboard],
+        resize_keyboard=True,
+    )
+
+    update.message.reply_text('Чи бажаєте ви продовжити?', reply_markup=reply_markup)
+
+
+def cancel_order(update, context):
+    update.message.reply_text('Ви скасували ваше замовлення',  reply_markup=ReplyKeyboardRemove())
+    cancel(update, context)
+
+
+def payment_method(update, context):
 
     keyboard = [KeyboardButton(text=f"\U0001f4b7 {Order.CASH}"),
                 KeyboardButton(text=f"\U0001f4b8 {Order.CARD}")]
@@ -187,15 +212,15 @@ def order_create(update, context):
     user = User.get_by_chat_id(context.user_data['chat_id'])
     context.user_data['phone_number'] = user.phone_number
 
-    drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
+    drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE or i.driver_status == Driver.WITH_CLIENT]
 
     order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
             f"Спосіб оплати: {context.user_data['payment_method']}\n"
 
-    if len(drivers) != 0:
+    if drivers:
         for driver in drivers:
             #context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
-            context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)
+            context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)  #for develop
     else:
         update.message.reply_text('Вибачте, але вільних водіїв незалишилось')
 
@@ -222,24 +247,36 @@ def inline_buttons(update, context):
     if query.data == 'Accept order':
         order = Order.get_order(chat_id_client=context.user_data['chat_id'], sum='', status_order=WAITING)
         if order is not None:
-            query.edit_message_text(text=f"Ви обрали: Прийняти замовлення")
+            driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
+            # driver = Driver.get_by_chat_id(chat_id=chat_id)
+            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+            if record:
+                keyboard = [
+                    [
+                        InlineKeyboardButton("\u2705 Машина вже на місці", callback_data="On the spot")
+                    ]]
 
-            driver = Driver.get_by_chat_id(chat_id=736204274)
-            order.driver = Driver.objects.get(chat_id=736204274) #for develop
-            #driver = Driver.get_by_chat_id(chat_id=chat_id)
-            #order.driver = Driver.objects.get(chat_id=chat_id)
-            order.status_order = 'Виконується'
-            order.save()
-            driver.driver_status = Driver.WAIT_FOR_CLIENT
-            driver.save()
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-            vehicle = Vehicle.objects.get(driver=driver.id)
+                query.edit_message_reply_markup(reply_markup=reply_markup)
 
-            report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\n' \
-                                f'Номер машини: {vehicle}\n'
+                order.driver = Driver.objects.get(chat_id=736204274) #for develop
 
-            context.bot.send_message(chat_id=chat_id, text=f'Водій ваш статус зміненно на <<{Driver.WAIT_FOR_CLIENT}>>')
-            context.bot.send_message(chat_id=context.user_data['chat_id'], text=report_for_client)
+                #order.driver = Driver.objects.get(chat_id=chat_id)
+                order.status_order = 'Виконується'
+                order.save()
+                driver.driver_status = Driver.WAIT_FOR_CLIENT
+                driver.save()
+                licence_plate = (list(record))[-1].licence_plate
+                vehicle = Vehicle.objects.get(licence_plate=licence_plate)
+
+                report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\n' \
+                                    f'Номер машини: {licence_plate}\n'
+
+                context.bot.send_message(chat_id=chat_id, text=f'Водій ваш статус зміненно на <<{Driver.WAIT_FOR_CLIENT}>>')
+                context.bot.send_message(chat_id=context.user_data['chat_id'], text=report_for_client)
+            else:
+                query.edit_message_text(text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
         else:
             query.edit_message_text(text='Замовлення вже виконує інший водій')
     elif query.data == 'Reject order':
@@ -261,7 +298,7 @@ def status(update, context):
 
 
 def send_set_status(update, context):
-    chat_id = update.message.chat.id
+
     buttons = [[KeyboardButton(Driver.ACTIVE)],
                [KeyboardButton(Driver.WITH_CLIENT)],
                [KeyboardButton(Driver.WAIT_FOR_CLIENT)],
@@ -350,15 +387,19 @@ def get_gps_imea(update, context):
         update.message.reply_text('Ви ввели занадто довне значення. Спробуйте ще раз')
 
 
-
 JOB_DRIVER = 'Водій'
 
 
 # Add job application
 def role_for_job_application(update, context):
-    buttons = [[KeyboardButton(f'{JOB_DRIVER}')]]
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
-                reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=True))
+    chat_id = update.message.chat.id
+    user = User.get_by_chat_id(chat_id)
+    if not user.phone_number:
+        update.message.reply_text('Спочатку поділітся вашим номером телефону')
+    else:
+        buttons = [[KeyboardButton(f'{JOB_DRIVER}')]]
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
+                    reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=True))
 
 
 def job_application(update, context):
@@ -1095,8 +1136,7 @@ def code(update: Update, context: CallbackContext):
 
 
 def help(update, context) -> str:
-    update.message.reply_text('Для першого кроку зробіть реєстрацію або авторизуйтеся командою /start \n' \
-                              'Щоб переглянути команди для вашої ролі скористайтесь командою /get_information \n')
+    update.message.reply_text('Для першого кроку зробіть реєстрацію або авторизуйтеся командою /start')
 
 
 STATE_O = None     # range(200-250)
@@ -1233,51 +1273,42 @@ def generate_link_v2(update, context):
         update.message.reply_text('Не вдалось обробити вашу суму, спробуйте ще раз')
 
 
-def get_information(update, context):
+def menu(update, context):
     chat_id = update.message.chat.id
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     driver = Driver.get_by_chat_id(chat_id)
     manager = ServiceStationManager.get_by_chat_id(chat_id)
     owner = Owner.get_by_chat_id(chat_id)
-    standart_commands = '/start - Щоб зареєструватись та замовити таксі\n' \
-                        '/help - Допомога\n' \
-                        '/id - Дізнатись id\n'
+    standart_commands = [
+        BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
+        BotCommand("/help", "Допомога"),
+        BotCommand("/id", "Дізнатись id"),
+        BotCommand("/upd_informations", "Оновити інформацію про себе"),
+    ]
     if driver is not None:
-        report = 'Стандарті команди: \n\n' \
-                f'{standart_commands}\n' \
-                'Для вашої ролі:\n\n' \
-                '/status - Змінити статус водія\n' \
-                '/status_car - Змінити статус автомобіля\n' \
-                '/sending_report - Відправити звіт про оплату заборгованості\n'
-        update.message.reply_text(f'{report}')
+        standart_commands.extend([
+            BotCommand("/status", "Змінити статус водія"),
+            BotCommand("/status_car", "Змінити статус автомобіля"),
+            BotCommand("/sending_report", "Відправити звіт про оплату заборгованості")])
     elif driver_manager is not None:
-        report = 'Стандарті команди: \n\n' \
-                f'{standart_commands}\n' \
-                'Для вашої ролі:\n\n' \
-                '/car_status - Показати всі зломлені машини\n' \
-                '/driver_status - Показати водіїв за їх статусом\n' \
-                '/add - Створити користувачів та автомобілі\n' \
-                '/add_vehicle_to_driver - Добавити водію автомобіль\n' \
-                '/add_job_application_to_fleets - Добавити водія в автопарк\n' \
-                '/option - Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатист до СТО\n'
-        update.message.reply_text(f'{report}')
+        standart_commands.extend([
+            BotCommand("/car_status", "Показати всі зломлені машини"),
+            BotCommand("/driver_status", "Показати водіїв за їх статусом"),
+            BotCommand("/add", "Створити користувачів та автомобілі"),
+            BotCommand("/add_vehicle_to_driver", "Додати водію автомобіль"),
+            BotCommand("/add_job_application_to_fleets", "Додати водія в автопарк"),
+            BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])
     elif manager is not None:
-        report = 'Стандарті команди: \n\n' \
-                f'{standart_commands}\n' \
-                'Для вашої ролі:\n\n' \
-                '/send_report - Відправити звіт про ремонт\n'
-        update.message.reply_text(f'{report}')
+        standart_commands.extend([
+            BotCommand("/send_report", "Відправити звіт про ремонт")])
     elif owner is not None:
-        report = 'Стандарті команди: \n\n' \
-                f'{standart_commands}\n' \
-                'Для вашої ролі:\n\n' \
-                '/report - Загрузити та побачити недільні звіти\n' \
-                '/rating - Побачити рейтинг водіїв\n' \
-                '/payment - Перевести кошти або сгенерити лінк на оплату\n' \
-                '/download_report - Загрузити тижневі звіти\n'
-        update.message.reply_text(f'{report}')
-    else:
-        update.message.reply_text(f'{standart_commands}')
+        standart_commands.extend([
+            BotCommand("/report", "Загрузити та побачити недільні звіти"),
+            BotCommand("/rating", "Побачити рейтинг водіїв"),
+            BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
+            BotCommand("/download_report", "Загрузити тижневі звіти") ])
+
+    context.bot.set_my_commands(standart_commands)
 
 
 def text(update, context):
@@ -1293,7 +1324,7 @@ def text(update, context):
         if STATE == FROM_ADDRESS:
             return to_the_adress(update, context)
         elif STATE == TO_THE_ADDRESS:
-            return payment_method(update, context)
+            return continue_order(update, context)
         elif STATE == COMMENT:
             return save_comment(update, context)
         elif STATE == U_NAME:
@@ -1538,6 +1569,7 @@ def main():
     updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
     dp = updater.dispatcher
 
+
     # Command for Owner
     dp.add_handler(CommandHandler("report", report, run_async=True))
     dp.add_handler(CommandHandler("download_report", download_report))
@@ -1559,7 +1591,6 @@ def main():
     dp.add_handler(CommandHandler("id", get_id))
     # Information on commands
     dp.add_handler(CommandHandler("help", help))
-    dp.add_handler(CommandHandler("get_information", get_information))
 
 
     # Commands for Users
@@ -1571,6 +1602,9 @@ def main():
     dp.add_handler(MessageHandler(Filters.location, location, run_async=True))
     dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_adress))
     dp.add_handler(MessageHandler(Filters.text(f"\u274c {LOCATION_WRONG}"), from_address))
+    dp.add_handler(MessageHandler(Filters.text(f" {CONTINUE}"), payment_method))
+    dp.add_handler(MessageHandler(Filters.text(f"\u274c {CANCEL}"), cancel_order))
+
     dp.add_handler(MessageHandler(
         Filters.text(f"\U0001f4b7 {Order.CASH}") |
         Filters.text(f"\U0001f4b8 {Order.CARD}"),
