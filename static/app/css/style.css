@@ -683,6 +683,50 @@ header button start
  * 
 **/
 
+.info_section_header {
+  color: #ffffff;
+  justify-content: center;
+  display: flex;
+  margin-top: 10px;
+
+}
+
+.info_section_header .text-danger {
+  font-size: 65%;
+  padding-right: 5px;
+  padding-top: 5px;
+}
+
+.info_section_header .info_form form {
+  display: inline-flex;
+  margin-right: 5%;
+  margin-left: -5%;
+}
+
+.info_section_header .info_form input {
+  width: 150px;
+  border: none;
+  margin-bottom: 0px;
+  background-color: #eaeaea;
+  outline: none;
+  color: #101010;
+  padding: 0px;
+  padding-left: 5px;
+}
+
+.info_section_header .info_form button {
+  background-color: #ff7070;
+  border: 1px solid #ff7070;
+  color: #ffffff;
+  border-radius: 12px;
+  margin: 0px;
+  margin-left: 10px;
+}
+
+/**
+ * 
+ * */
+
 .info_section {
   background-color: #1b1f71;
   color: #ffffff;

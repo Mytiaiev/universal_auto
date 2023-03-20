@@ -19,6 +19,7 @@ from django.contrib import admin
 from django.urls import path, include
 from app.views import *
 from auto import settings
+from scripts.bot import webhook
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,6 +30,7 @@ urlpatterns = [
     path('', include('taxi_service.urls')),
     path('cars/', gps_cars, name='map'),
     path('', include('taxi_service.urls')),
+    path('webhook/', webhook),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
