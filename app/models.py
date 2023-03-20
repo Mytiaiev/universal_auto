@@ -749,6 +749,7 @@ class DriverRateLevels(models.Model):
         verbose_name = 'Рівень рейтингу водія'
         verbose_name_plural = 'Рівень рейтингу водіїв'
 
+
 class RawGPS(models.Model):
     imei = models.CharField(max_length=100)
     client_ip = models.CharField(max_length=100)
@@ -759,6 +760,9 @@ class RawGPS(models.Model):
     class Meta:
         verbose_name = 'GPS Raw'
         verbose_name_plural = 'GPS Raw'
+
+    def __str__(self):
+        return f'{self.data}'
 
 
 class GPS(PolymorphicModel):

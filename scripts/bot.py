@@ -23,6 +23,7 @@ import traceback
 import hashlib
 from django.db import IntegrityError
 from django.utils import timezone
+from scripts.conversion import *
 
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = 803129892
@@ -115,7 +116,7 @@ def location(update: Update, context: CallbackContext):
             time.sleep(5)
 
 
-STATE = None # range (1-50)
+STATE = None       # range (1-50)
 LOCATION, FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 5)
 U_NAME, U_SECOND_NAME, U_EMAIL, V_ID, V_GPS = range(5, 10)
 
@@ -160,8 +161,8 @@ def continue_order(update, context):
     update.message.reply_text(f"Ціна поїздки в місті {os.environ['TARIFF_IN_THE_CITY']}грн/км\n" +
                               f"Ціна поїздки за містом {os.environ['TARIFF_OUTSIDE_THE_CITY']}грн/км")
 
-    keyboard = [KeyboardButton(text=f"{CONTINUE}"),
-                KeyboardButton(text=f"{CANCEL}")]
+    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}"),
+                KeyboardButton(text=f"\u274c {CANCEL}")]
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[keyboard],
@@ -215,12 +216,12 @@ def order_create(update, context):
     drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE or i.driver_status == Driver.WITH_CLIENT]
 
     order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
-            f"Спосіб оплати: {context.user_data['payment_method']}\n"
+            f"Спосіб оплати: {context.user_data['payment_method']}\nНомер телефону: {context.user_data['phone_number']}"
 
     if drivers:
         for driver in drivers:
-            #context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
-            context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)  #for develop
+            context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
+        #context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)  #for develop
     else:
         update.message.reply_text('Вибачте, але вільних водіїв незалишилось')
 
@@ -247,8 +248,8 @@ def inline_buttons(update, context):
     if query.data == 'Accept order':
         order = Order.get_order(chat_id_client=context.user_data['chat_id'], sum='', status_order=WAITING)
         if order is not None:
-            driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
-            # driver = Driver.get_by_chat_id(chat_id=chat_id)
+            #driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
+            driver = Driver.get_by_chat_id(chat_id=chat_id)
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
                 keyboard = [
@@ -260,28 +261,62 @@ def inline_buttons(update, context):
 
                 query.edit_message_reply_markup(reply_markup=reply_markup)
 
-                order.driver = Driver.objects.get(chat_id=736204274) #for develop
-
-                #order.driver = Driver.objects.get(chat_id=chat_id)
+                # add driver to order
+                # order.driver = Driver.objects.get(chat_id=736204274) #for develop
+                order.driver = Driver.objects.get(chat_id=chat_id)
                 order.status_order = 'Виконується'
                 order.save()
                 driver.driver_status = Driver.WAIT_FOR_CLIENT
                 driver.save()
+
+                # take car from UseOfCars and send report to client
                 licence_plate = (list(record))[-1].licence_plate
                 vehicle = Vehicle.objects.get(licence_plate=licence_plate)
 
                 report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\n' \
-                                    f'Номер машини: {licence_plate}\n'
+                                    f'Номер машини: {licence_plate}\nНомер телефону: {driver.phone_number}'
 
                 context.bot.send_message(chat_id=chat_id, text=f'Водій ваш статус зміненно на <<{Driver.WAIT_FOR_CLIENT}>>')
                 context.bot.send_message(chat_id=context.user_data['chat_id'], text=report_for_client)
+
+                # Get coordinates car
+                car_gps_imei = vehicle.gps_imei
+                latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
+
+                #send map client
+                report = 'Коли водій буде на місці, ви отримаєте повідомлення. На карті нижче ви можете спостерігати, де зараз ваш водій'
+                context.bot.send_message(chat_id=context.user_data['chat_id'], text=report)
+                m = context.bot.sendLocation(context.user_data['chat_id'], latitude=latitude, longitude=longitude, live_period=600)
+
+                for i in range(1, 20):
+                    latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
+                    try:
+                        logger.error(i)
+                        m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
+                                                        longitude=longitude)
+                        print(m)
+                    except Exception as e:
+                        logger.error(msg=e.message)
+                        logger.error(i)
+                    time.sleep(30)
             else:
                 query.edit_message_text(text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
         else:
             query.edit_message_text(text='Замовлення вже виконує інший водій')
     elif query.data == 'Reject order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
+    elif query.data == "On the spot":
+        context.bot.send_message(chat_id=context.user_data['chat_id'], text='Машину подано. Водій вас очікує')
 
+
+def get_location_from_db(car_gps_imei):
+    data = RawGPS.objects.filter(imei=car_gps_imei).order_by('-created_at')[:1]
+    data = str(data).split(';')
+    try:
+        latitude, longitude = convertion(coordinates=data[2]), convertion(coordinates=data[4])
+    except:
+        pass
+    return latitude, longitude
 
 # Changing status of driver
 def status(update, context):
@@ -289,10 +324,10 @@ def status(update, context):
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
         record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
-        if not record:
-            get_vehicle_licence_plate(update, context)
-        else:
+        if record:
             send_set_status(update, context)
+        else:
+            get_vehicle_licence_plate(update, context)
     else:
         update.message.reply_text(f'Зареєструйтесь як водій')
 
@@ -1288,6 +1323,7 @@ def menu(update, context):
     if driver is not None:
         standart_commands.extend([
             BotCommand("/status", "Змінити статус водія"),
+            BotCommand("/car_registration", "Реєстрація робочого автомобіля на сьогодні"),
             BotCommand("/status_car", "Змінити статус автомобіля"),
             BotCommand("/sending_report", "Відправити звіт про оплату заборгованості")])
     elif driver_manager is not None:
@@ -1577,14 +1613,14 @@ def main():
 
     # Transfer money
     dp.add_handler(CommandHandler("payment", payments))
-    dp.add_handler(MessageHandler(Filters.text(f"{TRANSFER_MONEY}"), get_card))
-    dp.add_handler(MessageHandler(Filters.text(f"{THE_DATA_IS_CORRECT}"), correct_transfer))
-    dp.add_handler(MessageHandler(Filters.text(f"{THE_DATA_IS_WRONG}"), wrong_transfer))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{TRANSFER_MONEY}$"), get_card))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_CORRECT}$"), correct_transfer))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_WRONG}$"), wrong_transfer))
 
     # Generate link debt
-    dp.add_handler(MessageHandler(Filters.text(f"{GENERATE_LINK}"), commission))
-    dp.add_handler(MessageHandler(Filters.text(f"{COMMISSION_ONLY_PORTMONE}"), get_sum_for_portmone))
-    dp.add_handler(MessageHandler(Filters.text(f"{MY_COMMISSION}"), get_my_commission))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{GENERATE_LINK}$"), commission))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{COMMISSION_ONLY_PORTMONE}$"), get_sum_for_portmone))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{MY_COMMISSION}$"), get_my_commission))
 
     # Publicly available commands
     # Getting id
@@ -1600,20 +1636,20 @@ def main():
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
     dp.add_handler(MessageHandler(Filters.location, location, run_async=True))
-    dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_adress))
-    dp.add_handler(MessageHandler(Filters.text(f"\u274c {LOCATION_WRONG}"), from_address))
-    dp.add_handler(MessageHandler(Filters.text(f" {CONTINUE}"), payment_method))
-    dp.add_handler(MessageHandler(Filters.text(f"\u274c {CANCEL}"), cancel_order))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_adress))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {CONTINUE}$"), payment_method))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
 
     dp.add_handler(MessageHandler(
-        Filters.text(f"\U0001f4b7 {Order.CASH}") |
-        Filters.text(f"\U0001f4b8 {Order.CARD}"),
+        Filters.regex(fr"^\U0001f4b7 {Order.CASH}$") |
+        Filters.regex(fr"^\U0001f4b8 {Order.CARD}$"),
         order_create))
     # sending comment
-    dp.add_handler(MessageHandler(Filters.text("\U0001f4e2 Залишити відгук"), comment))
+    dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$"), comment))
     # Add job application
-    dp.add_handler(MessageHandler(Filters.text("\U0001F4E8 Залишити заявку на роботу"), role_for_job_application))
-    dp.add_handler(MessageHandler(Filters.text(f'{JOB_DRIVER}'), job_application))
+    dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити заявку на роботу$"), role_for_job_application))
+    dp.add_handler(MessageHandler(Filters.regex(fr'^{JOB_DRIVER}$'), job_application))
 
     # Update information for users
     dp.add_handler(CommandHandler("upd_informations", update_name))
@@ -1623,31 +1659,33 @@ def main():
     # Changing status of driver
     dp.add_handler(CommandHandler("status", status))
     dp.add_handler(MessageHandler(
-        Filters.text(Driver.ACTIVE) |
-        Filters.text(Driver.WITH_CLIENT) |
-        Filters.text(Driver.WAIT_FOR_CLIENT) |
-        Filters.text(Driver.OFFLINE),
+        Filters.regex(fr"^{Driver.ACTIVE}$") |
+        Filters.regex(fr"^{Driver.WITH_CLIENT}$") |
+        Filters.regex(fr"^{Driver.WAIT_FOR_CLIENT}$") |
+        Filters.regex(fr"^{Driver.OFFLINE}$"),
         set_status))
 
     # Updating status_car
     dp.add_handler(CommandHandler("status_car", status_car))
     dp.add_handler(MessageHandler(
-        Filters.text(f'{SERVICEABLE}') |
-        Filters.text(f'{BROKEN}'),
+        Filters.regex(fr'^{SERVICEABLE}$') |
+        Filters.regex(fr'^{BROKEN}$'),
         numberplate))
 
     # Sending report(payment debt)
     dp.add_handler(CommandHandler("sending_report", sending_report))
-    dp.add_handler(MessageHandler(Filters.text(f'{SEND_REPORT_DEBT}'), get_debt_photo))
+    dp.add_handler(MessageHandler(Filters.regex(fr'^{SEND_REPORT_DEBT}$'), get_debt_photo))
     dp.add_handler(MessageHandler(Filters.photo, save_debt_report))
 
     # Take a day off/Take sick leave
     dp.add_handler(CommandHandler("option", option))
     dp.add_handler(MessageHandler(
-        Filters.text(f'{TAKE_A_DAY_OFF}') |
-        Filters.text(f'{TAKE_SICK_LEAVE}'),
+        Filters.regex(fr'^{TAKE_A_DAY_OFF}$') |
+        Filters.regex(fr'^{TAKE_SICK_LEAVE}$'),
         take_a_day_off_or_sick_leave))
 
+    # Сar registration for today
+    dp.add_handler(CommandHandler("car_registration", get_vehicle_licence_plate))
 
     # Commands for Driver Managers
     # Returns status cars
@@ -1657,29 +1695,29 @@ def main():
     # Add user and other
     dp.add_handler(CommandHandler("add", add))
     dp.add_handler(MessageHandler(
-        Filters.text(f'{CREATE_USER}'),
+        Filters.regex(fr'^{CREATE_USER}$'),
         create))
     # Add vehicle to db
     dp.add_handler(MessageHandler(
-        Filters.text(f'{CREATE_VEHICLE}'),
+        Filters.regex(fr'^{CREATE_VEHICLE}$'),
         name_vehicle))
     dp.add_handler(MessageHandler(
-        Filters.text(f'{USER_DRIVER}') |
-        Filters.text(f'{USER_MANAGER_DRIVER}'),
+        Filters.regex(fr'^{USER_DRIVER}$') |
+        Filters.regex(fr'^{USER_MANAGER_DRIVER}$'),
         name))
     # Add vehicle to drivers
     dp.add_handler(CommandHandler("add_vehicle_to_driver", get_list_drivers))
     dp.add_handler(MessageHandler(
-        Filters.text(f'{F_UKLON}') |
-        Filters.text(f'{F_UBER}') |
-        Filters.text(f'{F_BOLT}'),
+        Filters.regex(fr'^{F_UKLON}$') |
+        Filters.regex(fr'^{F_UBER}$') |
+        Filters.regex(fr'^{F_BOLT}$'),
        get_driver_external_id))
 
     # The job application on driver sent to fleet
     dp.add_handler(CommandHandler("add_job_application_to_fleets", get_list_job_application))
     dp.add_handler(MessageHandler(
-        Filters.text(f'- {F_BOLT}') |
-        Filters.text(f'- {F_UBER}'),
+        Filters.regex(fr'^- {F_BOLT}$') |
+        Filters.regex(fr'^- {F_UBER}$'),
         add_job_application_to_fleet))
 
 
