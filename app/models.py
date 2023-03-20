@@ -1125,7 +1125,7 @@ class JobApplication(models.Model):
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
-    license_expired = models.DateField(verbose_name='Термін дії посвідчення')
+    license_expired = models.DateField(blank=True,verbose_name='Термін дії посвідчення')
     driver_license_front = models.ImageField(blank=True, upload_to='job/licenses/front',
                                              verbose_name='Лицьова сторона посвідчення')
     driver_license_back = models.ImageField(blank=True, upload_to='job/licenses/back',
@@ -1844,47 +1844,60 @@ class Bolt(SeleniumTools):
             form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
             form_email.click()
             form_email.clear()
-            form_email.send_keys(jobapplication['email'])
+            form_email.send_keys(jobapplication.email)
             form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
             form_phone_number.click()
             form_phone_number.clear()
-            form_phone_number.send_keys(jobapplication['phone_number'])
+            form_phone_number.send_keys(jobapplication.phone_number)
             button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
             button.click()
             if self.sleep:
                 time.sleep(self.sleep)
+
+            self.driver.find_element(By.XPATH, '//*[@id="ember9"]/div/div/div/div[2]/div/div/h4[1]/a').click()
+            form_first_name = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'first_name')))
+            form_first_name.click()
+            form_first_name.clear()
+            form_first_name.send_keys(jobapplication.first_name)
+            form_last_name = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'last_name')))
+            form_last_name.click()
+            form_last_name.clear()
+            form_last_name.send_keys(jobapplication.last_name)
+            self.driver.find_element(By.XPATH, '//button[@type="submit"]')
+
             # license
-            self.driver.find_element(By.ID, 'ember9').click() #year
+            self.driver.find_element(By.XPATH,
+                        '/html/body/div[1]/div[1]/div/div/div[2]/div[1]/div/div[3]/div/div/form/form-group/div/span/div[1]/span/div/div[1]').click() #year
             self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember7"]/div')
             self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication["license_expired"]).split("-")[0]} "]').click()
+                                     f'//span[text()= " {str(jobapplication.license_expired).split("-")[0]} "]').click()
             self.driver.find_element(By.ID, 'ember15').click() #month
             self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember13"]/div')
             self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication["license_expired"]).split("-")[1]} "]').click()
+                                     f'//span[text()= " {str(jobapplication.license_expired).split("-")[1]} "]').click()
             self.driver.find_element(By.ID, 'ember21').click() #day
             self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember19"]/div')
             self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication["license_expired"]).split("-")[2]} "]').click()
+                                     f'//span[text()= " {str(jobapplication.license_expired).split("-")[2]} "]').click()
             # insurance
             self.driver.find_element(By.ID, 'ember36').click() #year
             self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember34"]/div')
             self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication["insurance_expired"]).split("-")[0]} "]').click()
+                                     f'//span[text()= " {str(jobapplication.insurance_expired).split("-")[0]} "]').click()
             self.driver.find_element(By.ID, 'ember42').click() #month
             self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember40"]/div')
             self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication["insurance_expired"]).split("-")[1]} "]').click()
+                                     f'//span[text()= " {str(jobapplication.insurance_expired).split("-")[1]} "]').click()
             self.driver.find_element(By.ID, 'ember48').click() #day
             self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember46"]/div')
             self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication["insurance_expired"]).split("-")[2]} "]').click()
+                                     f'//span[text()= " {str(jobapplication.insurance_expired).split("-")[2]} "]').click()
             # upload
             file_paths = {
-                '//*[@id="ember24"]/input': f"app/data/mediafiles/{jobapplication['driver_license_front']}",  #license_front
-                '//*[@id="ember27"]/input': f"app/data/mediafiles/{jobapplication['driver_license_back']}", #license_back
-                '//*[@id="ember30"]/input': f"app/data/mediafiles/{jobapplication['car_documents']}", #car_document
-                '//*[@id="ember51"]/input': f"app/data/mediafiles/{jobapplication['insurance']}", #insurance
+                '//*[@id="ember24"]/input': f"app/data/mediafiles/{jobapplication.driver_license_front}",  #license_front
+                '//*[@id="ember27"]/input': f"app/data/mediafiles/{jobapplication.driver_license_back}", #license_back
+                '//*[@id="ember30"]/input': f"app/data/mediafiles/{jobapplication.car_documents}", #car_document
+                '//*[@id="ember51"]/input': f"app/data/mediafiles/{jobapplication.insurance}", #insurance
             }
 
             # Loop through the file paths and upload each file to the appropriate file input field
