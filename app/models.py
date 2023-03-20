@@ -9,6 +9,7 @@ import sys
 from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
+from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from selenium.common import TimeoutException, WebDriverException
 
@@ -1124,9 +1125,40 @@ class JobApplication(models.Model):
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
+    license_expired = models.DateField(verbose_name='Термін дії посвідчення')
+    driver_license_front = models.ImageField(blank=True, upload_to='job/licenses/front',
+                                             verbose_name='Лицьова сторона посвідчення')
+    driver_license_back = models.ImageField(blank=True, upload_to='job/licenses/back',
+                                            verbose_name='Тильна сторона посвідчення')
+    photo = models.ImageField(blank=True, upload_to='job/photo', verbose_name='Фото водія')
+    car_documents = models.ImageField(blank=True, upload_to='job/car', verbose_name='Фото техпаспорту')
+    insurance = models.ImageField(blank=True, upload_to='job/insurance', verbose_name='Автоцивілка')
+    insurance_expired = models.DateField(blank=True, null=True, verbose_name='Термін дії автоцивілки')
     role = models.CharField(max_length=255, verbose_name='Роль')
-    status_job_application = models.BooleanField(default=False, verbose_name='Опрацьована')
+    status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
+    status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата подачі заявки')
+
+    def admin_photo(self):
+        return admin_image_preview(self.photo)
+
+    def admin_front(self):
+        return admin_image_preview(self.driver_license_front)
+
+    def admin_back(self):
+        return admin_image_preview(self.driver_license_back)
+
+    def admin_insurance(self):
+        return admin_image_preview(self.insurance)
+
+    def admin_car_document(self):
+        return admin_image_preview(self.car_documents)
+
+    admin_back.short_description = 'License back'
+    admin_photo.short_description = 'Photo'
+    admin_front.short_description = 'License front'
+    admin_insurance.short_description = 'Insurance'
+    admin_car_document.short_description = 'Car document'
 
     class Meta:
         verbose_name = 'Заявка'
@@ -1135,6 +1167,12 @@ class JobApplication(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
+
+def admin_image_preview(image):
+    if image:
+        url = image.url
+        return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
+    return None
 
 
 from selenium import webdriver
@@ -1162,7 +1200,7 @@ from django.db import models
 from app.models import Fleet
 
 
-class SeleniumTools():
+class SeleniumTools:
     def __init__(self, session, week_number=None, day=None, profile=None):
         self.session_file_name = session
         self.day = day  # if not None then we work with daly reports
@@ -1795,25 +1833,71 @@ class Bolt(SeleniumTools):
 
         return items
 
-    def add_driver(self, email, phone_number):
-        """phone number exmp +380.."""
+    def add_driver(self, jobapplication):
+        if not jobapplication.status_bolt:
+            """phone number exmp +380.."""
 
-        url = 'https://fleets.bolt.eu/company/58225/driver/add'
-        self.driver.get(f"{url}")
-        if self.sleep:
-            time.sleep(self.sleep)
-        form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
-        form_email.click()
-        form_email.clear()
-        form_email.send_keys(email)
-        form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
-        form_phone_number.click()
-        form_phone_number.clear()
-        form_phone_number.send_keys(phone_number)
-        button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
-        button.click()
-        if self.sleep:
-            time.sleep(self.sleep)
+            url = 'https://fleets.bolt.eu/company/58225/driver/add'
+            self.driver.get(f"{url}")
+            if self.sleep:
+                time.sleep(self.sleep)
+            form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
+            form_email.click()
+            form_email.clear()
+            form_email.send_keys(jobapplication['email'])
+            form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
+            form_phone_number.click()
+            form_phone_number.clear()
+            form_phone_number.send_keys(jobapplication['phone_number'])
+            button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
+            button.click()
+            if self.sleep:
+                time.sleep(self.sleep)
+            # license
+            self.driver.find_element(By.ID, 'ember9').click() #year
+            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember7"]/div')
+            self.driver.find_element(By.XPATH,
+                                     f'//span[text()= " {str(jobapplication["license_expired"]).split("-")[0]} "]').click()
+            self.driver.find_element(By.ID, 'ember15').click() #month
+            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember13"]/div')
+            self.driver.find_element(By.XPATH,
+                                     f'//span[text()= " {str(jobapplication["license_expired"]).split("-")[1]} "]').click()
+            self.driver.find_element(By.ID, 'ember21').click() #day
+            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember19"]/div')
+            self.driver.find_element(By.XPATH,
+                                     f'//span[text()= " {str(jobapplication["license_expired"]).split("-")[2]} "]').click()
+            # insurance
+            self.driver.find_element(By.ID, 'ember36').click() #year
+            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember34"]/div')
+            self.driver.find_element(By.XPATH,
+                                     f'//span[text()= " {str(jobapplication["insurance_expired"]).split("-")[0]} "]').click()
+            self.driver.find_element(By.ID, 'ember42').click() #month
+            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember40"]/div')
+            self.driver.find_element(By.XPATH,
+                                     f'//span[text()= " {str(jobapplication["insurance_expired"]).split("-")[1]} "]').click()
+            self.driver.find_element(By.ID, 'ember48').click() #day
+            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember46"]/div')
+            self.driver.find_element(By.XPATH,
+                                     f'//span[text()= " {str(jobapplication["insurance_expired"]).split("-")[2]} "]').click()
+            # upload
+            file_paths = {
+                '//*[@id="ember24"]/input': f"app/data/mediafiles/{jobapplication['driver_license_front']}",  #license_front
+                '//*[@id="ember27"]/input': f"app/data/mediafiles/{jobapplication['driver_license_back']}", #license_back
+                '//*[@id="ember30"]/input': f"app/data/mediafiles/{jobapplication['car_documents']}", #car_document
+                '//*[@id="ember51"]/input': f"app/data/mediafiles/{jobapplication['insurance']}", #insurance
+            }
+
+            # Loop through the file paths and upload each file to the appropriate file input field
+            for field_name, file_path in file_paths.items():
+                file_input = self.driver.find_element(By.XPATH, field_name)
+                # Execute JavaScript code to remove the display property from the element's style
+                self.driver.execute_script("arguments[0].style.removeProperty('display');", file_input)
+                file_input.send_keys(file_path)
+
+            submit = self.driver.find_element(By.ID, 'ember53')
+            submit.click()
+            if self.sleep:
+                time.sleep(self.sleep)
 
 
     @staticmethod
@@ -2190,6 +2274,35 @@ class NewUklon(SeleniumTools):
             u.login()
             u.download_payments_day_order()
         return u.save_report()
+
+    def add_driver(self, jobapplication):
+        if not jobapplication.status_uklon:
+
+            url = 'https://partner-registration.uklon.com.ua/registration'
+            self.driver.get(f"{url}")
+            if self.sleep:
+                time.sleep(self.sleep)
+            form_region = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-select-value-7")))
+            form_region.click()
+            self.driver.find_element(By.XPATH, "//div[contains(text(),'Київ')]").click()
+            self.driver.find_element(By.XPATH,
+                        '/html/body/upr-root/upr-registration/div/div/div/upr-registration-country/div/button').click()
+            form_phone_number = self.driver.find_element(By.XPATH, '//*[@id="mat-input-11"]')
+            form_phone_number.click()
+            form_phone_number.clear()
+            form_phone_number.send_keys(jobapplication.phone_number[4:])
+            self.driver.find_element(By.XPATH,
+                        "/html/body/upr-root/upr-registration/div/div/div/upr-registration-phone/div/button").click()
+
+            # 2FA??
+            for i in range(1, 5):
+                el = self.driver.find_element(By.XPATH,
+                            f"/html/body/upr-root/upr-registration/div/div/div/upr-registration-phone-verification/div/upr-code-input/div/input[{i}]")
+                el.click()
+                el.send_keys(otp[i-1])
+            self.driver.find_element(By.XPATH, "/html/body/upr-root/upr-registration/div/div/div/upr-registration-phone-verification/div/button").click()
+            if self.sleep:
+                time.sleep(self.sleep)
 
 
 class Privat24(SeleniumTools):

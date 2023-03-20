@@ -101,6 +101,7 @@ __pypackages__/
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
+celerybeat-schedule.db
 
 # SageMath parsed files
 *.sage.py
@@ -134,5 +135,4 @@ dmypy.json
 
 _SeleniumChromeUsers
 .idea/
-celerybeat-schedule.db
 .DS_Store
