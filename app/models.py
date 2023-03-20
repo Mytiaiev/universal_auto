@@ -1125,7 +1125,7 @@ class JobApplication(models.Model):
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
-    license_expired = models.DateField(blank=True,verbose_name='Термін дії посвідчення')
+    license_expired = models.DateField(blank=True, verbose_name='Термін дії посвідчення')
     driver_license_front = models.ImageField(blank=True, upload_to='job/licenses/front',
                                              verbose_name='Лицьова сторона посвідчення')
     driver_license_back = models.ImageField(blank=True, upload_to='job/licenses/back',
