@@ -1328,15 +1328,15 @@ def menu(update, context):
             BotCommand("/status", "Змінити статус водія"),
             BotCommand("/car_registration", "Реєстрація робочого автомобіля на сьогодні"),
             BotCommand("/status_car", "Змінити статус автомобіля"),
-            BotCommand("/sending_report", "Відправити звіт про оплату заборгованості")])
+            BotCommand("/sending_report", "Відправити звіт про оплату заборгованості"),
+            BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])
     elif driver_manager is not None:
         standart_commands.extend([
             BotCommand("/car_status", "Показати всі зломлені машини"),
             BotCommand("/driver_status", "Показати водіїв за їх статусом"),
             BotCommand("/add", "Створити користувачів та автомобілі"),
             BotCommand("/add_vehicle_to_driver", "Додати водію автомобіль"),
-            BotCommand("/add_job_application_to_fleets", "Додати водія в автопарк"),
-            BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])
+            BotCommand("/add_job_application_to_fleets", "Додати водія в автопарк")])
     elif manager is not None:
         standart_commands.extend([
             BotCommand("/send_report", "Відправити звіт про ремонт")])
