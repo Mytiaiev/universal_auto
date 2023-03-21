@@ -1837,77 +1837,68 @@ class Bolt(SeleniumTools):
         if not jobapplication.status_bolt:
             """phone number exmp +380.."""
 
-            url = 'https://fleets.bolt.eu/company/58225/driver/add'
+            url = 'https://partners.bolt.eu/driver-signup/FQTOZjKH3Gk5NzuFU2OeEielBXCwESwR2NsmSnla/4'
             self.driver.get(f"{url}")
-            if self.sleep:
-                time.sleep(self.sleep)
-            form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
-            form_email.click()
-            form_email.clear()
-            form_email.send_keys(jobapplication.email)
-            form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
-            form_phone_number.click()
-            form_phone_number.clear()
-            form_phone_number.send_keys(jobapplication.phone_number)
-            button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
-            button.click()
-            if self.sleep:
-                time.sleep(self.sleep)
+            # if self.sleep:
+            #     time.sleep(self.sleep)
+            # form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
+            # form_email.click()
+            # form_email.clear()
+            # form_email.send_keys(jobapplication.email)
+            # form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
+            # form_phone_number.click()
+            # form_phone_number.clear()
+            # form_phone_number.send_keys(jobapplication.phone_number)
+            # button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
+            # button.click()
+            # if self.sleep:
+            #     time.sleep(self.sleep)
+            # self.driver.find_element(By.XPATH, '//a[text()="Продовжити реєстрацію"]').click()
+            # new_window = self.driver.window_handles[1]
+            # self.driver.switch_to.window(new_window)
+            # form_first_name = self.driver.find_element(By.XPATH, '//input[@id="first_name"]')
+            # form_first_name.click()
+            # form_first_name.clear()
+            # form_first_name.send_keys(jobapplication.first_name)
+            # form_last_name = self.driver.find_element(By.XPATH, '//input[@id="last_name"]')
+            # form_last_name.click()
+            # form_last_name.clear()
+            # form_last_name.send_keys(jobapplication.last_name)
+            # self.driver.find_element(By.XPATH, '//button[@type="submit"]')
+            # if self.sleep:
+            #     time.sleep(self.sleep)
+            elements_to_select = [str(jobapplication.license_expired).split("-")[0],
+                                  str(jobapplication.license_expired).split("-")[1],
+                                  str(jobapplication.license_expired).split("-")[2],
+                                  str(jobapplication.insurance_expired).split("-")[0],
+                                  str(jobapplication.insurance_expired).split("-")[1],
+                                  str(jobapplication.insurance_expired).split("-")[2]
+                                  ]
+            form_elements = self.driver.find_elements(By.XPATH, "//div[@role='button']/span[@class='text-muted']")
+            for i, element in enumerate(elements_to_select):
+                form_el = form_elements[i]
+                form_el.click()
+                print('clicked')
+                self.driver.find_element(By.XPATH, f'//a[@class="opt" and span[text()="{element}"]]').click()
+            print('expired')
+            upload_elements = self.driver.find_elements(By.XPATH, "//label[contains(., 'Завантажити файл')]")
 
-            self.driver.find_element(By.XPATH, '//*[@id="ember9"]/div/div/div/div[2]/div/div/h4[1]/a').click()
-            form_first_name = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'first_name')))
-            form_first_name.click()
-            form_first_name.clear()
-            form_first_name.send_keys(jobapplication.first_name)
-            form_last_name = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'last_name')))
-            form_last_name.click()
-            form_last_name.clear()
-            form_last_name.send_keys(jobapplication.last_name)
-            self.driver.find_element(By.XPATH, '//button[@type="submit"]')
+            file_paths = [
+                            f"app/data/mediafiles/{jobapplication.driver_license_front}",  #license_front
+                            f"app/data/mediafiles/{jobapplication.driver_license_back}", #license_back
+                            f"app/data/mediafiles/{jobapplication.car_documents}", #car_document
+                            f"app/data/mediafiles/{jobapplication.insurance}", #insurance
+            ]
 
-            # license
-            self.driver.find_element(By.XPATH,
-                        '/html/body/div[1]/div[1]/div/div/div[2]/div[1]/div/div[3]/div/div/form/form-group/div/span/div[1]/span/div/div[1]').click() #year
-            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember7"]/div')
-            self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication.license_expired).split("-")[0]} "]').click()
-            self.driver.find_element(By.ID, 'ember15').click() #month
-            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember13"]/div')
-            self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication.license_expired).split("-")[1]} "]').click()
-            self.driver.find_element(By.ID, 'ember21').click() #day
-            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember19"]/div')
-            self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication.license_expired).split("-")[2]} "]').click()
-            # insurance
-            self.driver.find_element(By.ID, 'ember36').click() #year
-            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember34"]/div')
-            self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication.insurance_expired).split("-")[0]} "]').click()
-            self.driver.find_element(By.ID, 'ember42').click() #month
-            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember40"]/div')
-            self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication.insurance_expired).split("-")[1]} "]').click()
-            self.driver.find_element(By.ID, 'ember48').click() #day
-            self.driver.find_element(By.XPATH, '//*[@id="ember-basic-dropdown-content-ember46"]/div')
-            self.driver.find_element(By.XPATH,
-                                     f'//span[text()= " {str(jobapplication.insurance_expired).split("-")[2]} "]').click()
-            # upload
-            file_paths = {
-                '//*[@id="ember24"]/input': f"app/data/mediafiles/{jobapplication.driver_license_front}",  #license_front
-                '//*[@id="ember27"]/input': f"app/data/mediafiles/{jobapplication.driver_license_back}", #license_back
-                '//*[@id="ember30"]/input': f"app/data/mediafiles/{jobapplication.car_documents}", #car_document
-                '//*[@id="ember51"]/input': f"app/data/mediafiles/{jobapplication.insurance}", #insurance
-            }
-
-            # Loop through the file paths and upload each file to the appropriate file input field
-            for field_name, file_path in file_paths.items():
-                file_input = self.driver.find_element(By.XPATH, field_name)
+            for i, file_path in enumerate(file_paths):
+                upload_element = upload_elements[i]
+                upload_element.click()
+                upload_input = upload_element.find_element(By.XPATH, "/input")
                 # Execute JavaScript code to remove the display property from the element's style
-                self.driver.execute_script("arguments[0].style.removeProperty('display');", file_input)
-                file_input.send_keys(file_path)
+                self.driver.execute_script("arguments[0].style.removeProperty('display');", upload_input)
+                upload_input.send_keys(file_path)
 
-            submit = self.driver.find_element(By.ID, 'ember53')
+            submit = self.driver.find_element(By.XPATH, "//button[@type='submit']")
             submit.click()
             if self.sleep:
                 time.sleep(self.sleep)

@@ -407,13 +407,12 @@ class JobApplicationAdmin(admin.ModelAdmin):
                     'admin_back', 'admin_photo', 'admin_car_document',
                     'admin_insurance', 'insurance_expired',
                     'status_bolt', 'status_uklon']
-    list_editable = ['status_bolt', 'status_uklon']
 
     fieldsets = [
         (None, {'fields': ['first_name', 'last_name',
                            'email', 'phone_number',
                            'license_expired', 'driver_license_front',
                            'driver_license_back', 'photo', 'car_documents',
-                           'insurance', 'insurance_expired',
-                           'status_bolt', 'status_uklon']}),
+                           'insurance', 'insurance_expired'
+                           ]}),
     ]
