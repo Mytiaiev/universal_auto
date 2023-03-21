@@ -36,7 +36,6 @@ logger = logging.getLogger(__name__)
 processed_files = []
 
 start_keyboard = [
-    KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True),
     KeyboardButton(text="\U0001f696 Викликати Таксі", request_location=True),
     KeyboardButton(text="\U0001f4e2 Залишити відгук"),
     KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу")
@@ -45,17 +44,11 @@ start_keyboard = [
 def start(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
     if user:
+        update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
         user.chat_id = chat_id
         user.save()
-        if user.phone_number:
-            reply_markup = ReplyKeyboardMarkup(
-                keyboard=[start_keyboard[1:]],
-                resize_keyboard=True,
-                )
-        else:
-            reply_markup = ReplyKeyboardMarkup(
+        reply_markup = ReplyKeyboardMarkup(
                 keyboard=[start_keyboard],
                 resize_keyboard=True,
             )
@@ -67,10 +60,9 @@ def start(update, context):
             second_name=update.message.from_user.last_name
         )
         reply_markup = ReplyKeyboardMarkup(
-          keyboard=[start_keyboard],
-          resize_keyboard=True,
-        )
-        update.message.reply_text("Будь ласка розшарьте номер телефону та геолокацію для виклику таксі", reply_markup=reply_markup,)
+          keyboard=[[KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)]],
+          resize_keyboard=True,)
+        update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом", reply_markup=reply_markup)
 
 
 def update_phone_number(update, context):
@@ -83,8 +75,8 @@ def update_phone_number(update, context):
         user.phone_number = phone_number
         user.chat_id = chat_id
         user.save()
-        update.message.reply_text('Дякуємо ми отримали ваш номер телефону для звязку з водієм',
-                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[1:]], resize_keyboard=True))
+        update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard], resize_keyboard=True))
 
 
 LOCATION_WRONG = "Місце посадки - невірне"
