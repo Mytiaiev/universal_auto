@@ -26,7 +26,7 @@ from django.http import HttpResponse
 from django.db import IntegrityError
 
 PORT = int(os.environ.get('PORT', '8443'))
-DEVELOPER_CHAT_ID = 623200601
+DEVELOPER_CHAT_ID = 803129892
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
