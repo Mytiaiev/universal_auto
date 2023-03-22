@@ -1138,6 +1138,20 @@ class JobApplication(models.Model):
     status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
     status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата подачі заявки')
+    @staticmethod
+    def validate_date(date_str):
+        try:
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+            today = datetime.datetime.today()
+            future_date = datetime.datetime(2099, 12, 31)
+            if date < today:
+                return False
+            elif date > future_date:
+                return False
+            else:
+                return True
+        except ValueError:
+            return False
 
     def admin_photo(self):
         return admin_image_preview(self.photo)
@@ -2280,34 +2294,67 @@ class NewUklon(SeleniumTools):
             u.download_payments_day_order()
         return u.save_report()
 
+    def wait_opt_code(self):
+        r = redis.Redis.from_url(os.environ["REDIS_URL"])
+        p = r.pubsub()
+        p.subscribe('code')
+        p.ping()
+        otpa = []
+        while True:
+            try:
+                otp = p.get_message()
+                if otp:
+                    otpa = list(f'{otp["data"]}')
+                    otpa = list(filter(lambda d: d.isdigit(), otpa))
+                    digits = [s.isdigit() for s in otpa]
+                    if not(digits) or (not all(digits)) or len(digits) != 4:
+                        continue
+                    break
+            except redis.ConnectionError as e:
+                self.logger.error(str(e))
+                p = r.pubsub()
+                p.subscribe('code')
+            time.sleep(1)
+        return otpa
+
     def add_driver(self, jobapplication):
         if not jobapplication.status_uklon:
 
             url = 'https://partner-registration.uklon.com.ua/registration'
             self.driver.get(f"{url}")
-            if self.sleep:
-                time.sleep(self.sleep)
-            form_region = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-select-value-7")))
-            form_region.click()
-            self.driver.find_element(By.XPATH, "//div[contains(text(),'Київ')]").click()
-            self.driver.find_element(By.XPATH,
-                        '/html/body/upr-root/upr-registration/div/div/div/upr-registration-country/div/button').click()
-            form_phone_number = self.driver.find_element(By.XPATH, '//*[@id="mat-input-11"]')
+            WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
+
+            self.driver.find_element(By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]").click()
+            self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+            form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
             form_phone_number.click()
             form_phone_number.clear()
             form_phone_number.send_keys(jobapplication.phone_number[4:])
-            self.driver.find_element(By.XPATH,
-                        "/html/body/upr-root/upr-registration/div/div/div/upr-registration-phone/div/button").click()
+            self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
 
-            # 2FA??
-            for i in range(1, 5):
-                el = self.driver.find_element(By.XPATH,
-                            f"/html/body/upr-root/upr-registration/div/div/div/upr-registration-phone-verification/div/upr-code-input/div/input[{i}]")
-                el.click()
-                el.send_keys(otp[i-1])
-            self.driver.find_element(By.XPATH, "/html/body/upr-root/upr-registration/div/div/div/upr-registration-phone-verification/div/button").click()
+            # 2FA
+            self.driver.find_elements(By.XPATH, "//input")
+
             if self.sleep:
                 time.sleep(self.sleep)
+            self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
+            self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+            if self.sleep:
+                time.sleep(self.sleep)
+            registration_fields = {"firstName": jobapplication.first_name,
+                                   "lastName": jobapplication.first_name,
+                                   "email": jobapplication.email,
+                                   # "driverLicense": jobapplication.driver_license, not nessessary
+                                   "password": "Test1234"}
+            for field, value in registration_fields.items():
+                element = self.driver.find_element(By.ID, field)
+                element.click()
+                element.clear()
+                element.send_keys(value)
+            self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+
+
 
 
 class Privat24(SeleniumTools):

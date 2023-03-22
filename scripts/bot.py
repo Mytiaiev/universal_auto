@@ -359,6 +359,7 @@ def upload_photo(update, context):
         context.user_data['photo_job'] = f'job/photo/{image["file_unique_id"]}.jpg'
         image.download(filename)
         update.message.reply_text('Ваше фото збережено.Надішліть лицьову сторону посвідчення')
+        context.bot.send_photo(update.effective_chat.id, 'https://i.lb.ua/041/13/628a9c2ce4d48.jpeg')
         return 'WAIT_FOR_FRONT_PHOTO'
     else:
         update.message.reply_text('Будь ласка, надішліть фото (селфі)', reply_markup=ReplyKeyboardRemove())
@@ -373,6 +374,7 @@ def upload_license_front_photo(update, context):
         context.user_data['front_license'] = f'job/licenses/front/{image["file_unique_id"]}.jpg'
         image.download(filename)
         update.message.reply_text('Лицьова сторона посвідчення збережена.Надішліть тильну сторону')
+        context.bot.send_photo(update.effective_chat.id, 'https://www.autoconsulting.com.ua/pictures/_upload/1582561870fbTo_h.jpg')
         return 'WAIT_FOR_BACK_PHOTO'
     else:
         update.message.reply_text('Будь ласка, надішліть лицьову сторону', reply_markup=ReplyKeyboardRemove())
@@ -391,17 +393,14 @@ def upload_license_back_photo(update, context):
         update.message.reply_text('Будь ласка, надішліть тильну сторону', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_BACK_PHOTO'
 def upload_expired_date(update, context):
-    chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
-    pattern = r"^\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01])$"
     date = update.message.text
-    if re.match(pattern, date):
+    if JobApplication.validate_date(date):
         context.user_data['expired_license'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
-        buttons = [[InlineKeyboardButton(text='так', callback_data='have_auto')],[InlineKeyboardButton(text='ні', callback_data='no_auto')]]
+        buttons = [[InlineKeyboardButton(text='так', callback_data='have_auto')], [InlineKeyboardButton(text='ні', callback_data='no_auto')]]
         update.message.reply_text('Чи є у вас авто для роботи:', reply_markup=InlineKeyboardMarkup(buttons))
         return "WAIT_ANSWER"
     else:
-        update.message.reply_text(f'{date} не вірний формат, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
 def check_auto(update,context):
@@ -410,6 +409,8 @@ def check_auto(update,context):
     if query.data == 'have_auto':
         query.answer()
         query.edit_message_text('Дякуємо! Будь ласка, надішліть фото посвідчення про реєстрацію авто.', reply_markup=empty_inline_keyboard)
+        context.bot.send_photo(query.message.chat_id,
+                       'https://protocol.ua/userfiles/tehpasport-na-avto.jpg')
         return 'WAIT_FOR_AUTO_YES_OPTION'
     else:
         chat_id = update.effective_chat.id
@@ -438,6 +439,8 @@ def upload_auto_doc(update, context):
         image.download(filename)
         update.message.reply_text(
             'Фото техпаспорту збережено.Надішліть фото автоцивілки')
+        context.bot.send_photo(update.effective_chat.id,
+                               'https://avtocivilka.net.ua/assets/images/insurance/pic-obrazec-blanka-polisa-avtocivilky-osago-zheltiy-big.jpg')
         return 'WAIT_FOR_INSURANCE'
     else:
         update.message.reply_text('Будь ласка, надішліть фото техпаспорту', reply_markup=ReplyKeyboardRemove())
@@ -459,9 +462,8 @@ def upload_insurance(update, context):
 def upload_expired_insurance(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    pattern = r"^\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01])$"
     date = update.message.text
-    if re.match(pattern, date):
+    if JobApplication.validate_date(date):
         context.user_data['expired_insurance'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
         JobApplication.objects.create(
             first_name=user.name,
@@ -481,7 +483,7 @@ def upload_expired_insurance(update, context):
             'Заявка прийнята.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
         return ConversationHandler.END
     else:
-        update.message.reply_text(f'{date} не вірний формат, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
 
