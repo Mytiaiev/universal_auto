@@ -11,7 +11,7 @@ from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
 
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -151,14 +151,16 @@ def download_weekly_report_force(self):
 
 
 @app.task(bind=True, priority=8)
-def send_on_job_application_on_driver_to_Bolt(self, email, phone_number):
-    try:
-        b = Bolt(driver=True, sleep=3, headless=True)
-        b.login()
-        b.add_driver(email, phone_number)
-        print('The job application has been sent to Bolt')
-    except Exception as e:
-        logger.info(e)
+def send_on_job_application_on_driver_to_Bolt(self):
+    candidates = JobApplication.objects.filter(status_bolt=None)
+    for candidate in candidates:
+        try:
+            b = Bolt(driver=True, sleep=3, headless=True)
+            b.login()
+            b.add_driver(candidate)
+            print('The job application has been sent to Bolt')
+        except Exception as e:
+            logger.info(e)
 
 
 @app.task(bind=True, priority=7)
