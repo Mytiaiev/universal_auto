@@ -174,6 +174,19 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
     except Exception as e:
         logger.info(e)
 
+@app.task(bind=True, priority=10)
+def send_on_job_application_on_driver_to_NewUklon(self):
+    candidates = JobApplication.objects.filter(status_uklon=None)
+    print(candidates)
+    for candidate in candidates:
+        try:
+            uklon = NewUklon(driver=True, sleep=5, headless=True)
+            uklon.add_driver(candidate)
+            uklon.quit()
+            print('The job application has been sent to Uklon')
+        except Exception as e:
+            logger.info(e)
+
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):

@@ -347,7 +347,7 @@ def update_user_information(update, context):
 def get_job_photo(update, context):
     empty_inline_keyboard = InlineKeyboardMarkup([])
     update.callback_query.answer()
-    update.callback_query.edit_message_text(text='Надішліть ваше фото (селфі)', reply_markup=empty_inline_keyboard)
+    update.callback_query.edit_message_text(text='Надішліть ваше фото (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=empty_inline_keyboard)
     return 'WAIT_FOR_JOB_PHOTO'
 
 
@@ -359,10 +359,10 @@ def upload_photo(update, context):
         context.user_data['photo_job'] = f'job/photo/{image["file_unique_id"]}.jpg'
         image.download(filename)
         update.message.reply_text('Ваше фото збережено.Надішліть лицьову сторону посвідчення')
-        context.bot.send_photo(update.effective_chat.id, 'https://i.lb.ua/041/13/628a9c2ce4d48.jpeg')
+        context.bot.send_photo(update.effective_chat.id, 'https://kourier.in.ua/uploads/posts/2016-12/1480604684_1702.jpg')
         return 'WAIT_FOR_FRONT_PHOTO'
     else:
-        update.message.reply_text('Будь ласка, надішліть фото (селфі)', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text('Будь ласка, надішліть фото (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_JOB_PHOTO'
 
 
@@ -425,9 +425,8 @@ def check_auto(update,context):
             driver_license_back=context.user_data['back_license'],
             photo=context.user_data['photo_job'],
             role=context.user_data['role'])
-        query.edit_message_text('Заявка прийнята.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій',
-                                reply_markup=empty_inline_keyboard)
-        return ConversationHandler.END
+        query.edit_message_text(f'На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+        return "JOB_UKLON_CODE"
 
 
 def upload_auto_doc(update, context):
@@ -440,7 +439,7 @@ def upload_auto_doc(update, context):
         update.message.reply_text(
             'Фото техпаспорту збережено.Надішліть фото автоцивілки')
         context.bot.send_photo(update.effective_chat.id,
-                               'https://avtocivilka.net.ua/assets/images/insurance/pic-obrazec-blanka-polisa-avtocivilky-osago-zheltiy-big.jpg')
+                               'https://rinokstrahovka.ua/img/content/2019/07/paper_client_green1.jpg')
         return 'WAIT_FOR_INSURANCE'
     else:
         update.message.reply_text('Будь ласка, надішліть фото техпаспорту', reply_markup=ReplyKeyboardRemove())
@@ -481,11 +480,20 @@ def upload_expired_insurance(update, context):
         )
         update.message.reply_text(
             'Заявка прийнята.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
-        return ConversationHandler.END
+        update.message.reply_text(f'На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+        return "JOB_UKLON_CODE"
     else:
         update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
+def uklon_code(update, context):
+    chat_id = update.message.chat.id
+    user = User.get_by_chat_id(chat_id)
+    r = redis.Redis.from_url(os.environ["REDIS_URL"])
+    r.publish(f'{user.phone_number} code', update.message.text)
+    update.message.reply_text(
+        'Заявка прийнята.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
+    return ConversationHandler.END
 
 # Sending comment
 def comment(update, context):
@@ -1616,6 +1624,7 @@ job_docs_conversation = ConversationHandler(
         'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
         'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
         'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
+        'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
     },
 
     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
