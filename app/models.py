@@ -2338,7 +2338,9 @@ class NewUklon(SeleniumTools):
         digits = self.driver.find_elements(By.XPATH, "//input")
         for i, element in enumerate(digits):
             element.send_keys(code[i])
+        time.sleep(1)
         self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+
         if self.sleep:
             time.sleep(self.sleep)
         self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
@@ -2346,7 +2348,7 @@ class NewUklon(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         registration_fields = {"firstName": jobapplication.first_name,
-                               "lastName": jobapplication.first_name,
+                               "lastName": jobapplication.last_name,
                                "email": jobapplication.email,
                                # "driverLicense": jobapplication.driver_license, not nessessary
                                "password": "Test1234"}
@@ -2369,11 +2371,14 @@ class NewUklon(SeleniumTools):
             photo_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
             photo_input.send_keys(file_paths[i])
             self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
-        fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, "//input]")))
+
+        fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
         fleet_code.click()
         fleet_code.clear()
         fleet_code.send_keys("0aa6d102-f4d0-47e3-86f9-a460b760f92e")
+        self.driver.get_screenshot_as_file('ukloncode.png')
         self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+        self.driver.get_screenshot_as_file('ukloncode2.png')
         # jobapplication.status_uklon = datetime.datetime.now().date()
         # jobapplication.save()
 

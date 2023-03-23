@@ -291,11 +291,19 @@ def job_application(update, context):
                                                                   one_time_keyboard=True))
 
 
+def restart_jobapplication(update, context):
+    context.user_data.clear()
+    context.user_data['role'] = f"{JOB_DRIVER}"
+    update.message.reply_text("Ви почали подачу заявки спочатку.")
+    update.message.reply_text("Введіть ваше Ім`я:")
+    return "JOB_USER_NAME"
+
+
 # Update information for users
 def update_name(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    context.user_data['role'] = update.message.text
+    context.user_data['role'] = f"{JOB_DRIVER}"
     if user:
         update.message.reply_text("Введіть ваше Ім`я:")
         return "JOB_USER_NAME"
@@ -308,6 +316,7 @@ def update_second_name(update, context):
     clear_name = User.name_and_second_name_validator(name=name)
     if clear_name is not None:
         context.user_data['u_name'] = clear_name
+        update.message.reply_text("Якщо ви помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
         update.message.reply_text("Введіть Прізвище:")
         return "JOB_LAST_NAME"
     else:
@@ -415,7 +424,23 @@ def check_auto(update,context):
     else:
         chat_id = update.effective_chat.id
         user = User.get_by_chat_id(chat_id)
-        JobApplication.objects.create(
+        try:
+            job = JobApplication.objects.get(phone_number=user.phone_number)
+            if job.status_bolt is None and job.status_uklon is None:
+                job.first_name = user.name
+                job.last_name = user.second_name
+                job.email = user.email
+                job.phone_number = user.phone_number
+                job.license_expired = context.user_data['expired_license']
+                job.driver_license_front = context.user_data['front_license']
+                job.driver_license_back = context.user_data['back_license']
+                job.photo = context.user_data['photo_job']
+                job.role = context.user_data['role']
+                job.save()
+            else:
+                update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+        except JobApplication.DoesNotExist:
+            JobApplication.objects.create(
             first_name=user.name,
             last_name=user.second_name,
             email=user.email,
@@ -425,8 +450,9 @@ def check_auto(update,context):
             driver_license_back=context.user_data['back_license'],
             photo=context.user_data['photo_job'],
             role=context.user_data['role'])
-        query.edit_message_text(f'На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
-        return "JOB_UKLON_CODE"
+        finally:
+            query.edit_message_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+            return "JOB_UKLON_CODE"
 
 
 def upload_auto_doc(update, context):
@@ -436,6 +462,7 @@ def upload_auto_doc(update, context):
         filename = f'data/mediafiles/job/car/{image["file_unique_id"]}.jpg'
         context.user_data['auto_doc'] = f'job/car/{image["file_unique_id"]}.jpg'
         image.download(filename)
+        update.message.reply_text('Якщо щось пішло не так, ви можете почати спочатку за допомогою команди /restart')
         update.message.reply_text(
             'Фото техпаспорту збережено.Надішліть фото автоцивілки')
         context.bot.send_photo(update.effective_chat.id,
@@ -464,24 +491,42 @@ def upload_expired_insurance(update, context):
     date = update.message.text
     if JobApplication.validate_date(date):
         context.user_data['expired_insurance'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
-        JobApplication.objects.create(
-            first_name=user.name,
-            last_name=user.second_name,
-            email=user.email,
-            phone_number=user.phone_number,
-            license_expired=context.user_data['expired_license'],
-            driver_license_front=context.user_data['front_license'],
-            driver_license_back=context.user_data['back_license'],
-            photo=context.user_data['photo_job'],
-            role=context.user_data['role'],
-            car_documents=context.user_data['auto_doc'],
-            insurance=context.user_data['insurance'],
-            insurance_expired=context.user_data['expired_insurance']
-        )
-        update.message.reply_text(
-            'Заявка прийнята.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
-        update.message.reply_text(f'На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
-        return "JOB_UKLON_CODE"
+        try:
+            job = JobApplication.objects.get(phone_number=user.phone_number)
+            if job.status_bolt is None and job.status_uklon is None:
+                job.first_name = user.name
+                job.last_name = user.second_name
+                job.email = user.email
+                job.phone_number = user.phone_number
+                job.license_expired = context.user_data['expired_license']
+                job.driver_license_front = context.user_data['front_license']
+                job.driver_license_back = context.user_data['back_license']
+                job.photo = context.user_data['photo_job']
+                job.role = context.user_data['role']
+                job.car_documents = context.user_data['auto_doc']
+                job.insurance = context.user_data['insurance']
+                job.insurance_expired = context.user_data['expired_insurance']
+                job.save()
+            else:
+                update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+        except JobApplication.DoesNotExist:
+            JobApplication.objects.create(
+                first_name=user.name,
+                last_name=user.second_name,
+                email=user.email,
+                phone_number=user.phone_number,
+                license_expired=context.user_data['expired_license'],
+                driver_license_front=context.user_data['front_license'],
+                driver_license_back=context.user_data['back_license'],
+                photo=context.user_data['photo_job'],
+                role=context.user_data['role'],
+                car_documents=context.user_data['auto_doc'],
+                insurance=context.user_data['insurance'],
+                insurance_expired=context.user_data['expired_insurance']
+            )
+        finally:
+            update.message.reply_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+            return "JOB_UKLON_CODE"
     else:
         update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
@@ -492,7 +537,7 @@ def uklon_code(update, context):
     r = redis.Redis.from_url(os.environ["REDIS_URL"])
     r.publish(f'{user.phone_number} code', update.message.text)
     update.message.reply_text(
-        'Заявка прийнята.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
+        'Наш менеджер з вами зв\'яжеться.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
     return ConversationHandler.END
 
 # Sending comment
@@ -1610,7 +1655,8 @@ debt_conversation = ConversationHandler(
 )
 
 job_docs_conversation = ConversationHandler(
-    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name)],
+    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
+                  CommandHandler("restart", restart_jobapplication)],
     states={
         "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
         "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
@@ -1628,6 +1674,7 @@ job_docs_conversation = ConversationHandler(
     },
 
     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+    allow_reentry=True,
     conversation_timeout=20
 )
 
