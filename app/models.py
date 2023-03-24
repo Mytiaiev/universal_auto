@@ -2306,3 +2306,10 @@ def download_and_save_daily_report(driver=True, sleep=5, headless=True, day=None
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
+class ReportUser(models.Model):
+    chat_id = models.IntegerField(unique=True)
+
+    def __str__(self):
+        return f"{self.chat_id}"
+
+
