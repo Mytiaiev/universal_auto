@@ -24,9 +24,11 @@ import hashlib
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from django.db import IntegrityError
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 PORT = int(os.environ.get('PORT', '8443'))
-DEVELOPER_CHAT_ID = 803129892
+DEVELOPER_CHAT_ID = 623200601
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -1302,24 +1304,31 @@ def drivers_rating(update, context):
 def report(update, context):
     update.message.reply_text('Ваш запит прийнято.\nМи надішлемо вам звіт, як тільки він сформується')
     update.message.reply_text("Введіть ваш Uber OTP код з SMS, якщо ви отримали його")
-    
+    chat_id = update.message.chat_id
+    ReportUser.objects.get_or_create(chat_id=chat_id)
+
+
+@receiver(post_save, sender=ReportUser)
+def send_report(sender, instance, **kwargs):
+    chat_id = instance.chat_id
     report = get_report()
     owner, totals = report[0], report[1]
     drivers = {f'{i.name} {i.second_name}': i.chat_id for i in Driver.objects.all()}
 
     # sending report to owner
     message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
-    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
+    bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
 
     # sending report to driver
     if len(drivers) != 0:
         for driver in drivers:
             try:
                 message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
-                context.bot.send_message(chat_id=chat_id, text=message)
+                bot.send_message(chat_id=chat_id, text=message)
             except:
                 pass
 
+    instance.delete()
 
 def auto_report_for_driver_and_owner(context):
     report = get_report()
