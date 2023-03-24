@@ -28,7 +28,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 PORT = int(os.environ.get('PORT', '8443'))
-DEVELOPER_CHAT_ID = 623200601
+DEVELOPER_CHAT_ID = 803129892
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
