@@ -1124,18 +1124,6 @@ class SubscribeUsers(models.Model):
 
 
 class JobApplication(models.Model):
-    def __init__(self, *args, **kwargs):
-        super(JobApplication, self).__init__(*args, **kwargs)
-
-        if not self.car_documents:
-            self.default_car_documents = settings.STATIC_URL + 'docs/default_car.jpg'
-        else:
-            self.default_car_documents = None
-        if not self.insurance:
-            self.default_insurance = settings.STATIC_URL + 'docs/default_insurance.png'
-        else:
-            self.default_insurance = None
-
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
@@ -1147,8 +1135,8 @@ class JobApplication(models.Model):
     driver_license_back = models.ImageField(blank=True, upload_to='job/licenses/back',
                                             verbose_name='Тильна сторона посвідчення')
     photo = models.ImageField(blank=True, upload_to='job/photo', verbose_name='Фото водія')
-    car_documents = models.ImageField(blank=True, upload_to='job/car', verbose_name='Фото техпаспорту')
-    insurance = models.ImageField(blank=True, upload_to='job/insurance', verbose_name='Автоцивілка')
+    car_documents = models.ImageField(blank=True, upload_to='job/car', default="docs/default_car.jpg", verbose_name='Фото техпаспорту')
+    insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png", verbose_name='Автоцивілка')
     insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
     role = models.CharField(max_length=255, verbose_name='Роль')
     status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
@@ -1191,10 +1179,10 @@ class JobApplication(models.Model):
         return admin_image_preview(self.driver_license_back)
 
     def admin_insurance(self):
-        return admin_image_preview(self.insurance, self.default_insurance)
+        return admin_image_preview(self.insurance)
 
     def admin_car_document(self):
-        return admin_image_preview(self.car_documents, self.default_car_documents)
+        return admin_image_preview(self.car_documents)
 
     admin_back.short_description = 'License back'
     admin_photo.short_description = 'Photo'
@@ -1213,12 +1201,8 @@ class JobApplication(models.Model):
 def admin_image_preview(image, default_image=None):
     if image:
         url = image.url
-    elif default_image:
-        url = default_image
-    else:
-        url = settings.STATIC_URL + 'defaults/default_image.jpg'
-
-    return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
+        return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
+    return None
 
 
 from selenium import webdriver
