@@ -152,10 +152,10 @@ def download_weekly_report_force(self):
 
 @app.task(bind=True, priority=8)
 def send_on_job_application_on_driver_to_Bolt(self, id):
-    candidate = JobApplication.objects.get(id=id)
     try:
         b = Bolt(driver=True, sleep=3, headless=True)
         b.login()
+        candidate = JobApplication.objects.get(id=id)
         b.add_driver(candidate)
         print('The job application has been sent to Bolt')
     except Exception as e:
@@ -174,10 +174,10 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
         logger.info(e)
 
 @app.task(bind=True, priority=10)
-def send_on_job_application_on_driver_to_NewUklon(self,id):
-    candidate = JobApplication.objects.get(id=id)
+def send_on_job_application_on_driver_to_NewUklon(self, id):
     try:
         uklon = NewUklon(driver=True, sleep=5, headless=True)
+        candidate = JobApplication.objects.get(id=id)
         uklon.add_driver(candidate)
         uklon.quit()
         print('The job application has been sent to Uklon')

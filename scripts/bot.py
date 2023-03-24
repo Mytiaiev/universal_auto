@@ -46,14 +46,21 @@ def start(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
     if user:
-        update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
-        user.chat_id = chat_id
-        user.save()
-        reply_markup = ReplyKeyboardMarkup(
-                keyboard=[start_keyboard],
-                resize_keyboard=True,
-            )
-        update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
+        if user.phone_number:
+            update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
+            user.chat_id = chat_id
+            user.save()
+            reply_markup = ReplyKeyboardMarkup(
+                    keyboard=[start_keyboard],
+                    resize_keyboard=True,
+                )
+            update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
+        else:
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)]],
+                resize_keyboard=True, )
+            update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом",
+                                      reply_markup=reply_markup)
     else:
         User.objects.create(
             chat_id=chat_id,

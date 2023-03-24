@@ -1894,7 +1894,7 @@ class Bolt(SeleniumTools):
             form_last_name.click()
             form_last_name.clear()
             form_last_name.send_keys(jobapplication.last_name)
-            self.driver.find_element(By.XPATH, '//button[@type="submit"]')
+            self.driver.find_element(By.XPATH, '//button[@type="submit"]').click()
             if self.sleep:
                 time.sleep(self.sleep)
             elements_to_select = [str(jobapplication.license_expired).split("-")[0],
