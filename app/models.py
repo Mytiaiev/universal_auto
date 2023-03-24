@@ -2359,33 +2359,32 @@ class NewUklon(SeleniumTools):
             EC.presence_of_element_located((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
         time.sleep(2)
         self.driver.find_element(By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]").click()
-        self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
         form_phone_number.click()
         form_phone_number.clear()
         form_phone_number.send_keys(jobapplication.phone_number[4:])
-        self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
-        self.driver.get_screenshot_as_file("uklon.png")
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
         # 2FA
         code = self.wait_otp_code(jobapplication)
         digits = self.driver.find_elements(By.XPATH, "//input")
         for i, element in enumerate(digits):
             element.send_keys(code[i])
-            self.driver.get_screenshot_as_file(f"uklon{i}.png")
-        time.sleep(1)
-        self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
-        self.driver.get_screenshot_as_file(f"uklonu.png")
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         if self.sleep:
             time.sleep(self.sleep)
         self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
-        self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         if self.sleep:
             time.sleep(self.sleep)
         registration_fields = {"firstName": jobapplication.first_name,
                                "lastName": jobapplication.last_name,
                                "email": jobapplication.email,
-                               # "driverLicense": jobapplication.driver_license, not nessessary
                                "password": jobapplication.password}
         for field, value in registration_fields.items():
             element = self.driver.find_element(By.ID, field)
@@ -2393,8 +2392,8 @@ class NewUklon(SeleniumTools):
             element.clear()
             element.send_keys(value)
             self.driver.get_screenshot_as_file(f"{field}.png")
-        time.sleep(2)
-        self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
         file_paths = [
             os.getcwd() + f"/data/mediafiles/{jobapplication.photo}",
@@ -2408,15 +2407,15 @@ class NewUklon(SeleniumTools):
             photo_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
             photo_input.send_keys(file_paths[i])
             self.driver.get_screenshot_as_file(f"{i}.png")
-            self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
         fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
         fleet_code.click()
         fleet_code.clear()
         fleet_code.send_keys("0aa6d102-f4d0-47e3-86f9-a460b760f92e")
-        self.driver.get_screenshot_as_file('ukloncode.png')
-        self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
-        self.driver.get_screenshot_as_file('ukloncode2.png')
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         # jobapplication.status_uklon = datetime.datetime.now().date()
         # jobapplication.save()
 
