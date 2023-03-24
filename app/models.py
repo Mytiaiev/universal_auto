@@ -3,8 +3,9 @@ import datetime
 import glob
 import os
 import shutil
+import string
 import sys
-
+import random
 
 from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
@@ -12,6 +13,8 @@ from django.db.models.base import ModelBase
 from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from selenium.common import TimeoutException, WebDriverException
+
+from auto import settings
 
 
 class PaymentsOrder(models.Model):
@@ -1121,9 +1124,22 @@ class SubscribeUsers(models.Model):
 
 
 class JobApplication(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(JobApplication, self).__init__(*args, **kwargs)
+
+        if not self.car_documents:
+            self.default_car_documents = settings.STATIC_URL + 'docs/default_car.jpg'
+        else:
+            self.default_car_documents = None
+        if not self.insurance:
+            self.default_insurance = settings.STATIC_URL + 'docs/default_insurance.png'
+        else:
+            self.default_insurance = None
+
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
+    password = models.CharField(max_length=12, verbose_name='Пароль Uklon')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
     license_expired = models.DateField(blank=True, verbose_name='Термін дії посвідчення')
     driver_license_front = models.ImageField(blank=True, upload_to='job/licenses/front',
@@ -1133,7 +1149,7 @@ class JobApplication(models.Model):
     photo = models.ImageField(blank=True, upload_to='job/photo', verbose_name='Фото водія')
     car_documents = models.ImageField(blank=True, upload_to='job/car', verbose_name='Фото техпаспорту')
     insurance = models.ImageField(blank=True, upload_to='job/insurance', verbose_name='Автоцивілка')
-    insurance_expired = models.DateField(blank=True, null=True, verbose_name='Термін дії автоцивілки')
+    insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
     role = models.CharField(max_length=255, verbose_name='Роль')
     status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
     status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
@@ -1143,7 +1159,7 @@ class JobApplication(models.Model):
         try:
             date = datetime.datetime.strptime(date_str, '%Y-%m-%d')
             today = datetime.datetime.today()
-            future_date = datetime.datetime(2099, 12, 31)
+            future_date = datetime.datetime(2077, 12, 31)
             if date < today:
                 return False
             elif date > future_date:
@@ -1152,6 +1168,18 @@ class JobApplication(models.Model):
                 return True
         except ValueError:
             return False
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.password = self.generate_password()
+        super().save(*args, **kwargs)
+    @staticmethod
+    def generate_password(length=12):
+        chars = string.ascii_lowercase + string.digits
+        password = ''.join(random.choice(chars) for _ in range(length - 2))
+        password += random.choice(string.ascii_uppercase)
+        password += random.choice(string.digits)
+        return ''.join(random.sample(password, len(password)))
 
     def admin_photo(self):
         return admin_image_preview(self.photo)
@@ -1163,10 +1191,10 @@ class JobApplication(models.Model):
         return admin_image_preview(self.driver_license_back)
 
     def admin_insurance(self):
-        return admin_image_preview(self.insurance)
+        return admin_image_preview(self.insurance, self.default_insurance)
 
     def admin_car_document(self):
-        return admin_image_preview(self.car_documents)
+        return admin_image_preview(self.car_documents, self.default_car_documents)
 
     admin_back.short_description = 'License back'
     admin_photo.short_description = 'Photo'
@@ -1182,11 +1210,15 @@ class JobApplication(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 
-def admin_image_preview(image):
+def admin_image_preview(image, default_image=None):
     if image:
         url = image.url
-        return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
-    return None
+    elif default_image:
+        url = default_image
+    else:
+        url = settings.STATIC_URL + 'defaults/default_image.jpg'
+
+    return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
 
 
 from selenium import webdriver
@@ -1493,9 +1525,9 @@ class Uber(SeleniumTools):
                 for _ in range(date_by_def.month - self.day.month):
                     self.driver.find_element(By.XPATH, f'//button[@aria-label="Previous month."]').click()
             self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()={self.day.strftime("%-d")}]').click()
-            end = self.driver.find_element(By.XPATH,'(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
+            end = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
             end.send_keys(Keys.NULL)
-            self.driver.find_element(By.XPATH,f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
+            self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
         else:
             start = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
             start.send_keys(Keys.NULL)
@@ -1912,8 +1944,8 @@ class Bolt(SeleniumTools):
             if self.sleep:
                 time.sleep(self.sleep)
 
-            submit = self.driver.find_element(By.XPATH, "//button[@type='submit']")
-            submit.click()
+            # submit = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+            # submit.click()
             jobapplication.status_bolt = datetime.datetime.now().date()
             jobapplication.save()
 
@@ -2325,6 +2357,7 @@ class NewUklon(SeleniumTools):
         self.driver.get(f"{url}")
         WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
+        time.sleep(2)
         self.driver.find_element(By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]").click()
         self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
         form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
@@ -2332,15 +2365,17 @@ class NewUklon(SeleniumTools):
         form_phone_number.clear()
         form_phone_number.send_keys(jobapplication.phone_number[4:])
         self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
+        self.driver.get_screenshot_as_file("uklon.png")
 
         # 2FA
         code = self.wait_otp_code(jobapplication)
         digits = self.driver.find_elements(By.XPATH, "//input")
         for i, element in enumerate(digits):
             element.send_keys(code[i])
+            self.driver.get_screenshot_as_file(f"uklon{i}.png")
         time.sleep(1)
         self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
-
+        self.driver.get_screenshot_as_file(f"uklonu.png")
         if self.sleep:
             time.sleep(self.sleep)
         self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
@@ -2351,12 +2386,14 @@ class NewUklon(SeleniumTools):
                                "lastName": jobapplication.last_name,
                                "email": jobapplication.email,
                                # "driverLicense": jobapplication.driver_license, not nessessary
-                               "password": "Test1234"}
+                               "password": jobapplication.password}
         for field, value in registration_fields.items():
             element = self.driver.find_element(By.ID, field)
             element.click()
             element.clear()
             element.send_keys(value)
+            self.driver.get_screenshot_as_file(f"{field}.png")
+        time.sleep(2)
         self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
 
         file_paths = [
@@ -2370,6 +2407,7 @@ class NewUklon(SeleniumTools):
                 time.sleep(self.sleep)
             photo_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
             photo_input.send_keys(file_paths[i])
+            self.driver.get_screenshot_as_file(f"{i}.png")
             self.driver.find_element(By.XPATH, "//button[@color='accent']").click()
 
         fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))

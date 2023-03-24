@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 import csv
 import datetime
@@ -289,6 +290,7 @@ def job_application(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
                                 reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True,
                                                                   one_time_keyboard=True))
+    update.message.reply_text("Якщо ви десь помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
 
 
 def restart_jobapplication(update, context):
@@ -305,7 +307,7 @@ def update_name(update, context):
     user = User.get_by_chat_id(chat_id)
     context.user_data['role'] = f"{JOB_DRIVER}"
     if user:
-        update.message.reply_text("Введіть ваше Ім`я:")
+        update.message.reply_text("Введіть ваше Ім`я:", reply_markup=ReplyKeyboardRemove())
         return "JOB_USER_NAME"
     else:
         update.message.reply_text('Спочатку надайте телефон')
@@ -316,7 +318,6 @@ def update_second_name(update, context):
     clear_name = User.name_and_second_name_validator(name=name)
     if clear_name is not None:
         context.user_data['u_name'] = clear_name
-        update.message.reply_text("Якщо ви помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
         update.message.reply_text("Введіть Прізвище:")
         return "JOB_LAST_NAME"
     else:
@@ -347,7 +348,7 @@ def update_user_information(update, context):
         user.email = clear_email
         user.save()
         buttons = [[InlineKeyboardButton(text='Завантажити документи', callback_data='job_photo')]]
-        update.message.reply_text('Ваші дані оновлені, надайте будь-ласка необхідні документи', reply_markup=InlineKeyboardMarkup(buttons))
+        update.message.reply_text('Ваші дані оновлені, надайте будь-ласка необхідні документи, скориставшись кнопкою під повідомленням', reply_markup=InlineKeyboardMarkup(buttons))
         return "WAIT_FOR_JOB_OPTION"
     else:
         update.message.reply_text('Eлектронна адреса некоректна. Спробуйте ще раз')
@@ -396,7 +397,9 @@ def upload_license_back_photo(update, context):
         filename = f'data/mediafiles/job/licenses/back/{image["file_unique_id"]}.jpg'
         context.user_data['back_license'] = f'job/licenses/back/{image["file_unique_id"]}.jpg'
         image.download(filename)
-        update.message.reply_text('Тильна сторона посвідчення збережена.Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        update.message.reply_text('Тильна сторона посвідчення збережена.Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25).')
+        update.message.reply_text(
+            'Якщо посвідчення безстрокове введіть 2077-12-31 або будь-яку іншу дату у далекому майбутньому до 2077р.:')
         return 'WAIT_FOR_EXPIRED'
     else:
         update.message.reply_text('Будь ласка, надішліть тильну сторону', reply_markup=ReplyKeyboardRemove())
@@ -452,6 +455,9 @@ def check_auto(update,context):
             role=context.user_data['role'])
         finally:
             query.edit_message_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+            context.user_data['thread'] = True
+            t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
+            t.start()
             return "JOB_UKLON_CODE"
 
 
@@ -525,7 +531,10 @@ def upload_expired_insurance(update, context):
                 insurance_expired=context.user_data['expired_insurance']
             )
         finally:
-            update.message.reply_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+            context.user_data['thread'] = True
+            t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
+            t.start()
+            update.message.reply_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду нам протягом 3 хвилин будь-ласка')
             return "JOB_UKLON_CODE"
     else:
         update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
@@ -534,11 +543,36 @@ def upload_expired_insurance(update, context):
 def uklon_code(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
+    context.user_data['thread'] = False
     r = redis.Redis.from_url(os.environ["REDIS_URL"])
     r.publish(f'{user.phone_number} code', update.message.text)
     update.message.reply_text(
-        'Наш менеджер з вами зв\'яжеться.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
+        'Ваш код прийнято.Наш менеджер з вами зв\'яжеться.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
     return ConversationHandler.END
+
+def code_timer(update, context, timer, sleep):
+    def timer_callback(context):
+        context.bot.send_message(update.effective_chat.id,
+            f'Заявку відхилено.Ви завжди можете подати її повторно')
+        return ConversationHandler.END
+
+    remaining_time = timer
+    while remaining_time > 0:
+        tread_state = context.user_data['thread']
+        if tread_state:
+            if remaining_time < sleep+1:
+                context.bot.send_message(update.effective_chat.id,
+                            f'Залишилось {int(remaining_time)} секунд.Якщо ви не відправите код заявку буде скасовано')
+                time.sleep(remaining_time)
+                remaining_time = 0
+                timer_callback(context)
+            else:
+                context.bot.send_message(update.effective_chat.id,
+                    f'Коду лишилось діяти {int(remaining_time)} секунд.Поспішіть будь-ласка')
+                time.sleep(sleep)
+                remaining_time = int(remaining_time - sleep)
+        else:
+            break
 
 # Sending comment
 def comment(update, context):

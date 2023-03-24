@@ -402,7 +402,7 @@ class Fleets_drivers_vehicles_rateAdmin(admin.ModelAdmin):
 @admin.register(JobApplication)
 class JobApplicationAdmin(admin.ModelAdmin):
     list_display = ['first_name', 'last_name',
-                    'email', 'phone_number',
+                    'email', 'password', 'phone_number',
                     'license_expired', 'admin_front',
                     'admin_back', 'admin_photo', 'admin_car_document',
                     'admin_insurance', 'insurance_expired',
