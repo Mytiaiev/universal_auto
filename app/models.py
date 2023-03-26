@@ -2340,9 +2340,9 @@ class NewUklon(SeleniumTools):
         url = 'https://partner-registration.uklon.com.ua/registration'
         self.driver.get(f"{url}")
         WebDriverWait(self.driver, 5).until(
-            EC.presence_of_element_located((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
-        time.sleep(2)
-        self.driver.find_element(By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]").click()
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]"))).click()
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
@@ -2361,23 +2361,23 @@ class NewUklon(SeleniumTools):
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
-        WebDriverWait(self.driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        registration_fields = {"firstName": jobapplication.first_name,
-                               "lastName": jobapplication.last_name,
-                               "email": jobapplication.email,
-                               "password": jobapplication.password}
-        for field, value in registration_fields.items():
-            element = self.driver.find_element(By.ID, field)
-            element.click()
-            element.clear()
-            element.send_keys(value)
-            self.driver.get_screenshot_as_file(f"{field}.png")
-        WebDriverWait(self.driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        # self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
+        # WebDriverWait(self.driver, 5).until(
+        #     EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        # if self.sleep:
+        #     time.sleep(self.sleep)
+        # registration_fields = {"firstName": jobapplication.first_name,
+        #                        "lastName": jobapplication.last_name,
+        #                        "email": jobapplication.email,
+        #                        "password": jobapplication.password}
+        # for field, value in registration_fields.items():
+        #     element = self.driver.find_element(By.ID, field)
+        #     element.click()
+        #     element.clear()
+        #     element.send_keys(value)
+        #     self.driver.get_screenshot_as_file(f"{field}.png")
+        # WebDriverWait(self.driver, 5).until(
+        #     EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
         file_paths = [
             os.getcwd() + f"/data/mediafiles/{jobapplication.photo}",
@@ -2390,16 +2390,20 @@ class NewUklon(SeleniumTools):
                 time.sleep(self.sleep)
             photo_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
             photo_input.send_keys(file_paths[i])
-            self.driver.get_screenshot_as_file(f"{i}.png")
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
+            time.sleep(1)
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
             WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
-
         fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
         fleet_code.click()
         fleet_code.clear()
-        fleet_code.send_keys("0aa6d102-f4d0-47e3-86f9-a460b760f92e")
+        fleet_code.send_keys("14f19b9d-4372-4bcf-9823-31e8fb79d080")
         WebDriverWait(self.driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))) #.click()
+        self.driver.get_screenshot_as_file('uklon.png')
         # jobapplication.status_uklon = datetime.datetime.now().date()
         # jobapplication.save()
 

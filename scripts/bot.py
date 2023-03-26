@@ -45,6 +45,7 @@ start_keyboard = [
 def start(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
+    context.user_data.clear()
     if user:
         if user.phone_number:
             update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
@@ -565,20 +566,23 @@ def code_timer(update, context, timer, sleep):
 
     remaining_time = timer
     while remaining_time > 0:
-        tread_state = context.user_data['thread']
-        if tread_state:
-            if remaining_time < sleep+1:
-                context.bot.send_message(update.effective_chat.id,
+        try:
+            tread_state = context.user_data['thread']
+            if tread_state:
+                if remaining_time < sleep+1:
+                    context.bot.send_message(update.effective_chat.id,
                             f'Залишилось {int(remaining_time)} секунд.Якщо ви не відправите код заявку буде скасовано')
-                time.sleep(remaining_time)
-                remaining_time = 0
-                timer_callback(context)
+                    time.sleep(remaining_time)
+                    remaining_time = 0
+                    timer_callback(context)
+                else:
+                    context.bot.send_message(update.effective_chat.id,
+                        f'Коду лишилось діяти {int(remaining_time)} секунд.Поспішіть будь-ласка')
+                    time.sleep(sleep)
+                    remaining_time = int(remaining_time - sleep)
             else:
-                context.bot.send_message(update.effective_chat.id,
-                    f'Коду лишилось діяти {int(remaining_time)} секунд.Поспішіть будь-ласка')
-                time.sleep(sleep)
-                remaining_time = int(remaining_time - sleep)
-        else:
+                break
+        except KeyError:
             break
 
 # Sending comment
