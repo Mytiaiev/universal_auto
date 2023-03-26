@@ -721,6 +721,7 @@ class Vehicle(models.Model):
         else:
             return None
 
+
 class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE)
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
