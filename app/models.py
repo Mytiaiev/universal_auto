@@ -655,6 +655,7 @@ class UklonFleet(Fleet):
 
 
 class NewUklonFleet(Fleet):
+    token = models.CharField(max_length=40, default=os.environ.get("UKLON_TOKEN"), verbose_name="Код автопарку")
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
@@ -1228,6 +1229,11 @@ import base64
 
 from django.db import models
 from app.models import Fleet
+
+
+def clickandclear(element):
+    element.click()
+    element.clear()
 
 
 class SeleniumTools:
@@ -1872,12 +1878,10 @@ class Bolt(SeleniumTools):
             if self.sleep:
                 time.sleep(self.sleep)
             form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
-            form_email.click()
-            form_email.clear()
+            clickandclear(form_email)
             form_email.send_keys(jobapplication.email)
             form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
-            form_phone_number.click()
-            form_phone_number.clear()
+            clickandclear(form_phone_number)
             form_phone_number.send_keys(jobapplication.phone_number)
             button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
             button.click()
@@ -1887,12 +1891,10 @@ class Bolt(SeleniumTools):
             new_window = self.driver.window_handles[1]
             self.driver.switch_to.window(new_window)
             form_first_name = self.driver.find_element(By.XPATH, '//input[@id="first_name"]')
-            form_first_name.click()
-            form_first_name.clear()
+            clickandclear(form_first_name)
             form_first_name.send_keys(jobapplication.first_name)
             form_last_name = self.driver.find_element(By.XPATH, '//input[@id="last_name"]')
-            form_last_name.click()
-            form_last_name.clear()
+            clickandclear(form_last_name)
             form_last_name.send_keys(jobapplication.last_name)
             self.driver.find_element(By.XPATH, '//button[@type="submit"]').click()
             if self.sleep:
@@ -1928,8 +1930,8 @@ class Bolt(SeleniumTools):
             if self.sleep:
                 time.sleep(self.sleep)
 
-            # submit = self.driver.find_element(By.XPATH, "//button[@type='submit']")
-            # submit.click()
+            submit = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+            submit.click()
             jobapplication.status_bolt = datetime.datetime.now().date()
             jobapplication.save()
 
@@ -2347,8 +2349,7 @@ class NewUklon(SeleniumTools):
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
-        form_phone_number.click()
-        form_phone_number.clear()
+        clickandclear(form_phone_number)
         form_phone_number.send_keys(jobapplication.phone_number[4:])
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
@@ -2373,8 +2374,7 @@ class NewUklon(SeleniumTools):
                                "password": jobapplication.password}
         for field, value in registration_fields.items():
             element = self.driver.find_element(By.ID, field)
-            element.click()
-            element.clear()
+            clickandclear(element)
             element.send_keys(value)
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
@@ -2398,11 +2398,10 @@ class NewUklon(SeleniumTools):
             WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
-        fleet_code.click()
-        fleet_code.clear()
-        fleet_code.send_keys("14f19b9d-4372-4bcf-9823-31e8fb79d080")
+        clickandclear(fleet_code)
+        fleet_code.send_keys(NewUklonFleet.token)
         WebDriverWait(self.driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))) #.click()
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         self.driver.get_screenshot_as_file('uklon.png')
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()

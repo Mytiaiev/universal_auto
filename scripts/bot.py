@@ -41,7 +41,8 @@ processed_files = []
 start_keyboard = [
     KeyboardButton(text="\U0001f696 Викликати Таксі", request_location=True),
     KeyboardButton(text="\U0001f4e2 Залишити відгук"),
-    KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу")
+    KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу"),
+    KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)
 ]
 #Ordering taxi
 def start(update, context):
@@ -54,13 +55,13 @@ def start(update, context):
             user.chat_id = chat_id
             user.save()
             reply_markup = ReplyKeyboardMarkup(
-                    keyboard=[start_keyboard],
+                    keyboard=[start_keyboard[:3]],
                     resize_keyboard=True,
                 )
             update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
         else:
             reply_markup = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)]],
+                keyboard=[start_keyboard[3:]],
                 resize_keyboard=True, )
             update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом",
                                       reply_markup=reply_markup)
@@ -71,7 +72,7 @@ def start(update, context):
             second_name=update.message.from_user.last_name
         )
         reply_markup = ReplyKeyboardMarkup(
-          keyboard=[[KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)]],
+          keyboard=[start_keyboard[3:]],
           resize_keyboard=True,)
         update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом", reply_markup=reply_markup)
 
@@ -87,7 +88,7 @@ def update_phone_number(update, context):
         user.chat_id = chat_id
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
-                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard], resize_keyboard=True))
+                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[3:]], resize_keyboard=True))
 
 
 LOCATION_WRONG = "Місце посадки - невірне"
