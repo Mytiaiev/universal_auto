@@ -2367,7 +2367,6 @@ class NewUklon(SeleniumTools):
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        self.driver.get_screenshot_as_file('regist.png')
         registration_fields = {"firstName": jobapplication.first_name,
                                "lastName": jobapplication.last_name,
                                "email": jobapplication.email,
@@ -2377,7 +2376,6 @@ class NewUklon(SeleniumTools):
             element.click()
             element.clear()
             element.send_keys(value)
-            self.driver.get_screenshot_as_file(f"{field}.png")
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
