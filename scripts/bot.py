@@ -439,20 +439,8 @@ def check_auto(update,context):
         chat_id = update.effective_chat.id
         user = User.get_by_chat_id(chat_id)
         try:
-            job = JobApplication.objects.get(phone_number=user.phone_number)
-            if job.status_bolt is None and job.status_uklon is None:
-                job.first_name = user.name
-                job.last_name = user.second_name
-                job.email = user.email
-                job.phone_number = user.phone_number
-                job.license_expired = context.user_data['expired_license']
-                job.driver_license_front = context.user_data['front_license']
-                job.driver_license_back = context.user_data['back_license']
-                job.photo = context.user_data['photo_job']
-                job.role = context.user_data['role']
-                job.save()
-            else:
-                update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+            JobApplication.objects.get(phone_number=user.phone_number)
+            update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
         except JobApplication.DoesNotExist:
             JobApplication.objects.create(
             first_name=user.name,
@@ -509,23 +497,8 @@ def upload_expired_insurance(update, context):
     if JobApplication.validate_date(date):
         context.user_data['expired_insurance'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
         try:
-            job = JobApplication.objects.get(phone_number=user.phone_number)
-            if job.status_bolt is None and job.status_uklon is None:
-                job.first_name = user.name
-                job.last_name = user.second_name
-                job.email = user.email
-                job.phone_number = user.phone_number
-                job.license_expired = context.user_data['expired_license']
-                job.driver_license_front = context.user_data['front_license']
-                job.driver_license_back = context.user_data['back_license']
-                job.photo = context.user_data['photo_job']
-                job.role = context.user_data['role']
-                job.car_documents = context.user_data['auto_doc']
-                job.insurance = context.user_data['insurance']
-                job.insurance_expired = context.user_data['expired_insurance']
-                job.save()
-            else:
-                update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+            JobApplication.objects.get(phone_number=user.phone_number)
+            update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
         except JobApplication.DoesNotExist:
             JobApplication.objects.create(
                 first_name=user.name,
