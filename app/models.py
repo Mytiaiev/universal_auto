@@ -2405,8 +2405,8 @@ class NewUklon(SeleniumTools):
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))) #.click()
         self.driver.get_screenshot_as_file('uklon.png')
-        # jobapplication.status_uklon = datetime.datetime.now().date()
-        # jobapplication.save()
+        jobapplication.status_uklon = datetime.datetime.now().date()
+        jobapplication.save()
 
 
 class Privat24(SeleniumTools):
