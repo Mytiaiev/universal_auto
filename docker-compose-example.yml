@@ -18,6 +18,8 @@ services:
 
     environment:
       TELEGRAM_TOKEN: <add Your telegram token here>
+      WEBHOOK_URL: <add Your domain>
+      BOT_PROD_ENV: <"True"or"False">
       UBER_NAME:
       UBER_PASSWORD:
       BOLT_NAME:

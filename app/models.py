@@ -2111,9 +2111,10 @@ class NewUklon(SeleniumTools):
         url = f'{self.base_url}/workspace/orders'
         xpath = '//flt-group-filter[1]/flt-date-range-filter/mat-form-field/div'
         self.get_target_page_or_login(url, xpath, self.login)
-
         self.driver.find_element(By.XPATH, '//flt-group-filter[1]/flt-date-range-filter/mat-form-field/div').click()
+        time.sleep(self.sleep)
         self.driver.find_element(By.XPATH, '//mat-option[@id="mat-option-7"]/span').click()  #Минулий тиждень
+        time.sleep(self.sleep)
         self.driver.find_element(By.XPATH, '//flt-filter-group/div/div/button').click()  #Експорт CSV
         time.sleep(self.sleep)
         if self.remote:
@@ -2521,5 +2522,12 @@ def download_and_save_daily_report(driver=True, sleep=5, headless=True, day=None
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+
+
+class ReportUser(models.Model):
+    chat_id = models.IntegerField(unique=True)
+
+    def __str__(self):
+        return f"{self.chat_id}"
 
 
