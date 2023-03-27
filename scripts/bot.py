@@ -350,6 +350,7 @@ def update_user_information(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
     clear_email = User.email_validator(email=email)
+    context.user_data['phone'] = user.phone_number
     if clear_email is not None:
         user.name = context.user_data['u_name']
         user.second_name = context.user_data['u_second_name']
@@ -562,6 +563,7 @@ def code_timer(update, context, timer, sleep):
     def timer_callback(context):
         context.bot.send_message(update.effective_chat.id,
             f'Заявку відхилено.Ви завжди можете подати її повторно')
+        JobApplication.objects.filter(phone_number=context.user_data['phone']).first().delete()
         return ConversationHandler.END
 
     remaining_time = timer

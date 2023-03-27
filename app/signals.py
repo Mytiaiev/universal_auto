@@ -4,11 +4,7 @@ from auto.tasks import send_on_job_application_on_driver_to_Bolt, send_on_job_ap
 from app.models import JobApplication
 
 @receiver(post_save, sender=JobApplication)
-def run_uklon_task(sender, instance, created, **kwargs):
+def run_add_drivers_task(sender, instance, created, **kwargs):
     if created:
         send_on_job_application_on_driver_to_NewUklon.delay(instance.id)
-
-@receiver(post_save, sender=JobApplication)
-def run_bolt_task(sender, instance, created, **kwargs):
-    if created:
         send_on_job_application_on_driver_to_Bolt.delay(instance.id)

@@ -2361,23 +2361,24 @@ class NewUklon(SeleniumTools):
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        # self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
-        # WebDriverWait(self.driver, 5).until(
-        #     EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
-        # if self.sleep:
-        #     time.sleep(self.sleep)
-        # registration_fields = {"firstName": jobapplication.first_name,
-        #                        "lastName": jobapplication.last_name,
-        #                        "email": jobapplication.email,
-        #                        "password": jobapplication.password}
-        # for field, value in registration_fields.items():
-        #     element = self.driver.find_element(By.ID, field)
-        #     element.click()
-        #     element.clear()
-        #     element.send_keys(value)
-        #     self.driver.get_screenshot_as_file(f"{field}.png")
-        # WebDriverWait(self.driver, 5).until(
-        #     EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        self.driver.get_screenshot_as_file('regist.png')
+        registration_fields = {"firstName": jobapplication.first_name,
+                               "lastName": jobapplication.last_name,
+                               "email": jobapplication.email,
+                               "password": jobapplication.password}
+        for field, value in registration_fields.items():
+            element = self.driver.find_element(By.ID, field)
+            element.click()
+            element.clear()
+            element.send_keys(value)
+            self.driver.get_screenshot_as_file(f"{field}.png")
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
         file_paths = [
             os.getcwd() + f"/data/mediafiles/{jobapplication.photo}",
