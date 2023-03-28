@@ -368,11 +368,88 @@ def set_status(update, context):
     update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
 
 
+CORRECT_AUTO = '- ТАК -'
+NOT_CORRECT_AUTO = '- НІ -'
+
+
 def get_vehicle_of_driver(update, context):
     chat_id = update.message.chat.id
-    driver = Driver.objects.get(chat_id=chat_id)
-    vehicles = [(k for k in i.vehicle) for i in Fleets_drivers_vehicles_rate.objects.filter(driver=driver.id)]
-    update.message.reply_text(f'{vehicles}')
+    driver_ = Driver.get_by_chat_id(chat_id)
+    context.user_data['u_driver'] = driver_
+
+    keyboard = [[KeyboardButton(f'{CORRECT_AUTO}')],
+                [KeyboardButton(f'{NOT_CORRECT_AUTO}')]]
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=[keyboard[0], keyboard[1]],
+        resize_keyboard=True)
+
+    vehicles = [i.licence_plate for i in Vehicle.objects.filter(driver=driver_.id)]
+    if vehicles:
+        if len(vehicles) == 1:
+            vehicle = Vehicle.objects.get(licence_plate=vehicles[0])
+            if vehicle.gps_imei:
+                update.message.reply_text(f'Ви сьогодні на авто з номерним знаком {vehicles[0]}?', reply_markup=reply_markup)
+                context.user_data['use_vehicle'] = vehicles[0]
+            else:
+                update.message.reply_text('За вашим авто не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
+        else:
+            global STATE_D
+            licence_plates = {i.id: i.licence_plate for i in Vehicle.objects.all() if i.licence_plate in vehicles}
+            vehicles = {k: licence_plates[k] for k in sorted(licence_plates)}
+            context.user_data['data_vehicles'] = vehicles
+            report_list_vehicles = ''
+            for k, v in vehicles.items():
+                report_list_vehicles += f'{k}: {v}\n'
+            update.message.reply_text(f'{report_list_vehicles}')
+            update.message.reply_text(f'Укажіть номер машини, яку ви будете використовувати сьогодні')
+            STATE_D = V_CAR
+    else:
+        update.message.reply_text("За вами не закріплено жодного авто. Зверніться до менеджерів")
+
+
+def add_vehicle_to_driver(update, context):
+    global STATE_D
+    id_vehicle = update.message.text
+    chat_id = update.message.chat.id
+    try:
+        id_vehicle = int(id_vehicle)
+        if id_vehicle in context.user_data['data_vehicles']:
+            vehicle = Vehicle.objects.get(id=id_vehicle)
+        else:
+            update.message.reply_text('Такого ключа немає у вашому списку, спробуйте ще раз')
+    except:
+        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+    record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date())
+    if record:
+        update.message.reply_text('Це авто вже використовує інший водій. Спробуйте інше авто. Якщо всі авто заняті зверніться до менеджерів')
+        get_vehicle_of_driver(update, context)
+    else:
+        UseOfCars.objects.create(
+            user_vehicle=context.user_data['u_driver'],
+            chat_id=chat_id,
+            licence_plate=vehicle)
+        update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня')
+        STATE_D = None
+        send_set_status(update, context)
+
+def correct_or_not_auto(update, context):
+    option = update.message.text
+    chat_id = update.message.chat.id
+    if option == f'{CORRECT_AUTO}':
+        record = UseOfCars.objects.filter(licence_plate=context.user_data['use_vehicle'], created_at__date=timezone.now().date())
+        if record:
+            update.message.reply_text('Ваше авто вже використовує інший водій. Зверніться до менеджерів')
+        else:
+            UseOfCars.objects.create(
+                user_vehicle=context.user_data['u_driver'],
+                chat_id=chat_id,
+                licence_plate=context.user_data['use_vehicle'])
+            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
+            send_set_status(update, context)
+    else:
+        update.message.reply_text('Зверніться до менеджерів водіїв та проконсультуйтесь, яку машину вам використовувати сьогодні.' +
+                                  ' Та скористайтесь наступною командою /car_change', reply_markup=ReplyKeyboardRemove())
 
 
 def get_vehicle_licence_plate(update, context):
@@ -425,6 +502,7 @@ def get_imei(update, context):
     if context.user_data['vehicle'].gps_imei:
         UseOfCars.objects.create(
             user_vehicle=driver,
+            chat_id=chat_id,
             licence_plate=context.user_data['vehicle'])
         update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
         send_set_status(update, context)
@@ -700,7 +778,7 @@ SERVICEABLE = 'Придатна'
 BROKEN = 'Зламана'
 
 STATE_D = None    # range(50 - 100)
-NUMBERPLATE, REPORT, V_ID = range(50, 53)
+NUMBERPLATE, REPORT, V_ID, V_CAR = range(50, 54)
 
 
 # Changing status car
@@ -1431,6 +1509,8 @@ def text(update, context):
             return change_status_car(update, context)
         elif STATE_D == V_ID:
             return correct_choice(update, context)
+        elif STATE_D == V_CAR:
+            return add_vehicle_to_driver(update, context)
     elif STATE_O is not None:
         if STATE_O == CARD:
             return get_sum(update, context)
@@ -1681,6 +1761,7 @@ def webhook(request):
         dp.process_update(update)
         return HttpResponse(status=200)
 
+
 # Command for Owner
 dp.add_handler(CommandHandler("report", report))
 dp.add_handler(CommandHandler("download_report", download_report))
@@ -1763,6 +1844,12 @@ dp.add_handler(MessageHandler(
 # Сar registration for today
 dp.add_handler(CommandHandler("car_change", get_vehicle_licence_plate))
 
+# Get correct auto
+dp.add_handler(MessageHandler(
+    Filters.regex(fr'^{CORRECT_AUTO}$') |
+    Filters.regex(fr'^{NOT_CORRECT_AUTO}$'),
+    correct_or_not_auto))
+
 # Correct choice change_auto
 dp.add_handler(MessageHandler(Filters.regex(fr'^{CORRECT_CHOICE}$'), get_imei))
 dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_licence_plate))
@@ -1794,8 +1881,7 @@ dp.add_handler(MessageHandler(
     get_driver_external_id))
 
 # The job application on driver sent to fleet
-dp.add_handler(CommandHandler("add_job_application_to_fleets",
-                              get_list_job_application))
+dp.add_handler(CommandHandler("add_job_application_to_fleets", get_list_job_application))
 dp.add_handler(MessageHandler(
     Filters.regex(fr'^- {F_BOLT}$') |
     Filters.regex(fr'^- {F_UBER}$'),
@@ -1817,17 +1903,12 @@ dp.add_error_handler(error_handler)
 dp.add_handler(CommandHandler('update', update_db, run_async=True))
 dp.add_handler(CommandHandler("save_reports", save_reports))
 
-dp.add_handler(MessageHandler(Filters.text('Get all today statistic'),
-                              get_manager_today_report))
-dp.add_handler(MessageHandler(Filters.text('Get today statistic'),
-                              get_driver_today_report))
-dp.add_handler(MessageHandler(Filters.text('Choice week number'),
-                              get_driver_week_report))
-dp.add_handler(
-    MessageHandler(Filters.text('Update report'), get_update_report))
+dp.add_handler(MessageHandler(Filters.text('Get all today statistic'), get_manager_today_report))
+dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_today_report))
+dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
+dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
-updater.job_queue.run_daily(auto_report_for_driver_and_owner,
-                            time=datetime.time(7, 0, 0), days=(1,))
+updater.job_queue.run_daily(auto_report_for_driver_and_owner, time=datetime.time(7, 0, 0), days=(1,))
 
 
 def main():

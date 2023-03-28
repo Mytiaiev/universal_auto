@@ -421,7 +421,6 @@ class Driver(User):
     OFFLINE = 'Не працюю'
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
-    driver_manager_id = models.ManyToManyField('DriverManager', blank=True)
     #partner = models.ManyToManyField('Partner', blank=True)
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
@@ -1146,6 +1145,7 @@ class JobApplication(models.Model):
 
 class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
+    chat_id = models.CharField(blank=True, max_length=100, verbose_name='Індетифікатор чата')
     licence_plate = models.CharField(max_length=24, verbose_name='Номерний знак')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата використання авто')
 
