@@ -27,7 +27,7 @@ MEMCASH_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
-@app.task(priority=0)
+@app.task(priority=8)
 def raw_gps_handler(id):
     try:
         raw = RawGPS.objects.get(id=id)
@@ -148,6 +148,7 @@ def download_weekly_report_force(self):
         UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
     except Exception as e:
         logger.info(e)
+
 
 
 @app.task(bind=True, priority=8)
