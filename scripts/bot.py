@@ -88,7 +88,7 @@ def update_phone_number(update, context):
         user.chat_id = chat_id
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
-                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[3:]], resize_keyboard=True))
+                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[:3]], resize_keyboard=True))
 
 
 LOCATION_WRONG = "Місце посадки - невірне"
