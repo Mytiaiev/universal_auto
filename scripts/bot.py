@@ -425,13 +425,18 @@ def add_vehicle_to_driver(update, context):
         update.message.reply_text('Це авто вже використовує інший водій. Спробуйте інше авто. Якщо всі авто заняті зверніться до менеджерів')
         get_vehicle_of_driver(update, context)
     else:
-        UseOfCars.objects.create(
-            user_vehicle=context.user_data['u_driver'],
-            chat_id=chat_id,
-            licence_plate=vehicle)
-        update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня')
-        STATE_D = None
-        send_set_status(update, context)
+        if vehicle.gps_imei:
+            UseOfCars.objects.create(
+                user_vehicle=context.user_data['u_driver'],
+                chat_id=chat_id,
+                licence_plate=vehicle)
+            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня')
+            STATE_D = None
+            send_set_status(update, context)
+        else:
+            update.message.reply_text('За авто, яке ви обрали не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
+            STATE_D = None
+
 
 def correct_or_not_auto(update, context):
     option = update.message.text
