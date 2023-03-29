@@ -219,7 +219,7 @@ def order_create(update, context):
     user = User.get_by_chat_id(context.user_data['chat_id'])
     context.user_data['phone_number'] = user.phone_number
 
-    drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE or i.driver_status == Driver.WITH_CLIENT]
+    drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
 
     order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
             f"Спосіб оплати: {context.user_data['payment_method']}\nНомер телефону: {context.user_data['phone_number']}"
@@ -245,14 +245,18 @@ def order_create(update, context):
     create_order.save()
 
 
-def inline_buttons(update, context):
+def inline_buttons_for_driver(update, context):
     query = update.callback_query
     query.answer()
-
     chat_id = update.effective_chat.id
 
+    number_phone = query.message.text
+    number_phone = number_phone[-13::]
+    user = User.objects.get(phone_number=number_phone)
+    context.user_data['client_chat_id'] = user.chat_id
+
     if query.data == 'Accept order':
-        order = Order.get_order(chat_id_client=context.user_data['chat_id'], sum='', status_order=WAITING)
+        order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=WAITING)
         if order is not None:
             #driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
             driver = Driver.get_by_chat_id(chat_id=chat_id)
@@ -282,8 +286,7 @@ def inline_buttons(update, context):
                 report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\n' \
                                     f'Номер машини: {licence_plate}\nНомер телефону: {driver.phone_number}'
 
-                context.bot.send_message(chat_id=chat_id, text=f'Водій ваш статус зміненно на <<{Driver.WAIT_FOR_CLIENT}>>')
-                context.bot.send_message(chat_id=context.user_data['chat_id'], text=report_for_client)
+                context.bot.send_message(chat_id=context.user_data['client_chat_id'], text=report_for_client)
 
                 # Get coordinates car
                 car_gps_imei = vehicle.gps_imei
@@ -291,8 +294,8 @@ def inline_buttons(update, context):
 
                 #send map client
                 report = 'Коли водій буде на місці, ви отримаєте повідомлення. На карті нижче ви можете спостерігати, де зараз ваш водій'
-                context.bot.send_message(chat_id=context.user_data['chat_id'], text=report)
-                m = context.bot.sendLocation(context.user_data['chat_id'], latitude=latitude, longitude=longitude, live_period=600)
+                context.bot.send_message(chat_id=context.user_data['client_chat_id'], text=report)
+                m = context.bot.sendLocation(context.user_data['client_chat_id'], latitude=latitude, longitude=longitude, live_period=600)
 
                 for i in range(1, 20):
                     latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
@@ -312,7 +315,7 @@ def inline_buttons(update, context):
     elif query.data == 'Reject order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
     elif query.data == "On the spot":
-        context.bot.send_message(chat_id=context.user_data['chat_id'], text='Машину подано. Водій вас очікує')
+        context.bot.send_message(chat_id=context.user_data['client_chat_id'], text='Машину подано. Водій вас очікує')
 
 
 def get_location_from_db(car_gps_imei):
@@ -1897,7 +1900,9 @@ dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gp
 # Commands for Service Station Manager
 # Sending report on repair
 dp.add_handler(CommandHandler("send_report", numberplate_car))
-dp.add_handler(CallbackQueryHandler(inline_buttons))
+
+dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$', p))
+
 
 # System commands
 dp.add_handler(CommandHandler("cancel", cancel))
