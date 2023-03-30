@@ -226,7 +226,10 @@ def order_create(update, context):
 
     if drivers:
         for driver in drivers:
-            context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
+            try:
+                context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
+            except:
+                pass
         #context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)  #for develop
     else:
         update.message.reply_text('Вибачте, але вільних водіїв незалишилось')
@@ -1901,7 +1904,7 @@ dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gp
 # Sending report on repair
 dp.add_handler(CommandHandler("send_report", numberplate_car))
 
-dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$', p))
+dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
 
 
 # System commands
