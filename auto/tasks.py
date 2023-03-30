@@ -11,7 +11,7 @@ from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
 
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, UaGps
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -169,6 +169,15 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
         ub.add_driver(phone_number, email, name, second_name)
         ub.quit()
         print('The job application has been sent to Uber')
+    except Exception as e:
+        logger.info(e)
+@app.task(bind=True, priority=8)
+def get_rent_information(self):
+    try:
+        gps = UaGps(driver=True, sleep=5, headless=True)
+        gps.login()
+        gps.quit()
+        print('logged in uagps')
     except Exception as e:
         logger.info(e)
 

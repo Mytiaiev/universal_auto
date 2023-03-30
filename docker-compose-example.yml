@@ -26,6 +26,8 @@ services:
       BOLT_PASSWORD:
       UKLON_NAME:
       UKLON_PASSWORD:
+      UAGPS_LOGIN:
+      UAGPS_PASSWORD:
       PRIVAT24_NAME:              #lenght = 9 ex: 632587413
       PRIVAT24_PASSWORD:
       PORTMONE_LOGIN:
