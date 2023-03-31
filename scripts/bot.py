@@ -12,6 +12,7 @@ import json
 import logging
 import requests
 import traceback
+import threading
 from telegram import * 
 from telegram.ext import *
 from app.models import *
@@ -48,7 +49,7 @@ def start(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
     keyboard = [KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True),
-                KeyboardButton(text="\U0001f696 Викликати Таксі", request_location=True),
+                KeyboardButton(text="\U0001f696 Викликати Таксі"),
                 KeyboardButton(text="\U0001f4e2 Залишити відгук"),
                 KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу")]
     if user:
@@ -89,46 +90,56 @@ def update_phone_number(update, context):
 
 LOCATION_WRONG = "Місце посадки - невірне"
 LOCATION_CORRECT = "Місце посадки - вірне"
+CONTINUE = 'Продовжити замовлення'
+CANCEL = 'Скасувати замовлення'
+
+
+def continue_order(update, context):
+    update.message.reply_text(f"Ціна поїздки в місті {os.environ['TARIFF_IN_THE_CITY']}грн/км\n" +
+                              f"Ціна поїздки за містом {os.environ['TARIFF_OUTSIDE_THE_CITY']}грн/км")
+
+    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}", request_location=True),
+                KeyboardButton(text=f"\u274c {CANCEL}")]
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=[keyboard],
+        resize_keyboard=True,
+    )
+
+    update.message.reply_text('Чи бажаєте ви продовжити?', reply_markup=reply_markup)
+
+
+def cancel_order(update, context):
+    update.message.reply_text('Гарного дня. Дякуємо, що скористались нашими послугами',  reply_markup=ReplyKeyboardRemove())
+    cancel(update, context)
 
 
 def location(update: Update, context: CallbackContext):
-    active_drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == f'{Driver.ACTIVE}' or i.driver_status == f'{Driver.WITH_CLIENT}']
+    active_drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == f'{Driver.ACTIVE}']
 
-    if len(active_drivers) == 0:
+    if not active_drivers:
         report = update.message.reply_text('Вибачте, але зараз немає вільний водіїв. Скористайтеся послугою пізніше', reply_markup=ReplyKeyboardRemove())
         return report
     else:
-        if update.edited_message:
-            m = update.edited_message
-        else:
-            m = update.message
-        m = context.bot.sendLocation(update.effective_chat.id, latitude=m.location.latitude,
-                                     longitude=m.location.longitude, live_period=600)
-
-
+        m = update.message
+        # geocoding lat and lon to address
         context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
-        context.user_data['from_address'] = 'Null'
-        the_confirmation_of_location(update, context)
-
-        for i in range(1, 10):
-            try:
-                logger.error(i)
-                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=i * 10, longitude=i * 10)
-                print(m)
-            except Exception as e:
-                logger.error(msg=e.message)
-                logger.error(i)
-            time.sleep(5)
+        address = get_address(context.user_data['latitude'], context.user_data['longitude'], os.environ["GOOGLE_API_KEY"])
+        if address is not None:
+            context.user_data['from_address'] = address
+            update.message.reply_text(f'Ваша адреса: {address}')
+            the_confirmation_of_location(update, context)
+        else:
+            update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
+            from_address(update, context)
 
 
 STATE = None       # range (1-50)
-LOCATION, FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 5)
-U_NAME, U_SECOND_NAME, U_EMAIL = range(5, 8)
+FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 4)
+U_NAME, U_SECOND_NAME, U_EMAIL = range(4, 7)
 
 
 def the_confirmation_of_location(update, context):
-    global STATE
-    STATE = LOCATION
 
     keyboard = [KeyboardButton(text=f"\u2705 {LOCATION_CORRECT}"),
                 KeyboardButton(text=f"\u274c {LOCATION_WRONG}")]
@@ -137,7 +148,7 @@ def the_confirmation_of_location(update, context):
         keyboard=[keyboard],
         resize_keyboard=True, )
 
-    update.message.reply_text('Виберіть статус вашої геолокації!', reply_markup=reply_markup)
+    update.message.reply_text('Оберіть статус посадки', reply_markup=reply_markup)
 
 
 def from_address(update, context):
@@ -155,34 +166,10 @@ def to_the_adress(update, context):
     STATE = TO_THE_ADDRESS
 
 
-CONTINUE = 'Продовжити замовлення'
-CANCEL = 'Скасувати замовлення'
-
-
-def continue_order(update, context):
+def payment_method(update, context):
     global STATE
     STATE = None
     context.user_data['to_the_address'] = update.message.text
-    update.message.reply_text(f"Ціна поїздки в місті {os.environ['TARIFF_IN_THE_CITY']}грн/км\n" +
-                              f"Ціна поїздки за містом {os.environ['TARIFF_OUTSIDE_THE_CITY']}грн/км")
-
-    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}"),
-                KeyboardButton(text=f"\u274c {CANCEL}")]
-
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard=[keyboard],
-        resize_keyboard=True,
-    )
-
-    update.message.reply_text('Чи бажаєте ви продовжити?', reply_markup=reply_markup)
-
-
-def cancel_order(update, context):
-    update.message.reply_text('Ви скасували ваше замовлення',  reply_markup=ReplyKeyboardRemove())
-    cancel(update, context)
-
-
-def payment_method(update, context):
 
     keyboard = [KeyboardButton(text=f"\U0001f4b7 {Order.CASH}"),
                 KeyboardButton(text=f"\U0001f4b8 {Order.CARD}")]
@@ -293,24 +280,12 @@ def inline_buttons_for_driver(update, context):
 
                 # Get coordinates car
                 car_gps_imei = vehicle.gps_imei
-                latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
 
-                #send map client
-                report = 'Коли водій буде на місці, ви отримаєте повідомлення. На карті нижче ви можете спостерігати, де зараз ваш водій'
-                context.bot.send_message(chat_id=context.user_data['client_chat_id'], text=report)
-                m = context.bot.sendLocation(context.user_data['client_chat_id'], latitude=latitude, longitude=longitude, live_period=600)
+                context.user_data['running'] = True
+                r = threading.Thread(target=send_map_to_client, args=(update, context,
+                                            context.user_data['client_chat_id'], car_gps_imei), daemon=True)
+                r.start()
 
-                for i in range(1, 20):
-                    latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
-                    try:
-                        logger.error(i)
-                        m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
-                                                        longitude=longitude)
-                        print(m)
-                    except Exception as e:
-                        logger.error(msg=e.message)
-                        logger.error(i)
-                    time.sleep(30)
             else:
                 query.edit_message_text(text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
         else:
@@ -318,7 +293,29 @@ def inline_buttons_for_driver(update, context):
     elif query.data == 'Reject order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
     elif query.data == "On the spot":
+        context.user_data['running'] = False
         context.bot.send_message(chat_id=context.user_data['client_chat_id'], text='Машину подано. Водій вас очікує')
+
+
+def send_map_to_client(update, context, client_chat_id, car_gps_imei):
+    # client_chat_id, car_gps_imei = context.args[0], context.args[1]
+    latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
+
+    # send map client
+    report = 'Коли водій буде на місці, ви отримаєте повідомлення. На карті нижче ви можете спостерігати, де зараз ваш водій'
+    context.bot.send_message(chat_id=client_chat_id, text=report)
+    m = context.bot.sendLocation(client_chat_id, latitude=latitude, longitude=longitude, live_period=600)
+
+    while context.user_data['running']:
+        latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
+        try:
+            logger.error(i)
+            m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
+            print(m)
+        except Exception as e:
+            logger.error(msg=e.message)
+            logger.error(i)
+            time.sleep(30)
 
 
 def get_location_from_db(car_gps_imei):
@@ -1506,7 +1503,7 @@ def text(update, context):
         if STATE == FROM_ADDRESS:
             return to_the_adress(update, context)
         elif STATE == TO_THE_ADDRESS:
-            return continue_order(update, context)
+            return payment_method(update, context)
         elif STATE == COMMENT:
             return save_comment(update, context)
         elif STATE == U_NAME:
@@ -1801,11 +1798,12 @@ dp.add_handler(CommandHandler("start", start))
 # incomplete auth
 dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
 # ordering taxi
-dp.add_handler(MessageHandler(Filters.location, location, run_async=True))
+dp.add_handler(MessageHandler(Filters.location, location))
 
-dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_adress))
+dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f696 Викликати Таксі$"), continue_order))
+
+dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_adress))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
-dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {CONTINUE}$"), payment_method))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
 
 dp.add_handler(MessageHandler(

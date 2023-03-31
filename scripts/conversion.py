@@ -22,23 +22,12 @@ def convertion(coordinates: str):
     return result
 
 
-def reverse_geocode(latitude, longitude):
-    # Did the geocoding request comes from a device with a
-    # location sensor? Must be either true or false
-    sensor = 'true'
+def get_address(latitude, longitude, api_key):
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&language=uk&key={api_key}"
+    response = requests.get(url)
+    data = response.json()
+    if data['status'] == 'OK':
+        return data['results'][0]['formatted_address']
+    else:
+        return None
 
-    # Hit Google's reverse geocoder directly
-    # NOTE: I *think* their terms state that you're supposed to
-    # use google maps if you use their api for anything.
-    base = "https://maps.googleapis.com/maps/api/geocode/json?"
-    params = "latlng={lat},{lon}&sensor={sen}&key={key}".format(
-        lat=latitude,
-        lon=longitude,
-        sen=sensor,
-        key=os.environ["GOOGLE_API_KEY"]
-    )
-    url = "{base}{params}".format(base=base, params=params)
-    print(url)
-    response = requests.get(url).json()
-    address = response['results'][0]['formatted_address']
-    return address
