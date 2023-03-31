@@ -394,6 +394,11 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = [f.name for f in Order._meta.fields]
 
 
+@admin.register(UseOfCars)
+class UseofCarsAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in UseOfCars._meta.fields]
+
+
 @admin.register(Fleets_drivers_vehicles_rate)
 class Fleets_drivers_vehicles_rateAdmin(admin.ModelAdmin):
     list_display = [f.name for f in Fleets_drivers_vehicles_rate._meta.fields]

@@ -175,9 +175,9 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
 def get_rent_information(self):
     try:
         gps = UaGps(driver=True, sleep=5, headless=True)
-        gps.login()
+        gps.get_rent_distance()
         gps.quit()
-        print('logged in uagps')
+        print('write rent report in uagps')
     except Exception as e:
         logger.info(e)
 
