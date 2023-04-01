@@ -315,12 +315,10 @@ def send_map_to_client(update, context, client_chat_id, car_gps_imei):
     while context.user_data['running']:
         latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
         try:
-            logger.error(i)
             m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
             print(m)
         except Exception as e:
             logger.error(msg=e.message)
-            logger.error(i)
             time.sleep(30)
 
 
