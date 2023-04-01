@@ -652,7 +652,7 @@ class UklonFleet(Fleet):
 
 
 class NewUklonFleet(Fleet):
-    token = models.CharField(max_length=40, default=os.environ.get("UKLON_TOKEN"), verbose_name="Код автопарку")
+    token = models.CharField(max_length=40, default=None, verbose_name="Код автопарку")
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
@@ -2411,7 +2411,7 @@ class NewUklon(SeleniumTools):
                 EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
         clickandclear(fleet_code)
-        fleet_code.send_keys(NewUklonFleet.token)
+        fleet_code.send_keys(os.environ.get("UKLON_TOKEN", NewUklonFleet.token))
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         self.driver.get_screenshot_as_file('uklon.png')
