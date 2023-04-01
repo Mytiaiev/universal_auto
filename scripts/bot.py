@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 processed_files = []
 
 start_keyboard = [
-    KeyboardButton(text="\U0001f696 Викликати Таксі", request_location=True),
+    KeyboardButton(text="\U0001f696 Викликати Таксі"),
     KeyboardButton(text="\U0001f4e2 Залишити відгук"),
     KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу"),
     KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)
