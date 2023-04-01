@@ -1,5 +1,6 @@
 import ast
 import os
+import threading
 import time
 import csv
 import datetime
@@ -12,8 +13,7 @@ import json
 import logging
 import requests
 import traceback
-import threading
-from telegram import * 
+from telegram import *
 from telegram.ext import *
 from app.models import *
 from app.portmone.generate_link import *
@@ -30,7 +30,6 @@ from scripts.conversion import *
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
 
@@ -41,27 +40,34 @@ logger = logging.getLogger(__name__)
 
 processed_files = []
 
-
-# Ordering taxi
+start_keyboard = [
+    KeyboardButton(text="\U0001f696 Викликати Таксі"),
+    KeyboardButton(text="\U0001f4e2 Залишити відгук"),
+    KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу"),
+    KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)
+]
+#Ordering taxi
 def start(update, context):
-    update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
     menu(update, context)
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    keyboard = [KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True),
-                KeyboardButton(text="\U0001f696 Викликати Таксі"),
-                KeyboardButton(text="\U0001f4e2 Залишити відгук"),
-                KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу")]
+    context.user_data.clear()
     if user:
-        user.chat_id = chat_id
-        user.save()
         if user.phone_number:
-            keyboard = [keyboard[1], keyboard[2], keyboard[3]]
+            update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
+            user.chat_id = chat_id
+            user.save()
             reply_markup = ReplyKeyboardMarkup(
-                keyboard=[keyboard],
-                resize_keyboard=True,
+                    keyboard=[start_keyboard[:3]],
+                    resize_keyboard=True,
                 )
             update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
+        else:
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard=[start_keyboard[3:]],
+                resize_keyboard=True, )
+            update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом",
+                                      reply_markup=reply_markup)
     else:
         User.objects.create(
             chat_id=chat_id,
@@ -69,10 +75,9 @@ def start(update, context):
             second_name=update.message.from_user.last_name
         )
         reply_markup = ReplyKeyboardMarkup(
-          keyboard=[keyboard],
-          resize_keyboard=True,
-        )
-        update.message.reply_text("Будь ласка розшарьте номер телефону та геолокацію для виклику таксі", reply_markup=reply_markup,)
+          keyboard=[start_keyboard[3:]],
+          resize_keyboard=True,)
+        update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом", reply_markup=reply_markup)
 
 
 def update_phone_number(update, context):
@@ -85,7 +90,8 @@ def update_phone_number(update, context):
         user.phone_number = phone_number
         user.chat_id = chat_id
         user.save()
-        update.message.reply_text('Дякуємо ми отримали ваш номер телефону для звязку з водієм', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[:3]], resize_keyboard=True))
 
 
 LOCATION_WRONG = "Місце посадки - невірне"
@@ -309,12 +315,10 @@ def send_map_to_client(update, context, client_chat_id, car_gps_imei):
     while context.user_data['running']:
         latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
         try:
-            logger.error(i)
             m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
             print(m)
         except Exception as e:
             logger.error(msg=e.message)
-            logger.error(i)
             time.sleep(30)
 
 
@@ -568,87 +572,273 @@ JOB_DRIVER = 'Водій'
 
 
 # Add job application
-def role_for_job_application(update, context):
-    chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
-    if not user.phone_number:
-        update.message.reply_text('Спочатку поділітся вашим номером телефону')
-    else:
-        buttons = [[KeyboardButton(f'{JOB_DRIVER}')]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
-                    reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=True))
-
 
 def job_application(update, context):
-    role = update.message.text
-    chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
-    if (user.phone_number and user.email and user.name and user.second_name):
-        JobApplication.objects.create(
-            first_name=user.name,
-            last_name=user.second_name,
-            email=user.email,
-            phone_number=user.phone_number,
-            role=role)
-        update.message.reply_text('Заявку подано', reply_markup=ReplyKeyboardRemove())
-        update.message.reply_text('Також вам потрібно зареєструватись на сайті https://supplier.uber.com, як водій')
-    else:
-        update.message.reply_text('Надайте повну інформацію про себе, щоб залишити заявку. Скористайтесь командою /upd_informations', reply_markup=ReplyKeyboardRemove())
+    buttons = [[KeyboardButton(f'{JOB_DRIVER}')]]
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
+                                reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True,
+                                                                  one_time_keyboard=True))
+    update.message.reply_text("Якщо ви десь помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
+
+
+def restart_jobapplication(update, context):
+    context.user_data.clear()
+    context.user_data['role'] = f"{JOB_DRIVER}"
+    update.message.reply_text("Ви почали подачу заявки спочатку.")
+    update.message.reply_text("Введіть ваше Ім`я:")
+    return "JOB_USER_NAME"
 
 
 # Update information for users
 def update_name(update, context):
-    global STATE
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
+    context.user_data['role'] = f"{JOB_DRIVER}"
     if user:
-        update.message.reply_text("Введіть Ім`я:")
-        STATE = U_NAME
+        update.message.reply_text("Введіть ваше Ім`я:", reply_markup=ReplyKeyboardRemove())
+        return "JOB_USER_NAME"
     else:
-        update.message.reply_text('Спочатку зареєструйтесь, щоб оновлювати ваші дані')
+        update.message.reply_text('Спочатку надайте телефон')
 
 
 def update_second_name(update, context):
-    global STATE
     name = update.message.text
-    name = User.name_and_second_name_validator(name=name)
-    if name is not None:
-        context.user_data['u_name'] = name
+    clear_name = User.name_and_second_name_validator(name=name)
+    if clear_name is not None:
+        context.user_data['u_name'] = clear_name
         update.message.reply_text("Введіть Прізвище:")
-        STATE = U_SECOND_NAME
+        return "JOB_LAST_NAME"
     else:
         update.message.reply_text('Ім`я занадто довге. Спробуйте ще раз')
+        return "JOB_USER_NAME"
 
 
 def update_email(update, context):
-    global STATE
     second_name = update.message.text
-    second_name = User.name_and_second_name_validator(name=second_name)
-    if second_name is not None:
-        context.user_data['u_second_name'] = second_name
+    clear_second_name = User.name_and_second_name_validator(name=second_name)
+    if clear_second_name is not None:
+        context.user_data['u_second_name'] = clear_second_name
         update.message.reply_text("Введіть електронну адресу:")
-        STATE = U_EMAIL
+        return "JOB_EMAIL"
     else:
         update.message.reply_text('Прізвище занадто довге. Спробуйте ще раз')
+        return "JOB_LAST_NAME"
 
 
 def update_user_information(update, context):
-    global STATE
     email = update.message.text
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    email = User.email_validator(email=email)
-    if email is not None:
+    clear_email = User.email_validator(email=email)
+    context.user_data['phone'] = user.phone_number
+    if clear_email is not None:
         user.name = context.user_data['u_name']
         user.second_name = context.user_data['u_second_name']
-        user.email = email
+        user.email = clear_email
         user.save()
-        update.message.reply_text('Ваші дані оновлені')
-        STATE = None
-        role_for_job_application(update, context)
+        buttons = [[InlineKeyboardButton(text='Завантажити документи', callback_data='job_photo')]]
+        update.message.reply_text('Ваші дані оновлені, надайте будь-ласка необхідні документи, скориставшись кнопкою під повідомленням', reply_markup=InlineKeyboardMarkup(buttons))
+        return "WAIT_FOR_JOB_OPTION"
     else:
         update.message.reply_text('Eлектронна адреса некоректна. Спробуйте ще раз')
+        return 'JOB_EMAIL'
 
+def get_job_photo(update, context):
+    empty_inline_keyboard = InlineKeyboardMarkup([])
+    update.callback_query.answer()
+    update.callback_query.edit_message_text(text='Надішліть ваше фото не розмите, без головного убору та окулярів (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=empty_inline_keyboard)
+    return 'WAIT_FOR_JOB_PHOTO'
+
+
+def upload_photo(update, context):
+    os.makedirs('data/mediafiles/job/photo/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/photo/{image["file_unique_id"]}.jpg'
+        context.user_data['photo_job'] = f'job/photo/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Ваше фото збережено.Надішліть лицьову сторону посвідчення')
+        context.bot.send_photo(update.effective_chat.id, 'https://kourier.in.ua/uploads/posts/2016-12/1480604684_1702.jpg')
+        return 'WAIT_FOR_FRONT_PHOTO'
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_JOB_PHOTO'
+
+
+def upload_license_front_photo(update, context):
+    os.makedirs('data/mediafiles/job/licenses/front/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/licenses/front/{image["file_unique_id"]}.jpg'
+        context.user_data['front_license'] = f'job/licenses/front/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Лицьова сторона посвідчення збережена.Надішліть тильну сторону')
+        context.bot.send_photo(update.effective_chat.id, 'https://www.autoconsulting.com.ua/pictures/_upload/1582561870fbTo_h.jpg')
+        return 'WAIT_FOR_BACK_PHOTO'
+    else:
+        update.message.reply_text('Будь ласка, надішліть лицьову сторону', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_FRONT_PHOTO'
+
+def upload_license_back_photo(update, context):
+    os.makedirs('data/mediafiles/job/licenses/back/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/licenses/back/{image["file_unique_id"]}.jpg'
+        context.user_data['back_license'] = f'job/licenses/back/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Тильна сторона посвідчення збережена.Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25).')
+        update.message.reply_text(
+            'Якщо посвідчення безстрокове введіть 2077-12-31 або будь-яку іншу дату у далекому майбутньому до 2077р.:')
+        return 'WAIT_FOR_EXPIRED'
+    else:
+        update.message.reply_text('Будь ласка, надішліть тильну сторону', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_BACK_PHOTO'
+def upload_expired_date(update, context):
+    date = update.message.text
+    if JobApplication.validate_date(date):
+        context.user_data['expired_license'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+        buttons = [[InlineKeyboardButton(text='так', callback_data='have_auto')], [InlineKeyboardButton(text='ні', callback_data='no_auto')]]
+        update.message.reply_text('Чи є у вас авто для роботи:', reply_markup=InlineKeyboardMarkup(buttons))
+        return "WAIT_ANSWER"
+    else:
+        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        return 'WAIT_FOR_EXPIRED'
+
+def check_auto(update,context):
+    query = update.callback_query
+    empty_inline_keyboard = InlineKeyboardMarkup([])
+    if query.data == 'have_auto':
+        query.answer()
+        query.edit_message_text('Дякуємо! Будь ласка, надішліть фото посвідчення про реєстрацію авто.', reply_markup=empty_inline_keyboard)
+        context.bot.send_photo(query.message.chat_id,
+                       'https://protocol.ua/userfiles/tehpasport-na-avto.jpg')
+        return 'WAIT_FOR_AUTO_YES_OPTION'
+    else:
+        chat_id = update.effective_chat.id
+        user = User.get_by_chat_id(chat_id)
+        try:
+            JobApplication.objects.get(phone_number=user.phone_number)
+            update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+        except JobApplication.DoesNotExist:
+            JobApplication.objects.create(
+            first_name=user.name,
+            last_name=user.second_name,
+            email=user.email,
+            phone_number=user.phone_number,
+            license_expired=context.user_data['expired_license'],
+            driver_license_front=context.user_data['front_license'],
+            driver_license_back=context.user_data['back_license'],
+            photo=context.user_data['photo_job'],
+            role=context.user_data['role'])
+        finally:
+            query.edit_message_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+            context.user_data['thread'] = True
+            t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
+            t.start()
+            return "JOB_UKLON_CODE"
+
+
+def upload_auto_doc(update, context):
+    os.makedirs('data/mediafiles/job/car/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/car/{image["file_unique_id"]}.jpg'
+        context.user_data['auto_doc'] = f'job/car/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Якщо щось пішло не так, ви можете почати спочатку за допомогою команди /restart')
+        update.message.reply_text(
+            'Фото техпаспорту збережено.Надішліть фото автоцивілки')
+        context.bot.send_photo(update.effective_chat.id,
+                               'https://rinokstrahovka.ua/img/content/2019/07/paper_client_green1.jpg')
+        return 'WAIT_FOR_INSURANCE'
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото техпаспорту', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_AUTO_YES_OPTION'
+def upload_insurance(update, context):
+    os.makedirs('data/mediafiles/job/insurance/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/insurance/{image["file_unique_id"]}.jpg'
+        context.user_data['insurance'] = f'job/insurance/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text(
+            'Фото автоцивілки збережено.Надішліть срок дії автоцивілки у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        return 'WAIT_FOR_INSURANCE_EXPIRED'
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото автоцивілки', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_INSURANCE'
+
+def upload_expired_insurance(update, context):
+    chat_id = update.message.chat.id
+    user = User.get_by_chat_id(chat_id)
+    date = update.message.text
+    if JobApplication.validate_date(date):
+        context.user_data['expired_insurance'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+        try:
+            JobApplication.objects.get(phone_number=user.phone_number)
+            update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+        except JobApplication.DoesNotExist:
+            JobApplication.objects.create(
+                first_name=user.name,
+                last_name=user.second_name,
+                email=user.email,
+                phone_number=user.phone_number,
+                license_expired=context.user_data['expired_license'],
+                driver_license_front=context.user_data['front_license'],
+                driver_license_back=context.user_data['back_license'],
+                photo=context.user_data['photo_job'],
+                role=context.user_data['role'],
+                car_documents=context.user_data['auto_doc'],
+                insurance=context.user_data['insurance'],
+                insurance_expired=context.user_data['expired_insurance']
+            )
+        finally:
+            context.user_data['thread'] = True
+            t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
+            t.start()
+            update.message.reply_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду нам протягом 3 хвилин будь-ласка')
+            return "JOB_UKLON_CODE"
+    else:
+        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        return 'WAIT_FOR_EXPIRED'
+
+def uklon_code(update, context):
+    chat_id = update.message.chat.id
+    user = User.get_by_chat_id(chat_id)
+    context.user_data['thread'] = False
+    r = redis.Redis.from_url(os.environ["REDIS_URL"])
+    r.publish(f'{user.phone_number} code', update.message.text)
+    update.message.reply_text(
+        'Ваш код прийнято.Наш менеджер з вами зв\'яжеться.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
+    return ConversationHandler.END
+
+def code_timer(update, context, timer, sleep):
+    def timer_callback(context):
+        context.bot.send_message(update.effective_chat.id,
+            f'Заявку відхилено.Ви завжди можете подати її повторно')
+        JobApplication.objects.filter(phone_number=context.user_data['phone']).first().delete()
+        return ConversationHandler.END
+
+    remaining_time = timer
+    while remaining_time > 0:
+        try:
+            tread_state = context.user_data['thread']
+            if tread_state:
+                if remaining_time < sleep+1:
+                    context.bot.send_message(update.effective_chat.id,
+                            f'Залишилось {int(remaining_time)} секунд.Якщо ви не відправите код заявку буде скасовано')
+                    time.sleep(remaining_time)
+                    remaining_time = 0
+                    timer_callback(context)
+                else:
+                    context.bot.send_message(update.effective_chat.id,
+                        f'Коду лишилось діяти {int(remaining_time)} секунд.Поспішіть будь-ласка')
+                    time.sleep(sleep)
+                    remaining_time = int(remaining_time - sleep)
+            else:
+                break
+        except KeyError:
+            break
 
 # Sending comment
 def comment(update, context):
@@ -833,27 +1023,38 @@ def sending_report(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        buttons = [[KeyboardButton(f'{SEND_REPORT_DEBT}')]]
+        buttons = [[InlineKeyboardButton(text=f'{SEND_REPORT_DEBT}', callback_data='photo_debt')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
-                                 reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=True))
+                                 reply_markup=InlineKeyboardMarkup(buttons))
+        return "WAIT_FOR_DEBT_OPTION"
     else:
         update.message.reply_text(f'Зареєструтесь як водій', reply_markup=ReplyKeyboardRemove())
 
 
 def get_debt_photo(update, context):
-    update.message.reply_text('Надішліть фото оплати заборгованості', reply_markup=ReplyKeyboardRemove())
+    empty_inline_keyboard = InlineKeyboardMarkup([])
+    update.callback_query.answer()
+    update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості', reply_markup=empty_inline_keyboard)
+    return 'WAIT_FOR_DEBT_PHOTO'
 
 
 def save_debt_report(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
-    image = update.message.photo[-1].get_file()
-    filename = f'{image["file_unique_id"]}.jpg'
-    image.download(filename)
-    Report_of_driver_debt.objects.create(
-                                driver=driver,
-                                image=f'static/{filename}')
-    update.message.reply_text('Ваш звіт збережено')
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'{image.file_unique_id}.jpg'
+        image.download(filename)
+        Report_of_driver_debt.objects.create(
+            driver=driver,
+            image=f'static/{filename}'
+        )
+        update.message.reply_text(text='Ваш звіт збережено')
+        return ConversationHandler.END
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_DEBT_PHOTO'
+
 
 
 # Viewing broken car
@@ -1351,7 +1552,7 @@ def get_sum(update, context):
         update.message.reply_text('Введіть суму в форматі DD.CC')
         STATE_O = SUM
     else:
-        update.messega.reply_text('Введена карта невалідна')
+        update.message.reply_text('Введена карта невалідна')
 
 
 THE_DATA_IS_CORRECT = "Транзакція заповнена вірно"
@@ -1506,12 +1707,6 @@ def text(update, context):
             return payment_method(update, context)
         elif STATE == COMMENT:
             return save_comment(update, context)
-        elif STATE == U_NAME:
-            return update_second_name(update, context)
-        elif STATE == U_SECOND_NAME:
-            return update_email(update, context)
-        elif STATE == U_EMAIL:
-            return update_user_information(update, context)
     elif STATE_D is not None:
         if STATE_D == NUMBERPLATE:
             return change_status_car(update, context)
@@ -1755,6 +1950,40 @@ def get_update_report(update, context):
         aut_handler(update, context)
 
 
+# Conversations
+debt_conversation = ConversationHandler(
+    entry_points=[CommandHandler('sending_report', sending_report)],
+    states={
+        'WAIT_FOR_DEBT_OPTION': [CallbackQueryHandler(get_debt_photo, pattern='photo_debt')],
+        'WAIT_FOR_DEBT_PHOTO': [MessageHandler(Filters.all, save_debt_report)]
+    },
+    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+)
+
+job_docs_conversation = ConversationHandler(
+    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
+                  CommandHandler("restart", restart_jobapplication)],
+    states={
+        "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
+        "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
+        "JOB_EMAIL": [MessageHandler(Filters.all, update_user_information, pass_user_data=True)],
+        'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
+        'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.all, upload_photo, pass_user_data=True)],
+        'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.all, upload_license_front_photo, pass_user_data=True)],
+        'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.all, upload_license_back_photo, pass_user_data=True)],
+        'WAIT_FOR_EXPIRED': [MessageHandler(Filters.all, upload_expired_date, pass_user_data=True)],
+        'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
+        'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
+        'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
+    },
+
+    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+    allow_reentry=True,
+)
+
+
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
 bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
@@ -1814,11 +2043,10 @@ dp.add_handler(MessageHandler(
 # sending comment
 dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$"), comment))
 # Add job application
-dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити заявку на роботу$"), role_for_job_application))
-dp.add_handler(MessageHandler(Filters.regex(fr'^{JOB_DRIVER}$'), job_application))
+dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити заявку на роботу$"), job_application))
 
-# Update information for users
-dp.add_handler(CommandHandler("upd_informations", update_name))
+dp.add_handler(job_docs_conversation)
+
 
 # Commands for Drivers
 # Changing status of driver
@@ -1838,10 +2066,8 @@ dp.add_handler(MessageHandler(
     numberplate))
 
 # Sending report(payment debt)
-dp.add_handler(CommandHandler("sending_report", sending_report))
-dp.add_handler(MessageHandler(Filters.regex(fr'^{SEND_REPORT_DEBT}$'), get_debt_photo))
+dp.add_handler(debt_conversation)
 
-dp.add_handler(MessageHandler(Filters.photo, save_debt_report))
 
 # Take a day off/Take sick leave
 dp.add_handler(CommandHandler("option", option))

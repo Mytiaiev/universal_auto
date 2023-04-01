@@ -3,14 +3,18 @@ import datetime
 import glob
 import os
 import shutil
+import string
 import sys
-
+import random
 
 from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
+from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from selenium.common import TimeoutException, WebDriverException
+
+from auto import settings
 
 
 class PaymentsOrder(models.Model):
@@ -648,6 +652,7 @@ class UklonFleet(Fleet):
 
 
 class NewUklonFleet(Fleet):
+    token = models.CharField(max_length=40, default=None, verbose_name="Код автопарку")
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
@@ -1130,10 +1135,68 @@ class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
+    password = models.CharField(max_length=12, verbose_name='Пароль Uklon')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
+    license_expired = models.DateField(blank=True, verbose_name='Термін дії посвідчення')
+    driver_license_front = models.ImageField(blank=True, upload_to='job/licenses/front',
+                                             verbose_name='Лицьова сторона посвідчення')
+    driver_license_back = models.ImageField(blank=True, upload_to='job/licenses/back',
+                                            verbose_name='Тильна сторона посвідчення')
+    photo = models.ImageField(blank=True, upload_to='job/photo', verbose_name='Фото водія')
+    car_documents = models.ImageField(blank=True, upload_to='job/car', default="docs/default_car.jpg", verbose_name='Фото техпаспорту')
+    insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png", verbose_name='Автоцивілка')
+    insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
     role = models.CharField(max_length=255, verbose_name='Роль')
-    status_job_application = models.BooleanField(default=False, verbose_name='Опрацьована')
+    status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
+    status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата подачі заявки')
+    @staticmethod
+    def validate_date(date_str):
+        try:
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+            today = datetime.datetime.today()
+            future_date = datetime.datetime(2077, 12, 31)
+            if date < today:
+                return False
+            elif date > future_date:
+                return False
+            else:
+                return True
+        except ValueError:
+            return False
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.password = self.generate_password()
+        super().save(*args, **kwargs)
+    @staticmethod
+    def generate_password(length=12):
+        chars = string.ascii_lowercase + string.digits
+        password = ''.join(random.choice(chars) for _ in range(length - 2))
+        password += random.choice(string.ascii_uppercase)
+        password += random.choice(string.digits)
+        return ''.join(random.sample(password, len(password)))
+
+    def admin_photo(self):
+        return admin_image_preview(self.photo)
+
+    def admin_front(self):
+        return admin_image_preview(self.driver_license_front)
+
+    def admin_back(self):
+        return admin_image_preview(self.driver_license_back)
+
+    def admin_insurance(self):
+        return admin_image_preview(self.insurance)
+
+    def admin_car_document(self):
+        return admin_image_preview(self.car_documents)
+
+    admin_back.short_description = 'License back'
+    admin_photo.short_description = 'Photo'
+    admin_front.short_description = 'License front'
+    admin_insurance.short_description = 'Insurance'
+    admin_car_document.short_description = 'Car document'
 
     class Meta:
         verbose_name = 'Заявка'
@@ -1142,6 +1205,12 @@ class JobApplication(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
+
+def admin_image_preview(image, default_image=None):
+    if image:
+        url = image.url
+        return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
+    return None
 
 class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
@@ -1183,7 +1252,12 @@ from django.db import models
 from app.models import Fleet
 
 
-class SeleniumTools():
+def clickandclear(element):
+    element.click()
+    element.clear()
+
+
+class SeleniumTools:
     def __init__(self, session, week_number=None, day=None, profile=None):
         self.session_file_name = session
         self.day = day  # if not None then we work with daly reports
@@ -1462,9 +1536,9 @@ class Uber(SeleniumTools):
                 for _ in range(date_by_def.month - self.day.month):
                     self.driver.find_element(By.XPATH, f'//button[@aria-label="Previous month."]').click()
             self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()={self.day.strftime("%-d")}]').click()
-            end = self.driver.find_element(By.XPATH,'(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
+            end = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
             end.send_keys(Keys.NULL)
-            self.driver.find_element(By.XPATH,f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
+            self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
         else:
             start = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
             start.send_keys(Keys.NULL)
@@ -1673,7 +1747,6 @@ class Uber(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
 
-
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         u = Uber(week_number=week_number, driver=False, sleep=0, headless=headless)
@@ -1816,26 +1889,69 @@ class Bolt(SeleniumTools):
 
         return items
 
-    def add_driver(self, email, phone_number):
-        """phone number exmp +380.."""
+    def add_driver(self, jobapplication):
+        if not jobapplication.status_bolt:
+            url = 'https://fleets.bolt.eu/company/58225/driver/add'
+            self.driver.get(f"{url}")
+            if self.sleep:
+                time.sleep(self.sleep)
+            form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
+            clickandclear(form_email)
+            form_email.send_keys(jobapplication.email)
+            form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
+            clickandclear(form_phone_number)
+            form_phone_number.send_keys(jobapplication.phone_number)
+            button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
+            button.click()
+            if self.sleep:
+                time.sleep(self.sleep)
+            self.driver.find_element(By.XPATH, '//a[text()="Продовжити реєстрацію"]').click()
+            new_window = self.driver.window_handles[1]
+            self.driver.switch_to.window(new_window)
+            form_first_name = self.driver.find_element(By.XPATH, '//input[@id="first_name"]')
+            clickandclear(form_first_name)
+            form_first_name.send_keys(jobapplication.first_name)
+            form_last_name = self.driver.find_element(By.XPATH, '//input[@id="last_name"]')
+            clickandclear(form_last_name)
+            form_last_name.send_keys(jobapplication.last_name)
+            self.driver.find_element(By.XPATH, '//button[@type="submit"]').click()
+            if self.sleep:
+                time.sleep(self.sleep)
+            elements_to_select = [str(jobapplication.license_expired).split("-")[0],
+                                  str(jobapplication.license_expired).split("-")[1],
+                                  str(jobapplication.license_expired).split("-")[2],
+                                  str(jobapplication.insurance_expired).split("-")[0],
+                                  str(jobapplication.insurance_expired).split("-")[1],
+                                  str(jobapplication.insurance_expired).split("-")[2]
+                                  ]
 
-        url = 'https://fleets.bolt.eu/company/58225/driver/add'
-        self.driver.get(f"{url}")
-        if self.sleep:
-            time.sleep(self.sleep)
-        form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
-        form_email.click()
-        form_email.clear()
-        form_email.send_keys(email)
-        form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
-        form_phone_number.click()
-        form_phone_number.clear()
-        form_phone_number.send_keys(phone_number)
-        button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
-        button.click()
-        if self.sleep:
-            time.sleep(self.sleep)
+            form_fields = self.driver.find_elements(By.XPATH, "//div[@class='form-group']")
+            for i, select_elem in enumerate(elements_to_select):
+                form_fields[i].click()
+                dropdown_div = self.driver.find_element(By.XPATH,
+                '//div[@class="ember-basic-dropdown-content-wormhole-origin"]/div[contains(@id, "ember-basic-dropdown-content-")]')
+                dropdown_div.find_element(By.XPATH, f'.//a[.//span[text()="{select_elem}"]]').click()
+            upload_elements = self.driver.find_elements(By.XPATH, "//label[contains(., 'Завантажити файл')]")
+            file_paths = [
+                            os.getcwd()+f"/data/mediafiles/{jobapplication.driver_license_front}",  #license_front
+                            os.getcwd()+f"/data/mediafiles/{jobapplication.driver_license_back}", #license_back
+                            os.getcwd()+f"/data/mediafiles/{jobapplication.car_documents}", #car_document
+                            os.getcwd()+f"/data/mediafiles/{jobapplication.insurance}", #insurance
+            ]
+            for i, file_path in enumerate(file_paths):
+                upload_element = upload_elements[i]
+                upload_element.click()
+                upload_input = upload_element.find_element(By.XPATH, "./input")
+                # Execute JavaScript code to remove the display property from the element's style
+                self.driver.execute_script("arguments[0].style.removeProperty('display');", upload_input)
+                upload_input.send_keys(file_path)
+            if self.sleep:
+                time.sleep(self.sleep)
 
+            submit = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+            submit.click()
+            jobapplication.status_bolt = datetime.datetime.now().date()
+            jobapplication.save()
 
     @staticmethod
     def download_weekly_report(week_number=None, day=None,  driver=True, sleep=5, headless=True):
@@ -1863,7 +1979,6 @@ class Uklon(SeleniumTools):
 
     def quit(self):
         self.driver.quit()
-
 
     def login(self):
         self.driver.get(self.base_url)
@@ -2109,7 +2224,6 @@ class NewUklon(SeleniumTools):
 
         return items
 
-
     def save_report_v2(self):
         if self.sleep:
             time.sleep(self.sleep)
@@ -2142,7 +2256,6 @@ class NewUklon(SeleniumTools):
                     except IntegrityError:
                         pass
                     items.append(order)
-
 
         if not items:
             order = NewUklonPaymentsOrder(
@@ -2189,7 +2302,6 @@ class NewUklon(SeleniumTools):
         ed, ey, em = end.strftime("%d"), end.strftime("%y"), end.strftime("%m")
         return f'00.00.{sd}.{sm}.{sy} - 23.59.{ed}.{em}.{ey}'
 
-
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         u = NewUklon(week_number=week_number, driver=False, sleep=0, headless=headless)
@@ -2212,6 +2324,99 @@ class NewUklon(SeleniumTools):
             u.login()
             u.download_payments_day_order()
         return u.save_report()
+
+    def wait_otp_code(self, user):
+        r = redis.Redis.from_url(os.environ["REDIS_URL"])
+        p = r.pubsub()
+        p.subscribe(f'{user.phone_number} code')
+        p.ping()
+        otpa = []
+        start = time.time()
+        while True:
+            try:
+                if time.time() - start >= 180:
+                    break
+                otp = p.get_message()
+                if otp:
+                    otpa = list(f'{otp["data"]}')
+                    otpa = list(filter(lambda d: d.isdigit(), otpa))
+                    digits = [s.isdigit() for s in otpa]
+                    if not(digits) or (not all(digits)) or len(digits) != 4:
+                        continue
+                    break
+            except redis.ConnectionError as e:
+                self.logger.error(str(e))
+                p = r.pubsub()
+                p.subscribe(f'{user.phone_number} code')
+            time.sleep(1)
+        return otpa
+
+    def add_driver(self, jobapplication):
+        url = 'https://partner-registration.uklon.com.ua/registration'
+        self.driver.get(f"{url}")
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]"))).click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
+        clickandclear(form_phone_number)
+        form_phone_number.send_keys(jobapplication.phone_number[4:])
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+
+        # 2FA
+        code = self.wait_otp_code(jobapplication)
+        digits = self.driver.find_elements(By.XPATH, "//input")
+        for i, element in enumerate(digits):
+            element.send_keys(code[i])
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        registration_fields = {"firstName": jobapplication.first_name,
+                               "lastName": jobapplication.last_name,
+                               "email": jobapplication.email,
+                               "password": jobapplication.password}
+        for field, value in registration_fields.items():
+            element = self.driver.find_element(By.ID, field)
+            clickandclear(element)
+            element.send_keys(value)
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+
+        file_paths = [
+            os.getcwd() + f"/data/mediafiles/{jobapplication.photo}",
+            os.getcwd() + f"/data/mediafiles/{jobapplication.driver_license_front}",
+            os.getcwd() + f"/data/mediafiles/{jobapplication.driver_license_back}",
+
+        ]
+        for i in range(3):
+            if self.sleep:
+                time.sleep(self.sleep)
+            photo_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
+            photo_input.send_keys(file_paths[i])
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
+            time.sleep(1)
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
+        clickandclear(fleet_code)
+        fleet_code.send_keys(os.environ.get("UKLON_TOKEN", NewUklonFleet.token))
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+        self.driver.get_screenshot_as_file('uklon.png')
+        jobapplication.status_uklon = datetime.datetime.now().date()
+        jobapplication.save()
 
 
 class Privat24(SeleniumTools):
@@ -2239,7 +2444,6 @@ class Privat24(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
 
-
     def password(self):
         password = self.driver.find_element(By.XPATH, '//input')
         ActionChains(self.driver).move_to_element(password).send_keys('').perform()
@@ -2247,7 +2451,6 @@ class Privat24(SeleniumTools):
         ActionChains(self.driver).move_to_element(password).send_keys( Keys.TAB + Keys.TAB + Keys.ENTER).perform()
         if self.sleep:
             time.sleep(self.sleep)
-
 
     def money_transfer(self):
         if self.sleep:
@@ -2295,11 +2498,11 @@ class Privat24(SeleniumTools):
 
 
 def get_report(week_number=None, driver=True, sleep=5, headless=True):
-    owner =   {"Fleet Owner": 0}
+    owner = {"Fleet Owner": 0}
     reports = {}
-    totals =  {}
-    salary =  {}
-    fleets =  Fleet.objects.filter(deleted_at=None)
+    totals = {}
+    salary = {}
+    fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
         for rate in Fleets_drivers_vehicles_rate.objects.filter(fleet_id=fleet.id, deleted_at=None):
@@ -2319,7 +2522,6 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     totals = {k: v + f'Зарплата за тиждень {k}: %.2f\n' % salary[k] for k, v in totals.items()}
 
     return owner, totals
-
 
 
 def download_and_save_daily_report(driver=True, sleep=5, headless=True, day=None):

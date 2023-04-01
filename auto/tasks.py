@@ -11,7 +11,7 @@ from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
 
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -150,12 +150,14 @@ def download_weekly_report_force(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=6)
-def send_on_job_application_on_driver_to_Bolt(self, email, phone_number):
+
+@app.task(bind=True, priority=8)
+def send_on_job_application_on_driver_to_Bolt(self, id):
     try:
         b = Bolt(driver=True, sleep=3, headless=True)
         b.login()
-        b.add_driver(email, phone_number)
+        candidate = JobApplication.objects.get(id=id)
+        b.add_driver(candidate)
         print('The job application has been sent to Bolt')
     except Exception as e:
         logger.info(e)
@@ -169,6 +171,17 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
         ub.add_driver(phone_number, email, name, second_name)
         ub.quit()
         print('The job application has been sent to Uber')
+    except Exception as e:
+        logger.info(e)
+
+@app.task(bind=True, priority=10)
+def send_on_job_application_on_driver_to_NewUklon(self, id):
+    try:
+        uklon = NewUklon(driver=True, sleep=5, headless=True)
+        candidate = JobApplication.objects.get(id=id)
+        uklon.add_driver(candidate)
+        uklon.quit()
+        print('The job application has been sent to Uklon')
     except Exception as e:
         logger.info(e)
 
