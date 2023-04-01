@@ -425,9 +425,6 @@ class Driver(User):
     OFFLINE = 'Не працюю'
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
-    #driver_manager_id: ManyToManyField already exists in DriverManager
-    #we have to delete this
-    driver_manager_id = models.ManyToManyField('DriverManager', blank=True)
     #partner = models.ManyToManyField('Partner', blank=True)
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
@@ -691,7 +688,7 @@ class Vehicle(models.Model):
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
             return vehicle
         except Vehicle.DoesNotExist:
-            pass
+            return None
 
     @staticmethod
     def name_validator(name):
@@ -718,6 +715,13 @@ class Vehicle(models.Model):
     def vin_code_validator(vin_code):
         if len(vin_code) <= 17:
             return vin_code.upper()
+        else:
+            return None
+
+    @staticmethod
+    def gps_imei_validator(gps_imei):
+        if len(gps_imei) <= 100:
+            return gps_imei.upper()
         else:
             return None
 
@@ -750,6 +754,7 @@ class DriverRateLevels(models.Model):
         verbose_name = 'Рівень рейтингу водія'
         verbose_name_plural = 'Рівень рейтингу водіїв'
 
+
 class RawGPS(models.Model):
     imei = models.CharField(max_length=100)
     client_ip = models.CharField(max_length=100)
@@ -760,6 +765,9 @@ class RawGPS(models.Model):
     class Meta:
         verbose_name = 'GPS Raw'
         verbose_name_plural = 'GPS Raw'
+
+    def __str__(self):
+        return f'{self.data}'
 
 
 class GPS(PolymorphicModel):
@@ -1100,7 +1108,6 @@ class Event(models.Model):
         verbose_name_plural = 'Події'
 
 
-
 class SubscribeUsers(models.Model):
     email = models.EmailField(max_length=254, verbose_name='Електрона пошта')
     created_at = models.DateTimeField(editable=False, auto_now=True, verbose_name='Створено')
@@ -1204,6 +1211,20 @@ def admin_image_preview(image, default_image=None):
         url = image.url
         return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
     return None
+
+class UseOfCars(models.Model):
+    user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
+    chat_id = models.CharField(blank=True, max_length=100, verbose_name='Індетифікатор чата')
+    licence_plate = models.CharField(max_length=24, verbose_name='Номерний знак')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата використання авто')
+
+    class Meta:
+        verbose_name = 'Користувачі автомобіля'
+        verbose_name_plural = 'Користувачі автомобілів'
+
+    def __str__(self):
+        return f"{self.user_vehicle}: {self.licence_plate}"
+
 
 
 from selenium import webdriver
@@ -1726,7 +1747,6 @@ class Uber(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
 
-
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         u = Uber(week_number=week_number, driver=False, sleep=0, headless=headless)
@@ -1871,8 +1891,6 @@ class Bolt(SeleniumTools):
 
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:
-            """phone number exmp +380.."""
-
             url = 'https://fleets.bolt.eu/company/58225/driver/add'
             self.driver.get(f"{url}")
             if self.sleep:
@@ -1935,8 +1953,6 @@ class Bolt(SeleniumTools):
             jobapplication.status_bolt = datetime.datetime.now().date()
             jobapplication.save()
 
-
-
     @staticmethod
     def download_weekly_report(week_number=None, day=None,  driver=True, sleep=5, headless=True):
         """Can save weekly and daily report"""
@@ -1963,7 +1979,6 @@ class Uklon(SeleniumTools):
 
     def quit(self):
         self.driver.quit()
-
 
     def login(self):
         self.driver.get(self.base_url)
@@ -2209,7 +2224,6 @@ class NewUklon(SeleniumTools):
 
         return items
 
-
     def save_report_v2(self):
         if self.sleep:
             time.sleep(self.sleep)
@@ -2242,7 +2256,6 @@ class NewUklon(SeleniumTools):
                     except IntegrityError:
                         pass
                     items.append(order)
-
 
         if not items:
             order = NewUklonPaymentsOrder(
@@ -2288,7 +2301,6 @@ class NewUklon(SeleniumTools):
         sd, sy, sm = start.strftime("%d"), start.strftime("%y"), start.strftime("%m")
         ed, ey, em = end.strftime("%d"), end.strftime("%y"), end.strftime("%m")
         return f'00.00.{sd}.{sm}.{sy} - 23.59.{ed}.{em}.{ey}'
-
 
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
@@ -2432,7 +2444,6 @@ class Privat24(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
 
-
     def password(self):
         password = self.driver.find_element(By.XPATH, '//input')
         ActionChains(self.driver).move_to_element(password).send_keys('').perform()
@@ -2440,7 +2451,6 @@ class Privat24(SeleniumTools):
         ActionChains(self.driver).move_to_element(password).send_keys( Keys.TAB + Keys.TAB + Keys.ENTER).perform()
         if self.sleep:
             time.sleep(self.sleep)
-
 
     def money_transfer(self):
         if self.sleep:
@@ -2488,11 +2498,11 @@ class Privat24(SeleniumTools):
 
 
 def get_report(week_number=None, driver=True, sleep=5, headless=True):
-    owner =   {"Fleet Owner": 0}
+    owner = {"Fleet Owner": 0}
     reports = {}
-    totals =  {}
-    salary =  {}
-    fleets =  Fleet.objects.filter(deleted_at=None)
+    totals = {}
+    salary = {}
+    fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
         for rate in Fleets_drivers_vehicles_rate.objects.filter(fleet_id=fleet.id, deleted_at=None):
@@ -2512,7 +2522,6 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     totals = {k: v + f'Зарплата за тиждень {k}: %.2f\n' % salary[k] for k, v in totals.items()}
 
     return owner, totals
-
 
 
 def download_and_save_daily_report(driver=True, sleep=5, headless=True, day=None):

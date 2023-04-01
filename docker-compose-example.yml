@@ -32,6 +32,9 @@ services:
       PORTMONE_LOGIN:
       PORTMONE_PASSWORD:
       PORTMONE_PAYEE_ID:
+      GOOGLE_API_KEY:
+      TARIFF_IN_THE_CITY:
+      TARIFF_OUTSIDE_THE_CITY:
       REDIS_URL: redis://redis
       DATABASE_URL: "postgres://universal_auto_dev:pass@postgres:5432/universal_auto_dev"
       SECRET_KEY:
