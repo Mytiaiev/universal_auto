@@ -1,8 +1,9 @@
 from django.utils import timezone
-
-from django.db.models.signals import pre_save
+from auto.tasks import send_on_job_application_on_driver_to_Bolt, send_on_job_application_on_driver_to_NewUklon
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from app.models import Driver, StatusChange
+from app.models import Driver, StatusChange, JobApplication
+
 
 @receiver(pre_save, sender=Driver)
 def create_status_change(sender, instance, **kwargs):
@@ -28,4 +29,8 @@ def create_status_change(sender, instance, **kwargs):
         status_change.save()
 
 
-
+@receiver(post_save, sender=JobApplication)
+def run_add_drivers_task(sender, instance, created, **kwargs):
+    if created:
+        send_on_job_application_on_driver_to_NewUklon.delay(instance.id)
+        send_on_job_application_on_driver_to_Bolt.delay(instance.id)

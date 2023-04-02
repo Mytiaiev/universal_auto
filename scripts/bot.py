@@ -1,5 +1,6 @@
 import ast
 import os
+import threading
 import time
 import csv
 import datetime
@@ -12,7 +13,7 @@ import json
 import logging
 import requests
 import traceback
-from telegram import * 
+from telegram import *
 from telegram.ext import *
 from app.models import *
 from app.portmone.generate_link import *
@@ -24,6 +25,8 @@ import hashlib
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from django.db import IntegrityError
+from django.utils import timezone
+from scripts.conversion import *
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -37,27 +40,34 @@ logger = logging.getLogger(__name__)
 
 processed_files = []
 
-
+start_keyboard = [
+    KeyboardButton(text="\U0001f696 Викликати Таксі"),
+    KeyboardButton(text="\U0001f4e2 Залишити відгук"),
+    KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу"),
+    KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)
+]
 #Ordering taxi
 def start(update, context):
-    update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
     menu(update, context)
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    keyboard = [KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True),
-                KeyboardButton(text="\U0001f696 Викликати Таксі", request_location=True),
-                KeyboardButton(text="\U0001f4e2 Залишити відгук"),
-                KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу")]
+    context.user_data.clear()
     if user:
-        user.chat_id = chat_id
-        user.save()
         if user.phone_number:
-            keyboard = [keyboard[1], keyboard[2], keyboard[3]]
+            update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
+            user.chat_id = chat_id
+            user.save()
             reply_markup = ReplyKeyboardMarkup(
-                keyboard=[keyboard],
-                resize_keyboard=True,
+                    keyboard=[start_keyboard[:3]],
+                    resize_keyboard=True,
                 )
             update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
+        else:
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard=[start_keyboard[3:]],
+                resize_keyboard=True, )
+            update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом",
+                                      reply_markup=reply_markup)
     else:
         User.objects.create(
             chat_id=chat_id,
@@ -65,10 +75,9 @@ def start(update, context):
             second_name=update.message.from_user.last_name
         )
         reply_markup = ReplyKeyboardMarkup(
-          keyboard=[keyboard],
-          resize_keyboard=True,
-        )
-        update.message.reply_text("Будь ласка розшарьте номер телефону та геолокацію для виклику таксі", reply_markup=reply_markup,)
+          keyboard=[start_keyboard[3:]],
+          resize_keyboard=True,)
+        update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом", reply_markup=reply_markup)
 
 
 def update_phone_number(update, context):
@@ -81,51 +90,62 @@ def update_phone_number(update, context):
         user.phone_number = phone_number
         user.chat_id = chat_id
         user.save()
-        update.message.reply_text('Дякуємо ми отримали ваш номер телефону для звязку з водієм', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[:3]], resize_keyboard=True))
 
 
 LOCATION_WRONG = "Місце посадки - невірне"
 LOCATION_CORRECT = "Місце посадки - вірне"
+CONTINUE = 'Продовжити замовлення'
+CANCEL = 'Скасувати замовлення'
+
+
+def continue_order(update, context):
+    update.message.reply_text(f"Ціна поїздки в місті {os.environ['TARIFF_IN_THE_CITY']}грн/км\n" +
+                              f"Ціна поїздки за містом {os.environ['TARIFF_OUTSIDE_THE_CITY']}грн/км")
+
+    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}", request_location=True),
+                KeyboardButton(text=f"\u274c {CANCEL}")]
+
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=[keyboard],
+        resize_keyboard=True,
+    )
+
+    update.message.reply_text('Чи бажаєте ви продовжити?', reply_markup=reply_markup)
+
+
+def cancel_order(update, context):
+    update.message.reply_text('Гарного дня. Дякуємо, що скористались нашими послугами',  reply_markup=ReplyKeyboardRemove())
+    cancel(update, context)
 
 
 def location(update: Update, context: CallbackContext):
     active_drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == f'{Driver.ACTIVE}']
 
-    if len(active_drivers) == 0:
+    if not active_drivers:
         report = update.message.reply_text('Вибачте, але зараз немає вільний водіїв. Скористайтеся послугою пізніше', reply_markup=ReplyKeyboardRemove())
         return report
     else:
-        if update.edited_message:
-            m = update.edited_message
-        else:
-            m = update.message
-        m = context.bot.sendLocation(update.effective_chat.id, latitude=m.location.latitude,
-                                     longitude=m.location.longitude, live_period=600)
-
-
+        m = update.message
+        # geocoding lat and lon to address
         context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
-        context.user_data['from_address'] = 'Null'
-        the_confirmation_of_location(update, context)
-
-        for i in range(1, 10):
-            try:
-                logger.error(i)
-                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=i * 10, longitude=i * 10)
-                print(m)
-            except Exception as e:
-                logger.error(msg=e.message)
-                logger.error(i)
-            time.sleep(5)
+        address = get_address(context.user_data['latitude'], context.user_data['longitude'], os.environ["GOOGLE_API_KEY"])
+        if address is not None:
+            context.user_data['from_address'] = address
+            update.message.reply_text(f'Ваша адреса: {address}')
+            the_confirmation_of_location(update, context)
+        else:
+            update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
+            from_address(update, context)
 
 
-STATE = None # range (1-50)
-LOCATION, FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 5)
-U_NAME, U_SECOND_NAME, U_EMAIL = range(5, 8)
+STATE = None       # range (1-50)
+FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 4)
+U_NAME, U_SECOND_NAME, U_EMAIL = range(4, 7)
 
 
 def the_confirmation_of_location(update, context):
-    global STATE
-    STATE = LOCATION
 
     keyboard = [KeyboardButton(text=f"\u2705 {LOCATION_CORRECT}"),
                 KeyboardButton(text=f"\u274c {LOCATION_WRONG}")]
@@ -134,7 +154,7 @@ def the_confirmation_of_location(update, context):
         keyboard=[keyboard],
         resize_keyboard=True, )
 
-    update.message.reply_text('Виберіть статус вашої геолокації!', reply_markup=reply_markup)
+    update.message.reply_text('Оберіть статус посадки', reply_markup=reply_markup)
 
 
 def from_address(update, context):
@@ -163,6 +183,7 @@ def payment_method(update, context):
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[keyboard],
         resize_keyboard=True,
+        one_time_keyboard=True,
         )
 
     update.message.reply_text('Виберіть спосіб оплати:', reply_markup=reply_markup)
@@ -194,12 +215,15 @@ def order_create(update, context):
     drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
 
     order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
-            f"Спосіб оплати: {context.user_data['payment_method']}\nСума: test"
+            f"Спосіб оплати: {context.user_data['payment_method']}\nНомер телефону: {context.user_data['phone_number']}"
 
-    if len(drivers) != 0:
+    if drivers:
         for driver in drivers:
-            context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
-            #context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)
+            try:
+                context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
+            except:
+                pass
+        #context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)  #for develop
     else:
         update.message.reply_text('Вибачте, але вільних водіїв незалишилось')
 
@@ -217,37 +241,95 @@ def order_create(update, context):
     create_order.save()
 
 
-def inline_buttons(update, context):
+def inline_buttons_for_driver(update, context):
     query = update.callback_query
     query.answer()
-
     chat_id = update.effective_chat.id
 
+    number_phone = query.message.text
+    number_phone = number_phone[-13::]
+    user = User.objects.get(phone_number=number_phone)
+    context.user_data['client_chat_id'] = user.chat_id
+
     if query.data == 'Accept order':
-        order = Order.get_order(chat_id_client=context.user_data['chat_id'], sum='', status_order=WAITING)
+        order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=WAITING)
         if order is not None:
-            query.edit_message_text(text=f"Ви обрали: Прийняти замовлення")
-
-            #driver = Driver.get_by_chat_id(chat_id=73620427)
-            #order.driver = Driver.objects.get(chat_id=73620427) for develop
+            #driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
             driver = Driver.get_by_chat_id(chat_id=chat_id)
-            order.driver = Driver.objects.get(chat_id=chat_id)
-            order.status_order = 'Виконується'
-            order.save()
-            driver.driver_status = Driver.WAIT_FOR_CLIENT
-            driver.save()
+            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+            if record:
+                keyboard = [
+                    [
+                        InlineKeyboardButton("\u2705 Машина вже на місці", callback_data="On the spot")
+                    ]]
 
-            vehicle = Vehicle.objects.get(driver=driver.id)
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-            report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\nМодель: {vehicle.model}\n' \
-                                f'Номер машини: {vehicle}\nПрибуде через: test'
+                query.edit_message_reply_markup(reply_markup=reply_markup)
 
-            context.bot.send_message(chat_id=chat_id, text=f'Водій ваш статус зміненно на <<{Driver.WAIT_FOR_CLIENT}>>')
-            context.bot.send_message(chat_id=context.user_data['chat_id'], text=report_for_client)
+                # add driver to order
+                # order.driver = Driver.objects.get(chat_id=736204274) #for develop
+                order.driver = Driver.objects.get(chat_id=chat_id)
+                order.status_order = 'Виконується'
+                order.save()
+                driver.driver_status = Driver.WAIT_FOR_CLIENT
+                driver.save()
+
+                # take car from UseOfCars and send report to client
+                licence_plate = (list(record))[-1].licence_plate
+                vehicle = Vehicle.objects.get(licence_plate=licence_plate)
+
+                report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\n' \
+                                    f'Номер машини: {licence_plate}\nНомер телефону: {driver.phone_number}'
+
+                context.bot.send_message(chat_id=context.user_data['client_chat_id'], text=report_for_client)
+
+                # Get coordinates car
+                car_gps_imei = vehicle.gps_imei
+
+                context.user_data['running'] = True
+                r = threading.Thread(target=send_map_to_client, args=(update, context,
+                                            context.user_data['client_chat_id'], car_gps_imei), daemon=True)
+                r.start()
+
+            else:
+                query.edit_message_text(text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
         else:
             query.edit_message_text(text='Замовлення вже виконує інший водій')
     elif query.data == 'Reject order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
+    elif query.data == "On the spot":
+        context.user_data['running'] = False
+        context.bot.send_message(chat_id=context.user_data['client_chat_id'], text='Машину подано. Водій вас очікує')
+
+
+def send_map_to_client(update, context, client_chat_id, car_gps_imei):
+    # client_chat_id, car_gps_imei = context.args[0], context.args[1]
+    latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
+
+    # send map client
+    report = 'Коли водій буде на місці, ви отримаєте повідомлення. На карті нижче ви можете спостерігати, де зараз ваш водій'
+    context.bot.send_message(chat_id=client_chat_id, text=report)
+    m = context.bot.sendLocation(client_chat_id, latitude=latitude, longitude=longitude, live_period=600)
+
+    while context.user_data['running']:
+        latitude, longitude = get_location_from_db(car_gps_imei=car_gps_imei)
+        try:
+            m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
+            print(m)
+        except Exception as e:
+            logger.error(msg=e.message)
+            time.sleep(30)
+
+
+def get_location_from_db(car_gps_imei):
+    data = RawGPS.objects.filter(imei=car_gps_imei).order_by('-created_at')[:1]
+    data = str(data).split(';')
+    try:
+        latitude, longitude = convertion(coordinates=data[2]), convertion(coordinates=data[4])
+    except:
+        pass
+    return latitude, longitude
 
 
 # Changing status of driver
@@ -255,7 +337,7 @@ def status(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
+        record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
         if record:
             send_set_status(update, context)
         else:
@@ -265,6 +347,7 @@ def status(update, context):
 
 
 def send_set_status(update, context):
+
     buttons = [[KeyboardButton(Driver.ACTIVE)],
                [KeyboardButton(Driver.WITH_CLIENT)],
                [KeyboardButton(Driver.WAIT_FOR_CLIENT)],
@@ -274,6 +357,29 @@ def send_set_status(update, context):
 
     context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
                              reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+
+
+def set_status(update, context):
+    status = update.message.text
+    chat_id = update.message.chat.id
+    driver = Driver.get_by_chat_id(chat_id)
+    try:
+        events = Event.objects.filter(full_name_driver=driver, status_event=False)
+        event = [i for i in events]
+        event[-1].status_event = True
+        event[-1].save()
+        update.message.reply_text(f'{driver}: Ваш - {event[-1].event} завершено')
+    except:
+        pass
+    driver.driver_status = status
+    driver.save()
+    if status == Driver.OFFLINE:
+        record = UseOfCars.objects.get(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
+        record.end_at = timezone.now()
+        record.save()
+        update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
+    else:
+        update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
 
 
 CORRECT_AUTO = '- ТАК -'
@@ -316,8 +422,6 @@ def get_vehicle_of_driver(update, context):
         update.message.reply_text("За вами не закріплено жодного авто. Зверніться до менеджерів")
 
 
-
-
 def add_vehicle_to_driver(update, context):
     global STATE_D
     id_vehicle = update.message.text
@@ -330,7 +434,7 @@ def add_vehicle_to_driver(update, context):
             update.message.reply_text('Такого ключа немає у вашому списку, спробуйте ще раз')
     except:
         update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
-    record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date(), end_at=None)
+    record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date())
     if record:
         update.message.reply_text('Це авто вже використовує інший водій. Спробуйте інше авто. Якщо всі авто заняті зверніться до менеджерів')
         get_vehicle_of_driver(update, context)
@@ -348,27 +452,43 @@ def add_vehicle_to_driver(update, context):
             STATE_D = None
 
 
-def set_status(update, context):
-    status = update.message.text
+def correct_or_not_auto(update, context):
+    option = update.message.text
+    chat_id = update.message.chat.id
+    if option == f'{CORRECT_AUTO}':
+        record = UseOfCars.objects.filter(licence_plate=context.user_data['use_vehicle'], created_at__date=timezone.now().date())
+        if record:
+            update.message.reply_text('Ваше авто вже використовує інший водій. Зверніться до менеджерів')
+        else:
+            UseOfCars.objects.create(
+                user_vehicle=context.user_data['u_driver'],
+                chat_id=chat_id,
+                licence_plate=context.user_data['use_vehicle'])
+            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
+            send_set_status(update, context)
+    else:
+        update.message.reply_text('Зверніться до менеджерів водіїв та проконсультуйтесь, яку машину вам використовувати сьогодні.' +
+                                  ' Та скористайтесь наступною командою /car_change', reply_markup=ReplyKeyboardRemove())
+
+
+def get_vehicle_licence_plate(update, context):
+    global STATE_D
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
-    try:
-        events = Event.objects.filter(full_name_driver=driver, status_event=False)
-        event = [i for i in events]
-        event[-1].status_event = True
-        event[-1].save()
-        update.message.reply_text(f'{driver}: Ваш - {event[-1].event} завершено')
-    except:
-        pass
-    driver.driver_status = status
-    driver.save()
-    if status == Driver.OFFLINE:
-        record = UseOfCars.objects.get(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
-        record.end_at = timezone.now()
-        record.save()
-        update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
+    if driver is not None:
+        vehicles = {i.id: i.licence_plate for i in Vehicle.objects.all()}
+        vehicles = {k: vehicles[k] for k in sorted(vehicles)}
+        report_list_vehicles = ''
+        if vehicles:
+            for k, v in vehicles.items():
+                report_list_vehicles += f'{k}: {v}\n'
+            update.message.reply_text(f'{report_list_vehicles}')
+            update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, яку ви будете використовувати сьогодні', reply_markup=ReplyKeyboardRemove())
+            STATE_D = V_ID
+        else:
+            update.message.reply_text("Не здайдено жодного авто у автопарку. Зверніться до Менеджера автопарку", reply_markup=ReplyKeyboardRemove())
     else:
-        update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
+        update.message.reply_text(f'Зареєструйтесь як водій')
 
 
 CORRECT_CHOICE = 'Так'
@@ -394,86 +514,338 @@ def correct_choice(update, context):
         update.message.reply_text(f"Ви обрали {licence_plate}. Вірно?", reply_markup=reply_markup)
 
 
+def get_imei(update, context):
+    global STATE_D
+    chat_id = update.message.chat.id
+    driver = Driver.get_by_chat_id(chat_id=chat_id)
+    if context.user_data['vehicle'].gps_imei:
+        UseOfCars.objects.create(
+            user_vehicle=driver,
+            chat_id=chat_id,
+            licence_plate=context.user_data['vehicle'])
+        update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
+        send_set_status(update, context)
+    else:
+        update.message.reply_text('Авто яке ви обрали без imei_gps. Зверніться до менеджера автопарку/водіїв', reply_markup=ReplyKeyboardRemove())
+    STATE_D = None
+
+
+def get_licence_plate_for_gps_imei(update, context):
+    global STATE_DM
+    chat_id = update.message.chat.id
+    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    vehicles = {i.id: i.licence_plate for i in Vehicle.objects.all()}
+    vehicles = {k: vehicles[k] for k in sorted(vehicles)}
+    report_list_vehicles = ''
+    if driver_manager is not None:
+        if vehicles:
+            for k, v in vehicles.items():
+                report_list_vehicles += f'{k}: {v}\n'
+            update.message.reply_text(f'{report_list_vehicles}')
+            update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, для якого ви бажаєте добавити gps_imei')
+            STATE_DM = V_GPS
+        else:
+            update.message.reply_text("Не здайдено жодного авто у автопарку")
+    else:
+        update.message.reply_text('Зареєструйтесь як менеджер водіїв')
+
+
+def get_n_vehicle(update, context):
+    global STATE_DM
+    id_vehicle = update.message.text
+    try:
+        id_vehicle = int(id_vehicle)
+        context.user_data['vehicle'] = Vehicle.objects.get(id=id_vehicle)
+        update.message.reply_text('Введіть gps_imei для данного авто')
+        STATE_DM = V_GPS_IMEI
+    except:
+        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+
+
+def get_gps_imea(update, context):
+    global STATE_DM
+    gps_imei = update.message.text
+    gps_imei = Vehicle.gps_imei_validator(gps_imei=gps_imei)
+    if gps_imei is not None:
+        context.user_data['vehicle'].gps_imei = gps_imei
+        context.user_data['vehicle'].save()
+        update.message.reply_text('Ми встановили GPS imei до авто, яке ви вказали')
+        STATE_DM = None
+    else:
+        update.message.reply_text("Задовне значення. Спробуйте ще раз")
+
+
 JOB_DRIVER = 'Водій'
 
 
 # Add job application
-def role_for_job_application(update, context):
-    buttons = [[KeyboardButton(f'{JOB_DRIVER}')]]
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
-                reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=True))
-
 
 def job_application(update, context):
-    role = update.message.text
-    chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
-    if (user.phone_number and user.email and user.name and user.second_name):
-        JobApplication.objects.create(
-            first_name=user.name,
-            last_name=user.second_name,
-            email=user.email,
-            phone_number=user.phone_number,
-            role=role)
-        update.message.reply_text('Заявку подано', reply_markup=ReplyKeyboardRemove())
-        update.message.reply_text('Також вам потрібно зареєструватись на сайті https://supplier.uber.com, як водій')
-    else:
-        update.message.reply_text('Надайте повну інформацію про себе, щоб залишити заявку. Скористайтесь командою /upd_informations', reply_markup=ReplyKeyboardRemove())
+    buttons = [[KeyboardButton(f'{JOB_DRIVER}')]]
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
+                                reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True,
+                                                                  one_time_keyboard=True))
+    update.message.reply_text("Якщо ви десь помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
+
+
+def restart_jobapplication(update, context):
+    context.user_data.clear()
+    context.user_data['role'] = f"{JOB_DRIVER}"
+    update.message.reply_text("Ви почали подачу заявки спочатку.")
+    update.message.reply_text("Введіть ваше Ім`я:")
+    return "JOB_USER_NAME"
 
 
 # Update information for users
 def update_name(update, context):
-    global STATE
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
+    context.user_data['role'] = f"{JOB_DRIVER}"
     if user:
-        update.message.reply_text("Введіть Ім`я:")
-        STATE = U_NAME
+        update.message.reply_text("Введіть ваше Ім`я:", reply_markup=ReplyKeyboardRemove())
+        return "JOB_USER_NAME"
     else:
-        update.message.reply_text('Спочатку зареєструйтесь, щоб оновлювати ваші дані')
+        update.message.reply_text('Спочатку надайте телефон')
 
 
 def update_second_name(update, context):
-    global STATE
     name = update.message.text
-    name = User.name_and_second_name_validator(name=name)
-    if name is not None:
-        context.user_data['u_name'] = name
+    clear_name = User.name_and_second_name_validator(name=name)
+    if clear_name is not None:
+        context.user_data['u_name'] = clear_name
         update.message.reply_text("Введіть Прізвище:")
-        STATE = U_SECOND_NAME
+        return "JOB_LAST_NAME"
     else:
         update.message.reply_text('Ім`я занадто довге. Спробуйте ще раз')
+        return "JOB_USER_NAME"
 
 
 def update_email(update, context):
-    global STATE
     second_name = update.message.text
-    second_name = User.name_and_second_name_validator(name=second_name)
-    if second_name is not None:
-        context.user_data['u_second_name'] = second_name
+    clear_second_name = User.name_and_second_name_validator(name=second_name)
+    if clear_second_name is not None:
+        context.user_data['u_second_name'] = clear_second_name
         update.message.reply_text("Введіть електронну адресу:")
-        STATE = U_EMAIL
+        return "JOB_EMAIL"
     else:
         update.message.reply_text('Прізвище занадто довге. Спробуйте ще раз')
+        return "JOB_LAST_NAME"
 
 
 def update_user_information(update, context):
-    global STATE
     email = update.message.text
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    email = User.email_validator(email=email)
-    if email is not None:
+    clear_email = User.email_validator(email=email)
+    context.user_data['phone'] = user.phone_number
+    if clear_email is not None:
         user.name = context.user_data['u_name']
         user.second_name = context.user_data['u_second_name']
-        user.email = email
+        user.email = clear_email
         user.save()
-        update.message.reply_text('Ваші дані оновлені')
-        STATE = None
-        role_for_job_application(update, context)
+        buttons = [[InlineKeyboardButton(text='Завантажити документи', callback_data='job_photo')]]
+        update.message.reply_text('Ваші дані оновлені, надайте будь-ласка необхідні документи, скориставшись кнопкою під повідомленням', reply_markup=InlineKeyboardMarkup(buttons))
+        return "WAIT_FOR_JOB_OPTION"
     else:
         update.message.reply_text('Eлектронна адреса некоректна. Спробуйте ще раз')
+        return 'JOB_EMAIL'
 
+def get_job_photo(update, context):
+    empty_inline_keyboard = InlineKeyboardMarkup([])
+    update.callback_query.answer()
+    update.callback_query.edit_message_text(text='Надішліть ваше фото не розмите, без головного убору та окулярів (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=empty_inline_keyboard)
+    return 'WAIT_FOR_JOB_PHOTO'
+
+
+def upload_photo(update, context):
+    os.makedirs('data/mediafiles/job/photo/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/photo/{image["file_unique_id"]}.jpg'
+        context.user_data['photo_job'] = f'job/photo/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Ваше фото збережено.Надішліть лицьову сторону посвідчення')
+        context.bot.send_photo(update.effective_chat.id, 'https://kourier.in.ua/uploads/posts/2016-12/1480604684_1702.jpg')
+        return 'WAIT_FOR_FRONT_PHOTO'
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_JOB_PHOTO'
+
+
+def upload_license_front_photo(update, context):
+    os.makedirs('data/mediafiles/job/licenses/front/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/licenses/front/{image["file_unique_id"]}.jpg'
+        context.user_data['front_license'] = f'job/licenses/front/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Лицьова сторона посвідчення збережена.Надішліть тильну сторону')
+        context.bot.send_photo(update.effective_chat.id, 'https://www.autoconsulting.com.ua/pictures/_upload/1582561870fbTo_h.jpg')
+        return 'WAIT_FOR_BACK_PHOTO'
+    else:
+        update.message.reply_text('Будь ласка, надішліть лицьову сторону', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_FRONT_PHOTO'
+
+def upload_license_back_photo(update, context):
+    os.makedirs('data/mediafiles/job/licenses/back/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/licenses/back/{image["file_unique_id"]}.jpg'
+        context.user_data['back_license'] = f'job/licenses/back/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Тильна сторона посвідчення збережена.Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25).')
+        update.message.reply_text(
+            'Якщо посвідчення безстрокове введіть 2077-12-31 або будь-яку іншу дату у далекому майбутньому до 2077р.:')
+        return 'WAIT_FOR_EXPIRED'
+    else:
+        update.message.reply_text('Будь ласка, надішліть тильну сторону', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_BACK_PHOTO'
+def upload_expired_date(update, context):
+    date = update.message.text
+    if JobApplication.validate_date(date):
+        context.user_data['expired_license'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+        buttons = [[InlineKeyboardButton(text='так', callback_data='have_auto')], [InlineKeyboardButton(text='ні', callback_data='no_auto')]]
+        update.message.reply_text('Чи є у вас авто для роботи:', reply_markup=InlineKeyboardMarkup(buttons))
+        return "WAIT_ANSWER"
+    else:
+        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        return 'WAIT_FOR_EXPIRED'
+
+def check_auto(update,context):
+    query = update.callback_query
+    empty_inline_keyboard = InlineKeyboardMarkup([])
+    if query.data == 'have_auto':
+        query.answer()
+        query.edit_message_text('Дякуємо! Будь ласка, надішліть фото посвідчення про реєстрацію авто.', reply_markup=empty_inline_keyboard)
+        context.bot.send_photo(query.message.chat_id,
+                       'https://protocol.ua/userfiles/tehpasport-na-avto.jpg')
+        return 'WAIT_FOR_AUTO_YES_OPTION'
+    else:
+        chat_id = update.effective_chat.id
+        user = User.get_by_chat_id(chat_id)
+        try:
+            JobApplication.objects.get(phone_number=user.phone_number)
+            update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+        except JobApplication.DoesNotExist:
+            JobApplication.objects.create(
+            first_name=user.name,
+            last_name=user.second_name,
+            email=user.email,
+            phone_number=user.phone_number,
+            license_expired=context.user_data['expired_license'],
+            driver_license_front=context.user_data['front_license'],
+            driver_license_back=context.user_data['back_license'],
+            photo=context.user_data['photo_job'],
+            role=context.user_data['role'])
+        finally:
+            query.edit_message_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+            context.user_data['thread'] = True
+            t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
+            t.start()
+            return "JOB_UKLON_CODE"
+
+
+def upload_auto_doc(update, context):
+    os.makedirs('data/mediafiles/job/car/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/car/{image["file_unique_id"]}.jpg'
+        context.user_data['auto_doc'] = f'job/car/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text('Якщо щось пішло не так, ви можете почати спочатку за допомогою команди /restart')
+        update.message.reply_text(
+            'Фото техпаспорту збережено.Надішліть фото автоцивілки')
+        context.bot.send_photo(update.effective_chat.id,
+                               'https://rinokstrahovka.ua/img/content/2019/07/paper_client_green1.jpg')
+        return 'WAIT_FOR_INSURANCE'
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото техпаспорту', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_AUTO_YES_OPTION'
+def upload_insurance(update, context):
+    os.makedirs('data/mediafiles/job/insurance/', exist_ok=True)
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'data/mediafiles/job/insurance/{image["file_unique_id"]}.jpg'
+        context.user_data['insurance'] = f'job/insurance/{image["file_unique_id"]}.jpg'
+        image.download(filename)
+        update.message.reply_text(
+            'Фото автоцивілки збережено.Надішліть срок дії автоцивілки у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        return 'WAIT_FOR_INSURANCE_EXPIRED'
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото автоцивілки', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_INSURANCE'
+
+def upload_expired_insurance(update, context):
+    chat_id = update.message.chat.id
+    user = User.get_by_chat_id(chat_id)
+    date = update.message.text
+    if JobApplication.validate_date(date):
+        context.user_data['expired_insurance'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+        try:
+            JobApplication.objects.get(phone_number=user.phone_number)
+            update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
+        except JobApplication.DoesNotExist:
+            JobApplication.objects.create(
+                first_name=user.name,
+                last_name=user.second_name,
+                email=user.email,
+                phone_number=user.phone_number,
+                license_expired=context.user_data['expired_license'],
+                driver_license_front=context.user_data['front_license'],
+                driver_license_back=context.user_data['back_license'],
+                photo=context.user_data['photo_job'],
+                role=context.user_data['role'],
+                car_documents=context.user_data['auto_doc'],
+                insurance=context.user_data['insurance'],
+                insurance_expired=context.user_data['expired_insurance']
+            )
+        finally:
+            context.user_data['thread'] = True
+            t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
+            t.start()
+            update.message.reply_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду нам протягом 3 хвилин будь-ласка')
+            return "JOB_UKLON_CODE"
+    else:
+        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        return 'WAIT_FOR_EXPIRED'
+
+def uklon_code(update, context):
+    chat_id = update.message.chat.id
+    user = User.get_by_chat_id(chat_id)
+    context.user_data['thread'] = False
+    r = redis.Redis.from_url(os.environ["REDIS_URL"])
+    r.publish(f'{user.phone_number} code', update.message.text)
+    update.message.reply_text(
+        'Ваш код прийнято.Наш менеджер з вами зв\'яжеться.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
+    return ConversationHandler.END
+
+def code_timer(update, context, timer, sleep):
+    def timer_callback(context):
+        context.bot.send_message(update.effective_chat.id,
+            f'Заявку відхилено.Ви завжди можете подати її повторно')
+        JobApplication.objects.filter(phone_number=context.user_data['phone']).first().delete()
+        return ConversationHandler.END
+
+    remaining_time = timer
+    while remaining_time > 0:
+        try:
+            tread_state = context.user_data['thread']
+            if tread_state:
+                if remaining_time < sleep+1:
+                    context.bot.send_message(update.effective_chat.id,
+                            f'Залишилось {int(remaining_time)} секунд.Якщо ви не відправите код заявку буде скасовано')
+                    time.sleep(remaining_time)
+                    remaining_time = 0
+                    timer_callback(context)
+                else:
+                    context.bot.send_message(update.effective_chat.id,
+                        f'Коду лишилось діяти {int(remaining_time)} секунд.Поспішіть будь-ласка')
+                    time.sleep(sleep)
+                    remaining_time = int(remaining_time - sleep)
+            else:
+                break
+        except KeyError:
+            break
 
 # Sending comment
 def comment(update, context):
@@ -658,27 +1030,38 @@ def sending_report(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        buttons = [[KeyboardButton(f'{SEND_REPORT_DEBT}')]]
+        buttons = [[InlineKeyboardButton(text=f'{SEND_REPORT_DEBT}', callback_data='photo_debt')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
-                                 reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=True))
+                                 reply_markup=InlineKeyboardMarkup(buttons))
+        return "WAIT_FOR_DEBT_OPTION"
     else:
         update.message.reply_text(f'Зареєструтесь як водій', reply_markup=ReplyKeyboardRemove())
 
 
 def get_debt_photo(update, context):
-    update.message.reply_text('Надішліть фото оплати заборгованості', reply_markup=ReplyKeyboardRemove())
+    empty_inline_keyboard = InlineKeyboardMarkup([])
+    update.callback_query.answer()
+    update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості', reply_markup=empty_inline_keyboard)
+    return 'WAIT_FOR_DEBT_PHOTO'
 
 
 def save_debt_report(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
-    image = update.message.photo[-1].get_file()
-    filename = f'{image["file_unique_id"]}.jpg'
-    image.download(filename)
-    Report_of_driver_debt.objects.create(
-                                driver=driver,
-                                image=f'static/{filename}')
-    update.message.reply_text('Ваш звіт збережено')
+    if update.message.photo:
+        image = update.message.photo[-1].get_file()
+        filename = f'{image.file_unique_id}.jpg'
+        image.download(filename)
+        Report_of_driver_debt.objects.create(
+            driver=driver,
+            image=f'static/{filename}'
+        )
+        update.message.reply_text(text='Ваш звіт збережено')
+        return ConversationHandler.END
+    else:
+        update.message.reply_text('Будь ласка, надішліть фото', reply_markup=ReplyKeyboardRemove())
+        return 'WAIT_FOR_DEBT_PHOTO'
+
 
 
 # Viewing broken car
@@ -702,7 +1085,7 @@ def broken_car(update, context):
 STATE_DM = None     # range (100 -150)
 NAME, SECOND_NAME, EMAIL, PHONE_NUMBER = range(100, 104)
 STATUS, DRIVER, CAR_NUMBERPLATE, RATE, NAME_VEHICLE, MODEL_VEHICLE, LICENCE_PLATE_VEHICLE, VIN_CODE_VEHICLE = range(104, 112)
-JOB_APPLICATION = range(112, 113)
+JOB_APPLICATION, V_GPS, V_GPS_IMEI = range(112, 115)
 
 
 # Viewing status driver
@@ -1139,8 +1522,7 @@ def code(update: Update, context: CallbackContext):
 
 
 def help(update, context) -> str:
-    update.message.reply_text('Для першого кроку зробіть реєстрацію або авторизуйтеся командою /start \n' \
-                              'Щоб переглянути команди для вашої ролі скористайтесь командою /get_information \n')
+    update.message.reply_text('Для першого кроку зробіть реєстрацію або авторизуйтеся командою /start')
 
 
 STATE_O = None     # range(200-250)
@@ -1178,7 +1560,7 @@ def get_sum(update, context):
         update.message.reply_text('Введіть суму в форматі DD.CC')
         STATE_O = SUM
     else:
-        update.messega.reply_text('Введена карта невалідна')
+        update.message.reply_text('Введена карта невалідна')
 
 
 THE_DATA_IS_CORRECT = "Транзакція заповнена вірно"
@@ -1283,39 +1665,38 @@ def menu(update, context):
     driver = Driver.get_by_chat_id(chat_id)
     manager = ServiceStationManager.get_by_chat_id(chat_id)
     owner = Owner.get_by_chat_id(chat_id)
-    commands = [
+    standart_commands = [
         BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
         BotCommand("/help", "Допомога"),
         BotCommand("/id", "Дізнатись id"),
+        BotCommand("/upd_informations", "Оновити інформацію про себе"),
     ]
     if driver is not None:
-        commands.extend([
+        standart_commands.extend([
             BotCommand("/status", "Змінити статус водія"),
+            BotCommand("/car_change", "Реєстрація робочого автомобіля на сьогодні"),
             BotCommand("/status_car", "Змінити статус автомобіля"),
             BotCommand("/sending_report", "Відправити звіт про оплату заборгованості"),
-        ])
+            BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])
     elif driver_manager is not None:
-        commands.extend([
+        standart_commands.extend([
             BotCommand("/car_status", "Показати всі зломлені машини"),
             BotCommand("/driver_status", "Показати водіїв за їх статусом"),
             BotCommand("/add", "Створити користувачів та автомобілі"),
+            BotCommand("/add_imei_gps_to_driver", "Додати авто gps_imei"),
             BotCommand("/add_vehicle_to_driver", "Додати водію автомобіль"),
-            BotCommand("/add_job_application_to_fleets", "Додати водія в автопарк"),
-            BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатист до СТО"),
-        ])
+            BotCommand("/add_job_application_to_fleets", "Додати водія в автопарк")])
     elif manager is not None:
-        commands.extend([
-            BotCommand("/send_report", "Відправити звіт про ремонт"),
-        ])
+        standart_commands.extend([
+            BotCommand("/send_report", "Відправити звіт про ремонт")])
     elif owner is not None:
-        commands.extend([
+        standart_commands.extend([
             BotCommand("/report", "Загрузити та побачити недільні звіти"),
             BotCommand("/rating", "Побачити рейтинг водіїв"),
             BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
-            BotCommand("/download_report", "Загрузити тижневі звіти"),
-        ])
+            BotCommand("/download_report", "Загрузити тижневі звіти") ])
 
-    context.bot.set_my_commands(commands)
+    context.bot.set_my_commands(standart_commands)
 
 
 def text(update, context):
@@ -1334,12 +1715,6 @@ def text(update, context):
             return payment_method(update, context)
         elif STATE == COMMENT:
             return save_comment(update, context)
-        elif STATE == U_NAME:
-            return update_second_name(update, context)
-        elif STATE == U_SECOND_NAME:
-            return update_email(update, context)
-        elif STATE == U_EMAIL:
-            return update_user_information(update, context)
     elif STATE_D is not None:
         if STATE_D == NUMBERPLATE:
             return change_status_car(update, context)
@@ -1385,6 +1760,10 @@ def text(update, context):
             return get_vin_code_vehicle(update, context)
         elif STATE_DM == JOB_APPLICATION:
             return get_fleet_for_job_application(update, context)
+        elif STATE_DM == V_GPS:
+            return get_n_vehicle(update, context)
+        elif STATE_DM == V_GPS_IMEI:
+            return get_gps_imea(update, context)
     elif STATE_SSM is not None:
         if STATE_SSM == LICENCE_PLATE:
             return photo(update, context)
@@ -1578,6 +1957,40 @@ def get_update_report(update, context):
         aut_handler(update, context)
 
 
+# Conversations
+debt_conversation = ConversationHandler(
+    entry_points=[CommandHandler('sending_report', sending_report)],
+    states={
+        'WAIT_FOR_DEBT_OPTION': [CallbackQueryHandler(get_debt_photo, pattern='photo_debt')],
+        'WAIT_FOR_DEBT_PHOTO': [MessageHandler(Filters.all, save_debt_report)]
+    },
+    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+)
+
+job_docs_conversation = ConversationHandler(
+    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
+                  CommandHandler("restart", restart_jobapplication)],
+    states={
+        "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
+        "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
+        "JOB_EMAIL": [MessageHandler(Filters.all, update_user_information, pass_user_data=True)],
+        'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
+        'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.all, upload_photo, pass_user_data=True)],
+        'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.all, upload_license_front_photo, pass_user_data=True)],
+        'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.all, upload_license_back_photo, pass_user_data=True)],
+        'WAIT_FOR_EXPIRED': [MessageHandler(Filters.all, upload_expired_date, pass_user_data=True)],
+        'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
+        'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
+        'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
+    },
+
+    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+    allow_reentry=True,
+)
+
+
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
 bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
@@ -1586,7 +1999,6 @@ dp = updater.dispatcher
 
 @csrf_exempt
 def webhook(request):
-
     if request.method == 'POST':
         json_string = request.body.decode('utf-8')
         update = Update.de_json(json.loads(json_string), bot)
@@ -1601,18 +2013,14 @@ dp.add_handler(CommandHandler("rating", drivers_rating))
 
 # Transfer money
 dp.add_handler(CommandHandler("payment", payments))
-dp.add_handler(MessageHandler(Filters.text(f"{TRANSFER_MONEY}"), get_card))
-dp.add_handler(MessageHandler(Filters.text(f"{THE_DATA_IS_CORRECT}"),
-                              correct_transfer))
-dp.add_handler(
-    MessageHandler(Filters.text(f"{THE_DATA_IS_WRONG}"), wrong_transfer))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{TRANSFER_MONEY}$"), get_card))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_CORRECT}$"), correct_transfer))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_WRONG}$"), wrong_transfer))
 
 # Generate link debt
-dp.add_handler(MessageHandler(Filters.text(f"{GENERATE_LINK}"), commission))
-dp.add_handler(MessageHandler(Filters.text(f"{COMMISSION_ONLY_PORTMONE}"),
-                              get_sum_for_portmone))
-dp.add_handler(
-    MessageHandler(Filters.text(f"{MY_COMMISSION}"), get_my_commission))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{GENERATE_LINK}$"), commission))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{COMMISSION_ONLY_PORTMONE}$"), get_sum_for_portmone))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{MY_COMMISSION}$"), get_my_commission))
 
 # Publicly available commands
 # Getting id
@@ -1626,57 +2034,68 @@ dp.add_handler(CommandHandler("start", start))
 # incomplete auth
 dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
 # ordering taxi
-dp.add_handler(MessageHandler(Filters.location, location, run_async=True))
-dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"),
-                              to_the_adress))
-dp.add_handler(
-MessageHandler(Filters.text(f"\u274c {LOCATION_WRONG}"), from_address))
-dp.add_handler(MessageHandler(
-    Filters.text(f"\U0001f4b7 {Order.CASH}") |
-    Filters.text(f"\U0001f4b8 {Order.CARD}"),
-    order_create))
-# sending comment
-dp.add_handler(
-    MessageHandler(Filters.text("\U0001f4e2 Залишити відгук"), comment))
-# Add job application
-dp.add_handler(
-    MessageHandler(Filters.text("\U0001F4E8 Залишити заявку на роботу"),
-                   role_for_job_application))
-dp.add_handler(
-    MessageHandler(Filters.text(f'{JOB_DRIVER}'), job_application))
+dp.add_handler(MessageHandler(Filters.location, location))
 
-# Update information for users
+dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f696 Викликати Таксі$"), continue_order))
+
+dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_adress))
+dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
+dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
+
+dp.add_handler(MessageHandler(
+    Filters.regex(fr"^\U0001f4b7 {Order.CASH}$") |
+    Filters.regex(fr"^\U0001f4b8 {Order.CARD}$"),
+    order_create))
+
+# sending comment
+dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$"), comment))
+# Add job application
+dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити заявку на роботу$"), job_application))
+
+dp.add_handler(job_docs_conversation)
+
 
 # Commands for Drivers
 # Changing status of driver
 dp.add_handler(CommandHandler("status", status))
 dp.add_handler(MessageHandler(
-    Filters.text(Driver.ACTIVE) |
-    Filters.text(Driver.WITH_CLIENT) |
-    Filters.text(Driver.WAIT_FOR_CLIENT) |
-    Filters.text(Driver.OFFLINE) |
-    Filters.text(Driver.RENT),
+    Filters.regex(fr"^{Driver.ACTIVE}$") |
+    Filters.regex(fr"^{Driver.WITH_CLIENT}$") |
+    Filters.regex(fr"^{Driver.WAIT_FOR_CLIENT}$") |
+    Filters.regex(fr"^{Driver.OFFLINE}$") |
+    Filters.regex(fr"^{Driver.RENT}$"),
     set_status))
 
 # Updating status_car
 dp.add_handler(CommandHandler("status_car", status_car))
 dp.add_handler(MessageHandler(
-    Filters.text(f'{SERVICEABLE}') |
-    Filters.text(f'{BROKEN}'),
+    Filters.regex(fr'^{SERVICEABLE}$') |
+    Filters.regex(fr'^{BROKEN}$'),
     numberplate))
 
 # Sending report(payment debt)
-dp.add_handler(CommandHandler("sending_report", sending_report))
-dp.add_handler(
-    MessageHandler(Filters.text(f'{SEND_REPORT_DEBT}'), get_debt_photo))
-dp.add_handler(MessageHandler(Filters.photo, save_debt_report))
+dp.add_handler(debt_conversation)
+
 
 # Take a day off/Take sick leave
 dp.add_handler(CommandHandler("option", option))
 dp.add_handler(MessageHandler(
-    Filters.text(f'{TAKE_A_DAY_OFF}') |
-    Filters.text(f'{TAKE_SICK_LEAVE}'),
+    Filters.regex(fr'^{TAKE_A_DAY_OFF}$') |
+    Filters.regex(fr'^{TAKE_SICK_LEAVE}$'),
     take_a_day_off_or_sick_leave))
+
+# Сar registration for today
+dp.add_handler(CommandHandler("car_change", get_vehicle_licence_plate))
+
+# Get correct auto
+dp.add_handler(MessageHandler(
+    Filters.regex(fr'^{CORRECT_AUTO}$') |
+    Filters.regex(fr'^{NOT_CORRECT_AUTO}$'),
+    correct_or_not_auto))
+
+# Correct choice change_auto
+dp.add_handler(MessageHandler(Filters.regex(fr'^{CORRECT_CHOICE}$'), get_imei))
+dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_licence_plate))
 
 # Commands for Driver Managers
 # Returns status cars
@@ -1686,36 +2105,39 @@ dp.add_handler(CommandHandler("driver_status", driver_status))
 # Add user and other
 dp.add_handler(CommandHandler("add", add))
 dp.add_handler(MessageHandler(
-    Filters.text(f'{CREATE_USER}'),
+    Filters.regex(fr'^{CREATE_USER}$'),
     create))
 # Add vehicle to db
 dp.add_handler(MessageHandler(
-    Filters.text(f'{CREATE_VEHICLE}'),
+    Filters.regex(fr'^{CREATE_VEHICLE}$'),
     name_vehicle))
 dp.add_handler(MessageHandler(
-    Filters.text(f'{USER_DRIVER}') |
-    Filters.text(f'{USER_MANAGER_DRIVER}'),
+    Filters.regex(fr'^{USER_DRIVER}$') |
+    Filters.regex(fr'^{USER_MANAGER_DRIVER}$'),
     name))
 # Add vehicle to drivers
 dp.add_handler(CommandHandler("add_vehicle_to_driver", get_list_drivers))
 dp.add_handler(MessageHandler(
-    Filters.text(f'{F_UKLON}') |
-    Filters.text(f'{F_UBER}') |
-    Filters.text(f'{F_BOLT}'),
+    Filters.regex(fr'^{F_UKLON}$') |
+    Filters.regex(fr'^{F_UBER}$') |
+    Filters.regex(fr'^{F_BOLT}$'),
     get_driver_external_id))
 
 # The job application on driver sent to fleet
-dp.add_handler(CommandHandler("add_job_application_to_fleets",
-                              get_list_job_application))
+dp.add_handler(CommandHandler("add_job_application_to_fleets", get_list_job_application))
 dp.add_handler(MessageHandler(
-    Filters.text(f'- {F_BOLT}') |
-    Filters.text(f'- {F_UBER}'),
+    Filters.regex(fr'^- {F_BOLT}$') |
+    Filters.regex(fr'^- {F_UBER}$'),
     add_job_application_to_fleet))
+
+dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gps_imei))
 
 # Commands for Service Station Manager
 # Sending report on repair
 dp.add_handler(CommandHandler("send_report", numberplate_car))
-dp.add_handler(CallbackQueryHandler(inline_buttons))
+
+dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
+
 
 # System commands
 dp.add_handler(CommandHandler("cancel", cancel))
@@ -1726,17 +2148,12 @@ dp.add_error_handler(error_handler)
 dp.add_handler(CommandHandler('update', update_db, run_async=True))
 dp.add_handler(CommandHandler("save_reports", save_reports))
 
-dp.add_handler(MessageHandler(Filters.text('Get all today statistic'),
-                              get_manager_today_report))
-dp.add_handler(MessageHandler(Filters.text('Get today statistic'),
-                              get_driver_today_report))
-dp.add_handler(MessageHandler(Filters.text('Choice week number'),
-                              get_driver_week_report))
-dp.add_handler(
-    MessageHandler(Filters.text('Update report'), get_update_report))
+dp.add_handler(MessageHandler(Filters.text('Get all today statistic'), get_manager_today_report))
+dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_today_report))
+dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
+dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
-updater.job_queue.run_daily(auto_report_for_driver_and_owner,
-                            time=datetime.time(7, 0, 0), days=(1,))
+updater.job_queue.run_daily(auto_report_for_driver_and_owner, time=datetime.time(7, 0, 0), days=(1,))
 
 
 def main():

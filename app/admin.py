@@ -406,9 +406,18 @@ class Fleets_drivers_vehicles_rateAdmin(admin.ModelAdmin):
 
 @admin.register(JobApplication)
 class JobApplicationAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in JobApplication._meta.fields]
-    list_editable = ['status_job_application']
+    list_display = ['first_name', 'last_name',
+                    'email', 'password', 'phone_number',
+                    'license_expired', 'admin_front',
+                    'admin_back', 'admin_photo', 'admin_car_document',
+                    'admin_insurance', 'insurance_expired',
+                    'status_bolt', 'status_uklon']
 
     fieldsets = [
-        (None, {'fields': ['first_name', 'last_name', 'email', 'phone_number', 'status_job_application']}),
+        (None, {'fields': ['first_name', 'last_name',
+                           'email', 'phone_number',
+                           'license_expired', 'driver_license_front',
+                           'driver_license_back', 'photo', 'car_documents',
+                           'insurance', 'insurance_expired'
+                           ]}),
     ]
