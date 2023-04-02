@@ -506,7 +506,6 @@ class StatusChange(models.Model):
 
 
 class RentInformation(models.Model):
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     driver_name = models.CharField(max_length=50, blank=True)
     rent_time = models.DurationField(null=True, blank=True, verbose_name='Час оренди')
     rent_distance = models.FloatField(null=True, blank=True, verbose_name='Орендована дистанція')
@@ -669,7 +668,7 @@ class UklonFleet(Fleet):
 
 
 class NewUklonFleet(Fleet):
-    token = models.CharField(max_length=40, default=None, verbose_name="Код автопарку")
+    token = models.CharField(max_length=40, default=None, null=True, verbose_name="Код автопарку")
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
@@ -1228,6 +1227,7 @@ def admin_image_preview(image, default_image=None):
         url = image.url
         return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
     return None
+
 
 class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
@@ -2630,8 +2630,7 @@ class UaGps(SeleniumTools):
                     rent_distance += status_report[0]
                     rent_time += status_report[1]
 
-            RentInformation.objects.create(driver=_driver,
-                                           driver_name=_driver,
+            RentInformation.objects.create(driver_name=_driver,
                                            rent_time=rent_time,
                                            rent_distance=rent_distance)
 
