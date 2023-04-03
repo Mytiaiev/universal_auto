@@ -19,11 +19,11 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: taxi_service/forms.py:25
-msgid "Введіть будь ласка адресу"
+msgid "Введіть, будь ласка, адресу"
 msgstr "Enter your address please"
 
 #: taxi_service/forms.py:28
-msgid "Введіть будь ласка ваш номер телефону"
+msgid "Введіть, будь ласка, ваш номер телефону"
 msgstr "Enter your phone please"
 
 #: taxi_service/forms.py:34
@@ -47,7 +47,7 @@ msgid "Введіть пошту"
 msgstr "Enter your email"
 
 #: taxi_service/forms.py:61
-msgid "Введіть ел.пошту будь ласка"
+msgid "Введіть ел.пошту, будь-ласка"
 msgstr "Enter your email please"
 
 #: taxi_service/forms.py:62
