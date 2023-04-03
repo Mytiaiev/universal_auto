@@ -574,6 +574,16 @@ def get_gps_imea(update, context):
     else:
         update.message.reply_text("Задовне значення. Спробуйте ще раз")
 
+@receiver(post_save, sender=RentInformation)
+def send_day_rent(sender, instance, **kwargs):
+    try:
+        chat_id = instance.driver.chat_id
+        if instance.rent_distance > 20 and instance.driver.driver_status != DRIVER.OFFLINE:
+            message = f"Ваша оренда сьогодні {instance.rent_distance} км, вартість оренди {(instance.rent_distance-20)*15}грн"
+            bot.send_message(chat_id=chat_id, text=message)
+    except:
+        pass
+
 
 JOB_DRIVER = 'Водій'
 
@@ -1669,7 +1679,6 @@ def menu(update, context):
         BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
         BotCommand("/help", "Допомога"),
         BotCommand("/id", "Дізнатись id"),
-        BotCommand("/upd_informations", "Оновити інформацію про себе"),
     ]
     if driver is not None:
         standart_commands.extend([
@@ -1802,8 +1811,7 @@ def send_report(sender, instance, **kwargs):
     chat_id = instance.chat_id
     report = get_report()
     owner, totals = report[0], report[1]
-    drivers = {f'{i.name} {i.second_name}': i.chat_id for i in Driver.objects.all()}
-
+    drivers = {f'{i}': i.chat_id for i in Driver.objects.all()}
     # sending report to owner
     message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
     bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)

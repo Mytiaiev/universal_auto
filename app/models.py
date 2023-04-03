@@ -506,6 +506,7 @@ class StatusChange(models.Model):
 
 
 class RentInformation(models.Model):
+    driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True)
     driver_name = models.CharField(max_length=50, blank=True)
     rent_time = models.DurationField(null=True, blank=True, verbose_name='Час оренди')
     rent_distance = models.FloatField(null=True, blank=True, verbose_name='Орендована дистанція')
@@ -2535,7 +2536,7 @@ class UaGps(SeleniumTools):
         self.driver.get(self.base_url)
         if self.sleep:
             time.sleep(self.sleep)
-        user_field = self.driver.find_element(By.ID, 'user')
+        user_field = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'user')))
         clickandclear(user_field)
         user_field.send_keys(os.environ["UAGPS_LOGIN"])
         pass_field = self.driver.find_element(By.ID, 'passw')
@@ -2586,18 +2587,15 @@ class UaGps(SeleniumTools):
         rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
         return rent_distance, rent_time
 
-
     def get_rent_distance(self):
-        today = timezone.localdate()
-        yesterday = today - datetime.timedelta(days=1)
-        start = timezone.datetime.combine(yesterday, datetime.datetime.min.time()).astimezone()
-        end = timezone.datetime.combine(yesterday, datetime.datetime.max.time()).astimezone()
+        now = timezone.localtime()
+        start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
         for _driver in Driver.objects.all():
             rent_distance = 0
             rent_time = datetime.timedelta()
             # car that have worked at that day
             working_cars = UseOfCars.objects.filter(created_at__gte=start,
-                                                    created_at__lte=end)
+                                                    created_at__lte=now)
 
             vehicles = Vehicle.objects.filter(driver=_driver)
             if vehicles:
@@ -2610,12 +2608,12 @@ class UaGps(SeleniumTools):
                         rent_time += rent_before[1]
                         # check driver's car after work
                         last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
-                        rent_after = self.generate_report(last_use.end_at, end, vehicle.licence_plate)
+                        rent_after = self.generate_report(last_use.end_at, now, vehicle.licence_plate)
                         rent_distance += rent_after[0]
                         rent_time += rent_after[1]
                     #  car not used in that day
                     else:
-                        rent = self.generate_report(start, end, vehicle.licence_plate)
+                        rent = self.generate_report(start, now, vehicle.licence_plate)
                         rent_distance += rent[0]
                         rent_time += rent[1]
             # driver work at that day
@@ -2630,9 +2628,16 @@ class UaGps(SeleniumTools):
                     rent_distance += status_report[0]
                     rent_time += status_report[1]
 
-            RentInformation.objects.create(driver_name=_driver,
-                                           rent_time=rent_time,
-                                           rent_distance=rent_distance)
+            rent_today = RentInformation.objects.filter(driver_name=_driver, created_at__date=timezone.now().date()).first()
+            if rent_today:
+                rent_today.rent_time = rent_time
+                rent_today.rent_distance = rent_distance
+                rent_today.save()
+            else:
+                RentInformation.objects.create(driver_name=_driver,
+                                               driver=_driver,
+                                               rent_time=rent_time,
+                                               rent_distance=rent_distance)
 
 
 

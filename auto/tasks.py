@@ -105,9 +105,11 @@ def update_driver_status(self):
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
                     current_status = Driver.OFFLINE
-                    if (driver.name, driver.second_name) in status_online:
+                    if ((driver.name, driver.second_name) in status_online
+                            or driver.driver_status == Driver.ACTIVE):
                         current_status = Driver.ACTIVE
-                    if (driver.name, driver.second_name) in status_width_client:
+                    if ((driver.name, driver.second_name) in status_width_client
+                            or driver.driver_status == Driver.WITH_CLIENT):
                         current_status = Driver.WITH_CLIENT
                     # if (driver.name, driver.second_name) in status['wait']:
                     #     current_status = Driver.ACTIVE
@@ -191,6 +193,7 @@ def send_on_job_application_on_driver_to_NewUklon(self, id):
 def get_rent_information(self):
     try:
         gps = UaGps(driver=True, sleep=5, headless=True)
+        gps.login()
         gps.get_rent_distance()
         gps.quit()
         print('write rent report in uagps')
@@ -206,6 +209,7 @@ def setup_periodic_tasks(sender, **kwargs):
     init_chrome_driver()
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
     sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
+    sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, get_rent_information.s())
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
     # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
 
