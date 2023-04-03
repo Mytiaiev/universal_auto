@@ -22,10 +22,10 @@ class MainOrderForm(ModelForm):
         fields = ('from_address', 'phone_number')
         error_messages = {
             "from_address": {
-                "required": _("Введіть будь-ласка адресу"),
+                "required": _("Введіть, будь ласка, адресу"),
             },
             "phone_number": {
-                "required": _("Введіть будь-ласка ваш номер телефону"),
+                "required": _("Введіть, будь ласка, ваш номер телефону"),
             },
         }
 
@@ -58,7 +58,7 @@ class SubscriberForm(ModelForm):
             'style': 'font-size: medium',
             'id': 'sub_email'
         }),
-        error_messages={'required': _('Введіть ел.пошту будь-ласка'),
+        error_messages={'required': _('Введіть ел.пошту, будь ласка'),
                         'invalid': _('Введіть коректну ел.пошту')}
     )
 
