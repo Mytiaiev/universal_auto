@@ -1684,7 +1684,8 @@ def menu(update, context):
     elif owner is not None:
         standart_commands.extend([
             BotCommand("/report", "Загрузити та побачити недільні звіти"),
-            BotCommand("/rating", "Побачити рейтинг водіїв"),
+            BotCommand("/rating", "Побачити рейтинг водіїв по автопарках за тиждень"),
+            BotCommand("/total_weekly_rating", "Побачити рейтинг водіїв загальну за тиждень"),
             BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
             BotCommand("/download_report", "Загрузити тижневі звіти") ])
 
@@ -1771,14 +1772,36 @@ def text(update, context):
 
 def drivers_rating(update, context):
     text = 'Рейтинг водіїв\n\n'
-    # for fleet in DriversRatingMixin().get_rating():
-    #     text += fleet['fleet'] + '\n'
-    #     for period in fleet['rating']:
-    #         text += f"{period['start']:%d.%m.%Y} - {period['end']:%d.%m.%Y}" + '\n'
-    #         if period['rating']:
-    #             text += '\n'.join([f"{item['num']} {item['driver']} {item['amount']:15.2f} - {item['trips'] if item['trips']>0 else ''}" for item in period['rating']]) + '\n\n'
-    #         else:
-    #             text += 'Отримання даних... Спробуйте пізніше\n'
+    for fleet in DriversRatingMixin().get_rating():
+        text += fleet['fleet'] + '\n'
+        for period in fleet['rating']:
+            text += f"{period['start']:%d.%m.%Y} - {period['end']:%d.%m.%Y}" + '\n'
+            if period['rating']:
+                text += '\n'.join([f"{item['num']} {item['driver']} {item['amount']:15.2f} {- item['trips'] if item['trips']>0 else ''}" for item in period['rating']]) + '\n\n'
+            else:
+                text += 'Отримання даних... Спробуйте пізніше\n'
+    update.message.reply_text(text)
+
+
+def driver_total_weekly_rating(update, context):
+    text = 'Рейтинг водіїв\n'
+    totals = {}
+    rate = DriversRatingMixin().get_rating()
+    text += f"{rate[0]['rating'][0]['start']:%d.%m.%Y} - {rate[0]['rating'][0]['end']:%d.%m.%Y}" + '\n\n'
+    for fleet in DriversRatingMixin().get_rating():
+        for period in fleet['rating']:
+            if period['rating']:
+                for item in period['rating']:
+                    totals.setdefault(item['driver'], 0)
+                    totals[item['driver']] += round(item['amount'], 2)
+            else:
+                text += 'Отримання даних... Спробуйте пізніше\n'
+
+    totals = dict(sorted(totals.items(), key=lambda item: item[1], reverse=True))
+    id = 1
+    for key, value in totals.items():
+        text += f"{id} {key}: {value}\n"
+        id += 1
     update.message.reply_text(text)
 
 
@@ -2003,6 +2026,7 @@ def webhook(request):
 dp.add_handler(CommandHandler("report", report))
 dp.add_handler(CommandHandler("download_report", download_report))
 dp.add_handler(CommandHandler("rating", drivers_rating))
+dp.add_handler(CommandHandler("total_weekly_rating", driver_total_weekly_rating))
 
 # Transfer money
 dp.add_handler(CommandHandler("payment", payments))
