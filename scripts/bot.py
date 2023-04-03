@@ -1521,7 +1521,7 @@ STATE_O = None     # range(200-250)
 CARD, SUM, PORTMONE_SUM, PORTMONE_COMMISSION, GENERATE_LINK = range(200, 205)
 
 TRANSFER_MONEY = 'Перевести кошти'
-GENERATE_LINK = 'Сгенерувати лінк'
+_GENERATE_LINK = 'Сгенерувати лінк'
 
 
 # Transfer money
@@ -1530,7 +1530,7 @@ def payments(update, context):
     owner = Owner.get_by_chat_id(chat_id)
     if owner is not None:
         buttons = [[KeyboardButton(f'{TRANSFER_MONEY}')],
-                   [KeyboardButton(f'{GENERATE_LINK}')]]
+                   [KeyboardButton(f'{_GENERATE_LINK}')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
                                 reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
     else:
@@ -2011,7 +2011,7 @@ dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_CORRECT}$"), correc
 dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_WRONG}$"), wrong_transfer))
 
 # Generate link debt
-dp.add_handler(MessageHandler(Filters.regex(fr"^{GENERATE_LINK}$"), commission))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{_GENERATE_LINK}$"), commission))
 dp.add_handler(MessageHandler(Filters.regex(fr"^{COMMISSION_ONLY_PORTMONE}$"), get_sum_for_portmone))
 dp.add_handler(MessageHandler(Filters.regex(fr"^{MY_COMMISSION}$"), get_my_commission))
 
