@@ -51,7 +51,7 @@ msgid "Введіть ел.пошту будь-ласка"
 msgstr "Enter your email please"
 
 #: taxi_service/forms.py:62
-msgid "Введіть корректну ел.пошту"
+msgid "Введіть коректну ел.пошту"
 msgstr "Enter correct email"
 
 #: taxi_service/forms.py:72

@@ -59,7 +59,7 @@ class SubscriberForm(ModelForm):
             'id': 'sub_email'
         }),
         error_messages={'required': _('Введіть ел.пошту будь-ласка'),
-                        'invalid': _('Введіть корректну ел.пошту')}
+                        'invalid': _('Введіть коректну ел.пошту')}
     )
 
     class Meta:
