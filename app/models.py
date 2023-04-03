@@ -2564,7 +2564,7 @@ class UaGps(SeleniumTools):
             EC.element_to_be_clickable((By.XPATH, "//input[@id='report_templates_filter_units']")))
         unit.click()
         try:
-            self.driver.find_element(By.XPATH, f'//div[text()="{report_object}"]').click()
+            self.driver.find_element(By.XPATH, f'//div[starts-with(text(), "{report_object}")]').click()
         except:
             return 0, datetime.timedelta()
         from_field = self.driver.find_element(By.ID, "time_from_report_templates_filter_time")
@@ -2608,9 +2608,10 @@ class UaGps(SeleniumTools):
                         rent_time += rent_before[1]
                         # check driver's car after work
                         last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
-                        rent_after = self.generate_report(last_use.end_at, now, vehicle.licence_plate)
-                        rent_distance += rent_after[0]
-                        rent_time += rent_after[1]
+                        if last_use.end_at:
+                            rent_after = self.generate_report(last_use.end_at, now, vehicle.licence_plate)
+                            rent_distance += rent_after[0]
+                            rent_time += rent_after[1]
                     #  car not used in that day
                     else:
                         rent = self.generate_report(start, now, vehicle.licence_plate)
@@ -2622,7 +2623,7 @@ class UaGps(SeleniumTools):
                 rent_statuses = StatusChange.objects.filter(driver=_driver.id,
                                                             name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
                                                             start_time__gte=car.created_at,
-                                                            end_time__lte=car.end_at)
+                                                            end_time__lte=now)
                 for status in rent_statuses:
                     status_report = self.generate_report(status.start_time, status.end_time, car.licence_plate)
                     rent_distance += status_report[0]

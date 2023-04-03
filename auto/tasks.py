@@ -27,7 +27,7 @@ MEMCASH_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
-@app.task(priority=8)
+@app.task(priority=7)
 def raw_gps_handler(id):
     try:
         raw = RawGPS.objects.get(id=id)
@@ -142,7 +142,7 @@ def update_driver_data(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=9)
+@app.task(bind=True, priority=6)
 def download_weekly_report_force(self):
     try:
         BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
@@ -165,7 +165,7 @@ def send_on_job_application_on_driver_to_Bolt(self, id):
         logger.info(e)
 
 
-@app.task(bind=True, priority=7)
+@app.task(bind=True, priority=9)
 def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, second_name):
     try:
         ub = Uber(driver=True, sleep=5, headless=True)
@@ -189,7 +189,7 @@ def send_on_job_application_on_driver_to_NewUklon(self, id):
         logger.info(e)
 
 
-@app.task(bind=True, priority=8)
+@app.task(bind=True, priority=11)
 def get_rent_information(self):
     try:
         gps = UaGps(driver=True, sleep=5, headless=True)

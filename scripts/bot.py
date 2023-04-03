@@ -578,7 +578,7 @@ def get_gps_imea(update, context):
 def send_day_rent(sender, instance, **kwargs):
     try:
         chat_id = instance.driver.chat_id
-        if instance.rent_distance > 20 and instance.driver.driver_status != DRIVER.OFFLINE:
+        if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
             message = f"Ваша оренда сьогодні {instance.rent_distance} км, вартість оренди {(instance.rent_distance-20)*15}грн"
             bot.send_message(chat_id=chat_id, text=message)
     except:
