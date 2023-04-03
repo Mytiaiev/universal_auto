@@ -652,7 +652,7 @@ class UklonFleet(Fleet):
 
 
 class NewUklonFleet(Fleet):
-    token = models.CharField(max_length=40, default=None, verbose_name="Код автопарку")
+    token = models.CharField(max_length=40, default=None, null=True, verbose_name="Код автопарку")
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
