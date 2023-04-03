@@ -71,6 +71,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='newuklonfleet',
             name='token',
-            field=models.CharField(default=None, max_length=40, verbose_name='Код автопарку'),
+            field=models.CharField(default=None, null=True, max_length=40, verbose_name='Код автопарку'),
         ),
     ]
