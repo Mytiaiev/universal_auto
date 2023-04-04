@@ -9,7 +9,6 @@ from scripts.driversrating import DriversRatingMixin
 from app.models import VehicleGPS, Vehicle
 
 
-
 class DriversRatingView(DriversRatingMixin, TemplateView):
     template_name = 'app/drivers_rating.html'
 
@@ -33,6 +32,24 @@ class GpsData(APIView):
 
     def post(self, request):
         return Response('OK')
+
+
+def drivers_total_weekly_rating(request):
+    rate = DriversRatingMixin().get_rating()
+    date = f"{rate[0]['rating'][0]['start']:%d.%m.%Y} - {rate[0]['rating'][0]['end']:%d.%m.%Y}"
+    drivers = {}
+    for fleet in DriversRatingMixin().get_rating():
+        for period in fleet['rating']:
+            if period['rating']:
+                for item in period['rating']:
+                    drivers.setdefault(item['driver'], 0)
+                    drivers[item['driver']] += round(item['amount'], 2)
+
+    drivers = dict(sorted(drivers.items(), key=lambda item: item[1], reverse=True))
+
+    context = {'date': date, 'drivers': drivers}
+
+    return render(request, 'app/drivers_total_weekly_rating.html', context)
 
 
 def gps_cars(request):

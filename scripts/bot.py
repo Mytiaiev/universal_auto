@@ -23,12 +23,13 @@ from scripts.driversrating import DriversRatingMixin
 import traceback
 import hashlib
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
+from django.http.response import HttpResponse
 from django.db import IntegrityError
 from django.utils import timezone
 from scripts.conversion import *
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
@@ -46,7 +47,9 @@ start_keyboard = [
     KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу"),
     KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)
 ]
-#Ordering taxi
+
+
+# Ordering taxi
 def start(update, context):
     menu(update, context)
     chat_id = update.message.chat.id
@@ -1798,6 +1801,7 @@ def driver_total_weekly_rating(update, context):
                 text += 'Отримання даних... Спробуйте пізніше\n'
 
     totals = dict(sorted(totals.items(), key=lambda item: item[1], reverse=True))
+
     id = 1
     for key, value in totals.items():
         text += f"{id} {key}: {value}\n"
@@ -1824,15 +1828,18 @@ def send_report(sender, instance, **kwargs):
     bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
 
     # sending report to driver
-    if len(drivers) != 0:
+    if drivers:
         for driver in drivers:
             try:
                 message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
                 bot.send_message(chat_id=chat_id, text=message)
             except:
                 pass
+    else:
+        update.message.reply_text('Не вдалось отримати водіїв. Перевірте базу данних з водіями')
 
     instance.delete()
+
 
 def auto_report_for_driver_and_owner(context):
     report = get_report()
@@ -1844,7 +1851,7 @@ def auto_report_for_driver_and_owner(context):
     context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
 
     # sending report to driver
-    if len(drivers) != 0:
+    if drivers:
         for driver in drivers:
             try:
                 message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
