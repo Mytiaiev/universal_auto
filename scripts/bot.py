@@ -101,8 +101,8 @@ CANCEL = 'Скасувати замовлення'
 
 
 def continue_order(update, context):
-    update.message.reply_text(f"Ціна поїздки в місті {os.environ['TARIFF_IN_THE_CITY']}грн/км\n" +
-                              f"Ціна поїздки за містом {os.environ['TARIFF_OUTSIDE_THE_CITY']}грн/км")
+    update.message.reply_text(f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')}грн/км\n" +
+                              f"Ціна поїздки за містом {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')}грн/км")
 
     keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}", request_location=True),
                 KeyboardButton(text=f"\u274c {CANCEL}")]
