@@ -1150,6 +1150,7 @@ class JobApplication(models.Model):
     status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
     status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата подачі заявки')
+
     @staticmethod
     def validate_date(date_str):
         try:
@@ -1169,6 +1170,7 @@ class JobApplication(models.Model):
         if not self.id:
             self.password = self.generate_password()
         super().save(*args, **kwargs)
+
     @staticmethod
     def generate_password(length=12):
         chars = string.ascii_lowercase + string.digits
@@ -1212,6 +1214,7 @@ def admin_image_preview(image, default_image=None):
         return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
     return None
 
+
 class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
     chat_id = models.CharField(blank=True, max_length=100, verbose_name='Індетифікатор чата')
@@ -1224,6 +1227,28 @@ class UseOfCars(models.Model):
 
     def __str__(self):
         return f"{self.user_vehicle}: {self.licence_plate}"
+
+
+class ParkSettings(models.Model):
+    key = models.CharField(max_length=255, verbose_name='Ключ')
+    value = models.CharField(max_length=255, verbose_name='Значення')
+
+
+    class Meta:
+        verbose_name = 'Налаштування автопарка'
+        verbose_name_plural = 'Налаштування автопарків'
+
+    def __str__(self):
+        return f'{self.value}'
+
+    @staticmethod
+    def get_value(key=key):
+        try:
+            value = ParkSettings.objects.get(key=key)
+            return value
+        except ParkSettings.DoesNotExist:
+            return f"<ObjectDoesNotExist> {key}"
+
 
 
 
