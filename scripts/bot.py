@@ -23,12 +23,13 @@ from scripts.driversrating import DriversRatingMixin
 import traceback
 import hashlib
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
+from django.http.response import HttpResponse
 from django.db import IntegrityError
 from django.utils import timezone
 from scripts.conversion import *
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
@@ -46,7 +47,9 @@ start_keyboard = [
     KeyboardButton(text="\U0001F4E8 Залишити заявку на роботу"),
     KeyboardButton(text="\U0001f4f2 Надати номер телефону", request_contact=True)
 ]
-#Ordering taxi
+
+
+# Ordering taxi
 def start(update, context):
     menu(update, context)
     chat_id = update.message.chat.id
@@ -101,8 +104,8 @@ CANCEL = 'Скасувати замовлення'
 
 
 def continue_order(update, context):
-    update.message.reply_text(f"Ціна поїздки в місті {os.environ['TARIFF_IN_THE_CITY']}грн/км\n" +
-                              f"Ціна поїздки за містом {os.environ['TARIFF_OUTSIDE_THE_CITY']}грн/км")
+    update.message.reply_text(f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')}грн/км\n" +
+                              f"Ціна поїздки за містом {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')}грн/км")
 
     keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}", request_location=True),
                 KeyboardButton(text=f"\u274c {CANCEL}")]
@@ -1539,7 +1542,7 @@ STATE_O = None     # range(200-250)
 CARD, SUM, PORTMONE_SUM, PORTMONE_COMMISSION, GENERATE_LINK = range(200, 205)
 
 TRANSFER_MONEY = 'Перевести кошти'
-GENERATE_LINK = 'Сгенерувати лінк'
+_GENERATE_LINK = 'Сгенерувати лінк'
 
 
 # Transfer money
@@ -1548,7 +1551,7 @@ def payments(update, context):
     owner = Owner.get_by_chat_id(chat_id)
     if owner is not None:
         buttons = [[KeyboardButton(f'{TRANSFER_MONEY}')],
-                   [KeyboardButton(f'{GENERATE_LINK}')]]
+                   [KeyboardButton(f'{_GENERATE_LINK}')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
                                 reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
     else:
@@ -1701,7 +1704,8 @@ def menu(update, context):
     elif owner is not None:
         standart_commands.extend([
             BotCommand("/report", "Загрузити та побачити недільні звіти"),
-            BotCommand("/rating", "Побачити рейтинг водіїв"),
+            BotCommand("/rating", "Побачити рейтинг водіїв по автопарках за тиждень"),
+            BotCommand("/total_weekly_rating", "Побачити рейтинг водіїв загальну за тиждень"),
             BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
             BotCommand("/download_report", "Загрузити тижневі звіти") ])
 
@@ -1788,14 +1792,37 @@ def text(update, context):
 
 def drivers_rating(update, context):
     text = 'Рейтинг водіїв\n\n'
-    # for fleet in DriversRatingMixin().get_rating():
-    #     text += fleet['fleet'] + '\n'
-    #     for period in fleet['rating']:
-    #         text += f"{period['start']:%d.%m.%Y} - {period['end']:%d.%m.%Y}" + '\n'
-    #         if period['rating']:
-    #             text += '\n'.join([f"{item['num']} {item['driver']} {item['amount']:15.2f} - {item['trips'] if item['trips']>0 else ''}" for item in period['rating']]) + '\n\n'
-    #         else:
-    #             text += 'Отримання даних... Спробуйте пізніше\n'
+    for fleet in DriversRatingMixin().get_rating():
+        text += fleet['fleet'] + '\n'
+        for period in fleet['rating']:
+            text += f"{period['start']:%d.%m.%Y} - {period['end']:%d.%m.%Y}" + '\n'
+            if period['rating']:
+                text += '\n'.join([f"{item['num']} {item['driver']} {item['amount']:15.2f} {- item['trips'] if item['trips']>0 else ''}" for item in period['rating']]) + '\n\n'
+            else:
+                text += 'Отримання даних... Спробуйте пізніше\n'
+    update.message.reply_text(text)
+
+
+def driver_total_weekly_rating(update, context):
+    text = 'Рейтинг водіїв\n'
+    totals = {}
+    rate = DriversRatingMixin().get_rating()
+    text += f"{rate[0]['rating'][0]['start']:%d.%m.%Y} - {rate[0]['rating'][0]['end']:%d.%m.%Y}" + '\n\n'
+    for fleet in DriversRatingMixin().get_rating():
+        for period in fleet['rating']:
+            if period['rating']:
+                for item in period['rating']:
+                    totals.setdefault(item['driver'], 0)
+                    totals[item['driver']] += round(item['amount'], 2)
+            else:
+                text += 'Отримання даних... Спробуйте пізніше\n'
+
+    totals = dict(sorted(totals.items(), key=lambda item: item[1], reverse=True))
+
+    id = 1
+    for key, value in totals.items():
+        text += f"{id} {key}: {value}\n"
+        id += 1
     update.message.reply_text(text)
 
 
@@ -1817,15 +1844,18 @@ def send_report(sender, instance, **kwargs):
     bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
 
     # sending report to driver
-    if len(drivers) != 0:
+    if drivers:
         for driver in drivers:
             try:
                 message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
                 bot.send_message(chat_id=chat_id, text=message)
             except:
                 pass
+    else:
+        update.message.reply_text('Не вдалось отримати водіїв. Перевірте базу данних з водіями')
 
     instance.delete()
+
 
 def auto_report_for_driver_and_owner(context):
     report = get_report()
@@ -1837,7 +1867,7 @@ def auto_report_for_driver_and_owner(context):
     context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
 
     # sending report to driver
-    if len(drivers) != 0:
+    if drivers:
         for driver in drivers:
             try:
                 message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
@@ -2018,6 +2048,7 @@ def webhook(request):
 dp.add_handler(CommandHandler("report", report))
 dp.add_handler(CommandHandler("download_report", download_report))
 dp.add_handler(CommandHandler("rating", drivers_rating))
+dp.add_handler(CommandHandler("total_weekly_rating", driver_total_weekly_rating))
 
 # Transfer money
 dp.add_handler(CommandHandler("payment", payments))
@@ -2026,7 +2057,7 @@ dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_CORRECT}$"), correc
 dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_WRONG}$"), wrong_transfer))
 
 # Generate link debt
-dp.add_handler(MessageHandler(Filters.regex(fr"^{GENERATE_LINK}$"), commission))
+dp.add_handler(MessageHandler(Filters.regex(fr"^{_GENERATE_LINK}$"), commission))
 dp.add_handler(MessageHandler(Filters.regex(fr"^{COMMISSION_ONLY_PORTMONE}$"), get_sum_for_portmone))
 dp.add_handler(MessageHandler(Filters.regex(fr"^{MY_COMMISSION}$"), get_my_commission))
 

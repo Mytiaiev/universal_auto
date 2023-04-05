@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Рейтинг водіїв за тиждень</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #f2f2f2;
+		}
+		h1 {
+			text-align: center;
+			font-size: 36px;
+			margin-top: 50px;
+		}
+		table {
+			margin: 50px auto;
+			border-collapse: collapse;
+			box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+		}
+		th, td {
+			padding: 10px;
+			text-align: left;
+			border-bottom: 1px solid #ddd;
+		}
+		th {
+			background-color: #4CAF50;
+			color: white;
+			font-size: 20px;
+			font-weight: bold;
+			text-align: center;
+		}
+		td {
+			font-size: 16px;
+			text-align: center;
+		}
+		tr:nth-child(even) {
+			background-color: #f2f2f2;
+		}
+	</style>
+</head>
+<body>
+	<h1>Рейтинг водіїв за тиждень</h1>
+	<table>
+		<thead>
+			<tr>
+				<th>Водій</th>
+				<th>Кошти</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for driver, amount in drivers.items %}
+			<tr>
+				<td>{{ driver }}</td>
+				<td>{{ amount }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	<div style="text-align: center;">
+		<p style="font-size: 24px;">{{ date }}</p>
+	</div>
+</body>
+</html>

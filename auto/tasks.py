@@ -152,8 +152,7 @@ def download_weekly_report_force(self):
         logger.info(e)
 
 
-
-@app.task(bind=True, priority=8)
+@app.task(bind=True, priority=7)
 def send_on_job_application_on_driver_to_Bolt(self, id):
     try:
         b = Bolt(driver=True, sleep=3, headless=True)
@@ -177,7 +176,8 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
         logger.info(e)
 
 
-@app.task(bind=True, priority=10)
+
+@app.task(bind=True, priority=8)
 def send_on_job_application_on_driver_to_NewUklon(self, id):
     try:
         uklon = NewUklon(driver=True, sleep=5, headless=True)

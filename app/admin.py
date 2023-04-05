@@ -421,3 +421,8 @@ class JobApplicationAdmin(admin.ModelAdmin):
                            'insurance', 'insurance_expired'
                            ]}),
     ]
+
+
+@admin.register(ParkSettings)
+class ParkSettingsAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in ParkSettings._meta.fields]
