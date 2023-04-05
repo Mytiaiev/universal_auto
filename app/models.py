@@ -2153,9 +2153,9 @@ class NewUklon(SeleniumTools):
         url = f'{self.base_url}/workspace/orders'
         xpath = '//flt-group-filter[1]/flt-date-range-filter/mat-form-field/div'
         self.get_target_page_or_login(url, xpath, self.login)
-        self.driver.find_element(By.XPATH, '//flt-group-filter[1]/flt-date-range-filter/mat-form-field/div').click()
+        self.driver.find_element(By.XPATH, xpath).click()
         time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, '//mat-option[@id="mat-option-7"]/span').click()  #Минулий тиждень
+        self.driver.find_element(By.XPATH, '//span[text()=" Минулий тиждень "]').click()
         time.sleep(self.sleep)
         self.driver.find_element(By.XPATH, '//flt-filter-group/div/div/button').click()  #Експорт CSV
         time.sleep(self.sleep)
