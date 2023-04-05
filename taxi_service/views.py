@@ -41,6 +41,10 @@ def why(request):
     return render(request, 'why.html')
 
 
+def agreement(request):
+    return render(request, 'agreement.html')
+
+
 
 
 
