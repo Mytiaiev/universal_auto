@@ -1835,8 +1835,6 @@ def send_report(sender, instance, **kwargs):
                 bot.send_message(chat_id=chat_id, text=message)
             except:
                 pass
-    else:
-        update.message.reply_text('Не вдалось отримати водіїв. Перевірте базу данних з водіями')
 
     instance.delete()
 
