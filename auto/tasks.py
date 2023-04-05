@@ -150,7 +150,6 @@ def download_weekly_report_force(self):
         logger.info(e)
 
 
-
 @app.task(bind=True, priority=6)
 def send_on_job_application_on_driver_to_Bolt(self, id):
     try:

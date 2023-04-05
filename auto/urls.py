@@ -24,6 +24,7 @@ from scripts.bot import webhook
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('rating/', DriversRatingView.as_view()),
+    path('drivers_total_weekly_rating/', drivers_total_weekly_rating, name='app/drivers_total_weekly_rating'),
     path('gps/data', GpsData.as_view()),
     path('fake_uklon/', include('fake_uklon.urls')),
     path('fake_uber/', include('fake_uber.urls')),
