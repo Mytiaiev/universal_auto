@@ -2604,7 +2604,6 @@ class UaGps(SeleniumTools):
                 EC.element_to_be_clickable((By.XPATH, '//input[@value="Execute"]'))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        self.driver.get_screenshot_as_file(f'{start_time}.png')
         road_distance = self.driver.find_element(By.XPATH, "//tr[@pos='5']/td[2]").text
         rent_distance = float(road_distance.split(' ')[0])
         roadtimestr = self.driver.find_element(By.XPATH, "//tr[@pos='4']/td[2]").text
@@ -2656,10 +2655,14 @@ class UaGps(SeleniumTools):
                     rent_statuses = StatusChange.objects.filter(driver=_driver.id,
                                                                 name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
                                                                 start_time__gte=timezone.localtime(car.created_at),
-                                                                end_time__lte=timezone.localtime(end))
+                                                                start_time__lte=timezone.localtime(end))
                     for status in rent_statuses:
+                        if status.end_time:
+                            end = status.end_time
+                        else:
+                            end = now
                         status_report = self.generate_report(timezone.localtime(status.start_time),
-                                                             timezone.localtime(status.end_time),
+                                                             timezone.localtime(end),
                                                              car.licence_plate)
                         rent_distance += status_report[0]
                         rent_time += status_report[1]
