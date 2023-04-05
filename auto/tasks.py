@@ -214,6 +214,11 @@ def setup_periodic_tasks(sender, **kwargs):
     # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
 
 
+@app.on_after_finalize.connect
+def setup_rent_task(sender, **kwargs):
+    sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
+
+
 def init_chrome_driver():
     global BOLT_CHROME_DRIVER
     global UKLON_CHROME_DRIVER
