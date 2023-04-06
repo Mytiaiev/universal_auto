@@ -82,6 +82,7 @@
     
     <!-- end header section -->
 
+
     <!-- slider section -->
     <section class=" slider_section position-relative">
       <div class="box">
@@ -440,75 +441,7 @@
 
   <!-- end client section -->
 
-  <!-- info section -->
-  <section class="info_section">
 
-    <div class="container">
-      <div class="info_top ">
-        <div class="row ">
-          <div class="col-sm-6 col-md-4 col-lg-3">
-            <div class="info_detail">
-              <a href="{% url 'index' %}">
-                <h4>
-                  Ninja Taxi
-                </h4>
-              </a>
-              <p>
-                {% trans "Хочете бути екологічно свідомими та зручно подорожувати містом? Спробуйте електротаксі!" %}
-              </p>
-              {% include '_social_box.html' %}
-            </div>
-          </div>
-          <div class="col-sm-6 col-md-4 col-lg-3 mx-auto">
-            <h4>
-              {% trans "Наші Контакти" %}
-            </h4>
-            <div class="contact_nav">
-              <a href="">
-                <i class="fa fa-map-marker" aria-hidden="true"></i>
-                <span>
-                  {% trans "Місцезнаходження" %}
-                </span>
-              </a>
-              <a href="">
-                <i class="fa fa-phone" aria-hidden="true"></i>
-                <span>
-                  {% trans "Телефон" %}: +380681373335
-                </span>
-              </a>
-              <a href="">
-                <i class="fa fa-envelope" aria-hidden="true"></i>
-                <span>
-                  {% trans "Електронна пошта" %} : office@ninja-taxi.kyiv.ua
-                </span>
-              </a>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="info_form">
-              <h4>
-                {% trans "Підписатись на розсилку" %}
-              </h4>
-              {% include '_subscribe_form.html' with button=_("Підписатись") form='2' %}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <!-- end info_section -->
-
-
-  <!-- footer section -->
-  <footer class="footer_section">
-    <div class="container">
-      <p>
-        &copy; <span id="displayYear"></span> All Rights Reserved By
-        <a href="https://ninja-taxi.kyiv.ua/">Ninja Taxi</a>
-      </p>
-    </div>
-  </footer>
-  <!-- footer section -->
 {% include 'footer.html' %}
 
 <!-- scripts -->
