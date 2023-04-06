@@ -1848,10 +1848,10 @@ class Bolt(SeleniumTools):
         else:
             self.driver.get(f"{self.base_url}/company/58225/reports/weekly/{self.file_patern()}")
             time.sleep(self.sleep)
-        if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
-        else:
-            self.get_last_downloaded_file(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            if self.remote:
+                self.get_last_downloaded_file_frome_remote(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            else:
+                self.get_last_downloaded_file(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
 
     def file_patern(self):
         if self.day:
@@ -2541,8 +2541,8 @@ class Privat24(SeleniumTools):
 
 
 class UaGps(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://uagps.net/", remote=False, profile=None):
-        super().__init__('uagps', week_number=week_number, day=day, profile=profile)
+    def __init__(self, driver=True, sleep=3, headless=False, base_url="https://uagps.net/", remote=False, profile=None):
+        super().__init__('uagps', profile=profile)
         self.sleep = sleep
         if driver:
             if remote:
