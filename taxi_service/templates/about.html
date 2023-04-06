@@ -15,7 +15,7 @@
   <meta name="author" content="" />
   <link rel="shortcut icon" href="{% static 'app/images/favicon.ico' %}"/>
 
-  <title>{% trans "Універсальне таксі" %}</title>
+  <title>Ninja Taxi</title>
 
   <!-- slider stylesheet -->
   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.1.3/assets/owl.carousel.min.css" />
@@ -40,7 +40,7 @@
         <nav class="navbar navbar-expand-lg custom_nav-container">
           <a class="navbar-brand" href="{% url 'index' %}">
             <span>
-              {% trans "Універсальне таксі" %}
+              Ninja Taxi
             </span>
           </a>
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -89,10 +89,10 @@
               </h2>
             </div>
             <p>
-              It is a long established fact that a reader will be distracted by
-              the readable content of a page when looking at its layout. The point
-              of using Lorem Ipsum is that it has a more-or-less normal
-              distribution of letters
+              {% trans "Наша місія – надати пасажирам швидкий, зручний та безпечний транспорт, який буде відповідати найвищим стандартам." %}
+              {% trans "Наші електротаксі оснащені новітніми безпековими технологіями, що забезпечує максимальний захист пасажирів на дорозі." %}
+              {% trans "Крім того, ми гарантуємо швидкий та комфортний трансфер у будь-який час дня та ночі." %}
+              {% trans "Наші водії - це професіонали своєї справи, які мають високий рівень досвіду та знань про місто, що забезпечує швидку та безпечну поїздку для наших пасажирів." %}
             </p>
             <a href="">
               {% trans "Дізнатися більше" %}
@@ -116,35 +116,19 @@
             <div class="info_detail">
               <a href="{% url 'index' %}">
                 <h4>
-                  Elaxi
+                  Ninja Taxi
                 </h4>
               </a>
               <p>
-                Soluta odit exercitationem rerum aperiam eos consectetur impedit delectus qui reiciendis, distinctio, asperiores fuga labore a? Magni natus.
+                {% trans "Хочете бути екологічно свідомими та зручно подорожувати містом? Спробуйте електротаксі!" %}
               </p>
-              <div class="social_box">
-                <a href="">
-                  <i class="fa fa-facebook" aria-hidden="true"></i>
-                </a>
-                <a href="">
-                  <i class="fa fa-twitter" aria-hidden="true"></i>
-                </a>
-                <a href="">
-                  <i class="fa fa-linkedin" aria-hidden="true"></i>
-                </a>
-                <a href="">
-                  <i class="fa fa-instagram" aria-hidden="true"></i>
-                </a>
-              </div>
+              {% include '_social_box.html' %}
             </div>
           </div>
           <div class="col-sm-6 col-md-4 col-lg-3 mx-auto">
             <h4>
               {% trans "Наші Контакти" %}
             </h4>
-            <p>
-              Lorem ipsum dolor sit amet consectetur adipisicing elit
-            </p>
             <div class="contact_nav">
               <a href="">
                 <i class="fa fa-map-marker" aria-hidden="true"></i>
@@ -155,13 +139,13 @@
               <a href="">
                 <i class="fa fa-phone" aria-hidden="true"></i>
                 <span>
-                  {% trans "Телефон" %}: 000007854635
+                  {% trans "Телефон" %}: +380681373335
                 </span>
               </a>
               <a href="">
                 <i class="fa fa-envelope" aria-hidden="true"></i>
                 <span>
-                  {% trans "Електронна пошта" %} : demo@gmail.com
+                  {% trans "Електронна пошта" %} : office@ninja-taxi.kyiv.ua
                 </span>
               </a>
             </div>
@@ -191,7 +175,7 @@
     <div class="container">
       <p>
         &copy; <span id="displayYear"></span> All Rights Reserved By
-        <a href="https://html.design/">Free Html Templates</a>
+        <a href="https://ninja-taxi.kyiv.ua/">Ninja Taxi</a>
       </p>
     </div>
   </footer>
