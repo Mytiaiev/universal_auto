@@ -11,6 +11,7 @@ from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
 from django.utils.safestring import mark_safe
+from django.utils import timezone
 from polymorphic.models import PolymorphicModel
 from selenium.common import TimeoutException, WebDriverException
 
@@ -423,6 +424,7 @@ class Driver(User):
     WITH_CLIENT = 'В дорозі'
     WAIT_FOR_CLIENT = 'Очікую клієнта'
     OFFLINE = 'Не працюю'
+    RENT = 'Орендую авто'
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
     #partner = models.ManyToManyField('Partner', blank=True)
@@ -495,6 +497,21 @@ class Driver(User):
             return None
 
 
+class StatusChange(models.Model):
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, verbose_name='Назва статусу')
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    duration = models.DurationField(null=True, blank=True)
+
+
+class RentInformation(models.Model):
+    driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True)
+    driver_name = models.CharField(max_length=50, blank=True)
+    rent_time = models.DurationField(null=True, blank=True, verbose_name='Час оренди')
+    rent_distance = models.FloatField(null=True, blank=True, verbose_name='Орендована дистанція')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True)
+
 
 class Fleet(PolymorphicModel):
     name = models.CharField(max_length=255)
@@ -542,7 +559,7 @@ class DriverManager(User):
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
 
     class Meta:
-        verbose_name ='Менеджер водія'
+        verbose_name = 'Менеджер водія'
         verbose_name_plural = 'Менеджер водіїв'
 
     def __str__(self):
@@ -676,7 +693,7 @@ class Vehicle(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
     class Meta:
-        verbose_name ='Автомобіль'
+        verbose_name = 'Автомобіль'
         verbose_name_plural = 'Автомобілі'
 
     def __str__(self) -> str:
@@ -1220,6 +1237,7 @@ class UseOfCars(models.Model):
     chat_id = models.CharField(blank=True, max_length=100, verbose_name='Індетифікатор чата')
     licence_plate = models.CharField(max_length=24, verbose_name='Номерний знак')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата використання авто')
+    end_at = models.DateTimeField(null=True, blank=True, verbose_name='Кінець використання авто')
 
     class Meta:
         verbose_name = 'Користувачі автомобіля'
@@ -1821,7 +1839,7 @@ class Bolt(SeleniumTools):
         xpath = '//div/div/table'
         self.get_target_page_or_login(url, xpath, self.login)
         if self.day:
-            self.driver.get(f"{self.base_url}/company/58225/reports/dayly/")
+            self.driver.get(f"{self.base_url}/company/58225/reports/daily/")
             if self.sleep:
                 time.sleep(self.sleep)
             xpath = f'//table/tbody/tr/td[text()="{self.file_patern()}"]'
@@ -2176,8 +2194,8 @@ class NewUklon(SeleniumTools):
         self.driver.find_element(By.XPATH,
                                  '//upf-order-reports/section[1]/flt-filter-group/form/flt-group-filter[1]/flt-date-range-filter/mat-form-field/div').click()
         self.driver.find_element(By.XPATH, '//mat-option/span/div[text()=" Вибрати період "]').click()
-        e = self.driver.find_element(By.XPATH, '//input').click()
-
+        e = self.driver.find_element(By.XPATH, '//input')
+        e.click()
         sh, sm, eh, em = '00', '00', '23', '59'  # s - start/e - end/h - hours/m - minutes
         e.send_keys(self.day.format("DD.MM.YYYY") + Keys.TAB + self.day.format("DD.MM.YYYY") + Keys.TAB + Keys.TAB + f'{sh}' + Keys.SPACE + f'{sm}' + Keys.TAB + f'{eh}' + Keys.SPACE + f'{em}')
 
@@ -2520,6 +2538,147 @@ class Privat24(SeleniumTools):
             return result
         else:
             return None
+
+
+class UaGps(SeleniumTools):
+    def __init__(self, driver=True, sleep=3, headless=False, base_url="https://uagps.net/", remote=False, profile=None):
+        super().__init__('uagps', profile=profile)
+        self.sleep = sleep
+        if driver:
+            if remote:
+                self.driver = self.build_remote_driver(headless)
+            else:
+                self.driver = self.build_driver(headless)
+        self.remote = remote
+        self.base_url = base_url
+
+    def quit(self):
+        self.driver.quit()
+        self.driver = None
+
+    def login(self):
+        self.driver.get(self.base_url)
+        if self.sleep:
+            time.sleep(self.sleep)
+        user_field = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'user')))
+        clickandclear(user_field)
+        user_field.send_keys(os.environ["UAGPS_LOGIN"])
+        pass_field = self.driver.find_element(By.ID, 'passw')
+        clickandclear(pass_field)
+        pass_field.send_keys(os.environ["UAGPS_PASSWORD"])
+        self.driver.find_element(By.ID, 'submit').click()
+        if self.sleep:
+            time.sleep(self.sleep)
+
+    def generate_report(self, start_time, end_time, report_object):
+
+        """
+        :param start_time: time from which we need to get report
+        :type start_time: datetime.datetime
+        :param end_time: time to which we need to get report
+        :type end_time: datetime.datetime
+        :param report_object: license plate
+        :type report_object: str
+        :return: distance and time in rent
+        """
+        xpath = "//div[@title='Reports']"
+        self.get_target_page_or_login(self.base_url, xpath, self.login)
+        self.driver.find_element(By.XPATH, xpath).click()
+        unit = WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, "//input[@id='report_templates_filter_units']")))
+        unit.click()
+        try:
+            self.driver.find_element(By.XPATH, f'//div[starts-with(text(), "{report_object}")]').click()
+        except:
+            return 0, datetime.timedelta()
+        from_field = self.driver.find_element(By.ID, "time_from_report_templates_filter_time")
+        clickandclear(from_field)
+        from_field.send_keys(start_time.strftime("%d %B %Y %H:%M"))
+        from_field.send_keys(Keys.ENTER)
+        to_field = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.ID, "time_to_report_templates_filter_time")))
+        clickandclear(to_field)
+        to_field.send_keys(end_time.strftime("%d %B %Y %H:%M"))
+        from_field.send_keys(Keys.ENTER)
+        WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, '//input[@value="Execute"]'))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        road_distance = self.driver.find_element(By.XPATH, "//tr[@pos='5']/td[2]").text
+        rent_distance = float(road_distance.split(' ')[0])
+        roadtimestr = self.driver.find_element(By.XPATH, "//tr[@pos='4']/td[2]").text
+        roadtime = [int(i) for i in roadtimestr.split(':')]
+        rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
+        return rent_distance, rent_time
+
+    def get_rent_distance(self):
+        now = timezone.localtime()
+        start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
+        for _driver in Driver.objects.all():
+            rent_distance = 0
+            rent_time = datetime.timedelta()
+            # car that have worked at that day
+            working_cars = UseOfCars.objects.filter(created_at__gte=start,
+                                                    created_at__lte=now)
+            vehicles = Vehicle.objects.filter(driver=_driver)
+            if vehicles:
+                for vehicle in vehicles:
+                    # check driver's car before they start work
+                    first_use = working_cars.filter(licence_plate=vehicle.licence_plate).first()
+                    if first_use:
+                        rent_before = self.generate_report(start,
+                                                           timezone.localtime(first_use.created_at),
+                                                           vehicle.licence_plate)
+                        rent_distance += rent_before[0]
+                        rent_time += rent_before[1]
+                        # check driver's car after work
+                        last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
+                        if last_use.end_at:
+                            rent_after = self.generate_report(timezone.localtime(last_use.end_at),
+                                                              now,
+                                                              vehicle.licence_plate)
+                            rent_distance += rent_after[0]
+                            rent_time += rent_after[1]
+                    #  car not used in that day
+                    else:
+                        rent = self.generate_report(start, now, vehicle.licence_plate)
+                        rent_distance += rent[0]
+                        rent_time += rent[1]
+            # driver work at that day
+            driver_use = working_cars.filter(user_vehicle=_driver)
+            if driver_use:
+                for car in driver_use:
+                    if car.end_at:
+                        end = car.end_at
+                    else:
+                        end = now
+                    rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+                                                                name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
+                                                                start_time__gte=timezone.localtime(car.created_at),
+                                                                start_time__lte=timezone.localtime(end))
+                    for status in rent_statuses:
+                        if status.end_time:
+                            end = status.end_time
+                        else:
+                            end = now
+                        status_report = self.generate_report(timezone.localtime(status.start_time),
+                                                             timezone.localtime(end),
+                                                             car.licence_plate)
+                        rent_distance += status_report[0]
+                        rent_time += status_report[1]
+            #             update today rent in db
+            rent_today = RentInformation.objects.filter(driver_name=_driver,
+                                                        created_at__date=timezone.now().date()).first()
+            if rent_today:
+                rent_today.rent_time = rent_time
+                rent_today.rent_distance = rent_distance
+                rent_today.save()
+            else:
+                #  create rent file for today
+                RentInformation.objects.create(driver_name=_driver,
+                                               driver=_driver,
+                                               rent_time=rent_time,
+                                               rent_distance=rent_distance)
 
 
 def get_report(week_number=None, driver=True, sleep=5, headless=True):

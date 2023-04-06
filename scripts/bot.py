@@ -354,7 +354,8 @@ def send_set_status(update, context):
     buttons = [[KeyboardButton(Driver.ACTIVE)],
                [KeyboardButton(Driver.WITH_CLIENT)],
                [KeyboardButton(Driver.WAIT_FOR_CLIENT)],
-               [KeyboardButton(Driver.OFFLINE)]
+               [KeyboardButton(Driver.OFFLINE)],
+               [KeyboardButton(Driver.RENT)]
                ]
 
     context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
@@ -375,7 +376,13 @@ def set_status(update, context):
         pass
     driver.driver_status = status
     driver.save()
-    update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
+    if status == Driver.OFFLINE:
+        record = UseOfCars.objects.get(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
+        record.end_at = timezone.now()
+        record.save()
+        update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
+    else:
+        update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
 
 
 CORRECT_AUTO = '- ТАК -'
@@ -569,6 +576,17 @@ def get_gps_imea(update, context):
         STATE_DM = None
     else:
         update.message.reply_text("Задовне значення. Спробуйте ще раз")
+
+@receiver(post_save, sender=RentInformation)
+def send_day_rent(sender, instance, **kwargs):
+    try:
+        chat_id = instance.driver.chat_id
+        if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
+            message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
+             вартість оренди {int((instance.rent_distance-ParkSettings.get_value('FREE_RENT'))*ParkSettings.get_value('RENT_PRICE'))}грн"""
+            bot.send_message(chat_id=chat_id, text=message)
+    except:
+        pass
 
 
 JOB_DRIVER = 'Водій'
@@ -1093,7 +1111,8 @@ def driver_status(update, context):
         buttons = [[KeyboardButton(f'- {Driver.ACTIVE}')],
                    [KeyboardButton(f'- {Driver.WITH_CLIENT}')],
                    [KeyboardButton(f'- {Driver.WAIT_FOR_CLIENT}')],
-                   [KeyboardButton(f'- {Driver.OFFLINE}')]
+                   [KeyboardButton(f'- {Driver.OFFLINE}')],
+                   [KeyboardButton(f'- {Driver.RENT}')]
                    ]
         STATE_DM = STATUS
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
@@ -1664,7 +1683,6 @@ def menu(update, context):
         BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
         BotCommand("/help", "Допомога"),
         BotCommand("/id", "Дізнатись id"),
-        BotCommand("/upd_informations", "Оновити інформацію про себе"),
     ]
     if driver is not None:
         standart_commands.extend([
@@ -1821,8 +1839,7 @@ def send_report(sender, instance, **kwargs):
     chat_id = instance.chat_id
     report = get_report()
     owner, totals = report[0], report[1]
-    drivers = {f'{i.name} {i.second_name}': i.chat_id for i in Driver.objects.all()}
-
+    drivers = {f'{i}': i.chat_id for i in Driver.objects.all()}
     # sending report to owner
     message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
     bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
@@ -1928,7 +1945,6 @@ def get_driver_today_report(update, context) -> str:
 
 def get_driver_week_report(update, context) -> str:
     pass
-
 
 def choice_driver_option(update, context) -> list:
         update.message.reply_text(f'Hi {update.message.chat.username} driver')
@@ -2084,7 +2100,8 @@ dp.add_handler(MessageHandler(
     Filters.regex(fr"^{Driver.ACTIVE}$") |
     Filters.regex(fr"^{Driver.WITH_CLIENT}$") |
     Filters.regex(fr"^{Driver.WAIT_FOR_CLIENT}$") |
-    Filters.regex(fr"^{Driver.OFFLINE}$"),
+    Filters.regex(fr"^{Driver.OFFLINE}$") |
+    Filters.regex(fr"^{Driver.RENT}$"),
     set_status))
 
 # Updating status_car
