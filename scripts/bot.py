@@ -582,7 +582,8 @@ def send_day_rent(sender, instance, **kwargs):
     try:
         chat_id = instance.driver.chat_id
         if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
-            message = f"Ваша оренда сьогодні {instance.rent_distance} км, вартість оренди {(instance.rent_distance-20)*15}грн"
+            message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
+             вартість оренди {int((instance.rent_distance-ParkSettings.get_value('FREE_RENT'))*ParkSettings.get_value('RENT_PRICE'))}грн"""
             bot.send_message(chat_id=chat_id, text=message)
     except:
         pass
