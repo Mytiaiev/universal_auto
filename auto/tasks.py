@@ -114,12 +114,9 @@ def update_driver_status(self):
                     # if (driver.name, driver.second_name) in status['wait']:
                     #     current_status = Driver.ACTIVE
                     driver.driver_status = current_status
+                    driver.save()
                     if current_status != Driver.OFFLINE:
                         logger.info(f'{driver}: {current_status}')
-                    try:
-                        driver.save(update_fields=['driver_status'])
-                    except Exception:
-                        pass
 
             else:
                 logger.info('passed')
