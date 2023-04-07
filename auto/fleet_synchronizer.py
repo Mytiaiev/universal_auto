@@ -275,7 +275,7 @@ class BoltSynchronizer(Synchronizer, Bolt):
     def get_driver_status_from_map(self, search_text):
         raw_data = []
         try:
-            xpath = f'//div[contains(@class, "map-overlay")]/div/div[1]//a[@role="button"][{search_text}]'
+            xpath = f'//div[contains(@class, "map-overlay")]/div/div[1]/div[@role="tablist"]/div[{search_text}]'
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
         except TimeoutException:
             return raw_data
