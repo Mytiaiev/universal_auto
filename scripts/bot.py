@@ -18,6 +18,7 @@ from telegram.ext import *
 from app.models import *
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, send_on_job_application_on_driver_to_Uber
+from auto.tasks import download_daily_report
 from . import bolt, uklon, uber
 from scripts.driversrating import DriversRatingMixin
 import traceback
@@ -1863,6 +1864,12 @@ def download_report(update, context):
     download_weekly_report_force.delay()
 
 
+def download_daily_report(context):
+    message = '"Запит на завантаження вчорашнього звіту подано"'
+    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
+    download_weekly_report_force.delay()
+
+
 def cancel(update, context):
     global STATE
     global STATE_D
@@ -2175,10 +2182,10 @@ dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_wee
 dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
 updater.job_queue.run_daily(auto_report_for_driver_and_owner, time=datetime.time(7, 0, 0), days=(1,))
-
+updater.job_queue.run_daily(download_daily_report, time=datetime.time(7, 0, 0), days=(0, 1, 2, 3, 4, 5, 6))
 
 def main():
-    bot_prod_env = os.environ.get('BOT_PROD_ENV')
+    bot_prod_env = os.environ.get('PROD')
     if bot_prod_env is not None:
         bot_prod_env = ast.literal_eval(bot_prod_env)
     if bot_prod_env:

@@ -1,4 +1,5 @@
 import time
+import pendulum
 from contextlib import contextmanager
 from datetime import datetime
 try:
@@ -11,7 +12,7 @@ from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
 
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, download_and_save_daily_report
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -69,6 +70,16 @@ def download_weekly_report(fleet_name, missing_weeks):
     for fleet in fleets:
         for week_number in weeks:
             fleet.download_weekly_report(week_number=week_number, driver=True, sleep=5, headless=True)
+
+
+@app.task
+def download_daily_report():
+    # Yesterday
+    try:
+        day = pendulum.now().start_of('day').subtract(days=1)  # yesterday
+        download_and_save_daily_report(driver=True, sleep=5, headless=True, day=day)
+    except Exception as e:
+        logger.info(e)
 
 
 @contextmanager
