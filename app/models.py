@@ -2155,10 +2155,10 @@ class NewUklon(SeleniumTools):
         self.driver.get(self.base_url + '/auth/login')
         if self.sleep:
             time.sleep(self.sleep)
-        element = self.driver.find_element(By.ID, 'mat-input-1')
+        element = self.driver.find_element(By.XPATH, '//input[@data-cy="phone-number-control"]')
 
         element.send_keys(os.environ["UKLON_NAME"])
-        element = self.driver.find_element(By.ID, "mat-input-0")
+        element = self.driver.find_element(By.XPATH, '//input[@data-cy="password"]')
 
         element.send_keys('')
         element.send_keys(os.environ["UKLON_PASSWORD"])
