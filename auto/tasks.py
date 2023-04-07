@@ -11,7 +11,7 @@ from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
 
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, get_report
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -27,7 +27,7 @@ MEMCASH_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
-@app.task(priority=8)
+@app.task(priority=7)
 def raw_gps_handler(id):
     try:
         raw = RawGPS.objects.get(id=id)
@@ -139,7 +139,7 @@ def update_driver_data(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=9)
+@app.task(bind=True, priority=8)
 def download_weekly_report_force(self):
     try:
         BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
@@ -149,7 +149,7 @@ def download_weekly_report_force(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=6)
+@app.task(bind=True, priority=5)
 def send_on_job_application_on_driver_to_Bolt(self, id):
     try:
         b = Bolt(driver=True, sleep=3, headless=True)
@@ -161,7 +161,7 @@ def send_on_job_application_on_driver_to_Bolt(self, id):
         logger.info(e)
 
 
-@app.task(bind=True, priority=7)
+@app.task(bind=True, priority=6)
 def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, second_name):
     try:
         ub = Uber(driver=True, sleep=5, headless=True)
@@ -174,7 +174,7 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
 
 
 
-@app.task(bind=True, priority=8)
+@app.task(bind=True, priority=7)
 def send_on_job_application_on_driver_to_NewUklon(self, id):
     try:
         uklon = NewUklon(driver=True, sleep=5, headless=True)
@@ -194,6 +194,15 @@ def get_rent_information(self):
         gps.get_rent_distance()
         gps.quit()
         print('write rent report in uagps')
+    except Exception as e:
+        logger.info(e)
+
+
+@app.task(bind=True, priority=9)
+def get_report_for_tg(self):
+    try:
+        report = get_report(week_number=None, driver=True, sleep=5, headless=True)
+        return report
     except Exception as e:
         logger.info(e)
 
