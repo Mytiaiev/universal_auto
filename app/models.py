@@ -2158,7 +2158,7 @@ class NewUklon(SeleniumTools):
         element = self.driver.find_element(By.ID, 'mat-input-1')
 
         element.send_keys(os.environ["UKLON_NAME"])
-        element = self.driver.find_element(By.ID, "password")
+        element = self.driver.find_element(By.ID, "mat-input-0")
 
         element.send_keys('')
         element.send_keys(os.environ["UKLON_PASSWORD"])
@@ -2541,7 +2541,7 @@ class Privat24(SeleniumTools):
 
 
 class UaGps(SeleniumTools):
-    def __init__(self, driver=True, sleep=3, headless=False, base_url="https://uagps.net/", remote=False, profile=None):
+    def __init__(self, driver=True, sleep=5, headless=False, base_url="https://uagps.net/", remote=False, profile=None):
         super().__init__('uagps', profile=profile)
         self.sleep = sleep
         if driver:
@@ -2584,7 +2584,7 @@ class UaGps(SeleniumTools):
         xpath = "//div[@title='Reports']"
         self.get_target_page_or_login(self.base_url, xpath, self.login)
         self.driver.find_element(By.XPATH, xpath).click()
-        unit = WebDriverWait(self.driver, 5).until(
+        unit = WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//input[@id='report_templates_filter_units']")))
         unit.click()
         try:
@@ -2595,12 +2595,12 @@ class UaGps(SeleniumTools):
         clickandclear(from_field)
         from_field.send_keys(start_time.strftime("%d %B %Y %H:%M"))
         from_field.send_keys(Keys.ENTER)
-        to_field = WebDriverWait(self.driver, 5).until(
+        to_field = WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.ID, "time_to_report_templates_filter_time")))
         clickandclear(to_field)
         to_field.send_keys(end_time.strftime("%d %B %Y %H:%M"))
         from_field.send_keys(Keys.ENTER)
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, '//input[@value="Execute"]'))).click()
         if self.sleep:
             time.sleep(self.sleep)
@@ -2713,11 +2713,5 @@ def download_and_save_daily_report(driver=True, sleep=5, headless=True, day=None
     for fleet in fleets:
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
-
-class ReportUser(models.Model):
-    chat_id = models.IntegerField(unique=True)
-
-    def __str__(self):
-        return f"{self.chat_id}"
 
 
