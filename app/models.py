@@ -2701,7 +2701,7 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
                 owner["Fleet Owner"] += r.total_owner_amount(float(rate.rate))
 
     totals = {k: v for k, v in totals.items() if v != 0.0}
-    totals = {k: f'Общаяя касса {k}: %.2f\n' % v for k, v in totals.items()}
+    totals = {k: f'Загальна каса {k}: %.2f\n' % v for k, v in totals.items()}
     totals = {k: v + reports[k] for k, v in totals.items()}
     totals = {k: v + f'Зарплата за тиждень {k}: %.2f\n' % salary[k] for k, v in totals.items()}
 

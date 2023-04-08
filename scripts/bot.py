@@ -1856,25 +1856,6 @@ def send_report(sender=None, **kwargs):
                     pass
 
 
-def auto_report_for_driver_and_owner(context):
-    report = get_report()
-    owner, totals = report[0], report[1]
-    drivers = {f'{i.name} {i.second_name}': i.chat_id for i in Driver.objects.all()}
-
-    # sending report to owner
-    message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
-    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
-
-    # sending report to driver
-    if drivers:
-        for driver in drivers:
-            try:
-                message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
-                context.bot.send_message(chat_id=chat_id, text=message)
-            except:
-                pass
-
-
 def download_report(update, context):
     update.message.reply_text("Запит на завантаження щотижневого звіту подано")
     download_weekly_report_force.delay()
@@ -2191,7 +2172,6 @@ dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_to
 dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
 dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
-updater.job_queue.run_daily(auto_report_for_driver_and_owner, time=datetime.time(7, 0, 0), days=(1,))
 
 
 def main():
