@@ -1,7 +1,14 @@
 from django import forms
 from django.forms import ModelForm
-from app.models import Order, SubscribeUsers, User
+from app.models import Order, SubscribeUsers, User, Comment
 from django.utils.translation import gettext_lazy as _
+
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ('comment',)
+        widgets = {'comment': forms.Textarea(attrs={'rows': 5, 'cols': 50})}
 
 
 class PhoneInput(forms.NumberInput):
