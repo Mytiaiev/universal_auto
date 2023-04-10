@@ -2235,6 +2235,7 @@ dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gp
 dp.add_handler(CommandHandler("send_report", numberplate_car))
 
 dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
+dp.add_handler(CallbackQueryHandler(handle_callback_order))
 
 
 # System commands
