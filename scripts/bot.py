@@ -260,8 +260,6 @@ def inline_buttons_for_driver(update, context):
     if query.data == 'Accept order':
         order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=WAITING)
         if order is not None:
-            #driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
-            driver = Driver.get_by_chat_id(chat_id=chat_id)
             park_work = ParkStatus.objects.filter(driver=driver).first()
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
