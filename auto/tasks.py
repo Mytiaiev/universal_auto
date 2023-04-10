@@ -11,7 +11,8 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, download_and_save_daily_report
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
+    get_report, download_and_save_daily_report
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -27,7 +28,7 @@ MEMCASH_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
-@app.task(priority=8)
+@app.task(priority=7)
 def raw_gps_handler(id):
     try:
         raw = RawGPS.objects.get(id=id)
@@ -71,7 +72,7 @@ def download_weekly_report(fleet_name, missing_weeks):
             fleet.download_weekly_report(week_number=week_number, driver=True, sleep=5, headless=True)
 
 
-@app.task
+@app.task(bind=True)
 def download_daily_report():
     # Yesterday
     try:
@@ -149,7 +150,7 @@ def update_driver_data(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=9)
+@app.task(bind=True, priority=8)
 def download_weekly_report_force(self):
     try:
         BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
@@ -159,7 +160,7 @@ def download_weekly_report_force(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=6)
+@app.task(bind=True, priority=5)
 def send_on_job_application_on_driver_to_Bolt(self, id):
     try:
         b = Bolt(driver=True, sleep=3, headless=True)
@@ -171,7 +172,7 @@ def send_on_job_application_on_driver_to_Bolt(self, id):
         logger.info(e)
 
 
-@app.task(bind=True, priority=7)
+@app.task(bind=True, priority=6)
 def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, second_name):
     try:
         ub = Uber(driver=True, sleep=5, headless=True)
@@ -183,8 +184,7 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
         logger.info(e)
 
 
-
-@app.task(bind=True, priority=8)
+@app.task(bind=True, priority=7)
 def send_on_job_application_on_driver_to_NewUklon(self, id):
     try:
         uklon = NewUklon(driver=True, sleep=5, headless=True)
@@ -208,6 +208,15 @@ def get_rent_information(self):
         logger.info(e)
 
 
+@app.task(bind=True, priority=9)
+def get_report_for_tg(self):
+    try:
+        report = get_report(week_number=None, driver=True, sleep=5, headless=True)
+        return report
+    except Exception as e:
+        logger.info(e)
+
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
@@ -223,6 +232,8 @@ def setup_periodic_tasks(sender, **kwargs):
 @app.on_after_finalize.connect
 def setup_rent_task(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
+    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
+    sender.add_periodic_task(crontab(minuta=0, hour=5, day_of_week=[i for i in range(7)]), download_daily_report.s())
 
 
 def init_chrome_driver():

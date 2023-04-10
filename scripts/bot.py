@@ -13,12 +13,14 @@ import json
 import logging
 import requests
 import traceback
+
+from celery.signals import task_postrun
 from telegram import *
 from telegram.ext import *
 from app.models import *
 from app.portmone.generate_link import *
-from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, send_on_job_application_on_driver_to_Uber
-from auto.tasks import download_daily_report
+from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
+    send_on_job_application_on_driver_to_Uber, get_report_for_tg
 from . import bolt, uklon, uber
 from scripts.driversrating import DriversRatingMixin
 import traceback
@@ -1831,60 +1833,32 @@ def driver_total_weekly_rating(update, context):
 def report(update, context):
     update.message.reply_text('Ваш запит прийнято.\nМи надішлемо вам звіт, як тільки він сформується')
     update.message.reply_text("Введіть ваш Uber OTP код з SMS, якщо ви отримали його")
-    chat_id = update.message.chat_id
-    ReportUser.objects.get_or_create(chat_id=chat_id)
+    get_report_for_tg.delay()
 
 
-@receiver(post_save, sender=ReportUser)
-def send_report(sender, instance, **kwargs):
-    chat_id = instance.chat_id
-    report = get_report()
-    owner, totals = report[0], report[1]
-    drivers = {f'{i}': i.chat_id for i in Driver.objects.all()}
-    # sending report to owner
-    message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
-    bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
+@task_postrun.connect
+def send_report(sender=None, **kwargs):
+    if sender == get_report_for_tg:
+        rep = kwargs.get("retval")
+        owner, totals = rep[0], rep[1]
+        drivers = {f'{i}': i.chat_id for i in Driver.objects.all()}
+        # sending report to owner
+        message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
+        bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
 
-    # sending report to driver
-    if drivers:
-        for driver in drivers:
-            try:
-                message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
-                bot.send_message(chat_id=chat_id, text=message)
-            except:
-                pass
-
-    instance.delete()
-
-
-def auto_report_for_driver_and_owner(context):
-    report = get_report()
-    owner, totals = report[0], report[1]
-    drivers = {f'{i.name} {i.second_name}': i.chat_id for i in Driver.objects.all()}
-
-    # sending report to owner
-    message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
-    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
-
-    # sending report to driver
-    if drivers:
-        for driver in drivers:
-            try:
-                message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
-                context.bot.send_message(chat_id=chat_id, text=message)
-            except:
-                pass
+        # sending report to driver
+        if drivers:
+            for driver in drivers:
+                try:
+                    message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
+                    bot.send_message(chat_id=chat_id, text=message)
+                except:
+                    pass
 
 
 def download_report(update, context):
     update.message.reply_text("Запит на завантаження щотижневого звіту подано")
     download_weekly_report_force.delay()
-
-
-def download_daily_report(context):
-    message = '"Запит на завантаження вчорашнього звіту подано"'
-    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message)
-    download_daily_report.delay()
 
 
 def cancel(update, context):
@@ -1953,9 +1927,10 @@ def get_driver_today_report(update, context) -> str:
 def get_driver_week_report(update, context) -> str:
     pass
 
+
 def choice_driver_option(update, context) -> list:
         update.message.reply_text(f'Hi {update.message.chat.username} driver')
-        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')],[KeyboardButton('Update report')]]
+        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')], [KeyboardButton('Update report')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
         reply_markup=ReplyKeyboardMarkup(buttons))
 
@@ -2198,12 +2173,9 @@ dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_to
 dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
 dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
-updater.job_queue.run_daily(auto_report_for_driver_and_owner, time=datetime.time(7, 0, 0), days=(1,))
-updater.job_queue.run_daily(download_daily_report, time=datetime.time(6, 0, 0), days=(0, 1, 2, 3, 4, 5, 6))
-
 
 def main():
-    bot_prod_env = os.environ.get('PROD')
+    bot_prod_env = os.environ.get('BOT_PROD_ENV')
     if bot_prod_env is not None:
         bot_prod_env = ast.literal_eval(bot_prod_env)
     if bot_prod_env:
