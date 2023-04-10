@@ -641,7 +641,7 @@ class UberFleet(Fleet):
         return Uber.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
     def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
-        return Uber.download_weekly_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        return Uber.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class BoltFleet(Fleet):
@@ -656,7 +656,7 @@ class BoltFleet(Fleet):
         if period.in_days() > 30:
             return None  # do if you need to get report elder then 30 days
 
-        return Bolt.download_weekly_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        return Bolt.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class UklonFleet(Fleet):
@@ -665,7 +665,7 @@ class UklonFleet(Fleet):
 
     def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
         """the same method as weekly report. it gets daily report if day is non None"""
-        return Uklon.download_weekly_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        return Uklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class NewUklonFleet(Fleet):
@@ -675,7 +675,7 @@ class NewUklonFleet(Fleet):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
     def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
-        return NewUklon.download_weekly_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        return NewUklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class Vehicle(models.Model):
