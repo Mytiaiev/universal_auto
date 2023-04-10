@@ -2024,12 +2024,12 @@ def send_order_to_driver(sender, instance, **kwargs):
             keyboard = [
                 [
                     InlineKeyboardButton("\u2705 Прийняти замовлення",
-                                         callback_data="accept_order")
+                                         callback_data=f"accept_order {instance.pk}")
                 ],
 
                 [
                     InlineKeyboardButton("\u274c Відхилити",
-                                         callback_data="decline_order"),
+                                         callback_data=f"decline_order {instance.pk}"),
                 ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
