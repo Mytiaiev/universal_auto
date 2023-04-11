@@ -1570,6 +1570,7 @@ class Uber(SeleniumTools):
                 self.driver.find_element(By.XPATH, xpath).click()
 
         if self.day:
+            self.driver.find_element(By.XPATH, '//div[2]/div/div/div[1]/button[2]').click()
             start = self.driver.find_element(By.XPATH,'(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
             start.send_keys(Keys.NULL)
             date_by_def = pendulum.now().start_of('week').subtract(days=7)
@@ -1584,6 +1585,7 @@ class Uber(SeleniumTools):
             self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
 
         else:
+            self.driver.find_element(By.XPATH, '//div[2]/div/div/div[1]/button[2]').click()
             start = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
             start.send_keys(Keys.NULL)
             self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[1]').click()
