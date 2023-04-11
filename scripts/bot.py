@@ -13,7 +13,6 @@ import json
 import logging
 import requests
 import traceback
-
 from celery.signals import task_postrun
 from telegram import *
 from telegram.ext import *
