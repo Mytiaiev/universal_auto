@@ -35,6 +35,8 @@ def raw_gps_handler(id):
     except RawGPS.DoesNotExist:
         return f'{RawGPS.DoesNotExist}: id={id}'
     data = raw.data.split(';')
+    lat, lon = data[2].replace('.', ''), data[4].replace('.', '')
+    lat, lon = lat[:-6] + '.' + lat[-6:], lon[:-6] + '.' + lon[-6:]
     try:
         vehicle = Vehicle.objects.get(gps_imei=raw.imei)
     except Vehicle.DoesNotExist:
@@ -48,9 +50,9 @@ def raw_gps_handler(id):
         kwa = {
             'date_time': date_time,
             'vehicle': vehicle,
-            'lat': float(data[2]),
+            'lat': float(lat),
             'lat_zone': data[3],
-            'lon': float(data[4]),
+            'lon': float(lon),
             'lon_zone': data[5],
             'speed': float(data[6]),
             'course': float(data[7]),

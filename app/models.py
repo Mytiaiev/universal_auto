@@ -790,9 +790,9 @@ class RawGPS(models.Model):
 
 class GPS(PolymorphicModel):
     date_time = models.DateTimeField(null=False)
-    lat = models.DecimalField(decimal_places=4, max_digits=10, default=0)
+    lat = models.DecimalField(decimal_places=6, max_digits=10, default=0)
     lat_zone = models.CharField(max_length=1)
-    lon = models.DecimalField(decimal_places=4, max_digits=10, default=0)
+    lon = models.DecimalField(decimal_places=6, max_digits=10, default=0)
     lon_zone = models.CharField(max_length=1)
     speed = models.IntegerField(default=0)
     course = models.IntegerField(default=0)
