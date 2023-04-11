@@ -126,23 +126,17 @@ def cancel_order(update, context):
 
 
 def location(update: Update, context: CallbackContext):
-    active_drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == f'{Driver.ACTIVE}']
-
-    if not active_drivers:
-        report = update.message.reply_text('Вибачте, але зараз немає вільний водіїв. Скористайтеся послугою пізніше', reply_markup=ReplyKeyboardRemove())
-        return report
+    m = update.message
+    # geocoding lat and lon to address
+    context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
+    address = get_address(context.user_data['latitude'], context.user_data['longitude'], os.environ["GOOGLE_API_KEY"])
+    if address is not None:
+        context.user_data['from_address'] = address
+        update.message.reply_text(f'Ваша адреса: {address}')
+        the_confirmation_of_location(update, context)
     else:
-        m = update.message
-        # geocoding lat and lon to address
-        context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
-        address = get_address(context.user_data['latitude'], context.user_data['longitude'], os.environ["GOOGLE_API_KEY"])
-        if address is not None:
-            context.user_data['from_address'] = address
-            update.message.reply_text(f'Ваша адреса: {address}')
-            the_confirmation_of_location(update, context)
-        else:
-            update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
-            from_address(update, context)
+        update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
+        from_address(update, context)
 
 
 STATE = None       # range (1-50)
@@ -169,7 +163,7 @@ def from_address(update, context):
     update.message.reply_text('Введіть адресу місця посадки:', reply_markup=ReplyKeyboardRemove())
 
 
-def to_the_adress(update, context):
+def to_the_address(update, context):
     global STATE
     if STATE == FROM_ADDRESS:
         context.user_data['from_address'] = update.message.text
@@ -182,8 +176,8 @@ def payment_method(update, context):
     STATE = None
     context.user_data['to_the_address'] = update.message.text
 
-    keyboard = [KeyboardButton(text=f"\U0001f4b7 {Order.CASH}"),
-                KeyboardButton(text=f"\U0001f4b8 {Order.CARD}")]
+    keyboard = [KeyboardButton(text=f"\U0001f4b7 {CASH}"),
+                KeyboardButton(text=f"\U0001f4b8 {CARD}")]
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[keyboard],
@@ -194,43 +188,15 @@ def payment_method(update, context):
     update.message.reply_text('Виберіть спосіб оплати:', reply_markup=reply_markup)
 
 
-WAITING = 'Очікується'
+
+CARD = 'Картка'
+CASH = 'Готівка'
 
 
 def order_create(update, context):
-
-    keyboard = [
-        [
-            InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data="Accept order")
-        ],
-
-        [
-            InlineKeyboardButton("\u274c Відхилити", callback_data="Reject order"),
-        ],
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    payment_method = update.message.text
-    context.user_data['payment_method'] = payment_method.split()[1]
-    context.user_data['chat_id'] = update.message.chat.id
-    user = User.get_by_chat_id(context.user_data['chat_id'])
+    payment = update.message.text
+    user = User.get_by_chat_id(update.message.chat.id)
     context.user_data['phone_number'] = user.phone_number
-
-    drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
-
-    order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
-            f"Спосіб оплати: {context.user_data['payment_method']}\nНомер телефону: {context.user_data['phone_number']}"
-
-    if drivers:
-        for driver in drivers:
-            try:
-                context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
-            except:
-                pass
-        #context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)  #for develop
-    else:
-        update.message.reply_text('Вибачте, але вільних водіїв незалишилось')
 
     create_order = Order.objects.create(
         from_address=context.user_data['from_address'],
@@ -238,12 +204,45 @@ def order_create(update, context):
         longitude=context.user_data['longitude'],
         to_the_address=context.user_data['to_the_address'],
         phone_number=context.user_data['phone_number'],
-        chat_id_client=context.user_data['chat_id'],
+        chat_id_client=update.message.chat.id,
         sum='',
-        payment_method=context.user_data['payment_method'],
-        status_order=WAITING)
+        payment_method=payment.split()[1],
+        status_order=Order.WAITING)
 
     create_order.save()
+
+    keyboard = [
+        [
+            InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data="Accept order")
+        ],
+        [
+            InlineKeyboardButton("\u274c Відхилити", callback_data="Reject order"),
+        ],
+    ]
+
+    order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
+            f"Спосіб оплати: {context.user_data['payment_method']}\nНомер телефону: {context.user_data['phone_number']}"
+    drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
+    if drivers:
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        for driver in drivers:
+            try:
+                context.bot.send_message(chat_id=driver, text=order, reply_markup=reply_markup)
+            except:
+                pass
+        #context.bot.send_message(chat_id=736204274, text=order, reply_markup=reply_markup)  #for develop
+    else:
+        reply_markup = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="Замовити на інший час"),
+                       KeyboardButton(text="Відмовитись від замовлення")]],
+            resize_keyboard=True,
+            one_time_keyboard=True,
+        )
+        update.message.reply_text(
+            'Вибачте, але зараз немає вільний водіїв.Бажаєте замовити таксі на інший час?', reply_markup=reply_markup)
+
+def time_order(update, context):
+    order = Order.get_order(chat_id_client=update.message.chat.id, sum='', status_order=Order.WAITING)
 
 
 def inline_buttons_for_driver(update, context):
@@ -257,7 +256,8 @@ def inline_buttons_for_driver(update, context):
     context.user_data['client_chat_id'] = user.chat_id
 
     if query.data == 'Accept order':
-        order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=WAITING)
+        order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=Order.WAITING)
+
         if order is not None:
             park_work = ParkStatus.objects.filter(driver=driver).first()
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
@@ -734,6 +734,7 @@ def upload_expired_date(update, context):
         update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
+
 def check_auto(update,context):
     query = update.callback_query
     empty_inline_keyboard = InlineKeyboardMarkup([])
@@ -784,6 +785,8 @@ def upload_auto_doc(update, context):
     else:
         update.message.reply_text('Будь ласка, надішліть фото техпаспорту', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_AUTO_YES_OPTION'
+
+
 def upload_insurance(update, context):
     os.makedirs('data/mediafiles/job/insurance/', exist_ok=True)
     if update.message.photo:
@@ -797,6 +800,7 @@ def upload_insurance(update, context):
     else:
         update.message.reply_text('Будь ласка, надішліть фото автоцивілки', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_INSURANCE'
+
 
 def upload_expired_insurance(update, context):
     chat_id = update.message.chat.id
@@ -832,6 +836,7 @@ def upload_expired_insurance(update, context):
         update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
+
 def uklon_code(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
@@ -841,6 +846,7 @@ def uklon_code(update, context):
     update.message.reply_text(
         'Ваш код прийнято.Наш менеджер з вами зв\'яжеться.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
     return ConversationHandler.END
+
 
 def code_timer(update, context, timer, sleep):
     def timer_callback(context):
@@ -870,10 +876,15 @@ def code_timer(update, context, timer, sleep):
         except KeyError:
             break
 
+
 # Sending comment
 def comment(update, context):
     global STATE
     STATE = COMMENT
+    order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=Order.WAITING)
+    if order:
+        order.status_order = Order.CANCELED
+        order.save()
     update.message.reply_text('Залишіть відгук або сповістіть о проблемі', reply_markup=ReplyKeyboardRemove())
 
 
@@ -1733,7 +1744,7 @@ def text(update, context):
 
     if STATE is not None:
         if STATE == FROM_ADDRESS:
-            return to_the_adress(update, context)
+            return to_the_address(update, context)
         elif STATE == TO_THE_ADDRESS:
             return payment_method(update, context)
         elif STATE == COMMENT:
@@ -2064,17 +2075,19 @@ dp.add_handler(MessageHandler(Filters.location, location))
 
 dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f696 Викликати Таксі$"), continue_order))
 
-dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_adress))
+dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_address))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
 
 dp.add_handler(MessageHandler(
-    Filters.regex(fr"^\U0001f4b7 {Order.CASH}$") |
-    Filters.regex(fr"^\U0001f4b8 {Order.CARD}$"),
+    Filters.regex(fr"^\U0001f4b7 {CASH}$") |
+    Filters.regex(fr"^\U0001f4b8 {CARD}$"),
     order_create))
 
 # sending comment
-dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$"), comment))
+dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$") |
+                              Filters.regex(fr"^Відмовитись від замовлення$"),
+                              comment))
 # Add job application
 dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити заявку на роботу$"), job_application))
 

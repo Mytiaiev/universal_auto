@@ -1080,20 +1080,27 @@ class Comment(models.Model):
 
 
 class Order(models.Model):
-    CARD = 'Картка'
-    CASH = 'Готівка'
+    WAITING = 'Очікується'
+    CANCELED = 'Скасовано клієнтом'
+    ONTIME = 'На певний час'
 
     from_address = models.CharField(max_length=255)
     latitude = models.CharField(max_length=10)
     longitude = models.CharField(max_length=10)
     to_the_address = models.CharField(max_length=255)
+    to_latitude = models.CharField(max_length=10)
+    to_longitude = models.CharField(max_length=10)
     phone_number = models.CharField(max_length=13)
     chat_id_client = models.CharField(max_length=15)
     sum = models.CharField(max_length=30)
+    order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час замовлення')
     payment_method = models.CharField(max_length=70)
     status_order = models.CharField(max_length=70)
+    distance_gps = models.CharField(max_length=10)
+    distance_google = models.CharField(max_length=10)
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
+    comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL)
 
     @staticmethod
     def get_order(chat_id_client, sum, status_order):
