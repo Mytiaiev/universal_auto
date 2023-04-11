@@ -11,8 +11,10 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
+
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
     get_report, download_and_save_daily_report
+
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -110,20 +112,21 @@ def update_driver_status(self):
                 status_online = set()
                 status_width_client = set()
                 if bolt_status is not None:
-                    status_online = status_online.union(set(bolt_status['online']))
+                    status_online = status_online.union(set(bolt_status['wait']))
                     status_width_client = status_width_client.union(set(bolt_status['width_client']))
                 if uklon_status is not None:
                     status_online = status_online.union(set(uklon_status['online']))
                     status_width_client = status_width_client.union(set(uklon_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
+                    park_status = ParkStatus.objects.filter(driver=driver).first()
                     current_status = Driver.OFFLINE
-                    if ((driver.name, driver.second_name) in status_online
-                            or driver.driver_status == Driver.ACTIVE):
+                    if (driver.name, driver.second_name) in status_online:
                         current_status = Driver.ACTIVE
-                    if ((driver.name, driver.second_name) in status_width_client
-                            or driver.driver_status == Driver.WITH_CLIENT):
+                    if (driver.name, driver.second_name) in status_width_client:
                         current_status = Driver.WITH_CLIENT
+                    if park_status:
+                        current_status = park_status.status
                     # if (driver.name, driver.second_name) in status['wait']:
                     #     current_status = Driver.ACTIVE
                     driver.driver_status = current_status
