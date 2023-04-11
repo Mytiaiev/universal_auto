@@ -44,8 +44,8 @@ services:
       SELENIUM_HUB_HOST: http://chrome:4444/wd/hub
       CENTRE_CITY_LAT: '50.45010'
       CENTRE_CITY_LNG: '30.52340'
-      CENTRE_CITY_RADIUS: 7500
-      CITY_PARK: "Київ"
+      CENTRE_CITY_RADIUS: 75000
+      CITY_PARK: Київ"
       DEBUG: "False"
       ALLOWED_HOSTS: "127.0.0.1 0.0.0.0 localhost"
       CSRF_TRUSTED_ORIGINS: "http://127.0.0.1 http://168.220.93.200 http://localhost"

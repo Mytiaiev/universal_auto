@@ -39,6 +39,7 @@ def geocode(address, api_key):
 
 
 def get_addresses_by_radius(address, center_lat, center_lng, center_radius, api_key):
+    """"Returns addresses by pattern {CITY_PARK}"""
 
     url = f"https://maps.googleapis.com/maps/api/place/autocomplete/json?input={address}&language=uk&" \
         f"location={center_lat},{center_lng}&radius={center_radius}&key={api_key}"
@@ -59,5 +60,4 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius, api_
         return None
 
     return addresses
-
 
