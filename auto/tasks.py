@@ -75,7 +75,7 @@ def download_weekly_report(fleet_name, missing_weeks):
 
 
 @app.task(bind=True)
-def download_daily_report():
+def download_daily_report(self):
     # Yesterday
     try:
         day = pendulum.now().start_of('day').subtract(days=1)  # yesterday

@@ -636,14 +636,6 @@ class Owner(User):
             return None
 
 
-class UberFleet(Fleet):
-    def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
-        return Uber.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
-
-    def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
-        return Uber.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
-
-
 class BoltFleet(Fleet):
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return Bolt.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
@@ -659,15 +651,6 @@ class BoltFleet(Fleet):
         return Bolt.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
-class UklonFleet(Fleet):
-    def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
-        return Uklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
-
-    def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
-        """the same method as weekly report. it gets daily report if day is non None"""
-        return Uklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
-
-
 class NewUklonFleet(Fleet):
     token = models.CharField(max_length=40, default=None, null=True, verbose_name="Код автопарку")
 
@@ -676,6 +659,23 @@ class NewUklonFleet(Fleet):
 
     def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+
+
+class UberFleet(Fleet):
+    def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
+        return Uber.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
+
+    def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
+        return Uber.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+
+
+class UklonFleet(Fleet):
+    def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
+        return Uklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
+
+    def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
+        """the same method as weekly report. it gets daily report if day is non None"""
+        return Uklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class Vehicle(models.Model):
@@ -2169,10 +2169,6 @@ class Uklon(SeleniumTools):
             u.download_payments_order()
         return u.save_report()
 
-    @staticmethod
-    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
-        """Can download and save daily report if day is not None"""
-        pass
 
 
 class NewUklon(SeleniumTools):
@@ -2415,7 +2411,7 @@ class NewUklon(SeleniumTools):
     @staticmethod
     def download_daily_report(day=None, driver=True, sleep=5, headless=True):
         """Can download and save daily report if day is not None"""
-        u = NewUklon(day=day, driver=driver, sleep=sleep, headless=headless)
+        u = NewUklon(day=day, driver=False, sleep=sleep, headless=headless)
         report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
         if not report:
             u = NewUklon(day=day, driver=driver, sleep=sleep, headless=headless)
@@ -2672,7 +2668,7 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     return owner, totals
 
 
-def download_and_save_daily_report(day=None, driver=True, sleep=5, headless=True):
+def download_and_save_daily_report(day=None, driver=False, sleep=5, headless=True):
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
