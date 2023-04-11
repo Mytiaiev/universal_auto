@@ -2,32 +2,37 @@ import requests
 import os
 
 
-def convertion(coordinates: str):
-    # ex from (5045.4321 or 05045.4321) to 50.123456
-    flag = False
-    if coordinates[0] == '-':
-        coordinates = coordinates[1:]
-        flag = True
-    if len(coordinates) == 9:
-        index = 2
-    elif len(coordinates) == 10:
-        index = 3
-
-    degrees, minutes = coordinates[:index], coordinates[index:]
-    result = float(degrees) + float(minutes)/60
-    result = round(result, 6)
-    if flag:
-        result = float(f'-{str(result)}')
-
-    return result
-
-
 def get_address(latitude, longitude, api_key):
+    """
+        Returns address using Google Geocoding API
+    """
+    # URL for request to API
     url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&language=uk&key={api_key}"
     response = requests.get(url)
     data = response.json()
+    # Checking for results and address
     if data['status'] == 'OK':
         return data['results'][0]['formatted_address']
+    else:
+        return None
+
+
+def geocode(address, api_key):
+    """
+    Returns lat, lon address using Google Geocoding API
+    """
+    # URL for request to API
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}"
+
+    # Sending request and get response
+    response = requests.get(url).json()
+
+    # Checking for results and coordinates
+    if response['status'] == 'OK':
+        result = response['results'][0]
+        latitude = result['geometry']['location']['lat']
+        longitude = result['geometry']['location']['lng']
+        return latitude, longitude
     else:
         return None
 
