@@ -1,4 +1,5 @@
 import time
+import pendulum
 from contextlib import contextmanager
 from datetime import datetime
 try:
@@ -10,8 +11,8 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
-
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, get_report
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
+    get_report, download_and_save_daily_report
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -69,6 +70,16 @@ def download_weekly_report(fleet_name, missing_weeks):
     for fleet in fleets:
         for week_number in weeks:
             fleet.download_weekly_report(week_number=week_number, driver=True, sleep=5, headless=True)
+
+
+@app.task(bind=True)
+def download_daily_report():
+    # Yesterday
+    try:
+        day = pendulum.now().start_of('day').subtract(days=1)  # yesterday
+        download_and_save_daily_report(driver=True, sleep=5, headless=True, day=day)
+    except Exception as e:
+        logger.info(e)
 
 
 @contextmanager
@@ -173,7 +184,6 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
         logger.info(e)
 
 
-
 @app.task(bind=True, priority=7)
 def send_on_job_application_on_driver_to_NewUklon(self, id):
     try:
@@ -222,7 +232,8 @@ def setup_periodic_tasks(sender, **kwargs):
 @app.on_after_finalize.connect
 def setup_rent_task(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
-    sender.add_periodic_task(crontab(minute=0, hour=7, day_of_week=1), get_report_for_tg.s())
+    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
+    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
 
 
 def init_chrome_driver():

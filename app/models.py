@@ -641,7 +641,7 @@ class UberFleet(Fleet):
         return Uber.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
     def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
-        pass
+        return Uber.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class BoltFleet(Fleet):
@@ -656,7 +656,7 @@ class BoltFleet(Fleet):
         if period.in_days() > 30:
             return None  # do if you need to get report elder then 30 days
 
-        return Bolt.download_weekly_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        return Bolt.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class UklonFleet(Fleet):
@@ -665,11 +665,12 @@ class UklonFleet(Fleet):
 
     def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
         """the same method as weekly report. it gets daily report if day is non None"""
-        return Uklon.download_weekly_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        return Uklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
 
 
 class NewUklonFleet(Fleet):
     token = models.CharField(max_length=40, default=None, null=True, verbose_name="Код автопарку")
+
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
@@ -1523,7 +1524,7 @@ class Uber(SeleniumTools):
             self.password_form_v3()
         except TimeoutException:
             try:
-                el = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'alt-PASSWORD')))
+                el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'alt-PASSWORD')))
                 el.click()
                 self.password_form_v3()
             except TimeoutException:
@@ -1532,10 +1533,10 @@ class Uber(SeleniumTools):
             time.sleep(self.sleep)
 
     def password_form_v3(self):
-        el = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'PASSWORD')))
+        el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'PASSWORD')))
         el.clear()
         el.send_keys(os.environ["UBER_PASSWORD"])
-        el = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'forward-button')))
+        el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'forward-button')))
         el.click()
 
     def login(self, link="https://auth.uber.com/login/"):
@@ -1548,7 +1549,6 @@ class Uber(SeleniumTools):
     
     def generate_payments_order(self):
         url = f"{self.base_url}/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/reports"
-        # url = f"{self.base_url}/orgs/2c5515cd-a4ed-4136-905f-99504677a324/reports"  #my
         xpath = '//div[@data-testid="report-type-dropdown"]/div/div'
         self.get_target_page_or_login(url, xpath, self.login_v3)
         self.driver.get_screenshot_as_file('generate_payments_order.png')
@@ -1557,16 +1557,16 @@ class Uber(SeleniumTools):
         self.driver.find_element(By.XPATH, menu).click()   
         try:
             xpath = '//ul/li/div[text()[contains(.,"Payments Driver")]]'
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, xpath)))
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
             self.driver.find_element(By.XPATH, xpath).click()
         except Exception:
             try:
                 xpath = '//ul/li/div[text()[contains(.,"Payments driver")]]'
-                WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 self.driver.find_element(By.XPATH, xpath).click()
             except Exception:
                 xpath = '//ul/li/div[text()[contains(.,"Платежи (водитель)")]]'
-                WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 self.driver.find_element(By.XPATH, xpath).click()
 
         if self.day:
@@ -1582,6 +1582,7 @@ class Uber(SeleniumTools):
             end = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
             end.send_keys(Keys.NULL)
             self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
+
         else:
             start = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
             start.send_keys(Keys.NULL)
@@ -1597,8 +1598,8 @@ class Uber(SeleniumTools):
             self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[2]').click()
             self.driver.find_element(By.XPATH, f'(//li[@role="option" and text()[contains(.,"{self.end_of_week().strftime("%Y")}")]])').click()
             self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()={self.end_of_week().day}]').click()
-        self.driver.find_element(By.XPATH, '//button[@data-testid="generate-report-button"]').click()
 
+        self.driver.find_element(By.XPATH, '//button[@data-testid="generate-report-button"]').click()
         return f'{self.payments_order_file_name()}'
 
     def download_payments_order(self):
@@ -1609,7 +1610,6 @@ class Uber(SeleniumTools):
         self.generate_payments_order()
         download_button = '(//div[@data-testid="paginated-table"]//button)[1]'
         try:
-            # in_progress_text = '//div[1][@data-testid="payment-reporting-table-row"]/div/div/div/div[text()[contains(.,"In progress")]]'
             in_progress_text = '//i[@class="_css-bvkFtm"]'
             WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, in_progress_text)))
             WebDriverWait(self.driver, 600).until_not(EC.presence_of_element_located((By.XPATH, in_progress_text)))
@@ -1629,12 +1629,9 @@ class Uber(SeleniumTools):
         return self.report_file_name(self.file_patern())
 
     def file_patern(self):
-        if self.day:
-            start = self.start_of_day()
-            end = self.end_of_day()
-        else:
-            start = self.start_of_week()
-            end = self.end_of_week()
+        start = self.start_of_day() if self.day else self.start_of_week()
+        end = self.end_of_day() if self.day else self.end_of_week().end_of('day')
+
         sd, sy, sm = start.strftime("%d"), start.strftime("%Y"), start.strftime("%m")
         ed, ey, em = end.strftime("%d"), end.strftime("%Y"), end.strftime("%m")
         return f'{sy}{sm}{sd}-{ey}{em}{ed}-payments_driver'
@@ -1643,6 +1640,11 @@ class Uber(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
+
+        self.logger.info(f'Uber {self.file_patern()}.csv')
+        start_date = self.start_of_day() if self.day else self.start_of_week()
+        end_date = self.end_of_day() if self.day else self.end_of_week()
+
         if self.payments_order_file_name() is not None:
             try:
                 with open(self.payments_order_file_name(), encoding="utf-8") as file:
@@ -1654,8 +1656,8 @@ class Uber(SeleniumTools):
                         if row[3] is None:
                             continue
                         order = UberPaymentsOrder(
-                            report_from=self.start_of_week(),
-                            report_to=self.end_of_week(),
+                            report_from=start_date,
+                            report_to=end_date,
                             report_file_name=self.payments_order_file_name(),
                             driver_uuid=row[0],
                             first_name=row[1],
@@ -1674,8 +1676,8 @@ class Uber(SeleniumTools):
 
                     if not items:
                         order = UberPaymentsOrder(
-                            report_from=self.start_of_week(),
-                            report_to=self.end_of_week(),
+                            report_from=start_date,
+                            report_to=end_date,
                             report_file_name=self.payments_order_file_name(),
                             driver_uuid='00000000-0000-0000-0000-000000000000',
                             first_name='',
@@ -1731,7 +1733,7 @@ class Uber(SeleniumTools):
     
     def wait_code_form(self, id):
         try:
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, id)))
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
             self.driver.find_element(By.ID, id)
             self.driver.get_screenshot_as_file(f'{id}.png')
             return True
@@ -1751,7 +1753,7 @@ class Uber(SeleniumTools):
     
     def force_opt_form(self):
         try:
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'alt-PHONE-OTP')))
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'alt-PHONE-OTP')))
             el = self.driver.find_element(By.ID, 'alt-PHONE-OTP').click()
         except Exception as e:
             # self.logger.error(str(e))
@@ -1759,7 +1761,7 @@ class Uber(SeleniumTools):
     
     def password_form(self, id, button, selector):
         try:
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, id)))
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
             el = self.driver.find_element(By.ID, id).send_keys(os.environ["UBER_PASSWORD"])
             self.driver.find_element(selector, button).click()
             self.driver.get_screenshot_as_file('UBER_PASSWORD.png')
@@ -1767,7 +1769,7 @@ class Uber(SeleniumTools):
             self.logger.error(str(e))
 
     def login_form(self, id, button, selector):
-        element = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, id)))
+        element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
         element.send_keys(os.environ["UBER_NAME"])
         e = self.driver.find_element(selector, button)
         e.click() 
@@ -1792,11 +1794,24 @@ class Uber(SeleniumTools):
 
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
-        u = Uber(week_number=week_number, driver=False, sleep=0, headless=headless)
+        """Can download and save weekly report"""
+        u = Uber(week_number=week_number, driver=False, sleep=sleep, headless=headless)
         report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
         if not report:
             u = Uber(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
-            # u.login_v2()
+            u.download_payments_order()
+            u.save_report()
+            u.quit()
+            report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+        return list(report)
+
+    @staticmethod
+    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
+        """Can download and save daily report if day is not None"""
+        u = Uber(day=day, driver=False, sleep=sleep, headless=headless)
+        report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+        if not report:
+            u = Uber(day=day, driver=driver, sleep=sleep, headless=headless)
             u.download_payments_order()
             u.save_report()
             u.quit()
@@ -1847,11 +1862,13 @@ class Bolt(SeleniumTools):
             element_date.find_element(By.XPATH, "./../td/a").click()
         else:
             self.driver.get(f"{self.base_url}/company/58225/reports/weekly/{self.file_patern()}")
+
+        if self.sleep:
             time.sleep(self.sleep)
-            if self.remote:
-                self.get_last_downloaded_file_frome_remote(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
-            else:
-                self.get_last_downloaded_file(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        if self.remote:
+            self.get_last_downloaded_file_frome_remote(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        else:
+            self.get_last_downloaded_file(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
 
     def file_patern(self):
         if self.day:
@@ -1866,7 +1883,7 @@ class Bolt(SeleniumTools):
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(f'{self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        self.logger.info(f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
 
         if self.payments_order_file_name() is not None:
             with open(self.payments_order_file_name(), encoding="utf-8") as file:
@@ -1938,13 +1955,13 @@ class Bolt(SeleniumTools):
             self.driver.get(f"{url}")
             if self.sleep:
                 time.sleep(self.sleep)
-            form_email = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'email')))
+            form_email = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'email')))
             clickandclear(form_email)
             form_email.send_keys(jobapplication.email)
-            form_phone_number = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'phone')))
+            form_phone_number = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'phone')))
             clickandclear(form_phone_number)
             form_phone_number.send_keys(jobapplication.phone_number)
-            button = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, 'ember38')))
+            button = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'ember38')))
             button.click()
             if self.sleep:
                 time.sleep(self.sleep)
@@ -1997,18 +2014,33 @@ class Bolt(SeleniumTools):
             jobapplication.save()
 
     @staticmethod
-    def download_weekly_report(week_number=None, day=None,  driver=True, sleep=5, headless=True):
-        """Can save weekly and daily report"""
-        b = Bolt(week_number=week_number, day=day, driver=False, sleep=0, headless=headless)
-        report = BoltPaymentsOrder.objects.filter(report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+    def download_weekly_report(week_number=None, day=None, driver=True, sleep=5, headless=True):
+        """Can download and save weekly report"""
+        b = Bolt(week_number=week_number, day=day, driver=False, sleep=sleep, headless=headless)
+        report = BoltPaymentsOrder.objects.filter(
+                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
         if not report:
             b = Bolt(week_number=week_number, day=day, driver=driver, sleep=sleep, headless=headless)
-            # b.login()
             b.download_payments_order()
             b.quit()
             b.save_report()
             report = BoltPaymentsOrder.objects.filter(
-            report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        return list(report)
+
+    @staticmethod
+    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
+        """Can download and save daily report if day is not None"""
+        b = Bolt(day=day, driver=False, sleep=sleep, headless=headless)
+        report = BoltPaymentsOrder.objects.filter(
+                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        if not report:
+            b = Bolt(day=day, driver=driver, sleep=sleep, headless=headless)
+            b.download_payments_order()
+            b.quit()
+            b.save_report()
+            report = BoltPaymentsOrder.objects.filter(
+                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
         return list(report)
 
 
@@ -2127,7 +2159,7 @@ class Uklon(SeleniumTools):
 
     @staticmethod
     def download_weekly_report(week_number=None, day=None, driver=True, sleep=5, headless=True):
-        """Can save weekly and daily report"""
+        """Can download and save weekly report"""
         u = Uklon(week_number=week_number, day=day, driver=False, sleep=0, headless=headless)
         if u.payments_order_file_name() not in os.listdir(os.curdir):
             u = Uklon(week_number=week_number, day=day, driver=driver, sleep=sleep, headless=headless)
@@ -2135,7 +2167,9 @@ class Uklon(SeleniumTools):
             u.download_payments_order()
         return u.save_report()
 
-    def status(self):
+    @staticmethod
+    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
+        """Can download and save daily report if day is not None"""
         pass
 
 
@@ -2155,13 +2189,13 @@ class NewUklon(SeleniumTools):
         self.driver.get(self.base_url + '/auth/login')
         if self.sleep:
             time.sleep(self.sleep)
-        element = self.driver.find_element(By.XPATH, '//input[@data-cy="phone-number-control"]')
 
-        element.send_keys(os.environ["UKLON_NAME"])
-        element = self.driver.find_element(By.XPATH, '//input[@data-cy="password"]')
+        login = self.driver.find_element(By.XPATH, '//input[@data-cy="phone-number-control"]')
+        login.send_keys(os.environ["UKLON_NAME"])
 
-        element.send_keys('')
-        element.send_keys(os.environ["UKLON_PASSWORD"])
+        password = self.driver.find_element(By.XPATH, '//input[@data-cy="password"]')
+        password.send_keys('')
+        password.send_keys(os.environ["UKLON_PASSWORD"])
 
         self.driver.find_element(By.XPATH, '//button[@data-cy="login-btn"]').click()
         if self.sleep:
@@ -2172,38 +2206,30 @@ class NewUklon(SeleniumTools):
         xpath = '//flt-group-filter[1]/flt-date-range-filter/mat-form-field/div'
         self.get_target_page_or_login(url, xpath, self.login)
         self.driver.find_element(By.XPATH, xpath).click()
-        time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, '//span[text()=" Минулий тиждень "]').click()
-        time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, '//flt-filter-group/div/div/button').click()  #Експорт CSV
-        time.sleep(self.sleep)
+        if self.day:
+            if self.sleep:
+                time.sleep(self.sleep)
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((By.XPATH, '//mat-option/span/div[text()=" Вибрати період "]'))).click()
+            input_data = WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((By.XPATH, '//input')))
+            input_data.click()
+            input_data.send_keys(self.day.format("DD.MM.YYYY") + Keys.TAB + self.day.format("DD.MM.YYYY"))
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((By.XPATH, '//span[text()= " Застосувати "]'))).click()
+        else:
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((By.XPATH, '//span[text()=" Минулий тиждень "]'))).click()
+
+        if self.sleep:
+            time.sleep(self.sleep)
+        self.driver.find_element(By.XPATH, '//flt-filter-group/div/div/button').click()
+        if self.sleep:
+            time.sleep(self.sleep)
         if self.remote:
             self.get_last_downloaded_file_frome_remote(save_as=f'Uklon {self.file_patern()}.csv')
         else:
             self.get_last_downloaded_file(save_as=f'Uklon {self.file_patern()}.csv')
-
-    def download_payments_day_order(self):
-        actions = ActionChains(self.driver)
-        actions.move_by_offset(500, 500).perform()
-        if self.sleep:
-            time.sleep(self.sleep)
-        url = f'{self.base_url}/workspace/orders'
-        self.driver.get(url)
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH,
-                                 '//upf-order-reports/section[1]/flt-filter-group/form/flt-group-filter[1]/flt-date-range-filter/mat-form-field/div').click()
-        self.driver.find_element(By.XPATH, '//mat-option/span/div[text()=" Вибрати період "]').click()
-        e = self.driver.find_element(By.XPATH, '//input')
-        e.click()
-        sh, sm, eh, em = '00', '00', '23', '59'  # s - start/e - end/h - hours/m - minutes
-        e.send_keys(self.day.format("DD.MM.YYYY") + Keys.TAB + self.day.format("DD.MM.YYYY") + Keys.TAB + Keys.TAB + f'{sh}' + Keys.SPACE + f'{sm}' + Keys.TAB + f'{eh}' + Keys.SPACE + f'{em}')
-
-        self.driver.find_element(By.XPATH, '//span[text()= " Застосувати "]').click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        actions.click().perform()
-        self.driver.find_element(By.XPATH, '//span[text()="Експорт CSV"]').click()
 
     def save_report(self):
         if self.sleep:
@@ -2213,15 +2239,16 @@ class NewUklon(SeleniumTools):
         self.logger.info(f'Uklon {self.file_patern()}.csv')
         report = open(self.report_file_name(f'Uklon {self.file_patern()}.csv'))
 
+        start_date = self.start_of_day() if self.day else self.start_of_week()
+        end_date = self.end_of_day() if self.day else self.end_of_week()
+
         with report as file:
             reader = csv.reader(file)
             next(reader)
             for row in reader:
-                print(row)
-
                 order = NewUklonPaymentsOrder(
-                    report_from=self.start_of_week(),
-                    report_to=self.end_of_week(),
+                    report_from=start_date,
+                    report_to=end_date,
                     report_file_name=file.name,
                     full_name=row[0],
                     signal=row[1],
@@ -2244,8 +2271,8 @@ class NewUklon(SeleniumTools):
 
         if not items:
             order = NewUklonPaymentsOrder(
-                report_from=self.start_of_week(),
-                report_to=self.end_of_week(),
+                report_from=start_date,
+                report_to=end_date,
                 report_file_name='',
                 full_name='',
                 signal='',
@@ -2266,107 +2293,17 @@ class NewUklon(SeleniumTools):
                 pass
 
         return items
-
-    def save_report_v2(self):
-        if self.sleep:
-            time.sleep(self.sleep)
-        items = []
-
-        if self.payments_order_file_name() is not None:
-            with open(self.payments_order_file_name(), encoding="utf-8") as file:
-                reader = csv.reader(file)
-                next(reader)
-                for row in reader:
-                    order = NewUklonPaymentsOrder(
-                        report_from=self.start_of_week(),
-                        report_to=self.end_of_week(),
-                        report_file_name=file.name,
-                        full_name=row[0],
-                        signal=row[1],
-                        total_rides=float((row[2] or '0').replace(',','')),
-                        total_distance=float((row[3] or '0').replace(',','')),
-                        total_amount_cach=float((row[4] or '0').replace(',','')),
-                        total_amount_cach_less=float((row[5] or '0').replace(',','')),
-                        total_amount_on_card=float((row[6] or '0').replace(',','')),
-                        total_amount=float((row[7] or '0').replace(',','')),
-                        tips=float((row[8] or '0').replace(',','') ),
-                        bonuses=float((row[9] or '0').replace(',','')),
-                        fares=float((row[10] or '0').replace(',','')),
-                        comission=float((row[11] or '0').replace(',','')),
-                        total_amount_without_comission=float((row[12] or '0').replace(',','')))
-                    try:
-                        order.save()
-                    except IntegrityError:
-                        pass
-                    items.append(order)
-
-        if not items:
-            order = NewUklonPaymentsOrder(
-                report_from=self.start_of_week(),
-                report_to=self.end_of_week(),
-                report_file_name='',
-                full_name='',
-                signal='',
-                total_rides=0,
-                total_distance=0,
-                total_amount_cach=0,
-                total_amount_cach_less=0,
-                total_amount_on_card=0,
-                total_amount=0,
-                tips=0,
-                bonuses=0,
-                fares=0,
-                comission=0,
-                total_amount_without_comission=0)
-            try:
-                order.save()
-            except IntegrityError:
-                pass
-
-        return items
-
-    def start_of_week_timestamp(self):
-        return round(self.start_of_week().timestamp())
-
-    def end_of_week_timestamp(self):
-        return round(self.end_of_week().timestamp())
 
     def payments_order_file_name(self):
         return self.report_file_name(self.file_patern())
 
     def file_patern(self):
-        if self.day:
-            start = self.start_of_day()
-            end = self.end_of_day()
-        else:
-            start = self.start_of_week()
-            end = self.end_of_week().end_of('day')
+        start = self.start_of_day() if self.day else self.start_of_week()
+        end = self.end_of_day() if self.day else self.end_of_week().end_of('day')
+
         sd, sy, sm = start.strftime("%d"), start.strftime("%y"), start.strftime("%m")
         ed, ey, em = end.strftime("%d"), end.strftime("%y"), end.strftime("%m")
         return f'00.00.{sd}.{sm}.{sy} - 23.59.{ed}.{em}.{ey}'
-
-    @staticmethod
-    def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
-        u = NewUklon(week_number=week_number, driver=False, sleep=0, headless=headless)
-        report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
-        if not report:
-            u = NewUklon(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
-            # u.login()
-            u.download_payments_order()
-            u.quit()
-            u.save_report()
-            report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
-        return list(report)
-        #return u.save_report_v2()
-
-    @staticmethod
-    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
-        u = NewUklon(day=day, driver=False, sleep=0, headless=headless)
-        if u.payments_order_file_name() not in os.listdir(os.curdir):
-            u = NewUklon(day=day, driver=driver, sleep=sleep, headless=headless)
-            u.login()
-            u.download_payments_day_order()
-        return u.save_report()
 
     def wait_otp_code(self, user):
         r = redis.Redis.from_url(os.environ["REDIS_URL"])
@@ -2397,16 +2334,16 @@ class NewUklon(SeleniumTools):
     def add_driver(self, jobapplication):
         url = 'https://partner-registration.uklon.com.ua/registration'
         self.driver.get(f"{url}")
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]"))).click()
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
         clickandclear(form_phone_number)
         form_phone_number.send_keys(jobapplication.phone_number[4:])
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
         # 2FA
@@ -2414,12 +2351,12 @@ class NewUklon(SeleniumTools):
         digits = self.driver.find_elements(By.XPATH, "//input")
         for i, element in enumerate(digits):
             element.send_keys(code[i])
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         if self.sleep:
             time.sleep(self.sleep)
         self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         if self.sleep:
             time.sleep(self.sleep)
@@ -2431,7 +2368,7 @@ class NewUklon(SeleniumTools):
             element = self.driver.find_element(By.ID, field)
             clickandclear(element)
             element.send_keys(value)
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
 
         file_paths = [
@@ -2445,21 +2382,46 @@ class NewUklon(SeleniumTools):
                 time.sleep(self.sleep)
             photo_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
             photo_input.send_keys(file_paths[i])
-            WebDriverWait(self.driver, 5).until(
+            WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
             time.sleep(1)
-            WebDriverWait(self.driver, 5).until(
+            WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
-            WebDriverWait(self.driver, 5).until(
+            WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
-        fleet_code = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
+        fleet_code = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
         clickandclear(fleet_code)
         fleet_code.send_keys(os.environ.get("UKLON_TOKEN", NewUklonFleet.token))
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
-        self.driver.get_screenshot_as_file('uklon.png')
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
+
+    @staticmethod
+    def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
+        """Can download and save weekly report"""
+        u = NewUklon(week_number=week_number, driver=False, sleep=sleep, headless=headless)
+        report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        if not report:
+            u = NewUklon(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
+            u.download_payments_order()
+            u.quit()
+            u.save_report()
+            report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        return list(report)
+
+    @staticmethod
+    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
+        """Can download and save daily report if day is not None"""
+        u = NewUklon(day=day, driver=driver, sleep=sleep, headless=headless)
+        report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        if not report:
+            u = NewUklon(day=day, driver=driver, sleep=sleep, headless=headless)
+            u.download_payments_order()
+            u.quit()
+            u.save_report()
+            report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        return list(report)
 
 
 class Privat24(SeleniumTools):
@@ -2708,7 +2670,7 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     return owner, totals
 
 
-def download_and_save_daily_report(driver=True, sleep=5, headless=True, day=None):
+def download_and_save_daily_report(day=None, driver=True, sleep=5, headless=True):
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)

@@ -13,7 +13,6 @@ import json
 import logging
 import requests
 import traceback
-
 from celery.signals import task_postrun
 from telegram import *
 from telegram.ext import *
@@ -1927,9 +1926,10 @@ def get_driver_today_report(update, context) -> str:
 def get_driver_week_report(update, context) -> str:
     pass
 
+
 def choice_driver_option(update, context) -> list:
         update.message.reply_text(f'Hi {update.message.chat.username} driver')
-        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')],[KeyboardButton('Update report')]]
+        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')], [KeyboardButton('Update report')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
         reply_markup=ReplyKeyboardMarkup(buttons))
 
@@ -2171,7 +2171,6 @@ dp.add_handler(MessageHandler(Filters.text('Get all today statistic'), get_manag
 dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_today_report))
 dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
 dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
-
 
 
 def main():
