@@ -12,16 +12,20 @@ settings = {
 
 def init_park_settings():
     for key, value in settings.items():
-        park_setting = ParkSettings(
-            key=key,
-            value=value)
-        try:
-            park_setting.save()
-        except IntegrityError:
+        if not ParkSettings.objects.filter(key=key['key']).exists():
+            park_setting = ParkSettings(
+                key=key,
+                value=value)
+            try:
+                park_setting.save()
+            except IntegrityError:
+                pass
+        else:
             pass
 
 
 def run():
     init_park_settings()
+    print('Script ParkSettings done')
 
 
