@@ -1,5 +1,7 @@
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.generic import FormView
+
 from taxi_service.forms import SubscriberForm, MainOrderForm
 
 
@@ -30,7 +32,7 @@ def index(request):
 
 
 def about(request):
-    return render(request, 'about.html')
+    return render(request, 'about.html', {'subscribe_form': SubscriberForm()})
 
 
 def blog(request):
@@ -38,7 +40,11 @@ def blog(request):
 
 
 def why(request):
-    return render(request, 'why.html')
+    return render(request, 'why.html', {'subscribe_form': SubscriberForm()})
+
+
+def agreement(request):
+    return render(request, 'agreement.html', {'subscribe_form': SubscriberForm()})
 
 
 
