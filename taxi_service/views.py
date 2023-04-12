@@ -29,7 +29,10 @@ def index(request):
         if request.POST.get('action') == 'order':
             order_form = MainOrderForm(request.POST)
             if order_form.is_valid():
-                order_form.save()
+                order_form.save(
+                    request.POST.get('sum'),
+                    request.POST.get('payment_method')
+                )
             else:
                 return JsonResponse(order_form.errors, status=400)
 

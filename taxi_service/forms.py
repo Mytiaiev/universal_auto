@@ -26,7 +26,7 @@ class MainOrderForm(ModelForm):
 
     class Meta:
         model = Order
-        fields = ('from_address', 'phone_number')
+        fields = ('from_address', 'to_the_address', 'phone_number')
         error_messages = {
             "from_address": {
                 "required": _("Введіть, будь ласка, адресу"),
@@ -34,14 +34,26 @@ class MainOrderForm(ModelForm):
             "phone_number": {
                 "required": _("Введіть, будь ласка, ваш номер телефону"),
             },
+            "to_the_address": {
+                "required": _("Введіть, будь ласка, адресу"),
+            },
         }
 
         widgets = {
             'from_address': forms.TextInput(attrs={
-                'id': 'address', 'class': 'form-control', 'placeholder': _('Ваша адреса'), 'style': 'font-size: medium'}),
+                'id': 'address', 'class': 'form-control', 'placeholder': _('Звідки вас забрати?'), 'style': 'font-size: medium'}),
+            'to_the_address': forms.TextInput(attrs={
+                'id': 'to_address', 'class': 'form-control', 'placeholder': _('Куди їдемо?'), 'style': 'font-size: medium'}),
             'phone_number': PhoneInput(attrs={
                 'id': 'phone', 'class': 'form-control', 'placeholder': _('Номер телефону'), 'style': 'font-size: medium'})
         }
+
+    def save(self, sum, payment):
+        order = super().save(commit=False)
+        order.sum = sum
+        order.payment_method = payment
+        order.save()
+        return order
 
     def clean_phone_number(self):
         phone_number = self.cleaned_data.get('phone_number')
@@ -56,6 +68,13 @@ class MainOrderForm(ModelForm):
             raise forms.ValidationError(_("Неправильна адреса"))
         else:
             return from_address
+
+    def clean_to_the_address(self):
+        to_the_address = self.cleaned_data.get('to_the_address')
+        if not len(to_the_address):
+            raise forms.ValidationError(_("Неправильна адреса"))
+        else:
+            return to_the_address
 
 
 class SubscriberForm(ModelForm):
