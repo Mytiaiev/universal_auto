@@ -135,6 +135,18 @@
                 <div class="input-group pl-3" id="from_address-error">
                 </div>
               </div>
+			  <div class="form-group col-md-11">
+                <div class="input-group ">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">
+                      <i class="fa fa-map-marker" aria-hidden="true"></i>
+                    </div>
+                  </div>
+                  {{ order_form.to_the_address }}
+                </div>
+                <div class="input-group pl-3" id="from_address-error">
+                </div>
+              </div>
 
 
             <div class="btn-box">
@@ -366,70 +378,17 @@
 
 {% include 'footer.html' %}
 
-<!-- scripts -->
-<script src="{% static 'app/js/jquery-3.4.1.min.js' %}"></script>
-<script src="{% static 'app/js/bootstrap.js' %}"></script>
-<script src="{% static 'app/js/custom.js' %}"></script>
-<script type="text/javascript">
-$(document).ready(function(){
-  $('#order-form').on('submit', function(event){
-    event.preventDefault();
-    $.ajax({
-      type: "POST",
-      url: "{% url 'index' %}",
-      data: {
-        'from_address': $('#address').val(),
-        'phone_number': $('#phone').val(),
-        'action': 'order',
-        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
-      },
-      success: function(data){
-        $('#from_address-error').html('');
-        $('#phone_number-error').html('');
-        $('#order-form')[0].reset();
-      },
-
-      error: function(data){
-       $('#from_address-error').html('');
-       $('#phone_number-error').html('');
-        var errors = data.responseJSON;
-        $.each(errors, function(key, value) {
-          $('#' + key + '-error').html('<p class="text-danger small pl-5">' + value + '</p>');
-
-        });
-      }
-    });
-  });
-});
+<script>
+	var tariff = '{{ tariff }}';
+	var apiGoogle = '{{ google_api }}';
+	var csrfToken = '{% csrf_token %}';
+	var ajaxPostUrl = "{% url 'index' %}";
 </script>
-<script type="text/javascript">
-$(document).ready(function(){
-  $('#sub-form-1, #sub-form-2').on('submit', function(event){
-    event.preventDefault();
-    $.ajax({
-      type: "POST",
-      url: "{% url 'index' %}",
-      data: {
-        'email': $(event.target).find('#sub_email').val(),
-        'action': 'subscribe',
-        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
-      },
-      success: function(data){
-        $('#email-error-1, #email-error-2').html('');
-        $('#sub-form-1, #sub-form-2')[0].reset();
-      },
 
-      error: function(data){
-       $('#email-error-1, #email-error-2').html('');
-        var errors = data.responseJSON;
-        $.each(errors, function(key, value) {
-          $('#' + key + '-error-1').html(value);
-          $('#' + key + '-error-2').html(value);
-        });
-      }
-    });
-  });
-});
-</script>
-  </body>
+  <script src="{% static 'app/js/jquery-3.4.1.min.js' %}"></script>
+  <script src="{% static 'app/js/bootstrap.js' %}"></script>
+  <script src="{% static 'app/js/custom.js' %}"></script>
+
+</body>
+
 </html>
