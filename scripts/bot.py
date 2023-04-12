@@ -2023,9 +2023,10 @@ def send_order_to_driver(sender, instance, **kwargs):
         drivers = Driver.objects.filter(driver_status=Driver.ACTIVE)
         if drivers:
             message = f"Отримано нове замовлення:\n" \
-                      f"Адреса: {instance.from_address}\n" \
-                      f"Номер телефону: {instance.phone_number}\n" \
+                      f"Адреса посадки: {instance.from_address}\n" \
+                      f"Місце прибуття: {instance.to_the_address}\n" \
                       f"Спосіб оплати: {instance.payment_method}\n" \
+                      f"Номер телефону: {instance.phone_number}\n" \
                       f"Загальна вартість: {instance.sum}"
             keyboard = [
                 [
@@ -2070,11 +2071,12 @@ def handle_callback_order(update, context):
             order.driver = driver
             order.status_order = 'Призначено'
             order.save()
-            message = f"Ви прийняли замовлення: №{order_id}\n" \
-                      f"Адреса: {order.from_address}\n" \
-                      f"Номер телефону: {order.phone_number}\n" \
+            message = f"Адреса посадки: {order.from_address}\n" \
+                      f"Місце прибуття: {order.to_the_address}\n" \
                       f"Спосіб оплати: {order.payment_method}\n" \
+                      f"Номер телефону: {order.phone_number}\n" \
                       f"Загальна вартість: {order.sum}"
+
             query.edit_message_text(text=message)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
