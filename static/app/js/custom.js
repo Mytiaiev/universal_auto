@@ -247,7 +247,6 @@ function createMap(address, to_address, taxiArr) {
             });
             // Add the marker to the markers array
             markers.push(taxiMarker);
-            markers.push(toMarker);
           });
           var bounds = new google.maps.LatLngBounds();
           markers.forEach(marker => {
@@ -318,7 +317,7 @@ function createMap(address, to_address, taxiArr) {
               setCookie('sum', cost, 1)
 
               // Add the cost text to the map
-              var costText = "Подача автомобіля буде коштувати " + cost.toFixed(2) + " грн";
+              var costText = "Вартість поїздки буде коштувати " + cost.toFixed(2) + " грн";
               var costDiv = document.createElement('div');
               costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading mb-0">' + costText + '</h6></div>';
               map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
