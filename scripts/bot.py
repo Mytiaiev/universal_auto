@@ -2015,6 +2015,87 @@ job_docs_conversation = ConversationHandler(
 )
 
 
+@receiver(post_save, sender=Order)
+def send_order_to_driver(sender, instance, **kwargs):
+    if instance.status_order == WAITING:
+        exit()
+    if kwargs.get('created', False):
+        drivers = Driver.objects.filter(driver_status=Driver.ACTIVE)
+        if drivers:
+            message = f"Отримано нове замовлення:\n" \
+                      f"Адреса посадки: {instance.from_address}\n" \
+                      f"Місце прибуття: {instance.to_the_address}\n" \
+                      f"Спосіб оплати: {instance.payment_method}\n" \
+                      f"Номер телефону: {instance.phone_number}\n" \
+                      f"Загальна вартість: {instance.sum}"
+            keyboard = [
+                [
+                    InlineKeyboardButton("\u2705 Прийняти замовлення",
+                                         callback_data=f"accept_order {instance.pk}")
+                ],
+
+                [
+                    InlineKeyboardButton("\u274c Відхилити",
+                                         callback_data=f"decline_order {instance.pk}"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            for driver in drivers:
+                bot.send_message(
+                    chat_id=driver.chat_id,
+                    text=message,
+                    reply_markup=reply_markup
+                )
+            instance.status_order = 'Пошук водія'
+            instance.save()
+
+
+def handle_callback_order(update, context):
+    query = update.callback_query
+    data = query.data.split(' ')
+    if data[0] == "accept_order":
+        order_id = int(data[1])
+        order = Order.objects.filter(
+            pk=order_id,
+            status_order='Пошук водія'
+        ).first()
+        driver = Driver.objects.filter(
+            chat_id=query.message.chat_id,
+            driver_status=Driver.ACTIVE
+        ).first()
+        # we check whether the order and the driver
+        # are available for interaction
+        if order and driver:
+            driver.driver_status = Driver.WITH_CLIENT
+            driver.save()
+            order.driver = driver
+            order.status_order = 'Призначено'
+            order.save()
+            message = f"Адреса посадки: {order.from_address}\n" \
+                      f"Місце прибуття: {order.to_the_address}\n" \
+                      f"Спосіб оплати: {order.payment_method}\n" \
+                      f"Номер телефону: {order.phone_number}\n" \
+                      f"Загальна вартість: {order.sum}"
+
+            query.edit_message_text(text=message)
+        else:
+            query.edit_message_text(text="Це замовлення вже виконано.")
+
+    elif data[0] == "decline_order":
+        order_id = int(data[1])
+        order = Order.objects.filter(pk=order_id,
+                                     status_order='Пошук водія').first()
+        if order:
+            order.status_order = 'Пошук водія'
+            order.save()
+            # remove inline keyboard markup from the message
+            query.edit_message_text(
+                text="Ви відхилили замовлення. Пошук іншого водія..."
+            )
+        else:
+            query.edit_message_text(text="Це замовлення вже виконано.")
+
+
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
 bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
@@ -2162,6 +2243,7 @@ dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gp
 dp.add_handler(CommandHandler("send_report", numberplate_car))
 
 dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
+dp.add_handler(CallbackQueryHandler(handle_callback_order))
 
 
 # System commands
