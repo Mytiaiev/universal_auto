@@ -858,6 +858,15 @@ header button start
   color: inherit;
 }
 
+.tabs__contents .tabs__content {
+  display: none;
+}
+
+.tabs__contents .tabs__content.is-active {
+  display: block;
+}
+/*# sourceMappingURL=style.css.map */
+
 #order-modal {
   position: fixed;
   left: 3vw;

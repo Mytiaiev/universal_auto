@@ -13,7 +13,6 @@ import json
 import logging
 import requests
 import traceback
-
 from celery.signals import task_postrun
 from telegram import *
 from telegram.ext import *
@@ -21,7 +20,6 @@ from app.models import *
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
     send_on_job_application_on_driver_to_Uber, get_report_for_tg
-from . import bolt, uklon, uber
 from scripts.driversrating import DriversRatingMixin
 import traceback
 import hashlib
@@ -260,8 +258,7 @@ def inline_buttons_for_driver(update, context):
     if query.data == 'Accept order':
         order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=WAITING)
         if order is not None:
-            #driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
-            driver = Driver.get_by_chat_id(chat_id=chat_id)
+            park_work = ParkStatus.objects.filter(driver=driver).first()
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
                 keyboard = [
@@ -278,8 +275,9 @@ def inline_buttons_for_driver(update, context):
                 order.driver = Driver.objects.get(chat_id=chat_id)
                 order.status_order = 'Виконується'
                 order.save()
-                driver.driver_status = Driver.WAIT_FOR_CLIENT
-                driver.save()
+
+                park_work.status = Driver.WAIT_FOR_CLIENT
+                park_work.save()
 
                 # take car from UseOfCars and send report to client
                 licence_plate = (list(record))[-1].licence_plate
@@ -343,7 +341,9 @@ def status(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+        record = UseOfCars.objects.filter(user_vehicle=driver,
+                                          created_at__date=timezone.now().date(),
+                                          end_at=None)
         if record:
             send_set_status(update, context)
         else:
@@ -377,8 +377,12 @@ def set_status(update, context):
         update.message.reply_text(f'{driver}: Ваш - {event[-1].event} завершено')
     except:
         pass
-    driver.driver_status = status
-    driver.save()
+    park_worker = ParkStatus.objects.filter(driver=driver).first()
+    if park_worker:
+        park_worker.status = status
+        park_worker.save()
+    else:
+        ParkStatus.objects.create(driver=driver, status=status)
     if status == Driver.OFFLINE:
         record = UseOfCars.objects.get(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
         record.end_at = timezone.now()
@@ -440,7 +444,7 @@ def add_vehicle_to_driver(update, context):
             update.message.reply_text('Такого ключа немає у вашому списку, спробуйте ще раз')
     except:
         update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
-    record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date())
+    record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date(), end_at=None)
     if record:
         update.message.reply_text('Це авто вже використовує інший водій. Спробуйте інше авто. Якщо всі авто заняті зверніться до менеджерів')
         get_vehicle_of_driver(update, context)
@@ -462,7 +466,8 @@ def correct_or_not_auto(update, context):
     option = update.message.text
     chat_id = update.message.chat.id
     if option == f'{CORRECT_AUTO}':
-        record = UseOfCars.objects.filter(licence_plate=context.user_data['use_vehicle'], created_at__date=timezone.now().date())
+        record = UseOfCars.objects.filter(licence_plate=context.user_data['use_vehicle'],
+                                          created_at__date=timezone.now().date(), end_at=None)
         if record:
             update.message.reply_text('Ваше авто вже використовує інший водій. Зверніться до менеджерів')
         else:
@@ -1927,9 +1932,10 @@ def get_driver_today_report(update, context) -> str:
 def get_driver_week_report(update, context) -> str:
     pass
 
+
 def choice_driver_option(update, context) -> list:
         update.message.reply_text(f'Hi {update.message.chat.username} driver')
-        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')],[KeyboardButton('Update report')]]
+        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')], [KeyboardButton('Update report')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
         reply_markup=ReplyKeyboardMarkup(buttons))
 
@@ -2251,7 +2257,6 @@ dp.add_handler(MessageHandler(Filters.text('Get all today statistic'), get_manag
 dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_today_report))
 dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
 dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
-
 
 
 def main():
