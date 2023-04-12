@@ -1081,19 +1081,20 @@ class Comment(models.Model):
 
 class Order(models.Model):
     WAITING = 'Очікується'
+    IN_PROGRESS = 'Виконується'
     CANCELED = 'Скасовано клієнтом'
-    ONTIME = 'На певний час'
+    ON_TIME = 'На певний час'
 
     from_address = models.CharField(max_length=255)
     latitude = models.CharField(max_length=10)
     longitude = models.CharField(max_length=10)
     to_the_address = models.CharField(max_length=255)
-    to_latitude = models.CharField(max_length=10)
-    to_longitude = models.CharField(max_length=10)
+    to_latitude = models.CharField(max_length=10, null=True)
+    to_longitude = models.CharField(max_length=10, null=True)
     phone_number = models.CharField(max_length=13)
     chat_id_client = models.CharField(max_length=15)
     sum = models.CharField(max_length=30)
-    order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час замовлення')
+    order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
     payment_method = models.CharField(max_length=70)
     status_order = models.CharField(max_length=70)
     distance_gps = models.CharField(max_length=10)
@@ -1103,9 +1104,9 @@ class Order(models.Model):
     comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL)
 
     @staticmethod
-    def get_order(chat_id_client, sum, status_order):
+    def get_order(chat_id_client, status_order):
         try:
-            order = Order.objects.get(chat_id_client=chat_id_client, sum=sum, status_order=status_order)
+            order = Order.objects.get(chat_id_client=chat_id_client, status_order=status_order)
             return order
         except Order.DoesNotExist:
             return None

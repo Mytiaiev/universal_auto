@@ -1,16 +1,12 @@
 import requests
-from app.models import RawGPS
+from app.models import VehicleGPS, ParkSettings
 import os
 import re
 
 
-def get_location_from_db(car_gps_imei):
-    data = RawGPS.objects.filter(imei=car_gps_imei).order_by('-created_at')[:1]
-    data = str(data).split(';')
-    try:
-        latitude, longitude = "{:.6f}".format(float(data[2])), "{:.6f}".format(float(data[2]))
-    except:
-        pass
+def get_location_from_db(licence_plate):
+    gps = VehicleGPS.objects.filter(vehicle=licence_plate).first()
+    latitude, longitude = gps.lat, gps.lon
     return latitude, longitude
 
 def get_address(latitude, longitude, api_key) -> str or None:
@@ -43,7 +39,7 @@ def geocode(address, api_key) -> tuple or None:
         result = response['results'][0]
         latitude = result['geometry']['location']['lat']
         longitude = result['geometry']['location']['lng']
-        return latitude, longitude
+        return str(latitude)[:10], str(longitude)[:10]
     else:
         return None
 
@@ -73,11 +69,7 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int,
 
 
 def get_route_distance(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, api_key):
-    url = f"""
-    https://maps.googleapis.com/maps/api/directions/json?
-    origin={driver_lat},{driver_lng}&
-    destination={to_lat},{to_lng}&
-    waypoints=via:{from_lat},{from_lng}&mode=driving&key={api_key}"""
+    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={driver_lat},{driver_lng}&destination={to_lat},{to_lng}&waypoints=via:{from_lat},{from_lng}&mode=driving&key={api_key}"
     response = requests.get(url)
     data = response.json()
     if data['status'] == 'OK':
