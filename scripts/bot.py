@@ -1,3 +1,6 @@
+from telegram import *
+from telegram.ext import *
+from app.models import *
 import ast
 import os
 import threading
@@ -14,9 +17,6 @@ import logging
 import requests
 import traceback
 from celery.signals import task_postrun
-from telegram import *
-from telegram.ext import *
-from app.models import *
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
     send_on_job_application_on_driver_to_Uber, get_report_for_tg
@@ -140,8 +140,8 @@ def location(update: Update, context: CallbackContext):
 
 
 STATE = None       # range (1-50)
-FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 4)
-U_NAME, U_SECOND_NAME, U_EMAIL = range(4, 7)
+FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER = range(1, 5)
+U_NAME, U_SECOND_NAME, U_EMAIL = range(5, 8)
 
 
 def the_confirmation_of_location(update, context):
@@ -188,7 +188,6 @@ def payment_method(update, context):
     update.message.reply_text('Виберіть спосіб оплати:', reply_markup=reply_markup)
 
 
-
 CARD = 'Картка'
 CASH = 'Готівка'
 
@@ -211,19 +210,15 @@ def order_create(update, context):
 
     create_order.save()
 
-    keyboard = [
-        [
-            InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data="Accept order")
-        ],
-        [
-            InlineKeyboardButton("\u274c Відхилити", callback_data="Reject order"),
-        ],
-    ]
-
-    order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
-            f"Спосіб оплати: {context.user_data['payment_method']}\nНомер телефону: {context.user_data['phone_number']}"
     drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
     if drivers:
+        update.message.reply_text('Шукаємо водія')
+        keyboard = [
+            [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data="Accept order")],
+            [InlineKeyboardButton("\u274c Відхилити", callback_data="Reject order")],
+        ]
+        order = f"Адреса посадки: {context.user_data['from_address']}\nМісце прибуття: {context.user_data['to_the_address']}\n" \
+                f"Спосіб оплати: {context.user_data['payment_method']}\nНомер телефону: {context.user_data['phone_number']}"
         reply_markup = InlineKeyboardMarkup(keyboard)
         for driver in drivers:
             try:
@@ -241,8 +236,57 @@ def order_create(update, context):
         update.message.reply_text(
             'Вибачте, але зараз немає вільний водіїв.Бажаєте замовити таксі на інший час?', reply_markup=reply_markup)
 
+
 def time_order(update, context):
-    order = Order.get_order(chat_id_client=update.message.chat.id, sum='', status_order=Order.WAITING)
+    global STATE
+    STATE = TIME_ORDER
+    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)')
+
+
+def order_on_time(update, context):
+    global STATE
+    STATE = None
+    pattern = r'^\d{2}:\d{2}$'
+    user_time = update.message.text
+    if re.match(pattern, user_time):
+        format_time = datetime.datetime.strptime(user_time, '%h:%m').time()
+        min_time = timezone.localtime() + datetime.timedelta(minutes=ParkSettings.get_value('SEND_TIME_ORDER_MIN'))
+        conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
+        if min_time <= conv_time:
+            order = Order.get_order(chat_id_client=context.user_data['client_chat_id'],
+                                    sum='', status_order=Order.WAITING)
+            order.status = Order.ONTIME
+            order.order_time = conv_time
+            order.save()
+        else:
+            update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
+            STATE = TIME_ORDER
+    else:
+        update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
+        STATE = TIME_ORDER
+
+
+def send_time_orders(update, context):
+    min_sending_time = timezone.localtime()+datetime.timedelta(minutes=20)
+    orders = Order.objects.filter(status=Order.ONTIME,
+                                  order_time__gte=timezone.localtime(),
+                                  order_time__lte=min_sending_time)
+    if orders:
+        for timeorder in orders:
+            message = f"""Адреса посадки: {timeorder.from_address}\nМісце прибуття: {timeorder.to_the_address}\n
+                Спосіб оплати: {timeorder.payment_method}\nНомер телефону: {timeorder.phone_number}\n
+                Час подачі:{timeorder.order_time.time()}"""
+            drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
+            if drivers:
+                for driver in drivers:
+                    keyboard = [
+                        [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data="Accept order")],
+                        [InlineKeyboardButton("\u274c Відхилити", callback_data="Reject order")],
+                               ]
+                    try:
+                        context.bot.send_message(chat_id=driver, text=message, reply_markup=InlineKeyboardMarkup(keyboard))
+                    except:
+                        pass
 
 
 def inline_buttons_for_driver(update, context):
@@ -252,6 +296,7 @@ def inline_buttons_for_driver(update, context):
 
     number_phone = query.message.text
     number_phone = number_phone[-13::]
+    driver = Driver.get_by_chat_id(chat_id=chat_id)
     user = User.objects.get(phone_number=number_phone)
     context.user_data['client_chat_id'] = user.chat_id
 
@@ -324,17 +369,6 @@ def send_map_to_client(update, context, client_chat_id, car_gps_imei):
             print(m)
         except Exception as e:
             logger.error(msg=e.message)
-            time.sleep(30)
-
-
-def get_location_from_db(car_gps_imei):
-    data = RawGPS.objects.filter(imei=car_gps_imei).order_by('-created_at')[:1]
-    data = str(data).split(';')
-    try:
-        latitude, longitude = convertion(coordinates=data[2]), convertion(coordinates=data[4])
-    except:
-        pass
-    return latitude, longitude
 
 
 # Changing status of driver
@@ -890,16 +924,18 @@ def comment(update, context):
 
 def save_comment(update, context):
     global STATE
-    context.user_data['comment'] = update.message.text
-    chat_id = update.message.chat.id
-
-    order = Comment.objects.create(
-                comment=context.user_data['comment'],
-                chat_id=chat_id)
-    order.save()
-
+    order = Order.objects.filter(chat_id_client=update.message.chat.id,
+                                 status_order=Order.CANCELED,
+                                 created_at__date=timezone.now().date())
+    user_comment = Comment.objects.create(
+        comment=update.message.text,
+        chat_id=update.message.chat.id)
+    if order:
+        last_order = list(order)[-1]
+        last_order.comment = user_comment
+        last_order.save()
     STATE = None
-    update.message.reply_text('Ваш відгук був збережено. Очікуйте, менеджер скоро з вами звяжеться!')
+    update.message.reply_text('Ваш відгук було збережено. Очікуйте, менеджер скоро з вами звяжеться!')
 
 
 # Getting id for users
@@ -1749,6 +1785,8 @@ def text(update, context):
             return payment_method(update, context)
         elif STATE == COMMENT:
             return save_comment(update, context)
+        elif STATE == TIME_ORDER:
+            return order_on_time(update, context)
     elif STATE_D is not None:
         if STATE_D == NUMBERPLATE:
             return change_status_car(update, context)
@@ -2030,6 +2068,7 @@ job_docs_conversation = ConversationHandler(
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
 bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
+context = CallbackContext(updater.dispatcher)
 dp = updater.dispatcher
 
 
@@ -2075,8 +2114,10 @@ dp.add_handler(MessageHandler(Filters.location, location))
 
 dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f696 Викликати Таксі$"), continue_order))
 
-dp.add_handler(MessageHandler(Filters.text(f"\u2705 {LOCATION_CORRECT}"), to_the_address))
+dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_address))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
+dp.add_handler(MessageHandler(Filters.regex(fr"^Замовити на інший час$"), time_order))
+updater.job_queue.run_repeating(send_time_orders, interval=300, context=context)
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
 
 dp.add_handler(MessageHandler(

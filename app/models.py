@@ -1274,12 +1274,12 @@ class ParkSettings(models.Model):
         return f'{self.value}'
 
     @staticmethod
-    def get_value(key=key):
+    def get_value(key, default=None):
         try:
-            value = ParkSettings.objects.get(key=key)
-            return value
+            setting = ParkSettings.objects.get(key=key)
+            return setting.value
         except ParkSettings.DoesNotExist:
-            return f"<ObjectDoesNotExist> {key}"
+            return default
 
 
 
