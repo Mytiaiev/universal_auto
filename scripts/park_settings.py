@@ -7,6 +7,8 @@ settings = {
     'RENT_PRICE': default,
     'TARIFF_IN_THE_CITY': '15',
     'TARIFF_OUTSIDE_THE_CITY': '30',
+    'TARIFF_CAR_DISPATCH': '7',
+    'FREE_CAR_SENDING_DISTANCE': '5',
     'CENTRE_CITY_LAT': '50.4501',
     'CENTRE_CITY_LNG': '30.5234',
     'CENTRE_CITY_RADIUS': '75000',
