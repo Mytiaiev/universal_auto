@@ -16,12 +16,10 @@ import json
 import logging
 import requests
 import traceback
-
 from celery.signals import task_postrun
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
     send_on_job_application_on_driver_to_Uber, get_report_for_tg
-from . import bolt, uklon, uber
 from scripts.driversrating import DriversRatingMixin
 import traceback
 import hashlib
@@ -316,8 +314,7 @@ def inline_buttons_for_driver(update, context):
     if query.data == 'Accept order':
         order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], sum='', status_order=WAITING)
         if order is not None:
-            #driver = Driver.get_by_chat_id(chat_id=736204274) #for develop
-            driver = Driver.get_by_chat_id(chat_id=chat_id)
+            park_work = ParkStatus.objects.filter(driver=driver).first()
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
                 keyboard = [
@@ -334,8 +331,9 @@ def inline_buttons_for_driver(update, context):
                 order.driver = Driver.objects.get(chat_id=chat_id)
                 order.status_order = 'Виконується'
                 order.save()
-                driver.driver_status = Driver.WAIT_FOR_CLIENT
-                driver.save()
+
+                park_work.status = Driver.WAIT_FOR_CLIENT
+                park_work.save()
 
                 # take car from UseOfCars and send report to client
                 licence_plate = (list(record))[-1].licence_plate
@@ -399,7 +397,9 @@ def status(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+        record = UseOfCars.objects.filter(user_vehicle=driver,
+                                          created_at__date=timezone.now().date(),
+                                          end_at=None)
         if record:
             send_set_status(update, context)
         else:
@@ -433,8 +433,12 @@ def set_status(update, context):
         update.message.reply_text(f'{driver}: Ваш - {event[-1].event} завершено')
     except:
         pass
-    driver.driver_status = status
-    driver.save()
+    park_worker = ParkStatus.objects.filter(driver=driver).first()
+    if park_worker:
+        park_worker.status = status
+        park_worker.save()
+    else:
+        ParkStatus.objects.create(driver=driver, status=status)
     if status == Driver.OFFLINE:
         record = UseOfCars.objects.get(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
         record.end_at = timezone.now()
@@ -496,7 +500,7 @@ def add_vehicle_to_driver(update, context):
             update.message.reply_text('Такого ключа немає у вашому списку, спробуйте ще раз')
     except:
         update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
-    record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date())
+    record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date(), end_at=None)
     if record:
         update.message.reply_text('Це авто вже використовує інший водій. Спробуйте інше авто. Якщо всі авто заняті зверніться до менеджерів')
         get_vehicle_of_driver(update, context)
@@ -518,7 +522,8 @@ def correct_or_not_auto(update, context):
     option = update.message.text
     chat_id = update.message.chat.id
     if option == f'{CORRECT_AUTO}':
-        record = UseOfCars.objects.filter(licence_plate=context.user_data['use_vehicle'], created_at__date=timezone.now().date())
+        record = UseOfCars.objects.filter(licence_plate=context.user_data['use_vehicle'],
+                                          created_at__date=timezone.now().date(), end_at=None)
         if record:
             update.message.reply_text('Ваше авто вже використовує інший водій. Зверніться до менеджерів')
         else:
@@ -1998,9 +2003,10 @@ def get_driver_today_report(update, context) -> str:
 def get_driver_week_report(update, context) -> str:
     pass
 
+
 def choice_driver_option(update, context) -> list:
         update.message.reply_text(f'Hi {update.message.chat.username} driver')
-        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')],[KeyboardButton('Update report')]]
+        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')], [KeyboardButton('Update report')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
         reply_markup=ReplyKeyboardMarkup(buttons))
 
@@ -2078,6 +2084,87 @@ job_docs_conversation = ConversationHandler(
     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
     allow_reentry=True,
 )
+
+
+@receiver(post_save, sender=Order)
+def send_order_to_driver(sender, instance, **kwargs):
+    if instance.status_order == WAITING:
+        exit()
+    if kwargs.get('created', False):
+        drivers = Driver.objects.filter(driver_status=Driver.ACTIVE)
+        if drivers:
+            message = f"Отримано нове замовлення:\n" \
+                      f"Адреса посадки: {instance.from_address}\n" \
+                      f"Місце прибуття: {instance.to_the_address}\n" \
+                      f"Спосіб оплати: {instance.payment_method}\n" \
+                      f"Номер телефону: {instance.phone_number}\n" \
+                      f"Загальна вартість: {instance.sum}"
+            keyboard = [
+                [
+                    InlineKeyboardButton("\u2705 Прийняти замовлення",
+                                         callback_data=f"accept_order {instance.pk}")
+                ],
+
+                [
+                    InlineKeyboardButton("\u274c Відхилити",
+                                         callback_data=f"decline_order {instance.pk}"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            for driver in drivers:
+                bot.send_message(
+                    chat_id=driver.chat_id,
+                    text=message,
+                    reply_markup=reply_markup
+                )
+            instance.status_order = 'Пошук водія'
+            instance.save()
+
+
+def handle_callback_order(update, context):
+    query = update.callback_query
+    data = query.data.split(' ')
+    if data[0] == "accept_order":
+        order_id = int(data[1])
+        order = Order.objects.filter(
+            pk=order_id,
+            status_order='Пошук водія'
+        ).first()
+        driver = Driver.objects.filter(
+            chat_id=query.message.chat_id,
+            driver_status=Driver.ACTIVE
+        ).first()
+        # we check whether the order and the driver
+        # are available for interaction
+        if order and driver:
+            driver.driver_status = Driver.WITH_CLIENT
+            driver.save()
+            order.driver = driver
+            order.status_order = 'Призначено'
+            order.save()
+            message = f"Адреса посадки: {order.from_address}\n" \
+                      f"Місце прибуття: {order.to_the_address}\n" \
+                      f"Спосіб оплати: {order.payment_method}\n" \
+                      f"Номер телефону: {order.phone_number}\n" \
+                      f"Загальна вартість: {order.sum}"
+
+            query.edit_message_text(text=message)
+        else:
+            query.edit_message_text(text="Це замовлення вже виконано.")
+
+    elif data[0] == "decline_order":
+        order_id = int(data[1])
+        order = Order.objects.filter(pk=order_id,
+                                     status_order='Пошук водія').first()
+        if order:
+            order.status_order = 'Пошук водія'
+            order.save()
+            # remove inline keyboard markup from the message
+            query.edit_message_text(
+                text="Ви відхилили замовлення. Пошук іншого водія..."
+            )
+        else:
+            query.edit_message_text(text="Це замовлення вже виконано.")
 
 
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
@@ -2227,6 +2314,7 @@ dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gp
 dp.add_handler(CommandHandler("send_report", numberplate_car))
 
 dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
+dp.add_handler(CallbackQueryHandler(handle_callback_order))
 
 
 # System commands

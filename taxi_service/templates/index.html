@@ -1,88 +1,10 @@
 <!DOCTYPE html>
 {% load static %}
 {% load i18n %}
+{% include 'header.html' %}
 
-<html>
-
-<head>
-  <!-- Basic -->
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <!-- Mobile Metas -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <!-- Site Metas -->
-  <meta name="keywords" content="" />
-  <meta name="description" content="" />
-  <meta name="author" content="" />
-  <link rel="shortcut icon" href="{% static 'app/images/favicon.png' %}"/>
-
-  <title>{% trans "Ninja Taxi" %}</title>
-
-  <!-- slider stylesheet -->
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.1.3/assets/owl.carousel.min.css" />
-
-  <!-- bootstrap core css -->
-  <link rel="stylesheet" type="text/css" href="{% static 'app/css/bootstrap.css' %}" />
-  <!-- font awesome style -->
-  <link href="{% static 'app/css/font-awesome.min.css' %}" rel="stylesheet" />
-  <!-- fonts style -->
-  <link href="https://fonts.googleapis.com/css?family=Dosis:500|Poppins:400,600,700&display=swap" rel="stylesheet">
-  <!-- Custom styles for this template -->
-  <link href="{% static 'app/css/style.css' %}" rel="stylesheet" />
-  <!-- responsive style -->
-  <link href="{% static 'app/css/responsive.css' %}" rel="stylesheet" />
-  <script
-  src="https://code.jquery.com/jquery-3.6.3.min.js"
-  integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU="
-  crossorigin="anonymous"></script>
-</head>
-
-<body>
-  <header class="header_section navbar navbar-expand-sm sticky-top navbar-light bg-light">
-      <div class="container">
-        <nav class="container navbar navbar-expand-lg custom_nav-container navbar navbar-expand-sm sticky-top navbar-light bg-light">
-          <a class="navbar-brand" href="{% url 'index' %}">
-            <img src="{% static 'app/images/logo.svg' %}" alt="">
-          </a>
-            
-          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span></span>
-          </button>
-          <div class="collapse navbar-collapse ml-auto  " id="navbarSupportedContent">
-            <ul class="navbar-nav">
-              <li class="nav-item info_section_header">
-                <div class="info_form">
-                  {% include '_subscribe_form.html' with button=_("Підписатись") form='1' %}
-                </div>
-              </li>
-              <li class="nav-item">
-                <div class="social_header">
-                  {% include '_social_box.html' %}
-                </div>
-              </li>
-              <li class="nav-item">
-                <section class="book_header_section">
-                  <div class="book_form">
-                    <div class="btn-box">
-                      <a href="#order_from_header">
-                        <button >{% trans "Замовити зараз" %}</button>
-                      </a>
-                    </div>
-     
-                  </div>
-                </section>
-              </li>
-            </ul>
-          </div>
-        </nav>
-      </div>
-    </header>
-  <div class="hero_area">
-    <!-- header section strats -->
-    
-    <!-- end header section -->
-
-
+{% block content %}
+<div class="hero_area">
     <!-- slider section -->
     <section class=" slider_section position-relative">
       <div class="box">
@@ -209,6 +131,18 @@
                     </div>
                   </div>
                   {{ order_form.from_address }}
+                </div>
+                <div class="input-group pl-3" id="from_address-error">
+                </div>
+              </div>
+			  <div class="form-group col-md-11">
+                <div class="input-group ">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">
+                      <i class="fa fa-map-marker" aria-hidden="true"></i>
+                    </div>
+                  </div>
+                  {{ order_form.to_the_address }}
                 </div>
                 <div class="input-group pl-3" id="from_address-error">
                 </div>
@@ -440,142 +374,21 @@
   </section>
 
   <!-- end client section -->
+{% endblock %}
 
-  <!-- info section -->
-  <section class="info_section">
+{% include 'footer.html' %}
 
-    <div class="container">
-      <div class="info_top ">
-        <div class="row ">
-          <div class="col-sm-6 col-md-4 col-lg-3">
-            <div class="info_detail">
-              <a href="{% url 'index' %}">
-                <h4>
-                  Ninja Taxi
-                </h4>
-              </a>
-              <p>
-                {% trans "Хочете бути екологічно свідомими та зручно подорожувати містом? Спробуйте електротаксі!" %}
-              </p>
-              {% include '_social_box.html' %}
-            </div>
-          </div>
-          <div class="col-sm-6 col-md-4 col-lg-3 mx-auto">
-            <h4>
-              {% trans "Наші Контакти" %}
-            </h4>
-            <div class="contact_nav">
-              <a href="">
-                <i class="fa fa-map-marker" aria-hidden="true"></i>
-                <span>
-                  {% trans "Місцезнаходження" %}
-                </span>
-              </a>
-              <a href="">
-                <i class="fa fa-phone" aria-hidden="true"></i>
-                <span>
-                  {% trans "Телефон" %}: +380681373335
-                </span>
-              </a>
-              <a href="">
-                <i class="fa fa-envelope" aria-hidden="true"></i>
-                <span>
-                  {% trans "Електронна пошта" %} : office@ninja-taxi.kyiv.ua
-                </span>
-              </a>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="info_form">
-              <h4>
-                {% trans "Підписатись на розсилку" %}
-              </h4>
-              {% include '_subscribe_form.html' with button=_("Підписатись") form='2' %}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <!-- end info_section -->
-
-
-  <!-- footer section -->
-  <footer class="footer_section">
-    <div class="container">
-      <p>
-        &copy; <span id="displayYear"></span> All Rights Reserved By
-        <a href="https://ninja-taxi.kyiv.ua/">Ninja Taxi</a>
-      </p>
-    </div>
-  </footer>
-  <!-- footer section -->
-
+<script>
+	var tariff = '{{ tariff }}';
+	var apiGoogle = '{{ google_api }}';
+	var csrfToken = '{% csrf_token %}';
+	var ajaxPostUrl = "{% url 'index' %}";
+</script>
 
   <script src="{% static 'app/js/jquery-3.4.1.min.js' %}"></script>
   <script src="{% static 'app/js/bootstrap.js' %}"></script>
   <script src="{% static 'app/js/custom.js' %}"></script>
 
 </body>
-<script type="text/javascript">
-$(document).ready(function(){
-  $('#order-form').on('submit', function(event){
-    event.preventDefault();
-    $.ajax({
-      type: "POST",
-      url: "{% url 'index' %}",
-      data: {
-        'from_address': $('#address').val(),
-        'phone_number': $('#phone').val(),
-        'action': 'order',
-        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
-      },
-      success: function(data){
-        $('#from_address-error').html('');
-        $('#phone_number-error').html('');
-        $('#order-form')[0].reset();
-      },
 
-      error: function(data){
-       $('#from_address-error').html('');
-       $('#phone_number-error').html('');
-        var errors = data.responseJSON;
-        $.each(errors, function(key, value) {
-          $('#' + key + '-error').html('<p class="text-danger small pl-5">' + value + '</p>');
-
-        });
-      }
-    });
-  });
-});
-</script>
-<script type="text/javascript">
-$(document).ready(function(){
-  $('#sub-form-1, #sub-form-2').on('submit', function(event){
-    event.preventDefault();
-    $.ajax({
-      type: "POST",
-      url: "{% url 'index' %}",
-      data: {
-        'email': $(event.target).find('#sub_email').val(),
-        'action': 'subscribe',
-        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
-      },
-      success: function(data){
-        $('#email-error-1, #email-error-2').html('');
-        $('#sub-form-1, #sub-form-2')[0].reset();
-      },
-
-      error: function(data){
-       $('#email-error-1, #email-error-2').html('');
-        var errors = data.responseJSON;
-        $.each(errors, function(key, value) {
-          $('#' + key + '-error-1').html(value);
-          $('#' + key + '-error-2').html(value);
-        });
-      }
-    });
-  });
-});
-</script>
 </html>

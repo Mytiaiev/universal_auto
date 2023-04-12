@@ -1,4 +1,5 @@
 import time
+import pendulum
 from contextlib import contextmanager
 from datetime import datetime
 try:
@@ -11,7 +12,9 @@ from django.conf import settings
 from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
 
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, get_report
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
+    get_report, download_and_save_daily_report
+
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer
 
@@ -34,6 +37,8 @@ def raw_gps_handler(id):
     except RawGPS.DoesNotExist:
         return f'{RawGPS.DoesNotExist}: id={id}'
     data = raw.data.split(';')
+    lat, lon = data[2].replace('.', ''), data[4].replace('.', '')
+    lat, lon = lat[:-6] + '.' + lat[-6:], lon[:-6] + '.' + lon[-6:]
     try:
         vehicle = Vehicle.objects.get(gps_imei=raw.imei)
     except Vehicle.DoesNotExist:
@@ -47,9 +52,9 @@ def raw_gps_handler(id):
         kwa = {
             'date_time': date_time,
             'vehicle': vehicle,
-            'lat': float(data[2]),
+            'lat': float(lat),
             'lat_zone': data[3],
-            'lon': float(data[4]),
+            'lon': float(lon),
             'lon_zone': data[5],
             'speed': float(data[6]),
             'course': float(data[7]),
@@ -69,6 +74,16 @@ def download_weekly_report(fleet_name, missing_weeks):
     for fleet in fleets:
         for week_number in weeks:
             fleet.download_weekly_report(week_number=week_number, driver=True, sleep=5, headless=True)
+
+
+@app.task(bind=True)
+def download_daily_report(self):
+    # Yesterday
+    try:
+        day = pendulum.now().start_of('day').subtract(days=1)  # yesterday
+        download_and_save_daily_report(driver=True, sleep=5, headless=True, day=day)
+    except Exception as e:
+        logger.info(e)
 
 
 @contextmanager
@@ -97,20 +112,21 @@ def update_driver_status(self):
                 status_online = set()
                 status_width_client = set()
                 if bolt_status is not None:
-                    status_online = status_online.union(set(bolt_status['online']))
+                    status_online = status_online.union(set(bolt_status['wait']))
                     status_width_client = status_width_client.union(set(bolt_status['width_client']))
                 if uklon_status is not None:
                     status_online = status_online.union(set(uklon_status['online']))
                     status_width_client = status_width_client.union(set(uklon_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
+                    park_status = ParkStatus.objects.filter(driver=driver).first()
                     current_status = Driver.OFFLINE
-                    if ((driver.name, driver.second_name) in status_online
-                            or driver.driver_status == Driver.ACTIVE):
+                    if (driver.name, driver.second_name) in status_online:
                         current_status = Driver.ACTIVE
-                    if ((driver.name, driver.second_name) in status_width_client
-                            or driver.driver_status == Driver.WITH_CLIENT):
+                    if (driver.name, driver.second_name) in status_width_client:
                         current_status = Driver.WITH_CLIENT
+                    if park_status:
+                        current_status = park_status.status
                     # if (driver.name, driver.second_name) in status['wait']:
                     #     current_status = Driver.ACTIVE
                     driver.driver_status = current_status
@@ -173,7 +189,6 @@ def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, s
         logger.info(e)
 
 
-
 @app.task(bind=True, priority=7)
 def send_on_job_application_on_driver_to_NewUklon(self, id):
     try:
@@ -222,7 +237,8 @@ def setup_periodic_tasks(sender, **kwargs):
 @app.on_after_finalize.connect
 def setup_rent_task(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
-    sender.add_periodic_task(crontab(minute=0, hour=7, day_of_week=1), get_report_for_tg.s())
+    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
+    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
 
 
 def init_chrome_driver():
