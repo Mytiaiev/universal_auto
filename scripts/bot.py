@@ -1,3 +1,6 @@
+from telegram import *
+from telegram.ext import *
+from app.models import *
 import ast
 import os
 import threading
@@ -15,9 +18,6 @@ import requests
 import traceback
 
 from celery.signals import task_postrun
-from telegram import *
-from telegram.ext import *
-from app.models import *
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
     send_on_job_application_on_driver_to_Uber, get_report_for_tg
@@ -127,28 +127,22 @@ def cancel_order(update, context):
 
 
 def location(update: Update, context: CallbackContext):
-    active_drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == f'{Driver.ACTIVE}']
-
-    if not active_drivers:
-        report = update.message.reply_text('Вибачте, але зараз немає вільний водіїв. Скористайтеся послугою пізніше', reply_markup=ReplyKeyboardRemove())
-        return report
+    m = update.message
+    # geocoding lat and lon to address
+    context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
+    address = get_address(context.user_data['latitude'], context.user_data['longitude'], os.environ["GOOGLE_API_KEY"])
+    if address is not None:
+        context.user_data['from_address'] = address
+        update.message.reply_text(f'Ваша адреса: {address}')
+        the_confirmation_of_location(update, context)
     else:
-        m = update.message
-        # geocoding lat and lon to address
-        context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
-        address = get_address(context.user_data['latitude'], context.user_data['longitude'], os.environ["GOOGLE_API_KEY"])
-        if address is not None:
-            context.user_data['from_address'] = address
-            update.message.reply_text(f'Ваша адреса: {address}')
-            the_confirmation_of_location(update, context)
-        else:
-            update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
-            from_address(update, context)
+        update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
+        from_address(update, context)
 
 
 STATE = None       # range (1-50)
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT = range(1, 4)
-U_NAME, U_SECOND_NAME, U_EMAIL = range(4, 7)
+U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(4, 9)
 
 
 def the_confirmation_of_location(update, context):
@@ -166,33 +160,95 @@ def the_confirmation_of_location(update, context):
 def from_address(update, context):
     global STATE
     STATE = FROM_ADDRESS
-    context.user_data['latitude'], context.user_data['longitude'] = 'Null', 'Null'
+    #context.user_data['latitude'], context.user_data['longitude'] = 'Null', 'Null'
     update.message.reply_text('Введіть адресу місця посадки:', reply_markup=ReplyKeyboardRemove())
+
+
+NOT_CORRECT_ADDRESS = 'Немає вірної адреси'
 
 
 def to_the_adress(update, context):
     global STATE
     if STATE == FROM_ADDRESS:
-        context.user_data['from_address'] = update.message.text
-    update.message.reply_text('Введіть адресу місця призначення:', reply_markup=ReplyKeyboardRemove())
-    STATE = TO_THE_ADDRESS
+        buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
+        address = update.message.text
+        addresses = buttons_addresses(update, context, address=address)
+        if addresses is not None:
+            for item in addresses:
+                buttons.append([KeyboardButton(str(item))])
+            reply_markup = ReplyKeyboardMarkup(buttons)
+            context.user_data['addresses_first'] = addresses
+            update.message.reply_text(f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу", reply_markup=reply_markup)
+            STATE = FIRST_ADDRESS_CHECK
+        else:
+            update.message.reply_text('Нам не вдалось обробити вашу адресу, спробуйте ще раз')
+            from_address(update, context)
+    else:
+        update.message.reply_text('Введіть адресу місця призначення:', reply_markup=ReplyKeyboardRemove())
+        STATE = TO_THE_ADDRESS
 
 
 def payment_method(update, context):
     global STATE
-    STATE = None
-    context.user_data['to_the_address'] = update.message.text
+    if STATE == TO_THE_ADDRESS:
+        address = update.message.text
+        buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
+        addresses = buttons_addresses(update, context, address=address)
+        if addresses is not None:
+            for item in addresses:
+                buttons.append([KeyboardButton(str(item))])
+            reply_markup = ReplyKeyboardMarkup(buttons)
+            context.user_data['addresses_second'] = addresses
+            update.message.reply_text(
+                f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу",
+                reply_markup=reply_markup)
+            STATE = SECOND_ADDRESS_CHECK
+        else:
+            update.message.reply_text('Нам не вдалось обробити вашу адресу, спробуйте ще раз')
+            to_the_adress(update, context)
+    else:
+        STATE = None
 
-    keyboard = [KeyboardButton(text=f"\U0001f4b7 {Order.CASH}"),
-                KeyboardButton(text=f"\U0001f4b8 {Order.CARD}")]
+        keyboard = [KeyboardButton(text=f"\U0001f4b7 {Order.CASH}"),
+                    KeyboardButton(text=f"\U0001f4b8 {Order.CARD}")]
 
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard=[keyboard],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-        )
+        reply_markup = ReplyKeyboardMarkup(
+            keyboard=[keyboard],
+            resize_keyboard=True,
+            one_time_keyboard=True,
+            )
 
-    update.message.reply_text('Виберіть спосіб оплати:', reply_markup=reply_markup)
+        update.message.reply_text('Виберіть спосіб оплати:', reply_markup=reply_markup)
+
+
+def second_address_check(update, context):
+    response = update.message.text
+    lst = context.user_data['addresses_second']
+    if response not in lst or response == NOT_CORRECT_ADDRESS:
+        to_the_adress(update, context)
+    else:
+        context.user_data['to_the_address'] = response
+        payment_method(update, context)
+
+
+def first_address_check(update, context):
+    response = update.message.text
+    lst = context.user_data['addresses_first']
+    if response not in lst or response == NOT_CORRECT_ADDRESS:
+        from_address(update, context)
+    else:
+        context.user_data['from_address'] = response
+        to_the_adress(update, context)
+
+
+def buttons_addresses(update, context, address):
+    center_lat, center_lng = f"{ParkSettings.get_value('CENTRE_CITY_LAT')}", f"{ParkSettings.get_value('CENTRE_CITY_LNG')}"
+    center_radius = int(f"{ParkSettings.get_value('CENTRE_CITY_RADIUS')}")
+    lst_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius, os.environ["GOOGLE_API_KEY"])
+    if lst_addresses is not None:
+        return lst_addresses
+    else:
+        return None
 
 
 WAITING = 'Очікується'
@@ -580,6 +636,7 @@ def get_gps_imea(update, context):
     else:
         update.message.reply_text("Задовне значення. Спробуйте ще раз")
 
+
 @receiver(post_save, sender=RentInformation)
 def send_day_rent(sender, instance, **kwargs):
     try:
@@ -667,6 +724,7 @@ def update_user_information(update, context):
         update.message.reply_text('Eлектронна адреса некоректна. Спробуйте ще раз')
         return 'JOB_EMAIL'
 
+
 def get_job_photo(update, context):
     empty_inline_keyboard = InlineKeyboardMarkup([])
     update.callback_query.answer()
@@ -703,6 +761,7 @@ def upload_license_front_photo(update, context):
         update.message.reply_text('Будь ласка, надішліть лицьову сторону', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_FRONT_PHOTO'
 
+
 def upload_license_back_photo(update, context):
     os.makedirs('data/mediafiles/job/licenses/back/', exist_ok=True)
     if update.message.photo:
@@ -717,6 +776,8 @@ def upload_license_back_photo(update, context):
     else:
         update.message.reply_text('Будь ласка, надішліть тильну сторону', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_BACK_PHOTO'
+
+
 def upload_expired_date(update, context):
     date = update.message.text
     if JobApplication.validate_date(date):
@@ -727,6 +788,7 @@ def upload_expired_date(update, context):
     else:
         update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
+
 
 def check_auto(update,context):
     query = update.callback_query
@@ -778,6 +840,8 @@ def upload_auto_doc(update, context):
     else:
         update.message.reply_text('Будь ласка, надішліть фото техпаспорту', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_AUTO_YES_OPTION'
+
+
 def upload_insurance(update, context):
     os.makedirs('data/mediafiles/job/insurance/', exist_ok=True)
     if update.message.photo:
@@ -791,6 +855,7 @@ def upload_insurance(update, context):
     else:
         update.message.reply_text('Будь ласка, надішліть фото автоцивілки', reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_INSURANCE'
+
 
 def upload_expired_insurance(update, context):
     chat_id = update.message.chat.id
@@ -826,6 +891,7 @@ def upload_expired_insurance(update, context):
         update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
+
 def uklon_code(update, context):
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
@@ -835,6 +901,7 @@ def uklon_code(update, context):
     update.message.reply_text(
         'Ваш код прийнято.Наш менеджер з вами зв\'яжеться.Не забудьте зареєструватись на сайті https://supplier.uber.com, як водій')
     return ConversationHandler.END
+
 
 def code_timer(update, context, timer, sleep):
     def timer_callback(context):
@@ -1732,6 +1799,10 @@ def text(update, context):
             return payment_method(update, context)
         elif STATE == COMMENT:
             return save_comment(update, context)
+        elif STATE == FIRST_ADDRESS_CHECK:
+            return first_address_check(update, context)
+        elif STATE == SECOND_ADDRESS_CHECK:
+            return second_address_check(update, context)
     elif STATE_D is not None:
         if STATE_D == NUMBERPLATE:
             return change_status_car(update, context)
@@ -2171,7 +2242,6 @@ dp.add_handler(MessageHandler(Filters.text('Get all today statistic'), get_manag
 dp.add_handler(MessageHandler(Filters.text('Get today statistic'), get_driver_today_report))
 dp.add_handler(MessageHandler(Filters.text('Choice week number'), get_driver_week_report))
 dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
-
 
 
 def main():

@@ -1,9 +1,10 @@
 import requests
 import os
 import re
+from app.models import ParkSettings
 
 
-def get_address(latitude, longitude, api_key):
+def get_address(latitude, longitude, api_key) -> str or None:
     """
         Returns address using Google Geocoding API
     """
@@ -18,7 +19,7 @@ def get_address(latitude, longitude, api_key):
         return None
 
 
-def geocode(address, api_key):
+def geocode(address, api_key) -> tuple or None:
     """
     Returns lat, lon address using Google Geocoding API
     """
@@ -38,17 +39,17 @@ def geocode(address, api_key):
         return None
 
 
-def get_addresses_by_radius(address, center_lat, center_lng, center_radius, api_key):
-    """"Returns addresses by pattern {CITY_PARK}"""
+def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int, api_key) -> list or None:
+    """"Returns addresses by pattern {CITY_PARK} """
 
     url = f"https://maps.googleapis.com/maps/api/place/autocomplete/json?input={address}&language=uk&" \
         f"location={center_lat},{center_lng}&radius={center_radius}&key={api_key}"
 
     response = requests.get(url)
     data = response.json()
-    city_park = os.environ["CITY_PARK"]
+    city_park = f"{ParkSettings.get_value('CITY_PARK')}"
     addresses = []
-    pattern = re.compile(rf"\b{city_park}\b", re.IGNORECASE)
+    pattern = re.compile(rf".*({city_park}).*", re.IGNORECASE)
 
     if data['status'] == 'OK':
         results = data['predictions']
