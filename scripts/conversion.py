@@ -1,13 +1,68 @@
 import requests
 from app.models import VehicleGPS, ParkSettings
-import os
 import re
+from shapely.geometry import Point, Polygon
+from shapely.ops import nearest_points
+from geopy.distance import distance
+import os
 
+city_boundaries = Polygon([(50.482433, 30.758250), (50.491685, 30.742045), (50.517374, 30.753721),
+         (50.529704, 30.795370), (50.537806, 30.824810), (50.557504, 30.816837),
+         (50.579778, 30.783808), (50.583684, 30.766494), (50.590833, 30.717995),
+         (50.585827, 30.721184), (50.575221, 30.709590), (50.555702, 30.713665),
+         (50.534572, 30.653589), (50.572107, 30.472565), (50.571557, 30.464734),
+         (50.584574, 30.464120), (50.586367, 30.373054), (50.573406, 30.373049),
+         (50.570661, 30.307423), (50.557272, 30.342127), (50.554324, 30.298128),
+         (50.533394, 30.302445), (50.423057, 30.244148), (50.446055, 30.348753),
+         (50.302393, 30.532814), (50.213270, 30.593929), (50.226755, 30.642478),
+         (50.291609, 30.590369), (50.335279, 30.628839), (50.389522, 30.775925),
+         (50.394966, 30.776293), (50.397798, 30.790669), (50.392594, 30.806395),
+         (50.404878, 30.825881), (50.458385, 30.742751), (50.481657, 30.748158),
+         (50.482454, 30.758345)])
+
+
+def get_route_distance(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, api_key):
+    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={driver_lat},{driver_lng}&" \
+          f"destination={to_lat},{to_lng}&waypoints={from_lat},{from_lng}|{to_lat},{to_lng}&mode=driving&key={api_key}"
+    response = requests.get(url)
+    data = response.json()
+    if data['status'] == 'OK':
+        distance_within_city = 0
+        distance_outside_city = 0
+        for route in data["routes"]:
+            for leg in route["legs"]:
+                for step in leg["steps"]:
+                    start_location = Point(step["start_location"]["lat"], step["start_location"]["lng"])
+                    end_location = Point(step["end_location"]["lat"], step["end_location"]["lng"])
+                    step_distance = step["distance"]["value"]
+                    # Check if the step intersects the city boundaries
+                    if city_boundaries.intersects(start_location.buffer(0.000001)) or city_boundaries.intersects(
+                            end_location.buffer(0.000001)):
+                        if not city_boundaries.intersects(start_location.buffer(0.000001)):
+                            nearest = nearest_points(start_location, city_boundaries.boundary)[0]
+                            dist = distance(start_location, nearest).meters
+                            distance_within_city += step_distance-dist
+                            distance_outside_city += dist
+                            print(dist)
+                        if not city_boundaries.intersects(end_location.buffer(0.000001)):
+                            nearest = nearest_points(end_location, city_boundaries.boundary)[0]
+                            dist = distance(end_location, nearest).meters
+                            distance_outside_city += step_distance-dist
+                            distance_within_city += dist
+                            print(dist)
+                        else:
+                            # Calculate the distance within the city
+                            distance_within_city += step_distance
+                    else:
+                        # Calculate the distance outside the city
+                        distance_outside_city += step_distance
+        return f"{distance_within_city}/{distance_outside_city}"
 
 def get_location_from_db(licence_plate):
     gps = VehicleGPS.objects.filter(vehicle=licence_plate).first()
-    latitude, longitude = gps.lat, gps.lon
+    latitude, longitude = str(gps.lat), str(gps.lon)
     return latitude, longitude
+
 
 def get_address(latitude, longitude, api_key) -> str or None:
     """
@@ -68,13 +123,23 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int,
     return addresses
 
 
-def get_route_distance(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, api_key):
-    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={driver_lat},{driver_lng}&destination={to_lat},{to_lng}&waypoints=via:{from_lat},{from_lng}&mode=driving&key={api_key}"
-    response = requests.get(url)
-    data = response.json()
-    if data['status'] == 'OK':
-        distance_meters = data["routes"][0]["legs"][0]["distance"]["value"]
-        distance_km = distance_meters / 1000
-        return distance_km
-    else:
-        return None
+# def get_route_distance(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, api_key):
+#     url = f"https://maps.googleapis.com/maps/api/directions/json?origin={driver_lat},{driver_lng}&" \
+#           f"destination={to_lat},{to_lng}&waypoints={from_lat},{from_lng}|{to_lat},{to_lng}&mode=driving&key={api_key}"
+#     response = requests.get(url)
+#     data = response.json()
+#     if data['status'] == 'OK':
+#         points = data["routes"][0]["legs"]
+#         ride_to_client = points[0]["distance"]["value"]/1000
+#         if ride_to_client > int(ParkSettings.get_value("FREE_CAR_SENDING_DISTANCE")):
+#             sending_price = (ride_to_client - int(ParkSettings.get_value("FREE_CAR_SENDING_DISTANCE"))) *\
+#                             int(ParkSettings.get_value("TARIFF_CAR_DISPATCH"))
+#         else:
+#             sending_price = 0
+#         price = sending_price + (points[1]["distance"]["value"]/1000) * int(ParkSettings.get_value("TARIFF_IN_THE_CITY"))
+#         return data
+#     else:
+#         return None
+
+def run():
+    print(geocodekyiv(os.environ["GOOGLE_API_KEY"]))

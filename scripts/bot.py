@@ -118,6 +118,13 @@ def continue_order(update, context):
 
     update.message.reply_text('Чи бажаєте ви продовжити?', reply_markup=reply_markup)
 
+def time_for_order(update, context):
+    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}", request_location=True),
+                KeyboardButton(text=f"\u274c {CANCEL}")]
+    update.message.reply_text(f"Бажаєте замовити на зараз чи на певний час?")
+
+
+
 
 def cancel_order(update, context):
     update.message.reply_text('Гарного дня. Дякуємо, що скористались нашими послугами',  reply_markup=ReplyKeyboardRemove())
@@ -313,7 +320,7 @@ def time_order(update, context):
 def order_on_time(update, context):
     global STATE
     STATE = None
-    pattern = r'^\d{2}:\d{2}$'
+    pattern = r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
     user_time = update.message.text
     if re.match(pattern, user_time):
         format_time = datetime.datetime.strptime(user_time, '%h:%m').time()
@@ -405,7 +412,7 @@ def inline_buttons_for_driver(update, context):
 
                     report_for_client = f'Ваш водій: {driver}\nНазва: {vehicle.name}\n' \
                                         f'Номер машини: {licence_plate}\nНомер телефону: {driver.phone_number}\n' \
-                                        f'Сума замовлення:{order.sum}'
+                                        f'Сума замовлення:{order.sum}грн'
 
                     context.bot.send_message(chat_id=context.user_data['client_chat_id'], text=report_for_client)
 
@@ -995,11 +1002,16 @@ def comment(update, context):
     global STATE
     STATE = COMMENT
     order = Order.get_order(chat_id_client=update.message.chat.id, status_order=Order.WAITING)
+    keyboard = [
+        KeyboardButton(text="\U00002b50*5"),
+        KeyboardButton(text="\U00002b50*4"),
+        KeyboardButton(text="\U00002b50*3"),
+        KeyboardButton(text="\U00002b50*2")
+    ]
     if order:
         order.status_order = Order.CANCELED
         order.save()
-        # keyboard
-        update.message.reply_text('Залишіть відгук чому ви відмовились', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text('Поставте оцінку або напишіть відгук', reply_markup=ReplyKeyboardMarkup(keyboard=[keyboard]))
     else:
         update.message.reply_text('Залишіть відгук або сповістіть про проблему', reply_markup=ReplyKeyboardRemove())
 
@@ -1017,7 +1029,7 @@ def save_comment(update, context):
         last_order.comment = user_comment
         last_order.save()
     STATE = None
-    update.message.reply_text('Ваш відгук було збережено. Очікуйте, менеджер скоро з вами звяжеться!')
+    update.message.reply_text("Ваш відгук було збережено. Очікуйте, менеджер скоро з вами зв`яжеться!")
 
 
 # Getting id for users
