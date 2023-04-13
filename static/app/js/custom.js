@@ -54,21 +54,17 @@ function deleteAllCookies() {
     document.querySelector("#displayYear").innerHTML = currentYear;
 })();
 
-// add Google Maps script
-var script = document.createElement("script");
-script.setAttribute("src", `https://maps.googleapis.com/maps/api/js?key=${apiGoogle}&libraries=geometry`);
-document.body.appendChild(script);
-
 var map, orderReject, orderConfirm, orderData;
 
 const decodedData = tariff.replace(/&#x(\w+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
 const parsedData = JSON.parse(decodedData.replace(/'/g, '"'));
 const kmCost = parsedData["TARIFF_IN_THE_CITY"];
-const freeKmDispatch = parsedData["FREE_CAR_SENDING_DISTANCE"];
-const tariffKmDispatch = parsedData["TARIFF_CAR_DISPATCH"];
-const FREE_DISPATCH = parseInt(freeKmDispatch);
-const TARIFF_DISPATCH = parseInt(tariffKmDispatch);
+const FREE_DISPATCH = parseInt(parsedData["FREE_CAR_SENDING_DISTANCE"]);
+const TARIFF_DISPATCH = parseInt(parsedData["TARIFF_CAR_DISPATCH"]);
 const KM_COST = parseInt(kmCost);
+const CENTRE_CITY_LAT = parseFloat(parsedData["CENTRE_CITY_LAT"]);
+const CENTRE_CITY_LNG = parseFloat(parsedData["CENTRE_CITY_LNG"]);
+const CENTRE_CITY_RADIUS = parseInt(parsedData["CENTRE_CITY_RADIUS"]);
 
 
 function getMarkerIcon(type) {
@@ -465,4 +461,24 @@ $(document).ready(function(){
       }
     });
   });
+});
+
+function initAutocomplete(inputID) {
+  const inputField = document.getElementById(inputID);
+  const autoComplete = new google.maps.places.Autocomplete(inputField, {
+    bounds: new google.maps.Circle({
+      center: { lat: CENTRE_CITY_LAT, lng: CENTRE_CITY_LNG },
+      radius: CENTRE_CITY_RADIUS,
+    }).getBounds(),
+    strictBounds: true,
+  });
+  autoComplete.addListener('place_changed', function(){
+    const place = autoComplete.getPlace();
+    inputField.value = place.formatted_address;
+  });
+}
+
+loadGoogleMaps( 3, apiGoogle, "uk",'','geometry,places').then(function() {
+ initAutocomplete('address');
+ initAutocomplete('to_address');
 });
