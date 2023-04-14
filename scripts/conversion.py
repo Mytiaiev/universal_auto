@@ -2,9 +2,7 @@ import requests
 from app.models import VehicleGPS, ParkSettings
 import re
 from shapely.geometry import Point, Polygon, LineString, MultiLineString
-from shapely.ops import nearest_points, split
-from shapely.wkt import loads, dumps
-from geopy.distance import distance
+from shapely.ops import split
 import os
 from math import radians, sin, cos, sqrt, atan2
 
