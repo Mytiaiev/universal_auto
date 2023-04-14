@@ -16,7 +16,6 @@ django-polymorphic
 celery
 folium
 shapely
-geopy
 python-gettext
 translators
 gunicorn

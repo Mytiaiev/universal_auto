@@ -108,7 +108,7 @@ NOT_CORRECT_ADDRESS = 'Немає вірної адреси'
 CONTINUE = 'Продовжити замовлення'
 CANCEL = 'Скасувати замовлення'
 TOMORROW = "Замовити на завтра"
-TODAY = "Замовити на певний час"
+TODAY = "Замовити на інший час"
 
 
 def continue_order(update, context):
@@ -332,7 +332,7 @@ def time_order(update, context):
         answer = update.message.text
         context.user_data['time_order'] = answer
     STATE = TIME_ORDER
-    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)')
+    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)', reply_markup=ReplyKeyboardRemove())
 
 
 def order_on_time(update, context):
@@ -341,25 +341,25 @@ def order_on_time(update, context):
     pattern = r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
     user_time = update.message.text
     if re.match(pattern, user_time):
-        format_time = datetime.datetime.strptime(user_time, '%h:%m').time()
-        min_time = timezone.localtime() + datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+        format_time = datetime.datetime.strptime(user_time, '%H:%M').time()
+        min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
             if context.user_data['time_order'] == TODAY:
-                Order.objects.create(chat_id_client=context.user_data['client_chat_id'],
+                Order.objects.create(chat_id_client=update.message.chat.id,
                                      status_order=Order.ON_TIME,
                                      order_time=conv_time)
                 from_address(update, context)
-            elif not context.user_data['time_order']:
+            else:
                 order = Order.get_order(chat_id_client=context.user_data['client_chat_id'],
                                         phone=context.user_data['phone_number'],
                                         status_order=Order.WAITING)
                 order.status = Order.ON_TIME
                 order.order_time = conv_time
                 order.save()
-            else:
-                update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
-                STATE = TIME_ORDER
+        else:
+            update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
+            STATE = TIME_ORDER
     else:
         update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
         STATE = TIME_ORDER
@@ -2318,7 +2318,7 @@ dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from
 dp.add_handler(MessageHandler(Filters.regex(fr"^Замовити на інший час$"), time_order))
 updater.job_queue.run_repeating(send_time_orders, interval=int(ParkSettings.get_value('CHECK_ORDER_TIME_SEC', 100)))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
-dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CONTINUE}$"), time_for_order))
+dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {CONTINUE}$"), time_for_order))
 
 dp.add_handler(MessageHandler(
     Filters.regex(fr"^\U0001f4b7 {CASH}$") |
