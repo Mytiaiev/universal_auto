@@ -275,7 +275,17 @@ def order_create(update, context):
     else:
         context.user_data['latitude'], context.user_data['longitude'] = geocode(context.user_data['from_address'], os.environ["GOOGLE_API_KEY"])
     order = Order.get_order(chat_id_client=update.message.chat.id, phone=user.phone_number, status_order=Order.ON_TIME)
-    if not order:
+    if order:
+        order.from_address = context.user_data['from_address']
+        order.latitude = context.user_data['latitude']
+        order.longitude = context.user_data['longitude']
+        order.to_the_address = context.user_data['to_the_address']
+        order.to_latitude = destination_lat
+        order.to_longitude = destination_long
+        order.phone_number = user.phone_number
+        order.payment_method = payment.split()[1]
+        order.save()
+    else:
         Order.objects.create(
             from_address=context.user_data['from_address'],
             latitude=context.user_data['latitude'],
@@ -287,16 +297,6 @@ def order_create(update, context):
             chat_id_client=update.message.chat.id,
             payment_method=payment.split()[1],
             status_order=Order.WAITING)
-    else:
-        order.from_address = context.user_data['from_address']
-        order.latitude = context.user_data['latitude']
-        order.longitude = context.user_data['longitude']
-        order.to_the_address = context.user_data['to_the_address']
-        order.to_latitude = destination_lat
-        order.to_longitude = destination_long
-        order.phone_number = user.phone_number
-        order.payment_method = payment.split()[1]
-        order.save()
 
     drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
 
