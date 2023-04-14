@@ -85,7 +85,6 @@ function onOrderCash(paymentMethod) {
   var orderData = JSON.parse(savedOrderData);
   orderData.sum = getCookie('sum');
   orderData.payment_method = paymentMethod;
-  console.log(orderData);
 
   $.ajax({
     url: ajaxPostUrl,
@@ -167,7 +166,6 @@ function sendComment() {
     },
     success: function(response) {
       // Process the response from the server
-      console.log("Коментар успішно відправлено!");
       $('.modal').remove();
       deleteAllCookies();
       location.reload();
@@ -194,6 +192,13 @@ function createMap(address, to_address, taxiArr) {
     center: new google.maps.LatLng(50.4546600, 30.5238000)
   };
   map = new google.maps.Map(mapCanvas, mapOpts);
+
+  var bounds = new google.maps.LatLngBounds(
+    new google.maps.LatLng(44.387799, 22.137054), // Southwest coordinates
+    new google.maps.LatLng(52.545875, 40.227580)  // Northeast coordinates
+  );
+  map.fitBounds(bounds);
+
 
   // Create a geocoder object to convert the address to coordinates
   var geocoder = new google.maps.Geocoder();
@@ -379,7 +384,6 @@ $(document).ready(function(){
     }
 
     for(const field of fields) {
-      console.log(field)
       const err = $(`#${field}-error`);
       if(form.get(field).length === 0) {
         errorFields++;
@@ -489,7 +493,6 @@ function initAutocomplete(inputID) {
       center: { lat: CENTRE_CITY_LAT, lng: CENTRE_CITY_LNG },
       radius: CENTRE_CITY_RADIUS,
     }).getBounds(),
-    componentRestrictions: { country: "uk" },
     strictBounds: true,
   });
   autoComplete.addListener('place_changed', function(){
