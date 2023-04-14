@@ -121,12 +121,12 @@ def update_driver_status(self):
                 for driver in drivers:
                     park_status = ParkStatus.objects.filter(driver=driver).first()
                     current_status = Driver.OFFLINE
+                    if park_status:
+                        current_status = park_status.status
                     if (driver.name, driver.second_name) in status_online:
                         current_status = Driver.ACTIVE
                     if (driver.name, driver.second_name) in status_width_client:
                         current_status = Driver.WITH_CLIENT
-                    if park_status:
-                        current_status = park_status.status
                     # if (driver.name, driver.second_name) in status['wait']:
                     #     current_status = Driver.ACTIVE
                     driver.driver_status = current_status

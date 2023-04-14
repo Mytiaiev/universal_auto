@@ -393,6 +393,12 @@ class OwnerAdmin(admin.ModelAdmin):
 class OrderAdmin(admin.ModelAdmin):
     list_display = [f.name for f in Order._meta.fields]
 
+    fieldsets = [
+        (None, {'fields': ['from_address', 'to_the_address',
+                           'phone_number', 'chat_id_client', 'order_time',
+                           'status_order', 'payment_method', 'sum']}),
+    ]
+
 
 @admin.register(UseOfCars)
 class UseofCarsAdmin(admin.ModelAdmin):

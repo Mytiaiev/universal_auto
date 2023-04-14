@@ -3,8 +3,8 @@ from app.models import ParkSettings
 
 default = '0'
 settings = {
-    'FREE_RENT': default,
-    'RENT_PRICE': default,
+    'FREE_RENT': '15',
+    'RENT_PRICE': '15',
     'TARIFF_IN_THE_CITY': '15',
     'TARIFF_OUTSIDE_THE_CITY': '30',
     'TARIFF_CAR_DISPATCH': '7',
@@ -14,13 +14,14 @@ settings = {
     'CENTRE_CITY_RADIUS': '75000',
     'CITY_PARK': "Київ|Київська",
     'SEND_TIME_ORDER_MIN': '20',
-    'CHECK_ORDER_TIME_SEC': '305'
+    'CHECK_ORDER_TIME_SEC': '305',
+    'TARIFF_CAR_OUTSIDE_DISPATCH': '15'
 }
 
 
 def init_park_settings():
     for key, value in settings.items():
-        if not ParkSettings.objects.filter(key=key['key']).exists():
+        if not ParkSettings.objects.filter(key=key):
             park_setting = ParkSettings(
                 key=key,
                 value=value)
@@ -29,7 +30,7 @@ def init_park_settings():
             except IntegrityError:
                 pass
         else:
-            pass
+            continue
 
 
 def run():
