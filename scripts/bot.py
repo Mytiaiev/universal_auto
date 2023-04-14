@@ -158,7 +158,6 @@ def the_confirmation_of_location(update, context):
 def from_address(update, context):
     global STATE
     STATE = FROM_ADDRESS
-    #context.user_data['latitude'], context.user_data['longitude'] = 'Null', 'Null'
     update.message.reply_text('Введіть адресу місця посадки:', reply_markup=ReplyKeyboardRemove())
 
 
@@ -174,7 +173,7 @@ def to_the_adress(update, context):
         if addresses is not None:
             for item in addresses:
                 buttons.append([KeyboardButton(str(item))])
-            reply_markup = ReplyKeyboardMarkup(buttons)
+            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             context.user_data['addresses_first'] = addresses
             update.message.reply_text(f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу", reply_markup=reply_markup)
             STATE = FIRST_ADDRESS_CHECK
@@ -195,7 +194,7 @@ def payment_method(update, context):
         if addresses is not None:
             for item in addresses:
                 buttons.append([KeyboardButton(str(item))])
-            reply_markup = ReplyKeyboardMarkup(buttons)
+            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             context.user_data['addresses_second'] = addresses
             update.message.reply_text(
                 f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу",
