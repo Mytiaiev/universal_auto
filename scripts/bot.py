@@ -380,11 +380,11 @@ def inline_buttons_for_driver(update, context):
             licence_plate = (list(record))[-1].licence_plate
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
             driver_lat, driver_long = get_location_from_db(vehicle)
-            distance = get_route_distance(order.latitude, order.longitude,
-                                          order.to_latitude, order.to_longitude,
-                                          driver_lat, driver_long,
-                                          os.environ["GOOGLE_API_KEY"])
-            order.sum = distance
+            price = get_route_price(order.latitude, order.longitude,
+                                    order.to_latitude, order.to_longitude,
+                                    driver_lat, driver_long,
+                                    os.environ["GOOGLE_API_KEY"])
+            order.sum = price
             order.save()
 
             if order is not None:
