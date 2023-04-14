@@ -382,8 +382,8 @@ def send_time_orders(context):
             if drivers:
                 for driver in drivers:
                     keyboard = [
-                        [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data="Accept order")],
-                        [InlineKeyboardButton("\u274c Відхилити", callback_data="Reject order")],
+                        [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
+                        [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
                                ]
                     try:
                         context.bot.send_message(chat_id=driver, text=message, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -398,19 +398,19 @@ def handle_callback_order(update, context):
     if data[0] == "Accept_order":
         order_id = int(data[1])
         order = Order.objects.filter(pk=order_id).first()
-        record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
-        licence_plate = (list(record))[-1].licence_plate
-        vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-        driver_lat, driver_long = get_location_from_db(vehicle)
-        if not order.sum:
-            price = get_route_price(order.latitude, order.longitude,
-                                    order.to_latitude, order.to_longitude,
-                                    driver_lat, driver_long,
-                                    os.environ["GOOGLE_API_KEY"])
-        else:
-            price = order.sum
         if order:
+            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
+                licence_plate = (list(record))[-1].licence_plate
+                vehicle = Vehicle.objects.get(licence_plate=licence_plate)
+                driver_lat, driver_long = get_location_from_db(vehicle)
+                if not order.sum:
+                    price = get_route_price(order.latitude, order.longitude,
+                                            order.to_latitude, order.to_longitude,
+                                            driver_lat, driver_long,
+                                            os.environ["GOOGLE_API_KEY"])
+                else:
+                    price = order.sum
                 keyboard = [
                             [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data="On_the_spot")],
                             [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {order.pk}")],
