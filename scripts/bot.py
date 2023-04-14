@@ -411,6 +411,7 @@ def inline_buttons_for_driver(update, context):
                                     os.environ["GOOGLE_API_KEY"])
             order.sum = price
             order.save()
+            context.user_data['price'] = price
 
             if order is not None:
                 if record:
@@ -452,8 +453,78 @@ def inline_buttons_for_driver(update, context):
         elif query.data == 'Reject order':
             query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
         elif query.data == "On the spot":
-            context.user_data['running'] = False
+
+            keyboard = [
+                [
+                    InlineKeyboardButton("\u2705 Клієнт на місці", callback_data="Сlient on site")
+                ]]
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_reply_markup(reply_markup=reply_markup)
+
             context.bot.send_message(chat_id=context.user_data['client_chat_id'], text='Машину подано. Водій вас очікує')
+        elif query.data == "Сlient on site":
+            keyboard = [
+                [InlineKeyboardButton("Рухались по маршруту", callback_data="Along the route")],
+                [InlineKeyboardButton("Відхилялись від маршрута", callback_data="Off route")],
+            ]
+
+            ParkStatus.objects.create(driver=driver,
+                                      status=Driver.WITH_CLIENT)
+
+            context.user_data['running'] = False
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_reply_markup(reply_markup=reply_markup)
+        elif query.data == "Along the route":
+            keyboard = end_trip(update, context)
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_reply_markup(reply_markup=reply_markup)
+        elif query.data == "Off route":
+            keyboard = end_trip(update, context)
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_reply_markup(reply_markup=reply_markup)
+            # need price from uagps and recount context.user_data['price']
+        elif query.data == "End trip":
+            chat_id = 515224934
+            provider_token = os.environ["LIQ_PAY_TOKEN"]
+            url = os.environ["BOT_URL_IMAGE_TAXI"]
+            title = 'Послуга особистого водія'
+            description = 'Опис товару або послуги'
+            payload = 'Додаткові дані для ідентифікації користувача'
+            currency = 'UAH'
+            prices = [LabeledPrice(label='Ціна', amount=1000)]
+            context.bot.send_invoice(chat_id=chat_id,
+                                     title=title, description=description, payload=payload,
+                                     provider_token=provider_token, currency=currency, prices=prices, photo_url=url,
+                                     photo_width=512, photo_height=512, photo_size=50000)
+
+
+
+def payment_request(update, context):
+    chat_id = update.effective_chat.id
+    provider_token = os.environ["LIQ_PAY_TOKEN"]
+    url = os.environ["BOT_URL_IMAGE_TAXI"]
+    # Створення запиту на оплату
+    title = 'Послуга особистого водія'
+    description = 'Опис товару або послуги'
+    payload = 'Додаткові дані для ідентифікації користувача'
+    currency = 'UAH'
+    prices = [LabeledPrice(label='Ціна', amount=1000)]
+
+    # Відправлення запиту на оплату
+    context.bot.send_invoice(chat_id=chat_id,
+                            title=title, description=description, payload=payload,
+                            provider_token=provider_token, currency=currency, prices=prices, photo_url=url,
+                            photo_width=512, photo_height=512, photo_size=50000)
+
+
+def end_trip(update, context):
+    keyboard = [
+        [
+            InlineKeyboardButton("Завершити поїздку", callback_data="End trip")
+        ]]
+
+    return keyboard
 
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):
@@ -2279,7 +2350,7 @@ def webhook(request):
         dp.process_update(update)
         return HttpResponse(status=200)
 
-
+dp.add_handler(CommandHandler("buy", payment_request))
 # Command for Owner
 dp.add_handler(CommandHandler("report", report))
 dp.add_handler(CommandHandler("download_report", download_report))
@@ -2416,7 +2487,7 @@ dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gp
 # Sending report on repair
 dp.add_handler(CommandHandler("send_report", numberplate_car))
 
-dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
+dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot|Сlient on site|Along the route|Off route|End trip)$'))
 dp.add_handler(CallbackQueryHandler(handle_callback_order))
 
 
