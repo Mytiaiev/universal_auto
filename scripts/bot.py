@@ -401,7 +401,6 @@ def inline_buttons_for_driver(update, context):
         context.user_data['client_chat_id'] = user.chat_id
         if query.data == 'Accept order':
             order = Order.get_order(chat_id_client=user.chat_id, phone=user.phone_number, status_order=Order.WAITING)
-            park_work = ParkStatus.objects.filter(driver=driver).first()
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             licence_plate = (list(record))[-1].licence_plate
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
@@ -429,9 +428,8 @@ def inline_buttons_for_driver(update, context):
                     order.driver = Driver.objects.get(chat_id=chat_id)
                     order.status_order = Order.IN_PROGRESS
                     order.save()
-
-                    park_work.status = Driver.WAIT_FOR_CLIENT
-                    park_work.save()
+                    ParkStatus.objects.create(driver=driver,
+                                              status=Driver.WAIT_FOR_CLIENT)
 
                     # take car from UseOfCars and send report to client
 
@@ -518,12 +516,7 @@ def set_status(update, context):
         update.message.reply_text(f'{driver}: Ваш - {event[-1].event} завершено')
     except:
         pass
-    park_worker = ParkStatus.objects.filter(driver=driver).first()
-    if park_worker:
-        park_worker.status = status
-        park_worker.save()
-    else:
-        ParkStatus.objects.create(driver=driver, status=status)
+    ParkStatus.objects.create(driver=driver, status=status)
     if status == Driver.OFFLINE:
         record = UseOfCars.objects.get(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
         record.end_at = timezone.now()

@@ -501,6 +501,10 @@ class ParkStatus(models.Model):
 
     status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія в ParkFleet')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
 
 class StatusChange(models.Model):
