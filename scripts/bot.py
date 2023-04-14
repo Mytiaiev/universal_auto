@@ -102,13 +102,15 @@ LOCATION_WRONG = "Місце посадки - невірне"
 LOCATION_CORRECT = "Місце посадки - вірне"
 CONTINUE = 'Продовжити замовлення'
 CANCEL = 'Скасувати замовлення'
+TOMORROW = "Замовити на завтра"
+TODAY = "Замовити на певний час"
 
 
 def continue_order(update, context):
     update.message.reply_text(f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')}грн/км\n" +
                               f"Ціна поїздки за містом {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')}грн/км")
 
-    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}", request_location=True),
+    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}"),
                 KeyboardButton(text=f"\u274c {CANCEL}")]
 
     reply_markup = ReplyKeyboardMarkup(
@@ -118,10 +120,16 @@ def continue_order(update, context):
 
     update.message.reply_text('Чи бажаєте ви продовжити?', reply_markup=reply_markup)
 
+
 def time_for_order(update, context):
-    keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}", request_location=True),
-                KeyboardButton(text=f"\u274c {CANCEL}")]
-    update.message.reply_text(f"Бажаєте замовити на зараз чи на певний час?")
+    keyboard = [KeyboardButton(text="Замовити на зараз", request_location=True),
+                KeyboardButton(text=f"{TODAY}")]
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=[keyboard],
+        resize_keyboard=True,
+    )
+    update.message.reply_text(f"Бажаєте замовити на зараз чи на певний час?", reply_markup=reply_markup)
+
 
 
 
@@ -312,9 +320,12 @@ def order_create(update, context):
 
 
 def time_order(update, context):
+    answer = update.message.text
     global STATE
     STATE = TIME_ORDER
     update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)')
+    if answer == TODAY:
+        pass
 
 
 def order_on_time(update, context):
@@ -2297,6 +2308,7 @@ dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from
 dp.add_handler(MessageHandler(Filters.regex(fr"^Замовити на інший час$"), time_order))
 updater.job_queue.run_repeating(send_time_orders, interval=int(ParkSettings.get_value('CHECK_ORDER_TIME_SEC', 100)))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
+dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CONTINUE}$"), time_for_order))
 
 dp.add_handler(MessageHandler(
     Filters.regex(fr"^\U0001f4b7 {CASH}$") |

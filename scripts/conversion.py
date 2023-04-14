@@ -60,8 +60,9 @@ def get_route_price(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, 
                         line = LineString([start_location, end_location])
                         intersection = split(line, city_boundaries)
                         lines = [i for i in intersection.geoms]
-                        start = lines[0].coords[:][0]
-                        bound = lines[0].coords[:][1]
+                        if lines:
+                            start = lines[0].coords[:][0]
+                            bound = lines[0].coords[:][1]
                         # Check if step intersect boundary of city and calc distance
                         if not city_boundaries.intersects(start_location.buffer(0.000001)):
                             distance_outside_city += haversine(*start, *bound)
