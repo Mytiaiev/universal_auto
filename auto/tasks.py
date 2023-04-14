@@ -13,7 +13,7 @@ from django.core.cache import cache
 from selenium.common import InvalidSessionIdException
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
-    get_report, download_and_save_daily_report
+    get_report, download_and_save_daily_report, ParkStatus
 
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer

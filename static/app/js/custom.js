@@ -54,21 +54,17 @@ function deleteAllCookies() {
     document.querySelector("#displayYear").innerHTML = currentYear;
 })();
 
-// add Google Maps script
-var script = document.createElement("script");
-script.setAttribute("src", `https://maps.googleapis.com/maps/api/js?key=${apiGoogle}&libraries=geometry`);
-document.body.appendChild(script);
-
 var map, orderReject, orderConfirm, orderData;
 
 const decodedData = tariff.replace(/&#x(\w+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
 const parsedData = JSON.parse(decodedData.replace(/'/g, '"'));
 const kmCost = parsedData["TARIFF_IN_THE_CITY"];
-const freeKmDispatch = parsedData["FREE_CAR_SENDING_DISTANCE"];
-const tariffKmDispatch = parsedData["TARIFF_CAR_DISPATCH"];
-const FREE_DISPATCH = parseInt(freeKmDispatch);
-const TARIFF_DISPATCH = parseInt(tariffKmDispatch);
+const FREE_DISPATCH = parseInt(parsedData["FREE_CAR_SENDING_DISTANCE"]);
+const TARIFF_DISPATCH = parseInt(parsedData["TARIFF_CAR_DISPATCH"]);
 const KM_COST = parseInt(kmCost);
+const CENTRE_CITY_LAT = parseFloat(parsedData["CENTRE_CITY_LAT"]);
+const CENTRE_CITY_LNG = parseFloat(parsedData["CENTRE_CITY_LNG"]);
+const CENTRE_CITY_RADIUS = parseInt(parsedData["CENTRE_CITY_RADIUS"]);
 
 
 function getMarkerIcon(type) {
@@ -89,7 +85,6 @@ function onOrderCash(paymentMethod) {
   var orderData = JSON.parse(savedOrderData);
   orderData.sum = getCookie('sum');
   orderData.payment_method = paymentMethod;
-  console.log(orderData);
 
   $.ajax({
     url: ajaxPostUrl,
@@ -171,7 +166,6 @@ function sendComment() {
     },
     success: function(response) {
       // Process the response from the server
-      console.log("Коментар успішно відправлено!");
       $('.modal').remove();
       deleteAllCookies();
       location.reload();
@@ -198,6 +192,13 @@ function createMap(address, to_address, taxiArr) {
     center: new google.maps.LatLng(50.4546600, 30.5238000)
   };
   map = new google.maps.Map(mapCanvas, mapOpts);
+
+  var bounds = new google.maps.LatLngBounds(
+    new google.maps.LatLng(44.387799, 22.137054), // Southwest coordinates
+    new google.maps.LatLng(52.545875, 40.227580)  // Northeast coordinates
+  );
+  map.fitBounds(bounds);
+
 
   // Create a geocoder object to convert the address to coordinates
   var geocoder = new google.maps.Geocoder();
@@ -393,50 +394,68 @@ $(document).ready(function(){
     }
 
     if(!errorFields) {
-      form.append('action', 'order')
-      orderData = Object.fromEntries(form)
+      // Додаємо перевірку валідності адрес
+      var fromAddress = form.get('from_address');
+      var toAddress = form.get('to_the_address');
 
-      $.ajax({
-        url: ajaxPostUrl,
-        method: 'GET',
-        data: {
-          "action": "active_vehicles_locations"
-        },
-        success: function(response){
-          var taxiArr = JSON.parse(response.data);
-
-          if (taxiArr.length > 0) {
-            createMap(form.get('from_address'), form.get('to_the_address'), taxiArr);
-          } else {
-            var noTaxiArr = document.createElement("div");
-            noTaxiArr.innerHTML = `
-              <div class="modal-taxi">
-                <div class="modal-content-taxi">
-                  <span class="close">&times;</span>
-                  <h3>Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою пізніше!</h3>
-                </div>
-              </div>
-            `;
-            document.body.appendChild(noTaxiArr);
-
-            // We attach an event to close the window when the cross is clicked
-            var closeButton = noTaxiArr.querySelector(".close");
-            closeButton.addEventListener("click", function() {
-              noTaxiArr.parentNode.removeChild(noTaxiArr);
-              deleteAllCookies();
-              location.reload();
-            });
-          }
+      var geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ 'address': fromAddress }, function(results, status) {
+        if (status !== 'OK') {
+          $('#from_address-error').html('Некоректна адреса');
+          return;
         }
-      });
+        geocoder.geocode({ 'address': toAddress }, function(results, status) {
+          if (status !== 'OK') {
+            $('#to_the_address-error').html('Некоректна адреса');
+            return;
+          }
+          form.append('action', 'order');
+          orderData = Object.fromEntries(form);
 
-      setCookie("address", form.get('from_address'), 1);
-      setCookie("to_address", form.get('to_the_address'), 1);
-      setCookie("phone", form.get('phone_number'), 1);
-      setCookie('orderData', JSON.stringify(orderData), 1);
+          $.ajax({
+            url: ajaxPostUrl,
+            method: 'GET',
+            data: {
+              "action": "active_vehicles_locations"
+            },
+            success: function(response){
+              var taxiArr = JSON.parse(response.data);
+
+              if (taxiArr.length > 0) {
+                createMap(fromAddress, toAddress, taxiArr);
+              } else {
+                var noTaxiArr = document.createElement("div");
+                noTaxiArr.innerHTML = `
+                  <div class="modal-taxi">
+                    <div class="modal-content-taxi">
+                      <span class="close">&times;</span>
+                      <h3>Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою пізніше!</h3>
+                    </div>
+                  </div>
+                `;
+                document.body.appendChild(noTaxiArr);
+
+                // We attach an event to close the window when the cross is clicked
+                var closeButton = noTaxiArr.querySelector(".close");
+                closeButton.addEventListener("click", function() {
+                  noTaxiArr.parentNode.removeChild(noTaxiArr);
+                  deleteAllCookies();
+                  location.reload();
+                });
+              }
+            }
+          });
+
+          setCookie("address", fromAddress, 1);
+          setCookie("to_address", toAddress, 1);
+          setCookie("phone", form.get('phone_number'), 1);
+          setCookie('orderData', JSON.stringify(orderData), 1);
+        });
+      });
     }
   });
 });
+
 
 $(document).ready(function(){
   $('[id^="sub-form-"]').on('submit', function(event){
@@ -465,4 +484,29 @@ $(document).ready(function(){
       }
     });
   });
+});
+
+function initAutocomplete(inputID) {
+  const inputField = document.getElementById(inputID);
+  const autoComplete = new google.maps.places.Autocomplete(inputField, {
+    bounds: new google.maps.Circle({
+      center: { lat: CENTRE_CITY_LAT, lng: CENTRE_CITY_LNG },
+      radius: CENTRE_CITY_RADIUS,
+    }).getBounds(),
+    strictBounds: true,
+  });
+  autoComplete.addListener('place_changed', function(){
+    const place = autoComplete.getPlace();
+    if (place && place.formatted_address) {
+      inputField.value = place.formatted_address;
+    } else {
+      inputField.value = '';
+      inputField.placeholder = "Будь ласка, введіть коректну адресу";
+    }
+  });
+}
+
+loadGoogleMaps( 3, apiGoogle, "uk",'','geometry,places').then(function() {
+ initAutocomplete('address');
+ initAutocomplete('to_address');
 });
