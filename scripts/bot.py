@@ -98,8 +98,13 @@ def update_phone_number(update, context):
                                   reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[:3]], resize_keyboard=True))
 
 
+
+STATE = None       # range (1-50)
+FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
+U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(6, 11)
 LOCATION_WRONG = "Місце посадки - невірне"
 LOCATION_CORRECT = "Місце посадки - вірне"
+NOT_CORRECT_ADDRESS = 'Немає вірної адреси'
 CONTINUE = 'Продовжити замовлення'
 CANCEL = 'Скасувати замовлення'
 TOMORROW = "Замовити на завтра"
@@ -122,6 +127,8 @@ def continue_order(update, context):
 
 
 def time_for_order(update, context):
+    global STATE
+    STATE = START_TIME_ORDER
     keyboard = [KeyboardButton(text="Замовити на зараз", request_location=True),
                 KeyboardButton(text=f"{TODAY}")]
     reply_markup = ReplyKeyboardMarkup(
@@ -131,15 +138,14 @@ def time_for_order(update, context):
     update.message.reply_text(f"Бажаєте замовити на зараз чи на певний час?", reply_markup=reply_markup)
 
 
-
-
-
 def cancel_order(update, context):
     update.message.reply_text('Гарного дня. Дякуємо, що скористались нашими послугами',  reply_markup=ReplyKeyboardRemove())
     cancel(update, context)
 
 
 def location(update: Update, context: CallbackContext):
+    global STATE
+    STATE = None
     m = update.message
     # geocoding lat and lon to address
     context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
@@ -151,11 +157,6 @@ def location(update: Update, context: CallbackContext):
     else:
         update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
         from_address(update, context)
-
-
-STATE = None       # range (1-50)
-FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER = range(1, 5)
-U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(5, 10)
 
 
 def the_confirmation_of_location(update, context):
@@ -174,8 +175,6 @@ def from_address(update, context):
     global STATE
     STATE = FROM_ADDRESS
     update.message.reply_text('Введіть адресу місця посадки:', reply_markup=ReplyKeyboardRemove())
-
-NOT_CORRECT_ADDRESS = 'Немає вірної адреси'
 
 
 def to_the_address(update, context):
@@ -266,30 +265,38 @@ def buttons_addresses(update, context, address):
         return None
 
 
-WAITING = 'Очікується'
-
-
 def order_create(update, context):
     payment = update.message.text
     user = User.get_by_chat_id(update.message.chat.id)
     context.user_data['phone_number'] = user.phone_number
-    destination_lat, destination_long = geocode(context.user_data['to_the_address'],os.environ["GOOGLE_API_KEY"])
+    destination_lat, destination_long = geocode(context.user_data['to_the_address'], os.environ["GOOGLE_API_KEY"])
     if not context.user_data.get('from_address'):
         context.user_data['from_address'] = context.user_data['location_address']
     else:
-        context.user_data['latitude'], context.user_data['longitude'] = geocode(context.user_data['from_address'],os.environ["GOOGLE_API_KEY"])
-    Order.objects.create(
-        from_address=context.user_data['from_address'],
-        latitude=context.user_data['latitude'],
-        longitude=context.user_data['longitude'],
-        to_the_address=context.user_data['to_the_address'],
-        to_latitude=destination_lat,
-        to_longitude=destination_long,
-        phone_number=context.user_data['phone_number'],
-        chat_id_client=update.message.chat.id,
-        sum='',
-        payment_method=payment.split()[1],
-        status_order=Order.WAITING)
+        context.user_data['latitude'], context.user_data['longitude'] = geocode(context.user_data['from_address'], os.environ["GOOGLE_API_KEY"])
+    order = Order.get_order(chat_id_client=update.message.chat.id, phone=user.phone_number, status_order=Order.ON_TIME)
+    if not order:
+        Order.objects.create(
+            from_address=context.user_data['from_address'],
+            latitude=context.user_data['latitude'],
+            longitude=context.user_data['longitude'],
+            to_the_address=context.user_data['to_the_address'],
+            to_latitude=destination_lat,
+            to_longitude=destination_long,
+            phone_number=user.phone_number,
+            chat_id_client=update.message.chat.id,
+            payment_method=payment.split()[1],
+            status_order=Order.WAITING)
+    else:
+        order.from_address = context.user_data['from_address']
+        order.latitude = context.user_data['latitude']
+        order.longitude = context.user_data['longitude']
+        order.to_the_address = context.user_data['to_the_address']
+        order.to_latitude = destination_lat
+        order.to_longitude = destination_long
+        order.phone_number = user.phone_number
+        order.payment_method = payment.split()[1]
+        order.save()
 
     drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
 
@@ -320,12 +327,12 @@ def order_create(update, context):
 
 
 def time_order(update, context):
-    answer = update.message.text
     global STATE
+    if STATE == START_TIME_ORDER:
+        answer = update.message.text
+        context.user_data['time_order'] = answer
     STATE = TIME_ORDER
     update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)')
-    if answer == TODAY:
-        pass
 
 
 def order_on_time(update, context):
@@ -338,13 +345,21 @@ def order_on_time(update, context):
         min_time = timezone.localtime() + datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
-            order = Order.get_order(chat_id_client=context.user_data['client_chat_id'], status_order=Order.WAITING)
-            order.status = Order.ON_TIME
-            order.order_time = conv_time
-            order.save()
-        else:
-            update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
-            STATE = TIME_ORDER
+            if context.user_data['time_order'] == TODAY:
+                Order.objects.create(chat_id_client=context.user_data['client_chat_id'],
+                                     status_order=Order.ON_TIME,
+                                     order_time=conv_time)
+                from_address(update, context)
+            elif not context.user_data['time_order']:
+                order = Order.get_order(chat_id_client=context.user_data['client_chat_id'],
+                                        phone=context.user_data['phone_number'],
+                                        status_order=Order.WAITING)
+                order.status = Order.ON_TIME
+                order.order_time = conv_time
+                order.save()
+            else:
+                update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
+                STATE = TIME_ORDER
     else:
         update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
         STATE = TIME_ORDER
@@ -385,7 +400,7 @@ def inline_buttons_for_driver(update, context):
     if user:
         context.user_data['client_chat_id'] = user.chat_id
         if query.data == 'Accept order':
-            order = Order.get_order(chat_id_client=user.chat_id, status_order=Order.WAITING)
+            order = Order.get_order(chat_id_client=user.chat_id, phone=user.phone_number, status_order=Order.WAITING)
             park_work = ParkStatus.objects.filter(driver=driver).first()
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             licence_plate = (list(record))[-1].licence_plate
@@ -1012,7 +1027,9 @@ def code_timer(update, context, timer, sleep):
 def comment(update, context):
     global STATE
     STATE = COMMENT
-    order = Order.get_order(chat_id_client=update.message.chat.id, status_order=Order.WAITING)
+    order = Order.get_order(chat_id_client=update.message.chat.id,
+                            phone=context.user_data['phone_number'],
+                            status_order=Order.WAITING)
     keyboard = [
         KeyboardButton(text="\U00002b50*5"),
         KeyboardButton(text="\U00002b50*4"),

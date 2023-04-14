@@ -1104,9 +1104,9 @@ class Order(models.Model):
     comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL)
 
     @staticmethod
-    def get_order(chat_id_client, status_order):
+    def get_order(chat_id_client, phone, status_order):
         try:
-            order = Order.objects.get(chat_id_client=chat_id_client, status_order=status_order)
+            order = Order.objects.get(chat_id_client=chat_id_client, phone_number=phone, status_order=status_order)
             return order
         except Order.DoesNotExist:
             return None
