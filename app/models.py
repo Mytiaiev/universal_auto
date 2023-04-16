@@ -1086,8 +1086,10 @@ class Comment(models.Model):
 class Order(models.Model):
     WAITING = 'Очікується'
     IN_PROGRESS = 'Виконується'
+    COMPLETED = 'Виконаний'
     CANCELED = 'Скасовано клієнтом'
     ON_TIME = 'На певний час'
+
 
     from_address = models.CharField(max_length=255)
     latitude = models.CharField(max_length=10)
