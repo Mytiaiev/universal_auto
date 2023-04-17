@@ -1,5 +1,5 @@
 # Universal Auto
-This repo is supposed to get statistics from Uber, Bolt, Uklon to calculate performance of car cross this aggregators for fleet owners and provide reports via telegram bit for Drivers, Fleet Managers and Fleet Owners. 
+This repo is supposed to get statistics from Uber, Bolt, Uklon to calculate performance of car cross this aggregators for fleet owners and provide reports via telegram BOT for Drivers, Fleet Managers and Fleet Owners. 
 
 # How to run a project on your local machine?
 1. Install Docker https://docs.docker.com/engine/install/
