@@ -187,8 +187,8 @@ def to_the_address(update, context):
         address = update.message.text
         addresses = buttons_addresses(update, context, address=address)
         if addresses is not None:
-            for item in addresses:
-                buttons.append([KeyboardButton(str(item))])
+            for key in addresses.keys():
+                buttons.append([KeyboardButton(key)])
             reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             context.user_data['addresses_first'] = addresses
             update.message.reply_text(
@@ -210,9 +210,10 @@ def payment_method(update, context):
         buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
         addresses = buttons_addresses(update, context, address=address)
         if addresses is not None:
-            for item in addresses:
-                buttons.append([KeyboardButton(str(item))])
+            for key in addresses.keys():
+                buttons.append([KeyboardButton(key)])
             reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+
             context.user_data['addresses_second'] = addresses
             update.message.reply_text(
                 f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу",
@@ -239,7 +240,7 @@ def payment_method(update, context):
 def second_address_check(update, context):
     response = update.message.text
     lst = context.user_data['addresses_second']
-    if response not in lst or response == NOT_CORRECT_ADDRESS:
+    if response not in lst.keys() or response == NOT_CORRECT_ADDRESS:
         to_the_address(update, context)
     else:
         context.user_data['to_the_address'] = response
@@ -249,7 +250,7 @@ def second_address_check(update, context):
 def first_address_check(update, context):
     response = update.message.text
     lst = context.user_data['addresses_first']
-    if response not in lst or response == NOT_CORRECT_ADDRESS:
+    if response not in lst.keys() or response == NOT_CORRECT_ADDRESS:
         from_address(update, context)
     else:
         context.user_data['from_address'] = response
@@ -259,10 +260,9 @@ def first_address_check(update, context):
 def buttons_addresses(update, context, address):
     center_lat, center_lng = f"{ParkSettings.get_value('CENTRE_CITY_LAT')}", f"{ParkSettings.get_value('CENTRE_CITY_LNG')}"
     center_radius = int(f"{ParkSettings.get_value('CENTRE_CITY_RADIUS')}")
-    lst_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius,
-                                            os.environ["GOOGLE_API_KEY"])
-    if lst_addresses is not None:
-        return lst_addresses
+    dict_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius, os.environ["GOOGLE_API_KEY"])
+    if dict_addresses is not None:
+        return dict_addresses
     else:
         return None
 
@@ -271,12 +271,13 @@ def order_create(update, context):
     payment = update.message.text
     user = User.get_by_chat_id(update.message.chat.id)
     context.user_data['phone_number'] = user.phone_number
-    destination_lat, destination_long = geocode(context.user_data['to_the_address'], os.environ["GOOGLE_API_KEY"])
+    destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
+    destination_lat, destination_long = geocode(destination_place, os.environ["GOOGLE_API_KEY"])
     if not context.user_data.get('from_address'):
         context.user_data['from_address'] = context.user_data['location_address']
     else:
-        context.user_data['latitude'], context.user_data['longitude'] = geocode(context.user_data['from_address'],
-                                                                                os.environ["GOOGLE_API_KEY"])
+        from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
+        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place, os.environ["GOOGLE_API_KEY"])
     order = Order.get_order(chat_id_client=update.message.chat.id, phone=user.phone_number, status_order=Order.ON_TIME)
     if order and not order.payment_method:
         order.from_address = context.user_data['from_address']
@@ -324,10 +325,12 @@ def send_order_to_driver(sender, instance, **kwargs):
         reply_markup = InlineKeyboardMarkup(keyboard)
         if drivers:
             for driver in drivers:
-                try:
-                    bot.send_message(chat_id=driver, text=message, reply_markup=reply_markup)
-                except:
-                    pass
+                record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+                if record:
+                    try:
+                        bot.send_message(chat_id=driver, text=message, reply_markup=reply_markup)
+                    except:
+                        pass
 
 
 def time_order(update, context):
@@ -387,16 +390,16 @@ def send_time_orders(context):
             drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
             if drivers:
                 for driver in drivers:
-                    keyboard = [
-                        [InlineKeyboardButton("\u2705 Прийняти замовлення",
-                                              callback_data=f"Accept_order {timeorder.pk}")],
-                        [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
-                    ]
-                    try:
-                        context.bot.send_message(chat_id=driver, text=message,
-                                                 reply_markup=InlineKeyboardMarkup(keyboard))
-                    except:
-                        pass
+                    record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+                    if record:
+                        keyboard = [
+                            [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
+                            [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
+                                   ]
+                        try:
+                            context.bot.send_message(chat_id=driver, text=message, reply_markup=InlineKeyboardMarkup(keyboard))
+                        except:
+                            pass
 
 
 def handle_callback_order(update, context):
