@@ -5,6 +5,7 @@ default = '0'
 settings = {
     'FREE_RENT': '15',
     'RENT_PRICE': '15',
+    'DRIVER_PLAN': '10000',
     'TARIFF_IN_THE_CITY': '15',
     'TARIFF_OUTSIDE_THE_CITY': '30',
     'TARIFF_CAR_DISPATCH': '7',

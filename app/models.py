@@ -180,7 +180,7 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return self.signal
 
     def report_text(self, name=None, rate=0.35):
-        return f'New Uklon {self.full_name} {self.signal}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'Uklon: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.35):
         return -(self.kassa()) * rate
@@ -243,8 +243,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return self.mobile_number
 
     def report_text(self, name=None, rate=0.65):
-        name = name or self.full_name()
-        return f'Bolt {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
         res = self.total_cach_less_drivers_amount() * rate + float(self.total_amount_cach)
@@ -297,8 +296,7 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return str(self.driver_uuid)
 
     def report_text(self, name=None, rate=0.65):
-        name = name or self.full_name()
-        return f'Uber {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные({float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'Uber: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
        return float(self.total_amount) * rate + float(self.total_amount_cach)
@@ -2679,10 +2677,17 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
                 owner["Fleet Owner"] += r.total_owner_amount(float(rate.rate))
 
     totals = {k: v for k, v in totals.items() if v != 0.0}
+    plan = dict(totals)
     totals = {k: f'Загальна каса {k}: %.2f\n' % v for k, v in totals.items()}
     totals = {k: v + reports[k] for k, v in totals.items()}
-    totals = {k: v + f'Зарплата за тиждень {k}: %.2f\n' % salary[k] for k, v in totals.items()}
-
+    for k, v in totals.items():
+        if plan[k] > int(ParkSettings.get_value("DRIVER_PLAN", 10000)):
+            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" \
+                f"-----------------------------------------------------------------------------------------------------"
+        else:
+            incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
+            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" \
+                f"-----------------------------------------------------------------------------------------------------"
     return owner, totals
 
 

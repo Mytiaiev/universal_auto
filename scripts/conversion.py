@@ -106,19 +106,16 @@ def get_address(latitude, longitude, api_key) -> str or None:
         return None
 
 
-def geocode(address, api_key) -> tuple or None:
+def geocode(place_id, api_key) -> tuple or None:
     """
-    Returns lat, lon address using Google Geocoding API
+    Returns lat, lon address using Google Places API
     """
-    # URL for request to API
-    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}"
 
-    # Sending request and get response
+    url = f"https://maps.googleapis.com/maps/api/place/details/json?placeid={place_id}&language=uk&key={api_key}"
     response = requests.get(url).json()
 
-    # Checking for results and coordinates
     if response['status'] == 'OK':
-        result = response['results'][0]
+        result = response['result']
         latitude = result['geometry']['location']['lat']
         longitude = result['geometry']['location']['lng']
         return str(latitude)[:10], str(longitude)[:10]
@@ -135,7 +132,7 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int,
     response = requests.get(url)
     data = response.json()
     city_park = f"{ParkSettings.get_value('CITY_PARK')}"
-    addresses = []
+    addresses = {}
     pattern = re.compile(rf".*({city_park}).*", re.IGNORECASE)
 
     if data['status'] == 'OK':
@@ -143,7 +140,7 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int,
         for result in results:
             match = pattern.search(result['description'])
             if match:
-                addresses.append(result['description'])
+                addresses.update({result['description']: result['place_id']})
     else:
         return None
 
