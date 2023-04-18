@@ -20,7 +20,7 @@ import traceback
 from celery.signals import task_postrun
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
-    send_on_job_application_on_driver_to_Uber, get_report_for_tg
+    send_on_job_application_on_driver_to_Uber, get_report_for_tg, check_payment_status_tg
 from scripts.driversrating import DriversRatingMixin
 from uuid import uuid4
 import traceback
@@ -498,25 +498,11 @@ def handle_callback_order(update, context):
                 "version": "3",
                 "order_id": payment_id
             })
-            context.user_data['response'] = True
 
-            try:
-                r = threading.Thread(target=payment_response, args=(update, context, response), daemon=True)
-                r.start()
-            except:
-                pass
-            while True:
-                time.sleep(6)
-                if not context.user_data['response']:
-                    context.bot.send_message(chat_id=update.effective_chat.id,
-                                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
-                    query.edit_message_text(text=f"Ви <<Поїздка оплачена>>")
-                    break
+            check_payment_status_tg.delay(data[1], query.message.message_id, response)
         else:
             context.bot.send_message(chat_id=order.chat_id_client,
                                      text="Дякуємо, що скористались послугами нашої компанії")
-        order.status_order = Order.COMPLETED
-        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
 
 
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
@@ -534,12 +520,18 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
                              photo_width=512, photo_height=512, photo_size=50000, is_flexible=True)
 
 
-def payment_response(update, context, response):
-    while context.user_data['response']:
-        time.sleep(5)
-        status = response.get('status')
-        if status == 'success':
-            context.user_data['response'] = False
+@task_postrun.connect
+def check_payment_status(sender=None, **kwargs):
+    if sender == check_payment_status_tg:
+        rep = kwargs.get("retval")
+        query_id, order_id, status_payment = rep
+        if status_payment:
+            order = Order.objects.filter(pk=order_id).first()
+            bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
+            bot.send_message(chat_id=order.chat_id_client,
+                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
+            order.status_order = Order.COMPLETED
+            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
 
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):

@@ -2,6 +2,7 @@ import time
 import pendulum
 from contextlib import contextmanager
 from datetime import datetime
+
 try:
     import zoneinfo
 except ImportError:
@@ -10,6 +11,7 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
+from celery import shared_task
 from selenium.common import InvalidSessionIdException
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
@@ -22,8 +24,8 @@ BOLT_CHROME_DRIVER = None
 UKLON_CHROME_DRIVER = None
 UBER_CHROME_DRIVER = None
 
-UPDATE_DRIVER_DATA_FREQUENCY = 60*60*1
-UPDATE_DRIVER_STATUS_FREQUENCY = 60*2
+UPDATE_DRIVER_DATA_FREQUENCY = 60 * 60 * 1
+UPDATE_DRIVER_STATUS_FREQUENCY = 60 * 2
 MEMCASH_LOCK_EXPIRE = 60 * 10
 MEMCASH_LOCK_AFTER_FINISHING = 10
 
@@ -218,6 +220,18 @@ def get_report_for_tg(self):
     try:
         report = get_report(week_number=None, driver=True, sleep=5, headless=True)
         return report
+    except Exception as e:
+        logger.info(e)
+
+
+@shared_task
+def check_payment_status_tg(order, query, response):
+    try:
+        while True:
+            time.sleep(5)
+            status = response.get('status')
+            if status == 'success':
+                return query, order, response
     except Exception as e:
         logger.info(e)
 
