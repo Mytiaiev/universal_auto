@@ -26,6 +26,8 @@ services:
       UKLON_NAME:
       UKLON_PASSWORD:
       LIQ_PAY_TOKEN:
+      LIQ_PAY_PUBLIC_KEY:
+      LIQ_PAY_PRIVATE_KEY:
       UKLON_TOKEN:
       UAGPS_LOGIN:
       UAGPS_PASSWORD:

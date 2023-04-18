@@ -2,6 +2,7 @@ from telegram import *
 from telegram.ext import *
 from app.models import *
 import ast
+from liqpay import LiqPay
 import os
 import threading
 import time
@@ -477,40 +478,45 @@ def handle_callback_order(update, context):
         context.user_data['running'] = False
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_reply_markup(reply_markup=reply_markup)
-    elif data[0] == "Along_the_route":
-        keyboard = end_trip(update, context, order)
+    elif data[0] == "Along_the_route" or data[0] == "Off_route":
+        keyboard = [[
+            InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
+        ]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_reply_markup(reply_markup=reply_markup)
-    elif data[0] == "Off_route":
-        keyboard = end_trip(update, context, order)
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_reply_markup(reply_markup=reply_markup)
-        # need price from uagps
+        if data[0] == "Off_route":
+            pass
+            # need price from uagps
     elif data[0] == "End_trip":
         if order.payment_method == _CARD:
             payment_id = str(uuid4())
             payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
                             os.environ["BOT_URL_IMAGE_TAXI"], payment_id, order.sum)
+            liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"])
             response = liqpay_client.api("request", {
                 "action": "status",
                 "version": "3",
                 "order_id": payment_id
             })
+            context.user_data['response'] = True
+
+            try:
+                r = threading.Thread(target=payment_response, args=(update, context, response), daemon=True)
+                r.start()
+            except:
+                pass
             while True:
-                time.sleep(10)
-                status = response.get('status')
-                if status == 'success':
+                time.sleep(6)
+                if not context.user_data['response']:
                     context.bot.send_message(chat_id=update.effective_chat.id,
                                              text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
                     query.edit_message_text(text=f"Ви <<Поїздка оплачена>>")
                     break
-            order.status_order = Order.COMPLETED
-            ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         else:
-            order.status_order = Order.COMPLETED
-            ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
             context.bot.send_message(chat_id=order.chat_id_client,
                                      text="Дякуємо, що скористались послугами нашої компанії")
+        order.status_order = Order.COMPLETED
+        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
 
 
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
@@ -518,20 +524,22 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
     description = 'Опис товару або послуги'
     payload = 'Додаткові дані для ідентифікації користувача'
     currency = 'UAH'
-    prices = [LabeledPrice(label='Ціна', amount=price * 100)]
+    prices = [LabeledPrice(label='Ціна', amount=int(price) * 100)]
+    need_shipping_address = False
 
     # Sending a request for payment
-    context.bot.send_invoice(chat_id=chat_id, title=title, description=description, payload=payload,
+    context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
                              provider_token=provider_token, currency=currency, start_parameter=start_parameter,
-                             prices=prices, photo_url=url,
+                             prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
                              photo_width=512, photo_height=512, photo_size=50000, is_flexible=True)
 
 
-def end_trip(update, context, order):
-    keyboard = [[
-        InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
-    ]]
-    return keyboard
+def payment_response(update, context, response):
+    while context.user_data['response']:
+        time.sleep(5)
+        status = response.get('status')
+        if status == 'success':
+            context.user_data['response'] = False
 
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):
