@@ -260,7 +260,8 @@ def first_address_check(update, context):
 def buttons_addresses(update, context, address):
     center_lat, center_lng = f"{ParkSettings.get_value('CENTRE_CITY_LAT')}", f"{ParkSettings.get_value('CENTRE_CITY_LNG')}"
     center_radius = int(f"{ParkSettings.get_value('CENTRE_CITY_RADIUS')}")
-    dict_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius, os.environ["GOOGLE_API_KEY"])
+    dict_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius,
+                                             os.environ["GOOGLE_API_KEY"])
     if dict_addresses is not None:
         return dict_addresses
     else:
@@ -277,7 +278,8 @@ def order_create(update, context):
         context.user_data['from_address'] = context.user_data['location_address']
     else:
         from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
-        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place, os.environ["GOOGLE_API_KEY"])
+        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place,
+                                                                                os.environ["GOOGLE_API_KEY"])
     order = Order.get_order(chat_id_client=update.message.chat.id, phone=user.phone_number, status_order=Order.ON_TIME)
     if order and not order.payment_method:
         order.from_address = context.user_data['from_address']
@@ -325,12 +327,10 @@ def send_order_to_driver(sender, instance, **kwargs):
         reply_markup = InlineKeyboardMarkup(keyboard)
         if drivers:
             for driver in drivers:
-                record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
-                if record:
-                    try:
-                        bot.send_message(chat_id=driver, text=message, reply_markup=reply_markup)
-                    except:
-                        pass
+                try:
+                    bot.send_message(chat_id=driver, text=message, reply_markup=reply_markup)
+                except:
+                    pass
 
 
 def time_order(update, context):
@@ -389,17 +389,16 @@ def send_time_orders(context):
             Час подачі:{timezone.localtime(timeorder.order_time).time()}"
             drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
             if drivers:
+                keyboard = [
+                    [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
+                    [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
+                ]
                 for driver in drivers:
-                    record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
-                    if record:
-                        keyboard = [
-                            [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
-                            [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
-                                   ]
-                        try:
-                            context.bot.send_message(chat_id=driver, text=message, reply_markup=InlineKeyboardMarkup(keyboard))
-                        except:
-                            pass
+                    try:
+                        context.bot.send_message(chat_id=driver, text=message,
+                                                 reply_markup=InlineKeyboardMarkup(keyboard))
+                    except:
+                        pass
 
 
 def handle_callback_order(update, context):
@@ -453,6 +452,9 @@ def handle_callback_order(update, context):
                     r.start()
                 except:
                     pass
+            else:
+                query.edit_message_text(
+                    text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
         else:
             query.edit_message_text(text="Це замовлення вже виконується.")
     elif data[0] == 'Reject_order':
@@ -520,7 +522,7 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
     context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
                              provider_token=provider_token, currency=currency, start_parameter=start_parameter,
                              prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
-                             photo_width=512, photo_height=512, photo_size=50000, is_flexible=True)
+                             photo_width=512, photo_height=512, photo_size=50000, is_flexible=False)
 
 
 @task_postrun.connect
