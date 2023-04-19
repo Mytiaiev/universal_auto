@@ -2589,6 +2589,75 @@ class UaGps(SeleniumTools):
         rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
         return rent_distance, rent_time
 
+    # def get_rent_distance(self):
+    #     now = timezone.localtime()
+    #     start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
+    #     for _driver in Driver.objects.all():
+    #         rent_distance = 0
+    #         rent_time = datetime.timedelta()
+    #         # car that have worked at that day
+    #         working_cars = UseOfCars.objects.filter(created_at__gte=start,
+    #                                                 created_at__lte=now)
+    #         vehicles = Vehicle.objects.filter(driver=_driver)
+    #         if vehicles:
+    #             for vehicle in vehicles:
+    #                 # check driver's car before they start work
+    #                 first_use = working_cars.filter(licence_plate=vehicle.licence_plate).first()
+    #                 if first_use:
+    #                     rent_before = self.generate_report(start,
+    #                                                        timezone.localtime(first_use.created_at),
+    #                                                        vehicle.licence_plate)
+    #                     rent_distance += rent_before[0]
+    #                     rent_time += rent_before[1]
+    #                     # check driver's car after work
+    #                     last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
+    #                     if last_use.end_at:
+    #                         rent_after = self.generate_report(timezone.localtime(last_use.end_at),
+    #                                                           now,
+    #                                                           vehicle.licence_plate)
+    #                         rent_distance += rent_after[0]
+    #                         rent_time += rent_after[1]
+    #                 #  car not used in that day
+    #                 else:
+    #                     rent = self.generate_report(start, now, vehicle.licence_plate)
+    #                     rent_distance += rent[0]
+    #                     rent_time += rent[1]
+    #         # driver work at that day
+    #         driver_use = working_cars.filter(user_vehicle=_driver)
+    #         if driver_use:
+    #             for car in driver_use:
+    #                 if car.end_at:
+    #                     end = car.end_at
+    #                 else:
+    #                     end = now
+    #                 rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+    #                                                             name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
+    #                                                             start_time__gte=timezone.localtime(car.created_at),
+    #                                                             start_time__lte=timezone.localtime(end))
+    #                 for status in rent_statuses:
+    #                     if status.end_time:
+    #                         end = status.end_time
+    #                     else:
+    #                         end = now
+    #                     status_report = self.generate_report(timezone.localtime(status.start_time),
+    #                                                          timezone.localtime(end),
+    #                                                          car.licence_plate)
+    #                     rent_distance += status_report[0]
+    #                     rent_time += status_report[1]
+    #         #             update today rent in db
+    #         rent_today = RentInformation.objects.filter(driver_name=_driver,
+    #                                                     created_at__date=timezone.now().date()).first()
+    #         if rent_today:
+    #             rent_today.rent_time = rent_time
+    #             rent_today.rent_distance = rent_distance
+    #             rent_today.save()
+    #         else:
+    #             #  create rent file for today
+    #             RentInformation.objects.create(driver_name=_driver,
+    #                                            driver=_driver,
+    #                                            rent_time=rent_time,
+    #                                            rent_distance=rent_distance)
+
     def get_rent_distance(self):
         now = timezone.localtime()
         start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
@@ -2619,31 +2688,21 @@ class UaGps(SeleniumTools):
                             rent_time += rent_after[1]
                     #  car not used in that day
                     else:
-                        rent = self.generate_report(start, now, vehicle.licence_plate)
-                        rent_distance += rent[0]
-                        rent_time += rent[1]
             # driver work at that day
-            driver_use = working_cars.filter(user_vehicle=_driver)
-            if driver_use:
-                for car in driver_use:
-                    if car.end_at:
-                        end = car.end_at
-                    else:
-                        end = now
-                    rent_statuses = StatusChange.objects.filter(driver=_driver.id,
-                                                                name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
-                                                                start_time__gte=timezone.localtime(car.created_at),
-                                                                start_time__lte=timezone.localtime(end))
-                    for status in rent_statuses:
-                        if status.end_time:
-                            end = status.end_time
-                        else:
-                            end = now
-                        status_report = self.generate_report(timezone.localtime(status.start_time),
-                                                             timezone.localtime(end),
-                                                             car.licence_plate)
-                        rent_distance += status_report[0]
-                        rent_time += status_report[1]
+                        rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+                                                                    name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
+                                                                    start_time__gte=timezone.localtime(start),
+                                                                    start_time__lte=timezone.localtime(now))
+                        for status in rent_statuses:
+                            if status.end_time:
+                                end = status.end_time
+                            else:
+                                end = now
+                            status_report = self.generate_report(timezone.localtime(status.start_time),
+                                                                 timezone.localtime(end),
+                                                                 vehicle.licence_plate)
+                            rent_distance += status_report[0]
+                            rent_time += status_report[1]
             #             update today rent in db
             rent_today = RentInformation.objects.filter(driver_name=_driver,
                                                         created_at__date=timezone.now().date()).first()
@@ -2657,7 +2716,6 @@ class UaGps(SeleniumTools):
                                                driver=_driver,
                                                rent_time=rent_time,
                                                rent_distance=rent_distance)
-
 
 def get_report(week_number=None, driver=True, sleep=5, headless=True):
     owner = {"Fleet Owner": 0}
@@ -2684,12 +2742,11 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     totals = {k: v + reports[k] for k, v in totals.items()}
     for k, v in totals.items():
         if plan[k] > int(ParkSettings.get_value("DRIVER_PLAN", 10000)):
-            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" \
-                f"-----------------------------------------------------------------------------------------------------"
+            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 42
         else:
             incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
-            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" \
-                f"-----------------------------------------------------------------------------------------------------"
+            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" + \
+                f"-" * 42
     return owner, totals
 
 

@@ -414,10 +414,11 @@ def handle_callback_order(update, context):
                 vehicle = Vehicle.objects.get(licence_plate=licence_plate)
                 driver_lat, driver_long = get_location_from_db(vehicle)
                 if not order.sum:
-                    price = get_route_price(order.latitude, order.longitude,
+                    distance_price = get_route_price(order.latitude, order.longitude,
                                             order.to_latitude, order.to_longitude,
                                             driver_lat, driver_long,
                                             os.environ["GOOGLE_API_KEY"])
+                    price = distance_price[1]
                 else:
                     price = order.sum
                 keyboard = [
