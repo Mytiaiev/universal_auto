@@ -323,12 +323,10 @@ def send_order_to_driver(sender, instance, **kwargs):
         reply_markup = InlineKeyboardMarkup(keyboard)
         if drivers:
             for driver in drivers:
-                record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
-                if record:
-                    try:
-                        bot.send_message(chat_id=driver, text=message, reply_markup=reply_markup)
-                    except:
-                        pass
+                try:
+                    bot.send_message(chat_id=driver, text=message, reply_markup=reply_markup)
+                except:
+                    pass
 
 
 def time_order(update, context):
@@ -385,16 +383,14 @@ def send_time_orders(context):
             drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
             if drivers:
                 for driver in drivers:
-                    record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
-                    if record:
-                        keyboard = [
-                            [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
-                            [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
-                                   ]
-                        try:
-                            context.bot.send_message(chat_id=driver, text=message, reply_markup=InlineKeyboardMarkup(keyboard))
-                        except:
-                            pass
+                    keyboard = [
+                        [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
+                        [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
+                               ]
+                    try:
+                        context.bot.send_message(chat_id=driver, text=message, reply_markup=InlineKeyboardMarkup(keyboard))
+                    except:
+                        pass
 
 
 def handle_callback_order(update, context):
@@ -411,10 +407,11 @@ def handle_callback_order(update, context):
                 vehicle = Vehicle.objects.get(licence_plate=licence_plate)
                 driver_lat, driver_long = get_location_from_db(vehicle)
                 if not order.sum:
-                    price = get_route_price(order.latitude, order.longitude,
+                    distance_price = get_route_price(order.latitude, order.longitude,
                                             order.to_latitude, order.to_longitude,
                                             driver_lat, driver_long,
                                             os.environ["GOOGLE_API_KEY"])
+                    price = distance_price[1]
                 else:
                     price = order.sum
                 keyboard = [
@@ -450,6 +447,9 @@ def handle_callback_order(update, context):
                     r.start()
                 except:
                     pass
+            else:
+                query.edit_message_text(
+                    text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
         else:
             query.edit_message_text(text="Це замовлення вже виконується.")
 

@@ -81,8 +81,9 @@ def get_route_price(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, 
         else:
             sending_price = 0
         price = sending_price + legs[1][0] * int(ParkSettings.get_value("TARIFF_IN_THE_CITY")) + legs[1][1] * int(ParkSettings.get_value("TARIFF_OUTSIDE_THE_CITY"))
+        route = legs[1][0] + legs[1][1]
 
-        return int(price)
+        return int(price), int(sending_price), route
 
 
 def get_location_from_db(licence_plate):
