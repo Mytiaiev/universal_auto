@@ -501,6 +501,9 @@ class ParkStatus(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.status
+
     class Meta:
         ordering = ['-created_at']
 
@@ -1088,7 +1091,6 @@ class Order(models.Model):
     CANCELED = 'Скасовано клієнтом'
     ON_TIME = 'На певний час'
 
-
     from_address = models.CharField(max_length=255)
     latitude = models.CharField(max_length=10)
     longitude = models.CharField(max_length=10)
@@ -1097,6 +1099,7 @@ class Order(models.Model):
     to_longitude = models.CharField(max_length=10, null=True)
     phone_number = models.CharField(max_length=13)
     chat_id_client = models.CharField(max_length=15)
+    car_delivery_price = models.CharField(max_length=30, null=True, blank=True)
     sum = models.CharField(max_length=30)
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
     payment_method = models.CharField(max_length=70)
@@ -2716,6 +2719,7 @@ class UaGps(SeleniumTools):
                                                driver=_driver,
                                                rent_time=rent_time,
                                                rent_distance=rent_distance)
+
 
 def get_report(week_number=None, driver=True, sleep=5, headless=True):
     owner = {"Fleet Owner": 0}

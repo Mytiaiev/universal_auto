@@ -415,20 +415,18 @@ def handle_callback_order(update, context):
                 driver_lat, driver_long = get_location_from_db(vehicle)
                 if not order.sum:
                     distance_price = get_route_price(order.latitude, order.longitude,
-                                            order.to_latitude, order.to_longitude,
-                                            driver_lat, driver_long,
-                                            os.environ["GOOGLE_API_KEY"])
-                    price = distance_price[1]
-                else:
-                    price = order.sum
+                                                     order.to_latitude, order.to_longitude,
+                                                     driver_lat, driver_long,
+                                                     os.environ["GOOGLE_API_KEY"])
+                    order.car_delivery_price, order.sum = distance_price[0], distance_price[1]
+
                 keyboard = [
                     [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data=f"On_the_spot {order.pk}")],
                     [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {order.pk}")],
                 ]
+
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                order.status_order = Order.IN_PROGRESS
-                order.driver = driver
-                order.sum = price
+                order.status_order, order.driver = Order.IN_PROGRESS, driver
                 order.save()
                 ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
 
@@ -481,8 +479,7 @@ def handle_callback_order(update, context):
         ]
 
         ParkStatus.objects.create(driver=driver, status=Driver.WITH_CLIENT)
-        context.user_data['running'] = False
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup, context.user_data['running'] = InlineKeyboardMarkup(keyboard), False
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "Along_the_route" or data[0] == "Off_route":
         keyboard = [[
@@ -491,13 +488,18 @@ def handle_callback_order(update, context):
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_reply_markup(reply_markup=reply_markup)
         if data[0] == "Off_route":
-            pass
+            status = ParkStatus.objects.get(driver=driver, status=Driver.WITH_CLIENT).first()
+            start_time = str(status.created_at)
+
+
+
+
             # need price from uagps
     elif data[0] == "End_trip":
         if order.payment_method == _CARD:
             payment_id = str(uuid4())
             payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
-                            os.environ["BOT_URL_IMAGE_TAXI"], payment_id, order.sum)
+                            os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
             liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"])
             response = liqpay_client.api("request", {
                 "action": "status",
@@ -509,11 +511,12 @@ def handle_callback_order(update, context):
         else:
             context.bot.send_message(chat_id=order.chat_id_client,
                                      text="Дякуємо, що скористались послугами нашої компанії")
+            query.edit_message_text(text=f"<<Поїздку завершено>>")
 
 
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
     title = 'Послуга особистого водія'
-    description = 'Опис товару або послуги'
+    description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
     payload = 'Додаткові дані для ідентифікації користувача'
     currency = 'UAH'
     prices = [LabeledPrice(label='Ціна', amount=int(price) * 100)]
@@ -523,7 +526,7 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
     context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
                              provider_token=provider_token, currency=currency, start_parameter=start_parameter,
                              prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
-                             photo_width=512, photo_height=512, photo_size=50000, is_flexible=False)
+                             photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
 
 
 @task_postrun.connect
