@@ -112,7 +112,11 @@ TODAY = "Замовити на інший час"
 
 
 def continue_order(update, context):
-    update.message.reply_text(f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')}грн/км\n" +
+    order = Order.objects.filter(chat_id_client=update.message.chat.id, status_order__in=[Order.ON_TIME, Order.WAITING])
+    if order:
+        update.message.reply_text("У вас вже є активне замовлення бажаєте замовити ще одне авто?")
+    else:
+        update.message.reply_text(f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')}грн/км\n" +
                               f"Ціна поїздки за містом {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')}грн/км")
 
     keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}"),
@@ -276,8 +280,9 @@ def order_create(update, context):
     else:
         from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
         context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place, os.environ["GOOGLE_API_KEY"])
-    order = Order.get_order(chat_id_client=update.message.chat.id, phone=user.phone_number, status_order=Order.ON_TIME)
-    if order and not order.payment_method:
+    order = Order.objects.filter(chat_id_client=update.message.chat.id, payment_method="",
+                                  status_order=Order.ON_TIME).first()
+    if order:
         order.from_address = context.user_data['from_address']
         order.latitude = context.user_data['latitude']
         order.longitude = context.user_data['longitude']
@@ -287,6 +292,7 @@ def order_create(update, context):
         order.phone_number = user.phone_number
         order.payment_method = payment.split()[1]
         order.save()
+        update.message.reply_text(f'Замовлення прийняте, очікуйте водія о {timezone.localtime(order.order_time).time()}')
     else:
         Order.objects.create(
             from_address=context.user_data['from_address'],
@@ -377,9 +383,12 @@ def send_time_orders(context):
                                   order_time__lte=min_sending_time)
     if orders:
         for timeorder in orders:
-            message = f"Адреса посадки: {timeorder.from_address}\nМісце прибуття: {timeorder.to_the_address}\n \
-            Спосіб оплати: {timeorder.payment_method}\nНомер телефону: {timeorder.phone_number}\n \
-            Час подачі:{timezone.localtime(timeorder.order_time).time()}"
+            message = f"<u>Замовлення на певний час:</u>\n" \
+            f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
+            f"Адреса посадки: {timeorder.from_address}\n" \
+            f"Місце прибуття: {timeorder.to_the_address}\n" \
+            f"Спосіб оплати: {timeorder.payment_method}\n" \
+            f"Номер телефону: {timeorder.phone_number}\n"
             drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
             if drivers:
                 for driver in drivers:
@@ -388,7 +397,8 @@ def send_time_orders(context):
                         [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
                                ]
                     try:
-                        context.bot.send_message(chat_id=driver, text=message, reply_markup=InlineKeyboardMarkup(keyboard))
+                        context.bot.send_message(chat_id=driver, text=message,
+                                                 reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.HTML)
                     except:
                         pass
 
