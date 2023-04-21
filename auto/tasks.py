@@ -97,7 +97,7 @@ def memcache_lock(lock_id, oid):
             cache.set(lock_id, oid, MEMCASH_LOCK_AFTER_FINISHING)
 
 
-@app.task(bind=True)
+@app.task(bind=True,queue="non_priority_queue")
 def update_driver_status(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
@@ -201,7 +201,7 @@ def send_on_job_application_on_driver_to_NewUklon(self, id):
         logger.info(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue="priority_queue")
 def get_rent_information(self):
     try:
         gps = UaGps(driver=True, sleep=5, headless=True)
@@ -213,7 +213,7 @@ def get_rent_information(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=9)
+@app.task(bind=True, queue="priority_queue")
 def get_report_for_tg(self):
     try:
         report = get_report(week_number=None, driver=True, sleep=5, headless=True)
@@ -245,6 +245,6 @@ def init_chrome_driver():
     global BOLT_CHROME_DRIVER
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
-    BOLT_CHROME_DRIVER = Bolt(week_number=None, driver=True, sleep=3, headless=True, profile='Bolt_CeleryTasks')
-    UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=3, headless=True, profile='Uklon_CeleryTasks')
-    UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=3, headless=True, profile='Uber_CeleryTasks')
+    BOLT_CHROME_DRIVER = Bolt(week_number=None, driver=True, sleep=3, headless=True, remote=False, profile='Bolt_CeleryTasks')
+    UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=3, headless=True, remote=False, profile='Uklon_CeleryTasks')
+    UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=3, headless=True, remote=False, profile='Uber_CeleryTasks')
