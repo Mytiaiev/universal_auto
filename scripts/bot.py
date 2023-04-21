@@ -20,7 +20,7 @@ import traceback
 from celery.signals import task_postrun
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
-    send_on_job_application_on_driver_to_Uber, get_report_for_tg, check_payment_status_tg
+    send_on_job_application_on_driver_to_Uber, get_report_for_tg, check_payment_status_tg, get_distance_trip
 from scripts.driversrating import DriversRatingMixin
 from uuid import uuid4
 import traceback
@@ -53,8 +53,8 @@ start_keyboard = [
 
 # Ordering taxi
 def start(update, context):
-    menu(update, context)
-    chat_id = update.message.chat.id
+    chat_id = update.effective_chat.id
+    menu(update, context, chat_id)
     user = User.get_by_chat_id(chat_id)
     context.user_data.clear()
     if user:
@@ -418,7 +418,7 @@ def handle_callback_order(update, context):
                                                      order.to_latitude, order.to_longitude,
                                                      driver_lat, driver_long,
                                                      os.environ["GOOGLE_API_KEY"])
-                    order.car_delivery_price, order.sum = distance_price[0], distance_price[1]
+                    order.car_delivery_price, order.sum = distance_price[1], distance_price[0]
 
                 keyboard = [
                     [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data=f"On_the_spot {order.pk}")],
@@ -482,19 +482,18 @@ def handle_callback_order(update, context):
         reply_markup, context.user_data['running'] = InlineKeyboardMarkup(keyboard), False
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "Along_the_route" or data[0] == "Off_route":
-        keyboard = [[
-            InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
-        ]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_reply_markup(reply_markup=reply_markup)
         if data[0] == "Off_route":
-            status = ParkStatus.objects.get(driver=driver, status=Driver.WITH_CLIENT).first()
-            start_time = str(status.created_at)
-
-
-
-
-            # need price from uagps
+            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+            licence_plate = (list(record))[-1].licence_plate
+            status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
+            s, e = timezone.localtime(status_driver.created_at), timezone.localtime(timezone.localtime())
+            get_distance_trip.delay(data[1], query.message.message_id, s, e, licence_plate)
+        else:
+            keyboard = [[
+                InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
+            ]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "End_trip":
         if order.payment_method == _CARD:
             payment_id = str(uuid4())
@@ -512,6 +511,9 @@ def handle_callback_order(update, context):
             context.bot.send_message(chat_id=order.chat_id_client,
                                      text="Дякуємо, що скористались послугами нашої компанії")
             query.edit_message_text(text=f"<<Поїздку завершено>>")
+            order.status_order = Order.COMPLETED
+            order.save()
+            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
 
 
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
@@ -540,7 +542,41 @@ def check_payment_status(sender=None, **kwargs):
             bot.send_message(chat_id=order.chat_id_client,
                              text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
             order.status_order = Order.COMPLETED
+            order.save()
             ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+
+
+@task_postrun.connect
+def change_sum_trip(sender=None, **kwargs):
+    if sender == get_distance_trip:
+        rep = kwargs.get("retval")
+        order_id, query_id, minutes_of_trip, distance = rep
+        order = Order.objects.filter(pk=order_id).first()
+        AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')}"), int(
+            f"{ParkSettings.get_value('COST_PER_KM')}")
+        price_per_minute = (AVERAGE_DISTANCE_PER_HOUR * COST_PER_KM) / 60
+        price_per_minute = price_per_minute * minutes_of_trip
+        price_per_distance = round(COST_PER_KM * distance)
+        if price_per_distance > price_per_minute:
+            order.sum = int(price_per_distance) + int(order.car_delivery_price)
+        else:
+            order.sum = int(price_per_minute) + int(order.car_delivery_price)
+        order.save()
+        bot.send_message(chat_id=order.chat_id_client,
+                         text=f'Сума до оплати: {order.sum}грн')
+
+        message = f"Адреса посадки: {order.from_address}\n" \
+                  f"Місце прибуття: {order.to_the_address}\n" \
+                  f"Спосіб оплати: {order.payment_method}\n" \
+                  f"Номер телефону: {order.phone_number}\n" \
+                  f"Загальна вартість: {order.sum}грн"
+
+        keyboard = [[
+            InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
+        ]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
+        bot.edit_message_reply_markup(chat_id=order.driver.chat_id, message_id=query_id, reply_markup=reply_markup)
 
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):
@@ -1973,8 +2009,7 @@ def generate_link_v2(update, context):
         update.message.reply_text('Не вдалось обробити вашу суму, спробуйте ще раз')
 
 
-def menu(update, context):
-    chat_id = update.message.chat.id
+def menu(update, context, chat_id):
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     driver = Driver.get_by_chat_id(chat_id)
     manager = ServiceStationManager.get_by_chat_id(chat_id)
@@ -1983,6 +2018,7 @@ def menu(update, context):
         BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
         BotCommand("/help", "Допомога"),
         BotCommand("/id", "Дізнатись id"),
+        BotCommand("/cancel", "Вийти з процесу"),
     ]
     if driver is not None:
         standart_commands.extend([

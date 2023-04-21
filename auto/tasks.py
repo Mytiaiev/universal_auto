@@ -236,6 +236,21 @@ def check_payment_status_tg(order, query, response):
         logger.info(e)
 
 
+@shared_task
+def get_distance_trip(order, query, start_trip_with_client, end, licence_plate):
+    start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
+    start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
+    end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    try:
+        gps = UaGps(driver=True, sleep=5, headless=True)
+        gps.login()
+        result = gps.generate_report(start, end, licence_plate)
+        minutes = result[1].total_seconds() // 60
+        return order, query, minutes, result[0]
+    except Exception as e:
+        logger.info(e)
+
+'''
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
@@ -245,7 +260,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
     sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
-    # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
+    # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())'''
 
 
 @app.on_after_finalize.connect
