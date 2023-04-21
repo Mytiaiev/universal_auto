@@ -250,7 +250,7 @@ def get_distance_trip(order, query, start_trip_with_client, end, licence_plate):
     except Exception as e:
         logger.info(e)
 
-'''
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
@@ -260,7 +260,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
     sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
-    # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())'''
+    # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
 
 
 @app.on_after_finalize.connect
