@@ -1508,7 +1508,7 @@ class SeleniumTools:
 
 
 class Uber(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://supplier.uber.com", remote=True, profile=None):
+    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://supplier.uber.com", remote=False, profile=None):
         super().__init__('uber', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -1838,7 +1838,7 @@ class Uber(SeleniumTools):
 
 
 class Bolt(SeleniumTools):    
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://fleets.bolt.eu", remote=True, profile=None):
+    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://fleets.bolt.eu", remote=False, profile=None):
         super().__init__('bolt', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -2188,7 +2188,7 @@ class Uklon(SeleniumTools):
 
 
 class NewUklon(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://fleets.uklon.com.ua", remote=True, profile=None):
+    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://fleets.uklon.com.ua", remote=False, profile=None):
         super().__init__('nuklon', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -2517,7 +2517,7 @@ class Privat24(SeleniumTools):
 
 
 class UaGps(SeleniumTools):
-    def __init__(self, driver=True, sleep=5, headless=False, base_url="https://uagps.net/", remote=True, profile=None):
+    def __init__(self, driver=True, sleep=5, headless=False, base_url="https://uagps.net/", remote=False, profile=None):
         super().__init__('uagps', profile=profile)
         self.sleep = sleep
         if driver:

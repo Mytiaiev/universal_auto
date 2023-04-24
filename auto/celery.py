@@ -11,8 +11,8 @@ app = Celery('auto')
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.conf.task_queues = (
-    Queue('priority_queue', Exchange('priority_queue'), routing_key='priority_queue'),
-    Queue('non_priority_queue', Exchange('non_priority_queue'), routing_key='non_priority_queue'),
+    Queue('priority', Exchange('priority'), routing_key='priority'),
+    Queue('non_priority', Exchange('non_priority'), routing_key='non_priority'),
 )
 
 app.autodiscover_tasks()

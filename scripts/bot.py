@@ -52,20 +52,28 @@ start_keyboard = [
 
 # Ordering taxi
 def start(update, context):
+    context.user_data.clear()
     menu(update, context)
     chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    context.user_data.clear()
     if user:
         if user.phone_number:
-            update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
-            user.chat_id = chat_id
-            user.save()
-            reply_markup = ReplyKeyboardMarkup(
-                    keyboard=[start_keyboard[:3]],
+            if Driver.get_by_chat_id(chat_id):
+                reply_markup = ReplyKeyboardMarkup(
+                    keyboard=[[KeyboardButton(text="\U0001f696 Викликати Таксі"),
+                               KeyboardButton(text="\U0001F4B0 Розпочати роботу")]],
                     resize_keyboard=True,
                 )
-            update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
+                update.message.reply_text('Вітаю! Попрацюємо?)', reply_markup=reply_markup)
+            else:
+                update.message.reply_text('Привіт! Тебе вітає Універсальне таксі - викликай кнопкою нижче.')
+                user.chat_id = chat_id
+                user.save()
+                reply_markup = ReplyKeyboardMarkup(
+                        keyboard=[start_keyboard[:3]],
+                        resize_keyboard=True,
+                    )
+                update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
         else:
             reply_markup = ReplyKeyboardMarkup(
                 keyboard=[start_keyboard[3:]],
@@ -315,8 +323,6 @@ def send_order_to_driver(sender, instance, **kwargs):
         except:
             #     send sms
             pass
-        drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
-        # drivers = Driver.objects.filter(driver_status=Driver.ACTIVE)
         message = f"Отримано нове замовлення:\n" \
                   f"Адреса посадки: {instance.from_address}\n" \
                   f"Місце прибуття: {instance.to_the_address}\n" \
@@ -327,6 +333,8 @@ def send_order_to_driver(sender, instance, **kwargs):
             [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {instance.pk}")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
+        # drivers = Driver.objects.filter(driver_status=Driver.ACTIVE).order_by('Fleets_drivers_vehicles_rate__rate')
         if drivers:
             for driver in drivers:
                 try:
@@ -574,7 +582,7 @@ def get_vehicle_of_driver(update, context):
             vehicle = Vehicle.objects.get(licence_plate=vehicles[0])
             if vehicle.gps_imei:
                 update.message.reply_text(f'Ви сьогодні на авто з номерним знаком {vehicles[0]}?', reply_markup=reply_markup)
-                context.user_data['use_vehicle'] = vehicles[0]
+                context.user_data['vehicle'] = vehicles[0]
             else:
                 update.message.reply_text('За вашим авто не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
         else:
@@ -615,11 +623,10 @@ def add_vehicle_to_driver(update, context):
                 chat_id=chat_id,
                 licence_plate=vehicle)
             update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня')
-            STATE_D = None
-            send_set_status(update, context)
+            ParkStatus.objects.create(driver=context.user_data['u_driver'], status=DRIVER.ACTIVE)
         else:
             update.message.reply_text('За авто, яке ви обрали не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
-            STATE_D = None
+        STATE_D = None
 
 
 def correct_or_not_auto(update, context):
@@ -634,9 +641,10 @@ def correct_or_not_auto(update, context):
             UseOfCars.objects.create(
                 user_vehicle=context.user_data['u_driver'],
                 chat_id=chat_id,
-                licence_plate=context.user_data['use_vehicle'])
-            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
-            send_set_status(update, context)
+                licence_plate=context.user_data['vehicle'])
+            update.message.reply_text('Ми закріпили авто за вами на сьогодні і вже шукаємо замовлення. \
+                                       Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
+            ParkStatus.objects.create(driver=context.user_data['u_driver'], status=DRIVER.ACTIVE)
     else:
         update.message.reply_text('Зверніться до менеджерів водіїв та проконсультуйтесь, яку машину вам використовувати сьогодні.' +
                                   ' Та скористайтесь наступною командою /car_change', reply_markup=ReplyKeyboardRemove())
@@ -667,6 +675,8 @@ NOT_CORRECT_CHOICE = 'Ні'
 
 
 def correct_choice(update, context):
+    global STATE_D
+    STATE_D = None
     id_vehicle = update.message.text
     try:
         id_vehicle = int(id_vehicle)
@@ -686,7 +696,6 @@ def correct_choice(update, context):
 
 
 def get_imei(update, context):
-    global STATE_D
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id=chat_id)
     if context.user_data['vehicle'].gps_imei:
@@ -695,10 +704,10 @@ def get_imei(update, context):
             chat_id=chat_id,
             licence_plate=context.user_data['vehicle'])
         update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
-        send_set_status(update, context)
+        ParkStatus.objects.create(driver=context.user_data['u_driver'], status=DRIVER.ACTIVE)
     else:
         update.message.reply_text('Авто яке ви обрали без imei_gps. Зверніться до менеджера автопарку/водіїв', reply_markup=ReplyKeyboardRemove())
-    STATE_D = None
+
 
 
 def get_licence_plate_for_gps_imei(update, context):
@@ -2283,6 +2292,7 @@ dp.add_handler(job_docs_conversation)
 # Commands for Drivers
 # Changing status of driver
 dp.add_handler(CommandHandler("status", status))
+dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001F4B0 Розпочати роботу$"), status))
 dp.add_handler(MessageHandler(
     Filters.regex(fr"^{Driver.ACTIVE}$") |
     Filters.regex(fr"^{Driver.WITH_CLIENT}$") |

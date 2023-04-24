@@ -1,3 +1,4 @@
+import os
 import time
 import pendulum
 from contextlib import contextmanager
@@ -76,7 +77,7 @@ def download_weekly_report(fleet_name, missing_weeks):
             fleet.download_weekly_report(week_number=week_number, driver=True, sleep=5, headless=True)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='priority')
 def download_daily_report(self):
     # Yesterday
     try:
@@ -97,7 +98,7 @@ def memcache_lock(lock_id, oid):
             cache.set(lock_id, oid, MEMCASH_LOCK_AFTER_FINISHING)
 
 
-@app.task(bind=True,queue="non_priority_queue")
+@app.task(bind=True, queue='non_priority')
 def update_driver_status(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
@@ -141,7 +142,7 @@ def update_driver_status(self):
         logger.info(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='non_priority')
 def update_driver_data(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
@@ -155,7 +156,7 @@ def update_driver_data(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=8)
+@app.task(bind=True, queue='non_priority')
 def download_weekly_report_force(self):
     try:
         BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
@@ -172,6 +173,7 @@ def send_on_job_application_on_driver_to_Bolt(self, id):
         b.login()
         candidate = JobApplication.objects.get(id=id)
         b.add_driver(candidate)
+        b.quit()
         print('The job application has been sent to Bolt')
     except Exception as e:
         logger.info(e)
@@ -201,7 +203,7 @@ def send_on_job_application_on_driver_to_NewUklon(self, id):
         logger.info(e)
 
 
-@app.task(bind=True, queue="priority_queue")
+@app.task(bind=True, queue='priority')
 def get_rent_information(self):
     try:
         gps = UaGps(driver=True, sleep=5, headless=True)
@@ -213,7 +215,7 @@ def get_rent_information(self):
         logger.info(e)
 
 
-@app.task(bind=True, queue="priority_queue")
+@app.task(bind=True, queue='non_priority')
 def get_report_for_tg(self):
     try:
         report = get_report(week_number=None, driver=True, sleep=5, headless=True)
@@ -227,18 +229,16 @@ def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
-    init_chrome_driver()
-    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
-    sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
+    if os.getenv('CREATE_CHROME_INSTANCE', False):
+        init_chrome_driver()
+        sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute='*/10'), update_driver_data.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
+    else:
+        sender.add_periodic_task(crontab(minute='*/10'), get_rent_information.s(), queue='priority')
     # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
-
-
-@app.on_after_finalize.connect
-def setup_rent_task(sender, **kwargs):
-    sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
-    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
 
 
 def init_chrome_driver():
