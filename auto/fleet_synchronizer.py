@@ -379,10 +379,10 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 self.get_target_element_of_page(vehicle_url, xpath)
                 licence_plate = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//div[@data-cy="vehicle-control"]'
+                xpath = '//span[@data-cy="make-model-year"]'
                 vehicle_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//div[@data-cy="vin-control"]'
+                xpath = '//dd[@data-cy="vin-code"]'
                 vin_code = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
