@@ -56,13 +56,13 @@ def index(request):
             active_vehicle_locations = active_vehicles_gps()
             return JsonResponse({'data': active_vehicle_locations}, safe=False)
 
-    park_settings = ParkSettings.objects.all()
-    tariff = {}
-    for park in park_settings:
-        tariff[park.key] = park.value
+    park_setting = ParkSettings.objects.all()
+    park_settings = {}
+    for park in park_setting:
+        park_settings[park.key] = park.value
     google_api = os.environ['GOOGLE_API_KEY']
     context = {
-        "tariff": tariff,
+        "parkSettings": park_settings,
         "google_api": google_api,
         "subscribe_form": sub_form,
         "order_form": order_form,

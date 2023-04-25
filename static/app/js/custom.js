@@ -47,6 +47,11 @@ function deleteAllCookies() {
   }
 }
 
+function deleteCookie(key) {
+  document.cookie = key + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+}
+
+
 // to get current year
 (function() {
     var currentDate = new Date();
@@ -56,7 +61,7 @@ function deleteAllCookies() {
 
 var map, orderReject, orderConfirm, orderData;
 
-const decodedData = tariff.replace(/&#x(\w+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+const decodedData = parkSettings.replace(/&#x(\w+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
 const parsedData = JSON.parse(decodedData.replace(/'/g, '"'));
 const kmCost = parsedData["TARIFF_IN_THE_CITY"];
 const FREE_DISPATCH = parseInt(parsedData["FREE_CAR_SENDING_DISTANCE"]);
@@ -105,6 +110,7 @@ function onOrderCash(paymentMethod) {
         </div>
       `;
       document.body.appendChild(applicationAccepted);
+      deleteCookie("address")
 
       // We attach an event to close the window when the cross is clicked
       var closeButton = applicationAccepted.querySelector(".close");
@@ -144,6 +150,7 @@ function onOrderReject() {
 
   // Add a window to the page
   document.body.appendChild(commentForm);
+  deleteCookie("address")
 
   // We attach an event to close the window when the cross is clicked
   var closeButton = commentForm.querySelector(".close");
@@ -368,8 +375,8 @@ function destroyMap(){
 }
 
 $(document).ready(function(){
+  // deleteAllCookies()
   setCookie("csrfToken", $.parseHTML(csrfToken)[0].value)
-  checkCookies();
 
   $('#order-form').on('submit', function(event){
     event.preventDefault();
@@ -434,13 +441,12 @@ $(document).ready(function(){
                   </div>
                 `;
                 document.body.appendChild(noTaxiArr);
+                deleteCookie("address")
 
                 // We attach an event to close the window when the cross is clicked
                 var closeButton = noTaxiArr.querySelector(".close");
                 closeButton.addEventListener("click", function() {
                   noTaxiArr.parentNode.removeChild(noTaxiArr);
-                  deleteAllCookies();
-                  location.reload();
                 });
               }
             }
@@ -509,4 +515,5 @@ function initAutocomplete(inputID) {
 loadGoogleMaps( 3, apiGoogle, "uk",'','geometry,places').then(function() {
  initAutocomplete('address');
  initAutocomplete('to_address');
+ checkCookies()
 });
