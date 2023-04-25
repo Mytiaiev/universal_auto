@@ -189,11 +189,7 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return 'new_uklon'
 
     def total_drivers_amount(self, rate=0.35):
-        if self.signal == '512329' or self.signal == '542114' or self.signal == '517489':
-            return self.kassa() * (1 - rate) - float(self.total_amount_cach)
-        else:
-            return -(self.kassa()) * rate
-
+        return self.kassa() * (1 - rate) - float(self.total_amount_cach)
 
     def total_owner_amount(self, rate=0.35):
         return -self.total_drivers_amount(rate)

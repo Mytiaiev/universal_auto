@@ -229,6 +229,7 @@ def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
+
     if os.getenv('CREATE_CHROME_INSTANCE', False):
         init_chrome_driver()
         sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
