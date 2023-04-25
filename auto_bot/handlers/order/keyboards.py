@@ -1,14 +1,6 @@
-from telegram import KeyboardButton, InlineKeyboardButton, ReplyKeyboardMarkup, InlineKeyboardMarkup
+from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 from auto_bot.handlers.order.static_text import *
-
-
-def markup_keyboard(keyboard):
-    return ReplyKeyboardMarkup(keyboard=[keyboard], resize_keyboard=True)
-
-
-def markup_keyboard_onetime(keyboard):
-    return ReplyKeyboardMarkup(keyboard=[keyboard], resize_keyboard=True, one_time_keyboard=True)
 
 
 order_keyboard = [

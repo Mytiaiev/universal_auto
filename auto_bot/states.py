@@ -3,32 +3,33 @@ import re
 import redis
 from telegram import ChatAction
 
+from auto_bot.handlers.comment.handlers import save_comment
 from auto_bot.handlers.order.handlers import to_the_address, payment_method, first_address_check, second_address_check, \
     order_on_time
-from auto_bot.handlers.order.static_text import *
+from auto_bot.handlers.order.static_text import FROM_ADDRESS, TO_THE_ADDRESS, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK, \
+    TIME_ORDER, COMMENT
 
 
 def text(update, context):
     """ STATE - for all users, STATE_D - for drivers, STATE_O - for owner,
             STATE_DM - for driver manager, STATE_SSM - for service station manager"""
-    global STATE
     global STATE_O
     global STATE_D
     global STATE_DM
     global STATE_SSM
 
-    if STATE is not None:
-        if STATE == FROM_ADDRESS:
+    if context.user_data['state']:
+        if context.user_data['state'] == FROM_ADDRESS:
             return to_the_address(update, context)
-        elif STATE == TO_THE_ADDRESS:
+        elif context.user_data['state'] == TO_THE_ADDRESS:
             return payment_method(update, context)
-        # elif STATE == COMMENT:
-            # return save_comment(update, context)
-        elif STATE == FIRST_ADDRESS_CHECK:
+        elif context.user_data['state'] == COMMENT:
+            return save_comment(update, context)
+        elif context.user_data['state'] == FIRST_ADDRESS_CHECK:
             return first_address_check(update, context)
-        elif STATE == SECOND_ADDRESS_CHECK:
+        elif context.user_data['state'] == SECOND_ADDRESS_CHECK:
             return second_address_check(update, context)
-        elif STATE == TIME_ORDER:
+        elif context.user_data['state'] == TIME_ORDER:
             return order_on_time(update, context)
     # elif STATE_D is not None:
     #     if STATE_D == NUMBERPLATE:

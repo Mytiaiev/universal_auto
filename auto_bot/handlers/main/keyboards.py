@@ -1,4 +1,4 @@
-from telegram import KeyboardButton
+from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 start_keyboard = [
     KeyboardButton(text="\U0001f696 Викликати Таксі"),
@@ -11,3 +11,11 @@ driver_keyboard = [
     KeyboardButton(text="\U0001f696 Викликати Таксі"),
     KeyboardButton(text="\U0001F4B0 Розпочати роботу")
 ]
+
+
+def markup_keyboard(keyboard):
+    return ReplyKeyboardMarkup(keyboard=[keyboard], resize_keyboard=True)
+
+
+def markup_keyboard_onetime(keyboard):
+    return ReplyKeyboardMarkup(keyboard=[keyboard], resize_keyboard=True, one_time_keyboard=True)

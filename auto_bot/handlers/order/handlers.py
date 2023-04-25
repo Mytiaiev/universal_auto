@@ -6,18 +6,19 @@ import os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, \
+from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode, \
     KeyboardButton
 
-from app.models import Order, ParkSettings, User, Driver, Vehicle, UseOfCars, ParkStatus
+from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
 from auto.tasks import logger
-from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, markup_keyboard, timeorder_keyboard, \
-    markup_keyboard_onetime, payment_keyboard, inline_markup_accept, inline_spot_keyboard
+from auto_bot.handlers.main.handlers import cancel
+from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
+from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard,  timeorder_keyboard, \
+    payment_keyboard, inline_markup_accept, inline_spot_keyboard
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_addresses_by_radius, geocode, get_location_from_db, get_route_price
 from auto_bot.handlers.order.static_text import *
 
-STATE = None
 
 
 def continue_order(update, context):
@@ -33,8 +34,7 @@ def continue_order(update, context):
 
 
 def time_for_order(update, context):
-    global STATE
-    STATE = START_TIME_ORDER
+    context.user_data['state'] = START_TIME_ORDER
     reply_markup = markup_keyboard(timeorder_keyboard)
     update.message.reply_text(timeorder_ask, reply_markup=reply_markup)
 
@@ -45,8 +45,7 @@ def cancel_order(update, context):
 
 
 def location(update, context):
-    global STATE
-    STATE = None
+    context.user_data['state'] = None
     m = update.message
     # geocoding lat and lon to address
     context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
@@ -66,14 +65,12 @@ def the_confirmation_of_location(update, context):
 
 
 def from_address(update, context):
-    global STATE
-    STATE = FROM_ADDRESS
-    update.message.reply_text(f'Введіть адресу місця посадки:{STATE}', reply_markup=ReplyKeyboardRemove())
+    context.user_data['state'] = FROM_ADDRESS
+    update.message.reply_text('Введіть адресу місця посадки:', reply_markup=ReplyKeyboardRemove())
 
 
 def to_the_address(update, context):
-    global STATE
-    if STATE == FROM_ADDRESS:
+    if context.user_data['state'] == FROM_ADDRESS:
         buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
         address = update.message.text
         addresses = buttons_addresses(update, context, address=address)
@@ -83,18 +80,17 @@ def to_the_address(update, context):
             reply_markup = ReplyKeyboardMarkup(buttons)
             context.user_data['addresses_first'] = addresses
             update.message.reply_text(choose_address_text, reply_markup=reply_markup)
-            STATE = FIRST_ADDRESS_CHECK
+            context.user_data['state'] = FIRST_ADDRESS_CHECK
         else:
             update.message.reply_text(wrong_address_request)
             from_address(update, context)
     else:
         update.message.reply_text('Введіть адресу місця призначення:', reply_markup=ReplyKeyboardRemove())
-        STATE = TO_THE_ADDRESS
+        context.user_data['state'] = TO_THE_ADDRESS
 
 
 def payment_method(update, context):
-    global STATE
-    if STATE == TO_THE_ADDRESS:
+    if context.user_data['state'] == TO_THE_ADDRESS:
         address = update.message.text
         buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
         addresses = buttons_addresses(update, context, address=address)
@@ -106,12 +102,12 @@ def payment_method(update, context):
             update.message.reply_text(
                 choose_address_text,
                 reply_markup=reply_markup)
-            STATE = SECOND_ADDRESS_CHECK
+            context.user_data['state'] = SECOND_ADDRESS_CHECK
         else:
             update.message.reply_text(wrong_address_request)
             to_the_address(update, context)
     else:
-        STATE = None
+        context.user_data['state'] = None
         markup = markup_keyboard_onetime(payment_keyboard)
         update.message.reply_text('Виберіть спосіб оплати:', reply_markup=markup)
 

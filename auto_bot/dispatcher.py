@@ -1,64 +1,72 @@
 from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher, CallbackQueryHandler, ConversationHandler
+
+from auto_bot.handlers.comment.handlers import comment
+from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
+    correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
+from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
+    COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
+from auto_bot.handlers.reports.handlers import report, download_report
 from auto_bot.main import bot, updater
 from app.models import ParkSettings
 
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
-    cancel_order, order_create, location, time_for_order
+    cancel_order, order_create, location, time_for_order, handle_callback_order
 from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE
 
-from auto_bot.handlers.start.handlers import start, update_phone_number, helptext, get_id
+from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
 from auto_bot.states import text
 
 
+# Conversations
+# debt_conversation = ConversationHandler(
+#     entry_points=[CommandHandler('sending_report', sending_report)],
+#     states={
+#         'WAIT_FOR_DEBT_OPTION': [CallbackQueryHandler(get_debt_photo, pattern='photo_debt')],
+#         'WAIT_FOR_DEBT_PHOTO': [MessageHandler(Filters.all, save_debt_report)]
+#     },
+#     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+# )
+#
+# job_docs_conversation = ConversationHandler(
+#     entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
+#                   CommandHandler("restart", restart_jobapplication)],
+#     states={
+#         "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
+#         "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
+#         "JOB_EMAIL": [MessageHandler(Filters.all, update_user_information, pass_user_data=True)],
+#         'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
+#         'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.all, upload_photo, pass_user_data=True)],
+#         'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.all, upload_license_front_photo, pass_user_data=True)],
+#         'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.all, upload_license_back_photo, pass_user_data=True)],
+#         'WAIT_FOR_EXPIRED': [MessageHandler(Filters.all, upload_expired_date, pass_user_data=True)],
+#         'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
+#         'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
+#         'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
+#         'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
+#         'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
+#     },
+#
+#     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+#     allow_reentry=True,
+# )
+
 def setup_dispatcher(dp):
-    # # Conversations
-    # debt_conversation = ConversationHandler(
-    #     entry_points=[CommandHandler('sending_report', sending_report)],
-    #     states={
-    #         'WAIT_FOR_DEBT_OPTION': [CallbackQueryHandler(get_debt_photo, pattern='photo_debt')],
-    #         'WAIT_FOR_DEBT_PHOTO': [MessageHandler(Filters.all, save_debt_report)]
-    #     },
-    #     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
-    # )
-    #
-    # job_docs_conversation = ConversationHandler(
-    #     entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
-    #                   CommandHandler("restart", restart_jobapplication)],
-    #     states={
-    #         "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
-    #         "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
-    #         "JOB_EMAIL": [MessageHandler(Filters.all, update_user_information, pass_user_data=True)],
-    #         'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
-    #         'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.all, upload_photo, pass_user_data=True)],
-    #         'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.all, upload_license_front_photo, pass_user_data=True)],
-    #         'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.all, upload_license_back_photo, pass_user_data=True)],
-    #         'WAIT_FOR_EXPIRED': [MessageHandler(Filters.all, upload_expired_date, pass_user_data=True)],
-    #         'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
-    #         'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
-    #         'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
-    #         'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
-    #         'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
-    #     },
-    #
-    #     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
-    #     allow_reentry=True,
-    # )
-    #
-    # dp.add_handler(CommandHandler("report", report))
-    # dp.add_handler(CommandHandler("download_report", download_report))
-    # dp.add_handler(CommandHandler("rating", drivers_rating))
-    # dp.add_handler(CommandHandler("total_weekly_rating", driver_total_weekly_rating))
+
+    dp.add_handler(CommandHandler("report", report))
+    dp.add_handler(CommandHandler("download_report", download_report))
+    dp.add_handler(CommandHandler("rating", drivers_rating))
+    dp.add_handler(CommandHandler("total_weekly_rating", driver_total_weekly_rating))
     #
     # # Transfer money
-    # dp.add_handler(CommandHandler("payment", payments))
-    # dp.add_handler(MessageHandler(Filters.regex(fr"^{TRANSFER_MONEY}$"), get_card))
-    # dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_CORRECT}$"), correct_transfer))
-    # dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_WRONG}$"), wrong_transfer))
+    dp.add_handler(CommandHandler("payment", payments))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{TRANSFER_MONEY}$"), get_card))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_CORRECT}$"), correct_transfer))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{THE_DATA_IS_WRONG}$"), wrong_transfer))
     #
     # # Generate link debt
-    # dp.add_handler(MessageHandler(Filters.regex(fr"^{GENERATE_LINK_PORTMONE}$"), commission))
-    # dp.add_handler(MessageHandler(Filters.regex(fr"^{COMMISSION_ONLY_PORTMONE}$"), get_sum_for_portmone))
-    # dp.add_handler(MessageHandler(Filters.regex(fr"^{MY_COMMISSION}$"), get_my_commission))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{GENERATE_LINK_PORTMONE}$"), commission))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{COMMISSION_ONLY_PORTMONE}$"), get_sum_for_portmone))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{MY_COMMISSION}$"), get_my_commission))
 
     # Publicly available commands
     # Getting id
@@ -87,11 +95,11 @@ def setup_dispatcher(dp):
         Filters.regex(fr"^\U0001f4b7 {CASH}$") |
         Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
         order_create))
-
-    # # sending comment
-    # dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$") |
-                                  # Filters.regex(fr"^Відмовитись від замовлення$"),
-                                  # comment))
+    dp.add_handler(CallbackQueryHandler(handle_callback_order))
+    # sending comment
+    dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$") |
+                                  Filters.regex(fr"^Відмовитись від замовлення$"),
+                                  comment))
     # # Add job application
     # dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити заявку на роботу$"), job_application))
     #
@@ -177,14 +185,12 @@ def setup_dispatcher(dp):
     # # Commands for Service Station Manager
     # # Sending report on repair
     # dp.add_handler(CommandHandler("send_report", numberplate_car))
-    #
-    # # dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
-    # dp.add_handler(CallbackQueryHandler(handle_callback_order))
+
     #
     # # System commands
-    # dp.add_handler(CommandHandler("cancel", cancel))
+    dp.add_handler(CommandHandler("cancel", cancel))
     dp.add_handler(MessageHandler(Filters.text, text))
-    # dp.add_error_handler(error_handler)
+    dp.add_error_handler(error_handler)
     #
     # # need fix
     # dp.add_handler(CommandHandler('update', update_db, run_async=True))

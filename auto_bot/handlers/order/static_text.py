@@ -1,6 +1,5 @@
 from app.models import ParkSettings
 
-
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
 U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(6, 11)
 LOCATION_WRONG = "Місце посадки - невірне"
