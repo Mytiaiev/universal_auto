@@ -4,8 +4,12 @@ import redis
 from telegram import ChatAction
 
 from auto_bot.handlers.comment.handlers import save_comment
+from auto_bot.handlers.driver.handlers import change_status_car
 from auto_bot.handlers.order.handlers import to_the_address, payment_method, first_address_check, second_address_check, \
     order_on_time
+from auto_bot.handlers.status.handlers import add_vehicle_to_driver, correct_choice
+
+from auto_bot.handlers.driver.static_text import V_ID, V_CAR, NUMBERPLATE
 from auto_bot.handlers.order.static_text import FROM_ADDRESS, TO_THE_ADDRESS, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK, \
     TIME_ORDER, COMMENT
 
@@ -14,30 +18,29 @@ def text(update, context):
     """ STATE - for all users, STATE_D - for drivers, STATE_O - for owner,
             STATE_DM - for driver manager, STATE_SSM - for service station manager"""
     global STATE_O
-    global STATE_D
     global STATE_DM
     global STATE_SSM
 
-    if context.user_data['state']:
-        if context.user_data['state'] == FROM_ADDRESS:
+    if context.user_data.get('state'):
+        if context.user_data.get('state') == FROM_ADDRESS:
             return to_the_address(update, context)
-        elif context.user_data['state'] == TO_THE_ADDRESS:
+        elif context.user_data.get('state') == TO_THE_ADDRESS:
             return payment_method(update, context)
-        elif context.user_data['state'] == COMMENT:
+        elif context.user_data.get('state') == COMMENT:
             return save_comment(update, context)
-        elif context.user_data['state'] == FIRST_ADDRESS_CHECK:
+        elif context.user_data.get('state') == FIRST_ADDRESS_CHECK:
             return first_address_check(update, context)
-        elif context.user_data['state'] == SECOND_ADDRESS_CHECK:
+        elif context.user_data.get('state') == SECOND_ADDRESS_CHECK:
             return second_address_check(update, context)
-        elif context.user_data['state'] == TIME_ORDER:
+        elif context.user_data.get('state') == TIME_ORDER:
             return order_on_time(update, context)
-    # elif STATE_D is not None:
-    #     if STATE_D == NUMBERPLATE:
-    #         return change_status_car(update, context)
-    #     elif STATE_D == V_ID:
-    #         return correct_choice(update, context)
-    #     elif STATE_D == V_CAR:
-    #         return add_vehicle_to_driver(update, context)
+    elif context.user_data.get('driver_state') is not None:
+        if context.user_data.get('driver_state') == NUMBERPLATE:
+            return change_status_car(update, context)
+        elif context.user_data.get('driver_state') == V_ID:
+            return correct_choice(update, context)
+        elif context.user_data.get('driver_state') == V_CAR:
+            return add_vehicle_to_driver(update, context)
     # elif STATE_O is not None:
     #     if STATE_O == CARD:
     #         return get_sum(update, context)

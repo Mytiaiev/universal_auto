@@ -1,28 +1,32 @@
-STATE_D = None    # range(50 - 100)
-NUMBERPLATE, REPORT, V_ID, V_CAR = range(50, 54)
+import datetime
+
+from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup
+from telegram.ext import ConversationHandler
+
+from app.models import Driver, Vehicle, Report_of_driver_debt, Event
+from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard, option_keyboard
+from auto_bot.handlers.driver.static_text import *
+from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 
 
-# Changing status car
 def status_car(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        buttons = [[KeyboardButton(f'{SERVICEABLE}')], [KeyboardButton(f'{BROKEN}')]]
+
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус автомобіля',
-                                        reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+                                        reply_markup=markup_keyboard_onetime(service_auto_buttons))
     else:
-        update.message.reply_text(f'Зареєструтесь як водій', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
 
 def numberplate(update, context):
-    global STATE_D
     context.user_data['status'] = update.message.text
     update.message.reply_text('Введіть номер автомобіля', reply_markup=ReplyKeyboardRemove())
-    STATE_D = NUMBERPLATE
+    context.user_data['driver_state'] = NUMBERPLATE
 
 
 def change_status_car(update, context):
-    global STATE_D
     context.user_data['licence_place'] = update.message.text.upper()
     number_car = context.user_data['licence_place']
     numberplates = [i.licence_plate for i in Vehicle.objects.all()]
@@ -35,10 +39,7 @@ def change_status_car(update, context):
     else:
         update.message.reply_text('Цього номера немає в базі даних або надіслано неправильні дані. Зверніться до менеджера або повторіть команду')
 
-    STATE_D = None
-
-
-SEND_REPORT_DEBT = 'Надіслати звіт про оплату заборгованості'
+    context.user_data['driver_state'] = None
 
 
 # Sending report for drivers(payment debt)
@@ -46,18 +47,17 @@ def sending_report(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        buttons = [[InlineKeyboardButton(text=f'{SEND_REPORT_DEBT}', callback_data='photo_debt')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
-                                 reply_markup=InlineKeyboardMarkup(buttons))
+                                 reply_markup=inline_debt_keyboard())
         return "WAIT_FOR_DEBT_OPTION"
     else:
-        update.message.reply_text(f'Зареєструтесь як водій', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
 
 def get_debt_photo(update, context):
-    empty_inline_keyboard = InlineKeyboardMarkup([])
+    empty_keyboard = InlineKeyboardMarkup([])
     update.callback_query.answer()
-    update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості', reply_markup=empty_inline_keyboard)
+    update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості', reply_markup=empty_keyboard)
     return 'WAIT_FOR_DEBT_PHOTO'
 
 
@@ -82,24 +82,10 @@ def save_debt_report(update, context):
 def option(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
-    keyboard = [KeyboardButton(text=f"{SIGN_UP_FOR_A_SERVICE_CENTER}"),
-                KeyboardButton(text=f"{REPORT_CAR_DAMAGE}"),
-                KeyboardButton(text=f"{TAKE_A_DAY_OFF}"),
-                KeyboardButton(text=f"{TAKE_SICK_LEAVE}")]
     if driver is not None:
-        reply_markup = ReplyKeyboardMarkup(
-            keyboard=[keyboard],
-            resize_keyboard=True,
-            one_time_keyboard=True,
-        )
-        update.message.reply_text('Оберіть опцію: ', reply_markup=reply_markup)
+        update.message.reply_text('Оберіть опцію: ', reply_markup=markup_keyboard_onetime(option_keyboard))
     else:
-        update.message.reply_text(f'Зареєструтесь як водій', reply_markup=ReplyKeyboardRemove())
-
-TAKE_A_DAY_OFF = 'Взяти вихідний'
-TAKE_SICK_LEAVE = 'Взяти лікарняний'
-SIGN_UP_FOR_A_SERVICE_CENTER = 'Записатись до сервісного центру'
-REPORT_CAR_DAMAGE = 'Оповістити про пошкодження авто'
+        update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
 
 def take_a_day_off_or_sick_leave(update, context):
@@ -110,9 +96,10 @@ def take_a_day_off_or_sick_leave(update, context):
     events = Event.objects.filter(full_name_driver=driver, status_event=False)
     list_event = [i for i in events]
     if len(list_event) > 0:
-        update.message.reply_text(f"У вас вже відкритий <<Лікарняний>> або <<Вихідний>>.\nЩоб закрити подію скористайтесь командою /status")
+        update.message.reply_text(f"У вас вже відкритий <<Лікарняний>> або <<Вихідний>>.\n"
+                                  f"Щоб закрити подію скористайтесь командою /status")
     else:
-        driver.driver_status = f'{Driver.OFFLINE}'
+        driver.driver_status = Driver.OFFLINE
         driver.save()
         Event.objects.create(
                 full_name_driver=driver,

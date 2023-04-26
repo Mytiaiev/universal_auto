@@ -6,6 +6,7 @@ from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.reports.handlers import report, download_report
+from auto_bot.handlers.status.handlers import status
 from auto_bot.main import bot, updater
 from app.models import ParkSettings
 
@@ -107,8 +108,8 @@ def setup_dispatcher(dp):
     #
     # # Commands for Drivers
     # # Changing status of driver
-    # dp.add_handler(CommandHandler("status", status))
-    # dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001F4B0 Розпочати роботу$"), status))
+    dp.add_handler(CommandHandler("status", status))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001F4B0 Розпочати роботу$"), status))
     # dp.add_handler(MessageHandler(
     #     Filters.regex(fr"^{Driver.ACTIVE}$") |
     #     Filters.regex(fr"^{Driver.WITH_CLIENT}$") |

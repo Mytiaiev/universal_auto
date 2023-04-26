@@ -10,7 +10,7 @@ from auto_bot.handlers.order.static_text import COMMENT
 def comment(update, context):
     context.user_data['state'] = COMMENT
     order = Order.get_order(chat_id_client=update.message.chat.id,
-                            phone=context.user_data['phone_number'],
+                            phone=context.user_data.get('phone_number'),
                             status_order=Order.WAITING)
     if order:
         order.status_order = Order.CANCELED

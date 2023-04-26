@@ -1,3 +1,14 @@
+from django.utils import timezone
+from telegram import ReplyKeyboardRemove, ParseMode
+
+from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus
+from auto_bot.handlers.driver.static_text import not_driver_text, V_CAR, V_ID
+from auto_bot.handlers.driver_manager.handlers import DRIVER
+from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
+from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard
+from auto_bot.handlers.status.static_text import CORRECT_AUTO
+
+
 def status(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
@@ -10,20 +21,12 @@ def status(update, context):
         else:
             get_vehicle_of_driver(update, context)
     else:
-        update.message.reply_text(f'Зареєструйтесь як водій')
+        update.message.reply_text(not_driver_text)
 
 
 def send_set_status(update, context):
-
-    buttons = [[KeyboardButton(Driver.ACTIVE)],
-               [KeyboardButton(Driver.WITH_CLIENT)],
-               [KeyboardButton(Driver.WAIT_FOR_CLIENT)],
-               [KeyboardButton(Driver.OFFLINE)],
-               [KeyboardButton(Driver.RENT)]
-               ]
-
     context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
-                             reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+                             reply_markup=markup_keyboard_onetime(status_buttons))
 
 
 def set_status(update, context):
@@ -48,33 +51,21 @@ def set_status(update, context):
         update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
 
 
-CORRECT_AUTO = '- ТАК -'
-NOT_CORRECT_AUTO = '- НІ -'
-
-
 def get_vehicle_of_driver(update, context):
     chat_id = update.message.chat.id
     driver_ = Driver.get_by_chat_id(chat_id)
     context.user_data['u_driver'] = driver_
-
-    keyboard = [[KeyboardButton(f'{CORRECT_AUTO}')],
-                [KeyboardButton(f'{NOT_CORRECT_AUTO}')]]
-
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard=[keyboard[0], keyboard[1]],
-        resize_keyboard=True)
-
     vehicles = [i.licence_plate for i in Vehicle.objects.filter(driver=driver_.id)]
     if vehicles:
         if len(vehicles) == 1:
             vehicle = Vehicle.objects.get(licence_plate=vehicles[0])
             if vehicle.gps_imei:
-                update.message.reply_text(f'Ви сьогодні на авто з номерним знаком {vehicles[0]}?', reply_markup=reply_markup)
+                update.message.reply_text(f'Ви сьогодні на авто з номерним знаком {vehicles[0]}?',
+                                          reply_markup=markup_keyboard(choose_auto_keyboard))
                 context.user_data['vehicle'] = vehicles[0]
             else:
                 update.message.reply_text('За вашим авто не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
         else:
-            global STATE_D
             licence_plates = {i.id: i.licence_plate for i in Vehicle.objects.all() if i.licence_plate in vehicles}
             vehicles = {k: licence_plates[k] for k in sorted(licence_plates)}
             context.user_data['data_vehicles'] = vehicles
@@ -83,13 +74,12 @@ def get_vehicle_of_driver(update, context):
                 report_list_vehicles += f'{k}: {v}\n'
             update.message.reply_text(f'{report_list_vehicles}')
             update.message.reply_text(f'Укажіть номер машини, яку ви будете використовувати сьогодні')
-            STATE_D = V_CAR
+            context.user_data['driver_state'] = V_CAR
     else:
         update.message.reply_text("За вами не закріплено жодного авто. Зверніться до менеджерів")
 
 
 def add_vehicle_to_driver(update, context):
-    global STATE_D
     id_vehicle = update.message.text
     chat_id = update.message.chat.id
     try:
@@ -114,7 +104,7 @@ def add_vehicle_to_driver(update, context):
             ParkStatus.objects.create(driver=context.user_data['u_driver'], status=DRIVER.ACTIVE)
         else:
             update.message.reply_text('За авто, яке ви обрали не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
-        STATE_D = None
+        context.user_data['driver_state'] = None
 
 
 def correct_or_not_auto(update, context):
@@ -139,7 +129,6 @@ def correct_or_not_auto(update, context):
 
 
 def get_vehicle_licence_plate(update, context):
-    global STATE_D
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
@@ -151,7 +140,7 @@ def get_vehicle_licence_plate(update, context):
                 report_list_vehicles += f'{k}: {v}\n'
             update.message.reply_text(f'{report_list_vehicles}')
             update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, яку ви будете використовувати сьогодні', reply_markup=ReplyKeyboardRemove())
-            STATE_D = V_ID
+            context.user_data['driver_state'] = V_ID
         else:
             update.message.reply_text("Не здайдено жодного авто у автопарку. Зверніться до Менеджера автопарку", reply_markup=ReplyKeyboardRemove())
     else:
@@ -163,8 +152,7 @@ NOT_CORRECT_CHOICE = 'Ні'
 
 
 def correct_choice(update, context):
-    global STATE_D
-    STATE_D = None
+    context.user_data['driver_state'] = None
     id_vehicle = update.message.text
     try:
         id_vehicle = int(id_vehicle)
@@ -198,46 +186,3 @@ def get_imei(update, context):
 
 
 
-def get_licence_plate_for_gps_imei(update, context):
-    global STATE_DM
-    chat_id = update.message.chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
-    vehicles = {i.id: i.licence_plate for i in Vehicle.objects.all()}
-    vehicles = {k: vehicles[k] for k in sorted(vehicles)}
-    report_list_vehicles = ''
-    if driver_manager is not None:
-        if vehicles:
-            for k, v in vehicles.items():
-                report_list_vehicles += f'{k}: {v}\n'
-            update.message.reply_text(f'{report_list_vehicles}')
-            update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, для якого ви бажаєте добавити gps_imei')
-            STATE_DM = V_GPS
-        else:
-            update.message.reply_text("Не здайдено жодного авто у автопарку")
-    else:
-        update.message.reply_text('Зареєструйтесь як менеджер водіїв')
-
-
-def get_n_vehicle(update, context):
-    global STATE_DM
-    id_vehicle = update.message.text
-    try:
-        id_vehicle = int(id_vehicle)
-        context.user_data['vehicle'] = Vehicle.objects.get(id=id_vehicle)
-        update.message.reply_text('Введіть gps_imei для данного авто')
-        STATE_DM = V_GPS_IMEI
-    except:
-        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
-
-
-def get_gps_imea(update, context):
-    global STATE_DM
-    gps_imei = update.message.text
-    gps_imei = Vehicle.gps_imei_validator(gps_imei=gps_imei)
-    if gps_imei is not None:
-        context.user_data['vehicle'].gps_imei = gps_imei
-        context.user_data['vehicle'].save()
-        update.message.reply_text('Ми встановили GPS imei до авто, яке ви вказали')
-        STATE_DM = None
-    else:
-        update.message.reply_text("Задовне значення. Спробуйте ще раз")

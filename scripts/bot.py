@@ -4,15 +4,14 @@ import os
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from telegram.ext import Updater
-from telegram import Bot, Update
+from telegram import Update
 import ast
 
 from auto_bot.dispatcher import setup_dispatcher
-
+from auto_bot.main import bot
 
 PORT = int(os.environ.get('PORT', '8443'))
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
-bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
 dp = setup_dispatcher(updater.dispatcher)
 

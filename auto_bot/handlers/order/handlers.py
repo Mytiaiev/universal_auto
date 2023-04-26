@@ -15,10 +15,10 @@ from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard,  timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard
+from auto_bot.handlers.order.utils import buttons_addresses
 from auto_bot.main import bot
-from scripts.conversion import get_address, get_addresses_by_radius, geocode, get_location_from_db, get_route_price
+from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price
 from auto_bot.handlers.order.static_text import *
-
 
 
 def continue_order(update, context):
@@ -27,9 +27,7 @@ def continue_order(update, context):
         update.message.reply_text(already_ordered)
     else:
         update.message.reply_text(price_info)
-
     reply_markup = markup_keyboard(order_keyboard)
-
     update.message.reply_text(continue_ask, reply_markup=reply_markup)
 
 
@@ -73,7 +71,7 @@ def to_the_address(update, context):
     if context.user_data['state'] == FROM_ADDRESS:
         buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
         address = update.message.text
-        addresses = buttons_addresses(update, context, address=address)
+        addresses = buttons_addresses(address)
         if addresses is not None:
             for key in addresses.keys():
                 buttons.append([KeyboardButton(key)])
@@ -93,7 +91,7 @@ def payment_method(update, context):
     if context.user_data['state'] == TO_THE_ADDRESS:
         address = update.message.text
         buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
-        addresses = buttons_addresses(update, context, address=address)
+        addresses = buttons_addresses(address)
         if addresses is not None:
             for key in addresses.keys():
                 buttons.append([KeyboardButton(key)])
@@ -130,16 +128,6 @@ def first_address_check(update, context):
     else:
         context.user_data['from_address'] = response
         to_the_address(update, context)
-
-
-def buttons_addresses(update, context, address):
-    center_lat, center_lng = f"{ParkSettings.get_value('CENTRE_CITY_LAT')}", f"{ParkSettings.get_value('CENTRE_CITY_LNG')}"
-    center_radius = int(f"{ParkSettings.get_value('CENTRE_CITY_RADIUS')}")
-    dict_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius, os.environ["GOOGLE_API_KEY"])
-    if dict_addresses is not None:
-        return dict_addresses
-    else:
-        return None
 
 
 def order_create(update, context):
@@ -183,11 +171,8 @@ def order_create(update, context):
 @receiver(post_save, sender=Order)
 def send_order_to_driver(sender, instance, **kwargs):
     if instance.status_order == Order.WAITING or not instance.status_order:
-        try:
-            bot.send_message(chat_id=instance.chat_id_client, text='Шукаємо водія')
-        except:
-            #     send sms
-            pass
+
+
         message = f"Отримано нове замовлення:\n" \
                   f"Адреса посадки: {instance.from_address}\n" \
                   f"Місце прибуття: {instance.to_the_address}\n" \
@@ -198,25 +183,32 @@ def send_order_to_driver(sender, instance, **kwargs):
         drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
         # drivers = Driver.objects.filter(driver_status=Driver.ACTIVE).order_by('Fleets_drivers_vehicles_rate__rate')
         if drivers:
+            try:
+                bot.send_message(chat_id=instance.chat_id_client, text='Шукаємо водія')
+            except:
+                #     send sms
+                pass
             for driver in drivers:
                 try:
                     bot.send_message(chat_id=driver, text=message, reply_markup=markup)
                 except:
                     pass
+        else:
+            bot.send_message(chat_id=instance.chat_id_client,
+                             text='Вибачте, але вільних водіїв незалишилось, бажаєте замовити таксі на інший час?',
+                             reply_markup=markup_keyboard(timeorder_keyboard[1:]))
 
 
 def time_order(update, context):
-    global STATE
-    if STATE == START_TIME_ORDER:
+    if context.user_data['state'] == START_TIME_ORDER:
         answer = update.message.text
         context.user_data['time_order'] = answer
-    STATE = TIME_ORDER
+    context.user_data['state'] = TIME_ORDER
     update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)', reply_markup=ReplyKeyboardRemove())
 
 
 def order_on_time(update, context):
-    global STATE
-    STATE = None
+    context.user_data['state'] = None
     pattern = r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
     user_time = update.message.text
     user = User.get_by_chat_id(update.message.chat.id)
@@ -225,7 +217,7 @@ def order_on_time(update, context):
         min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
-            if context.user_data['time_order'] == TODAY:
+            if context.user_data.get('time_order') == TODAY:
                 Order.objects.create(chat_id_client=update.message.chat.id,
                                      status_order=Order.ON_TIME,
                                      phone_number=user.phone_number,
@@ -240,10 +232,10 @@ def order_on_time(update, context):
                 order.save()
         else:
             update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
-            STATE = TIME_ORDER
+            context.user_data['state'] = TIME_ORDER
     else:
         update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
-        STATE = TIME_ORDER
+        context.user_data['state'] = TIME_ORDER
 
 
 def send_time_orders(context):

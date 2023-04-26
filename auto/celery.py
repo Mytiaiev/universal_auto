@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from celery import Celery
 import os
 
+from kombu import Queue, Exchange
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'auto.settings')
 
@@ -14,4 +15,3 @@ app.conf.task_queues = (
 )
 
 app.autodiscover_tasks()
-

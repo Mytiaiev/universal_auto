@@ -103,8 +103,7 @@ def create_user(update, context):
         update.message.reply_text('Телефонний номер некоректний')
 
 
-SERVICEABLE = 'Придатна'
-BROKEN = 'Зламана'
+
 
 
 
@@ -417,3 +416,47 @@ def get_vin_code_vehicle(update, context):
         STATE_DM = None
     else:
         update.message.reply_text('Vin code занадто довгий. Спробуйте ще раз')
+
+def get_licence_plate_for_gps_imei(update, context):
+    global STATE_DM
+    chat_id = update.message.chat.id
+    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    vehicles = {i.id: i.licence_plate for i in Vehicle.objects.all()}
+    vehicles = {k: vehicles[k] for k in sorted(vehicles)}
+    report_list_vehicles = ''
+    if driver_manager is not None:
+        if vehicles:
+            for k, v in vehicles.items():
+                report_list_vehicles += f'{k}: {v}\n'
+            update.message.reply_text(f'{report_list_vehicles}')
+            update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, для якого ви бажаєте добавити gps_imei')
+            STATE_DM = V_GPS
+        else:
+            update.message.reply_text("Не здайдено жодного авто у автопарку")
+    else:
+        update.message.reply_text('Зареєструйтесь як менеджер водіїв')
+
+
+def get_n_vehicle(update, context):
+    global STATE_DM
+    id_vehicle = update.message.text
+    try:
+        id_vehicle = int(id_vehicle)
+        context.user_data['vehicle'] = Vehicle.objects.get(id=id_vehicle)
+        update.message.reply_text('Введіть gps_imei для данного авто')
+        STATE_DM = V_GPS_IMEI
+    except:
+        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+
+
+def get_gps_imea(update, context):
+    global STATE_DM
+    gps_imei = update.message.text
+    gps_imei = Vehicle.gps_imei_validator(gps_imei=gps_imei)
+    if gps_imei is not None:
+        context.user_data['vehicle'].gps_imei = gps_imei
+        context.user_data['vehicle'].save()
+        update.message.reply_text('Ми встановили GPS imei до авто, яке ви вказали')
+        STATE_DM = None
+    else:
+        update.message.reply_text("Задовге значення. Спробуйте ще раз")
