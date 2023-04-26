@@ -499,12 +499,23 @@ def handle_callback_order(update, context):
             payment_id = str(uuid4())
             payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
                             os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
-            liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"])
-            response = liqpay_client.api("request", {
-                "action": "status",
-                "version": "3",
-                "order_id": payment_id
-            })
+            liqpay_cert_path = os.environ["LIQPAY_CERF"]
+            liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"],
+                                   ssl_cert=liqpay_cert_path)
+
+            response = liqpay_client.api("request",
+                                         data={
+                                             "action": "status",
+                                             "version": "3",
+                                             "order_id": payment_id
+                                         },
+                                         headers={
+                                             "Content-Type": "application/json",
+                                             "Accept": "application/json",
+                                         },
+                                         cert=liqpay_cert_path,
+                                         verify=True
+                                         )
 
             check_payment_status_tg.delay(data[1], query.message.message_id, response)
         else:
