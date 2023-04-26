@@ -936,3 +936,11 @@ header button start
   font-size: 18px;
   line-height: 1.5;
 }
+
+.order-confirm {
+  display: block;
+}
+
+.order-confirm.clicked {
+  display: none;
+}
