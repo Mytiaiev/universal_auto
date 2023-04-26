@@ -13,7 +13,7 @@ from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
 from auto.tasks import logger
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
-from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard,  timeorder_keyboard, \
+from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard
 from auto_bot.handlers.order.utils import buttons_addresses
 from auto_bot.main import bot
@@ -27,18 +27,18 @@ def continue_order(update, context):
         update.message.reply_text(already_ordered)
     else:
         update.message.reply_text(price_info)
-    reply_markup = markup_keyboard(order_keyboard)
+    reply_markup = markup_keyboard([order_keyboard])
     update.message.reply_text(continue_ask, reply_markup=reply_markup)
 
 
 def time_for_order(update, context):
     context.user_data['state'] = START_TIME_ORDER
-    reply_markup = markup_keyboard(timeorder_keyboard)
+    reply_markup = markup_keyboard([timeorder_keyboard])
     update.message.reply_text(timeorder_ask, reply_markup=reply_markup)
 
 
 def cancel_order(update, context):
-    update.message.reply_text(canceled_order_text,  reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text(canceled_order_text, reply_markup=ReplyKeyboardRemove())
     cancel(update, context)
 
 
@@ -58,7 +58,7 @@ def location(update, context):
 
 
 def the_confirmation_of_location(update, context):
-    reply_markup = markup_keyboard(location_keyboard)
+    reply_markup = markup_keyboard([location_keyboard])
     update.message.reply_text('Оберіть статус посадки', reply_markup=reply_markup)
 
 
@@ -106,7 +106,7 @@ def payment_method(update, context):
             to_the_address(update, context)
     else:
         context.user_data['state'] = None
-        markup = markup_keyboard_onetime(payment_keyboard)
+        markup = markup_keyboard_onetime([payment_keyboard])
         update.message.reply_text('Виберіть спосіб оплати:', reply_markup=markup)
 
 
@@ -132,6 +132,7 @@ def first_address_check(update, context):
 
 def order_create(update, context):
     payment = update.message.text
+    context.user_data['client_chat_id'] = update.message.chat.id
     user = User.get_by_chat_id(update.message.chat.id)
     context.user_data['phone_number'] = user.phone_number
     destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
@@ -140,9 +141,10 @@ def order_create(update, context):
         context.user_data['from_address'] = context.user_data['location_address']
     else:
         from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
-        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place, os.environ["GOOGLE_API_KEY"])
+        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place,
+                                                                                os.environ["GOOGLE_API_KEY"])
     order = Order.objects.filter(chat_id_client=update.message.chat.id, payment_method="",
-                                  status_order=Order.ON_TIME).first()
+                                 status_order=Order.ON_TIME).first()
     if order:
         order.from_address = context.user_data['from_address']
         order.latitude = context.user_data['latitude']
@@ -153,7 +155,8 @@ def order_create(update, context):
         order.phone_number = user.phone_number
         order.payment_method = payment.split()[1]
         order.save()
-        update.message.reply_text(f'Замовлення прийняте, очікуйте водія о {timezone.localtime(order.order_time).time()}')
+        update.message.reply_text(
+            f'Замовлення прийняте, очікуйте водія о {timezone.localtime(order.order_time).time()}')
     else:
         Order.objects.create(
             from_address=context.user_data['from_address'],
@@ -163,7 +166,7 @@ def order_create(update, context):
             to_latitude=destination_lat,
             to_longitude=destination_long,
             phone_number=user.phone_number,
-            chat_id_client=update.message.chat.id,
+            chat_id_client=context.user_data['client_chat_id'],
             payment_method=payment.split()[1],
             status_order=Order.WAITING)
 
@@ -171,7 +174,6 @@ def order_create(update, context):
 @receiver(post_save, sender=Order)
 def send_order_to_driver(sender, instance, **kwargs):
     if instance.status_order == Order.WAITING or not instance.status_order:
-
 
         message = f"Отримано нове замовлення:\n" \
                   f"Адреса посадки: {instance.from_address}\n" \
@@ -196,7 +198,7 @@ def send_order_to_driver(sender, instance, **kwargs):
         else:
             bot.send_message(chat_id=instance.chat_id_client,
                              text='Вибачте, але вільних водіїв незалишилось, бажаєте замовити таксі на інший час?',
-                             reply_markup=markup_keyboard(timeorder_keyboard[1:]))
+                             reply_markup=markup_keyboard([timeorder_keyboard[1:]]))
 
 
 def time_order(update, context):
@@ -204,7 +206,8 @@ def time_order(update, context):
         answer = update.message.text
         context.user_data['time_order'] = answer
     context.user_data['state'] = TIME_ORDER
-    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)', reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)',
+                              reply_markup=ReplyKeyboardRemove())
 
 
 def order_on_time(update, context):
@@ -214,7 +217,8 @@ def order_on_time(update, context):
     user = User.get_by_chat_id(update.message.chat.id)
     if re.match(pattern, user_time):
         format_time = datetime.datetime.strptime(user_time, '%H:%M').time()
-        min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+        min_time = timezone.localtime().replace(tzinfo=None) + \
+                   datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
             if context.user_data.get('time_order') == TODAY:
@@ -239,24 +243,26 @@ def order_on_time(update, context):
 
 
 def send_time_orders(context):
-    min_sending_time = timezone.localtime()+datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+    min_sending_time = timezone.localtime() + \
+                       datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
     orders = Order.objects.filter(status_order=Order.ON_TIME,
                                   order_time__gte=timezone.localtime(),
                                   order_time__lte=min_sending_time)
     if orders:
         for timeorder in orders:
             message = f"<u>Замовлення на певний час:</u>\n" \
-            f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
-            f"Адреса посадки: {timeorder.from_address}\n" \
-            f"Місце прибуття: {timeorder.to_the_address}\n" \
-            f"Спосіб оплати: {timeorder.payment_method}\n" \
-            f"Номер телефону: {timeorder.phone_number}\n"
+                      f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
+                      f"Адреса посадки: {timeorder.from_address}\n" \
+                      f"Місце прибуття: {timeorder.to_the_address}\n" \
+                      f"Спосіб оплати: {timeorder.payment_method}\n" \
+                      f"Номер телефону: {timeorder.phone_number}\n"
             drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
             if drivers:
                 for driver in drivers:
                     try:
                         context.bot.send_message(chat_id=driver, text=message,
-                                                 reply_markup=inline_markup_accept(timeorder.pk), parse_mode=ParseMode.HTML)
+                                                 reply_markup=inline_markup_accept(timeorder.pk),
+                                                 parse_mode=ParseMode.HTML)
                     except:
                         pass
 
@@ -276,9 +282,9 @@ def handle_callback_order(update, context):
                 driver_lat, driver_long = get_location_from_db(vehicle)
                 if not order.sum:
                     distance_price = get_route_price(order.latitude, order.longitude,
-                                            order.to_latitude, order.to_longitude,
-                                            driver_lat, driver_long,
-                                            os.environ["GOOGLE_API_KEY"])
+                                                     order.to_latitude, order.to_longitude,
+                                                     driver_lat, driver_long,
+                                                     os.environ["GOOGLE_API_KEY"])
                     price = distance_price[1]
                 else:
                     price = order.sum
@@ -326,10 +332,10 @@ def handle_callback_order(update, context):
             order.save()
             # remove inline keyboard markup from the message
             context.bot.send_message(chat_id=order.chat_id_client,
-                text="Водій відхилив замовлення. Пошук іншого водія...")
+                                     text="Водій відхилив замовлення. Пошук іншого водія...")
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
-    elif query.data == "On_the_spot":
+    elif data[0] == "On_the_spot":
         order_id = int(data[1])
         order = Order.objects.filter(pk=order_id).first()
         context.user_data['running'] = False

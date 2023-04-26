@@ -25,15 +25,15 @@ def start(update, context):
     if user:
         if user.phone_number:
             if Driver.get_by_chat_id(chat_id):
-                update.message.reply_text(driver_greetings_text, reply_markup=markup_keyboard(driver_keyboard))
+                update.message.reply_text(driver_greetings_text, reply_markup=markup_keyboard([driver_keyboard]))
             else:
                 update.message.reply_text(user_greetings_text)
                 user.chat_id = chat_id
                 user.save()
-                update.message.reply_text('Зробіть вибір', reply_markup=markup_keyboard(start_keyboard[:3]))
+                update.message.reply_text('Зробіть вибір', reply_markup=markup_keyboard([start_keyboard[:3]]))
         else:
             update.message.reply_text(share_phone_text,
-                                      reply_markup=markup_keyboard(start_keyboard[3:]))
+                                      reply_markup=markup_keyboard([start_keyboard[3:]]))
     else:
         User.objects.create(
             chat_id=chat_id,
@@ -41,7 +41,7 @@ def start(update, context):
             second_name=update.message.from_user.last_name
         )
         update.message.reply_text(share_phone_text,
-                                  reply_markup=markup_keyboard(start_keyboard[3:]))
+                                  reply_markup=markup_keyboard([start_keyboard[3:]]))
 
 
 def update_phone_number(update, context):
@@ -55,7 +55,7 @@ def update_phone_number(update, context):
         user.chat_id = chat_id
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
-                                  reply_markup=markup_keyboard(start_keyboard[:3]))
+                                  reply_markup=markup_keyboard([start_keyboard[:3]]))
 
 
 def helptext(update, context) -> str:

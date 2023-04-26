@@ -14,7 +14,7 @@ def payments(update, context):
     owner = Owner.get_by_chat_id(chat_id)
     if owner is not None:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
-                                reply_markup=markup_keyboard_onetime(payments_buttons))
+                                reply_markup=markup_keyboard_onetime([payments_buttons]))
     else:
         update.message.reply_text('Ця команда тільки для власника')
 
@@ -47,7 +47,7 @@ def transfer(update, context):
 
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=open('privat_3.png', 'rb'))
     context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
-                             reply_markup=markup_keyboard_onetime(data_buttons))
+                             reply_markup=markup_keyboard_onetime([data_buttons]))
     context.user_data['owner_state'] = None
 
 
@@ -68,7 +68,7 @@ def wrong_transfer(update, context):
 def commission(update, context):
 
     context.bot.send_message(chat_id=update.effective_chat.id, text='Виберіть, яку комісію бажаєте встановити:',
-                             reply_markup=markup_keyboard_onetime(comission_buttons))
+                             reply_markup=markup_keyboard_onetime([comission_buttons]))
 
 
 def get_my_commission(update, context):
@@ -121,7 +121,7 @@ def drivers_rating(update, context):
     for fleet in DriversRatingMixin().get_rating():
         text += fleet['fleet'] + '\n'
         for period in fleet['rating']:
-            text += f"{period['main']:%d.%m.%Y} - {period['end']:%d.%m.%Y}" + '\n'
+            text += f"{period['start']:%d.%m.%Y} - {period['end']:%d.%m.%Y}" + '\n'
             if period['rating']:
                 text += '\n'.join([f"{item['num']} {item['driver']} {item['amount']:15.2f} {- item['trips'] if item['trips']>0 else ''}" for item in period['rating']]) + '\n\n'
             else:
@@ -133,7 +133,7 @@ def driver_total_weekly_rating(update, context):
     text = 'Рейтинг водіїв\n'
     totals = {}
     rate = DriversRatingMixin().get_rating()
-    text += f"{rate[0]['rating'][0]['main']:%d.%m.%Y} - {rate[0]['rating'][0]['end']:%d.%m.%Y}" + '\n\n'
+    text += f"{rate[0]['rating'][0]['start']:%d.%m.%Y} - {rate[0]['rating'][0]['end']:%d.%m.%Y}" + '\n\n'
     for fleet in DriversRatingMixin().get_rating():
         for period in fleet['rating']:
             if period['rating']:

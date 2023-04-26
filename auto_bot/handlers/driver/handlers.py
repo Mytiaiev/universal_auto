@@ -15,7 +15,7 @@ def status_car(update, context):
     if driver is not None:
 
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус автомобіля',
-                                        reply_markup=markup_keyboard_onetime(service_auto_buttons))
+                                        reply_markup=markup_keyboard_onetime([service_auto_buttons]))
     else:
         update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
@@ -83,7 +83,7 @@ def option(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        update.message.reply_text('Оберіть опцію: ', reply_markup=markup_keyboard_onetime(option_keyboard))
+        update.message.reply_text('Оберіть опцію: ', reply_markup=markup_keyboard_onetime([option_keyboard]))
     else:
         update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 

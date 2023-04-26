@@ -1,55 +1,61 @@
 from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher, CallbackQueryHandler, ConversationHandler
 
+from auto_bot.main import bot, updater
+from app.models import ParkSettings, Driver
+from auto_bot.states import text
+# handlers
 from auto_bot.handlers.comment.handlers import comment
+from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
-from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
-    COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.reports.handlers import report, download_report
-from auto_bot.handlers.status.handlers import status
-from auto_bot.main import bot, updater
-from app.models import ParkSettings
-
+from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
     cancel_order, order_create, location, time_for_order, handle_callback_order
-from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE
-
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
-from auto_bot.states import text
+from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
+    update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
+    upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
+    upload_expired_insurance, uklon_code
+# text
+from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE
+from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
+    COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
+from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO
 
 
 # Conversations
-# debt_conversation = ConversationHandler(
-#     entry_points=[CommandHandler('sending_report', sending_report)],
-#     states={
-#         'WAIT_FOR_DEBT_OPTION': [CallbackQueryHandler(get_debt_photo, pattern='photo_debt')],
-#         'WAIT_FOR_DEBT_PHOTO': [MessageHandler(Filters.all, save_debt_report)]
-#     },
-#     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
-# )
-#
-# job_docs_conversation = ConversationHandler(
-#     entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
-#                   CommandHandler("restart", restart_jobapplication)],
-#     states={
-#         "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
-#         "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
-#         "JOB_EMAIL": [MessageHandler(Filters.all, update_user_information, pass_user_data=True)],
-#         'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
-#         'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.all, upload_photo, pass_user_data=True)],
-#         'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.all, upload_license_front_photo, pass_user_data=True)],
-#         'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.all, upload_license_back_photo, pass_user_data=True)],
-#         'WAIT_FOR_EXPIRED': [MessageHandler(Filters.all, upload_expired_date, pass_user_data=True)],
-#         'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
-#         'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
-#         'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
-#         'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
-#         'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
-#     },
-#
-#     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
-#     allow_reentry=True,
-# )
+debt_conversation = ConversationHandler(
+    entry_points=[CommandHandler('sending_report', sending_report)],
+    states={
+        'WAIT_FOR_DEBT_OPTION': [CallbackQueryHandler(get_debt_photo, pattern='photo_debt')],
+        'WAIT_FOR_DEBT_PHOTO': [MessageHandler(Filters.all, save_debt_report)]
+    },
+    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+)
+
+job_docs_conversation = ConversationHandler(
+    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
+                  CommandHandler("restart", restart_job_application)],
+    states={
+        "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
+        "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
+        "JOB_EMAIL": [MessageHandler(Filters.all, update_user_information, pass_user_data=True)],
+        'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
+        'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.all, upload_photo, pass_user_data=True)],
+        'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.all, upload_license_front_photo, pass_user_data=True)],
+        'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.all, upload_license_back_photo, pass_user_data=True)],
+        'WAIT_FOR_EXPIRED': [MessageHandler(Filters.all, upload_expired_date, pass_user_data=True)],
+        'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
+        'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
+        'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
+    },
+
+    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+    allow_reentry=True,
+)
 
 def setup_dispatcher(dp):
 
@@ -110,13 +116,13 @@ def setup_dispatcher(dp):
     # # Changing status of driver
     dp.add_handler(CommandHandler("status", status))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001F4B0 Розпочати роботу$"), status))
-    # dp.add_handler(MessageHandler(
-    #     Filters.regex(fr"^{Driver.ACTIVE}$") |
-    #     Filters.regex(fr"^{Driver.WITH_CLIENT}$") |
-    #     Filters.regex(fr"^{Driver.WAIT_FOR_CLIENT}$") |
-    #     Filters.regex(fr"^{Driver.OFFLINE}$") |
-    #     Filters.regex(fr"^{Driver.RENT}$"),
-    #     set_status))
+    dp.add_handler(MessageHandler(
+        Filters.regex(fr"^{Driver.ACTIVE}$") |
+        Filters.regex(fr"^{Driver.WITH_CLIENT}$") |
+        Filters.regex(fr"^{Driver.WAIT_FOR_CLIENT}$") |
+        Filters.regex(fr"^{Driver.OFFLINE}$") |
+        Filters.regex(fr"^{Driver.RENT}$"),
+        set_status))
     #
     # # Updating status_car
     # dp.add_handler(CommandHandler("status_car", status_car))
@@ -125,8 +131,8 @@ def setup_dispatcher(dp):
     #     Filters.regex(fr'^{BROKEN}$'),
     #     numberplate))
     #
-    # # Sending report(payment debt)
-    # dp.add_handler(debt_conversation)
+    # Sending report(payment debt)
+    dp.add_handler(debt_conversation)
     #
     # # Take a day off/Take sick leave
     # dp.add_handler(CommandHandler("option", option))
@@ -138,11 +144,11 @@ def setup_dispatcher(dp):
     # # Сar registration for today
     # dp.add_handler(CommandHandler("car_change", get_vehicle_licence_plate))
     #
-    # # Get correct auto
-    # dp.add_handler(MessageHandler(
-    #     Filters.regex(fr'^{CORRECT_AUTO}$') |
-    #     Filters.regex(fr'^{NOT_CORRECT_AUTO}$'),
-    #     correct_or_not_auto))
+    # Get correct auto
+    dp.add_handler(MessageHandler(
+        Filters.regex(fr'^{CORRECT_AUTO}$') |
+        Filters.regex(fr'^{NOT_CORRECT_AUTO}$'),
+        correct_or_not_auto))
     #
     # # Correct choice change_auto
     # dp.add_handler(MessageHandler(Filters.regex(fr'^{CORRECT_CHOICE}$'), get_imei))

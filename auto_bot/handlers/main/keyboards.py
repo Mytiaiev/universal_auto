@@ -14,8 +14,8 @@ driver_keyboard = [
 
 
 def markup_keyboard(keyboard):
-    return ReplyKeyboardMarkup(keyboard=[keyboard], resize_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
 def markup_keyboard_onetime(keyboard):
-    return ReplyKeyboardMarkup(keyboard=[keyboard], resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)

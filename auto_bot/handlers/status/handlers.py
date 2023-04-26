@@ -5,7 +5,7 @@ from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus
 from auto_bot.handlers.driver.static_text import not_driver_text, V_CAR, V_ID
 from auto_bot.handlers.driver_manager.handlers import DRIVER
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
-from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard
+from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard, correct_keyboard
 from auto_bot.handlers.status.static_text import CORRECT_AUTO
 
 
@@ -30,7 +30,7 @@ def send_set_status(update, context):
 
 
 def set_status(update, context):
-    status = update.message.text
+    driver_status = update.message.text
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     try:
@@ -41,14 +41,15 @@ def set_status(update, context):
         update.message.reply_text(f'{driver}: Ваш - {event[-1].event} завершено')
     except:
         pass
-    ParkStatus.objects.create(driver=driver, status=status)
+    ParkStatus.objects.create(driver=driver, status=driver_status)
     if status == Driver.OFFLINE:
         record = UseOfCars.objects.get(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
         record.end_at = timezone.now()
         record.save()
         update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
     else:
-        update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
+        update.message.reply_text(f'Твій статус: <b>{driver_status}</b>', reply_markup=ReplyKeyboardRemove(),
+                                  parse_mode=ParseMode.HTML)
 
 
 def get_vehicle_of_driver(update, context):
@@ -61,7 +62,7 @@ def get_vehicle_of_driver(update, context):
             vehicle = Vehicle.objects.get(licence_plate=vehicles[0])
             if vehicle.gps_imei:
                 update.message.reply_text(f'Ви сьогодні на авто з номерним знаком {vehicles[0]}?',
-                                          reply_markup=markup_keyboard(choose_auto_keyboard))
+                                          reply_markup=markup_keyboard([choose_auto_keyboard]))
                 context.user_data['vehicle'] = vehicles[0]
             else:
                 update.message.reply_text('За вашим авто не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
@@ -100,8 +101,9 @@ def add_vehicle_to_driver(update, context):
                 user_vehicle=context.user_data['u_driver'],
                 chat_id=chat_id,
                 licence_plate=vehicle)
-            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня')
-            ParkStatus.objects.create(driver=context.user_data['u_driver'], status=DRIVER.ACTIVE)
+            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня',
+                                      reply_markup=ReplyKeyboardRemove())
+            ParkStatus.objects.create(driver=context.user_data['u_driver'], status=Driver.ACTIVE)
         else:
             update.message.reply_text('За авто, яке ви обрали не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
         context.user_data['driver_state'] = None
@@ -111,10 +113,10 @@ def correct_or_not_auto(update, context):
     option = update.message.text
     chat_id = update.message.chat.id
     if option == f'{CORRECT_AUTO}':
-        record = UseOfCars.objects.filter(licence_plate=context.user_data['use_vehicle'],
+        record = UseOfCars.objects.filter(licence_plate=context.user_data['vehicle'],
                                           created_at__date=timezone.now().date(), end_at=None)
         if record:
-            update.message.reply_text('Ваше авто вже використовує інший водій. Зверніться до менеджерів')
+            update.message.reply_text('Ваше авто вже використовує інший водій. Зверніться до менеджерів', reply_markup=ReplyKeyboardRemove())
         else:
             UseOfCars.objects.create(
                 user_vehicle=context.user_data['u_driver'],
@@ -122,7 +124,7 @@ def correct_or_not_auto(update, context):
                 licence_plate=context.user_data['vehicle'])
             update.message.reply_text('Ми закріпили авто за вами на сьогодні і вже шукаємо замовлення. \
                                        Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
-            ParkStatus.objects.create(driver=context.user_data['u_driver'], status=DRIVER.ACTIVE)
+            ParkStatus.objects.create(driver=context.user_data['u_driver'], status=Driver.ACTIVE)
     else:
         update.message.reply_text('Зверніться до менеджерів водіїв та проконсультуйтесь, яку машину вам використовувати сьогодні.' +
                                   ' Та скористайтесь наступною командою /car_change', reply_markup=ReplyKeyboardRemove())
@@ -144,11 +146,7 @@ def get_vehicle_licence_plate(update, context):
         else:
             update.message.reply_text("Не здайдено жодного авто у автопарку. Зверніться до Менеджера автопарку", reply_markup=ReplyKeyboardRemove())
     else:
-        update.message.reply_text(f'Зареєструйтесь як водій')
-
-
-CORRECT_CHOICE = 'Так'
-NOT_CORRECT_CHOICE = 'Ні'
+        update.message.reply_text(not_driver_text)
 
 
 def correct_choice(update, context):
@@ -161,14 +159,8 @@ def correct_choice(update, context):
         update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
         context.user_data['vehicle'] = False
     if context.user_data['vehicle']:
-        keyboard = [KeyboardButton(f'{CORRECT_CHOICE}'),
-                    KeyboardButton(f'{NOT_CORRECT_CHOICE}')]
-
-        reply_markup = ReplyKeyboardMarkup(
-            keyboard=[keyboard],
-            resize_keyboard=True)
         licence_plate = context.user_data['vehicle']
-        update.message.reply_text(f"Ви обрали {licence_plate}. Вірно?", reply_markup=reply_markup)
+        update.message.reply_text(f"Ви обрали {licence_plate}. Вірно?", reply_markup=markup_keyboard([correct_keyboard]))
 
 
 def get_imei(update, context):
@@ -180,7 +172,7 @@ def get_imei(update, context):
             chat_id=chat_id,
             licence_plate=context.user_data['vehicle'])
         update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
-        ParkStatus.objects.create(driver=context.user_data['u_driver'], status=DRIVER.ACTIVE)
+        ParkStatus.objects.create(driver=context.user_data['u_driver'], status=Driver.ACTIVE)
     else:
         update.message.reply_text('Авто яке ви обрали без imei_gps. Зверніться до менеджера автопарку/водіїв', reply_markup=ReplyKeyboardRemove())
 

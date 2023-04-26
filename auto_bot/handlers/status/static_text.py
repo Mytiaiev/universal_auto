@@ -1,2 +1,5 @@
 CORRECT_AUTO = '- ТАК -'
 NOT_CORRECT_AUTO = '- НІ -'
+
+CORRECT_CHOICE = 'Так'
+NOT_CORRECT_CHOICE = 'Ні'
