@@ -16,9 +16,9 @@ from auto_bot.handlers.owner.static_text import CARD, SUM, PORTMONE_SUM, PORTMON
 from auto_bot.handlers.service_manager.handlers import send_report_to_db_and_driver, end_of_repair, start_of_repair, \
     photo
 from auto_bot.handlers.service_manager.static_text import LICENCE_PLATE, PHOTO, START_OF_REPAIR, END_OF_REPAIR
-from auto_bot.handlers.status.handlers import add_vehicle_to_driver, correct_choice
+from auto_bot.handlers.status.handlers import correct_choice
 
-from auto_bot.handlers.driver.static_text import V_ID, V_CAR, NUMBERPLATE
+from auto_bot.handlers.driver.static_text import V_ID, NUMBERPLATE
 from auto_bot.handlers.order.static_text import FROM_ADDRESS, TO_THE_ADDRESS, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK, \
     TIME_ORDER, COMMENT
 
@@ -42,8 +42,6 @@ def text(update, context):
             return change_status_car(update, context)
         elif context.user_data['driver_state'] == V_ID:
             return correct_choice(update, context)
-        elif context.user_data['driver_state'] == V_CAR:
-            return add_vehicle_to_driver(update, context)
     elif context.user_data.get('owner_state') is not None:
         if context.user_data['owner_state'] == CARD:
             return get_sum(update, context)

@@ -3,7 +3,7 @@ import datetime
 from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
-from app.models import Driver, Vehicle, Report_of_driver_debt, Event
+from app.models import Driver, Vehicle, Report_of_driver_debt, Event, ParkStatus
 from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard, option_keyboard
 from auto_bot.handlers.driver.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
@@ -15,7 +15,7 @@ def status_car(update, context):
     if driver is not None:
 
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус автомобіля',
-                                        reply_markup=markup_keyboard_onetime([service_auto_buttons]))
+                                 reply_markup=markup_keyboard_onetime([service_auto_buttons]))
     else:
         update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
@@ -37,8 +37,9 @@ def change_status_car(update, context):
         numberplates.clear()
         update.message.reply_text('Статус авто був змінений')
     else:
-        update.message.reply_text('Цього номера немає в базі даних або надіслано неправильні дані. Зверніться до менеджера або повторіть команду')
-
+        update.message.reply_text(
+            'Цього номера немає в базі даних або надіслано неправильні дані.'
+            ' Зверніться до менеджера або повторіть команду')
     context.user_data['driver_state'] = None
 
 
@@ -54,14 +55,14 @@ def sending_report(update, context):
         update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
 
-def get_debt_photo(update, context):
+def get_debt_photo(update):
     empty_keyboard = InlineKeyboardMarkup([])
     update.callback_query.answer()
     update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості', reply_markup=empty_keyboard)
     return 'WAIT_FOR_DEBT_PHOTO'
 
 
-def save_debt_report(update, context):
+def save_debt_report(update):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if update.message.photo:
@@ -79,16 +80,16 @@ def save_debt_report(update, context):
         return 'WAIT_FOR_DEBT_PHOTO'
 
 
-def option(update, context):
+def option(update):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
-        update.message.reply_text('Оберіть опцію: ', reply_markup=markup_keyboard_onetime([option_keyboard]))
+        update.message.reply_text('Оберіть опцію: ', reply_markup=markup_keyboard_onetime(option_keyboard))
     else:
         update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
 
-def take_a_day_off_or_sick_leave(update, context):
+def take_a_day_off_or_sick_leave(update):
     event = update.message.text
     chat_id = update.message.chat.id
     event = event.split()
@@ -99,12 +100,12 @@ def take_a_day_off_or_sick_leave(update, context):
         update.message.reply_text(f"У вас вже відкритий <<Лікарняний>> або <<Вихідний>>.\n"
                                   f"Щоб закрити подію скористайтесь командою /status")
     else:
-        driver.driver_status = Driver.OFFLINE
-        driver.save()
+        ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
         Event.objects.create(
-                full_name_driver=driver,
-                event=event[1].title(),
-                chat_id=chat_id,
-                created_at=datetime.datetime.now())
-        update.message.reply_text(f'Ваш статус зміненно на <<{Driver.OFFLINE}>> та ваш <<{event[1].title()}>> розпочато',
-                                            reply_markup=ReplyKeyboardRemove())
+            full_name_driver=driver,
+            event=event[1].title(),
+            chat_id=chat_id,
+            created_at=datetime.datetime.now())
+        update.message.reply_text(
+            f'Ваш статус зміненно на <<{Driver.OFFLINE}>> та ваш <<{event[1].title()}>> розпочато',
+            reply_markup=ReplyKeyboardRemove())

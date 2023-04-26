@@ -2571,7 +2571,7 @@ class UaGps(SeleniumTools):
                 EC.element_to_be_clickable((By.ID, "time_to_report_templates_filter_time")))
         clickandclear(to_field)
         to_field.send_keys(end_time.strftime("%d %B %Y %H:%M"))
-        from_field.send_keys(Keys.ENTER)
+        to_field.send_keys(Keys.ENTER)
         WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, '//input[@value="Execute"]'))).click()
         if self.sleep:
