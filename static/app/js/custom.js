@@ -1,77 +1,134 @@
-function getCookie(key) {
-  var cDecoded = decodeURIComponent(document.cookie);
-  var cArray = cDecoded.split("; ");
-
-  var result = null;
-  cArray.forEach((el) => {
-    if (el.indexOf(key) === 0) {
-      result = el.substring(key.length + 1);
-    }
-  });
-  return result;
-}
-
-
-function setCookie(key, value, daysToLive){
-    var date = new Date()
-    date.setTime(date.getTime() + (daysToLive * 24 * 60 * 60 * 1000))
-    var expires = `expires=${date.toUTCString()}`
-    document.cookie = `${key}=${value}; ${expires}`
-}
-
-function checkCookies() {
-  var address = getCookie('address');
-  var to_address = getCookie('to_address');
-  var phone = getCookie('phone');
-  if (address && to_address && phone) {
-    $.ajax({
-      url: ajaxPostUrl,
-      method: 'GET',
-      data: {
-        "action": "active_vehicles_locations"
-      },
-      success: function(response) {
-        var taxiArr = JSON.parse(response.data);
-        createMap(address, to_address, taxiArr);
-      }
-    });
-  }
-}
-
-
-function deleteAllCookies() {
-  var cookies = document.cookie.split(";");
-  for (var i = 0; i < cookies.length; i++) {
-    var cookieName = cookies[i].split("=")[0].trim();
-    document.cookie = cookieName + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-  }
-}
-
-function deleteCookie(key) {
-  document.cookie = key + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-}
-
-
 // to get current year
 (function() {
-    var currentDate = new Date();
-    var currentYear = currentDate.getFullYear();
-    document.querySelector("#displayYear").innerHTML = currentYear;
+  var currentDate = new Date();
+  var currentYear = currentDate.getFullYear();
+  document.querySelector("#displayYear").innerHTML = currentYear;
 })();
 
-var map, orderReject, orderConfirm, orderData;
+function toRadians(degrees) {
+  return degrees * Math.PI / 180;
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const earthRadiusKm = 6371;
+
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+
+  lat1 = toRadians(lat1);
+  lat2 = toRadians(lat2);
+
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusKm * c;
+}
+
+function getAllPath(obj){
+  var allPaths = [];
+    for (var i = 0; i < obj.length; i++) {
+      var currentPath = obj[i].path;
+      allPaths = allPaths.concat(currentPath);
+   }
+    return allPaths
+}
+
+function pathSeparation(obj){
+  var getCity = city_boundaries();
+  var cityPolygon = new google.maps.Polygon({ paths: getCity });
+
+  var inCity = [], outOfCity = [];
+  obj.forEach(function(path) {
+    // Використовуємо метод containsLocation() для перевірки, чи точка входить у межі міста
+    var isInCity = google.maps.geometry.poly.containsLocation(path, cityPolygon);
+    // Якщо точка входить у межі міста, додаємо її до масиву inCity, інакше - до масиву outOfCity
+    if (isInCity) {
+      inCity.push(path);
+    } else {
+      outOfCity.push(path);
+    }
+  });
+   return [inCity, outOfCity]
+}
+
+function getPathCoords(obj){
+  var coords = []
+  for (var i = 0; i < obj.length; i++) {
+    coords.push({ lat: obj[i].lat(), lng: obj[i].lng() });
+  }
+  return coords
+}
+
+function calculateDistance(obj) {
+  let Distance = 0;
+  for (let i = 0; i < obj.length - 1; i++) {
+    const { lat: lat1, lng: lon1 } = obj[i];
+    const { lat: lat2, lng: lon2 } = obj[i + 1];
+    const distance = haversine(lat1, lon1, lat2, lon2);
+    Distance += distance;
+  }
+  return Distance;
+}
+
+function hidePaymentButtons() {
+  var paymentButtons = document.getElementsByClassName('order-confirm');
+  for (var i = 0; i < paymentButtons.length; i++) {
+    paymentButtons[i].classList.add('clicked');
+  }
+}
+
+function addMarker(obj) {
+  const marker = new google.maps.Marker(obj);
+  markersTaxi.push(marker)
+    return marker;
+}
+function removeAllMarkers() {
+  for(const m in markersTaxi) {
+    markersTaxi[m].setMap(null);
+  }
+  markersTaxi = [];
+}
+
+function setAutoCenter(map) {
+  var bounds = new google.maps.LatLngBounds();
+  markersTaxi.forEach(marker => {
+    bounds.extend(marker.getPosition());
+  });
+  map.fitBounds(bounds);
+}
+
+var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi = [];
 
 const decodedData = parkSettings.replace(/&#x(\w+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
 const parsedData = JSON.parse(decodedData.replace(/'/g, '"'));
-const kmCost = parsedData["TARIFF_IN_THE_CITY"];
 const FREE_DISPATCH = parseInt(parsedData["FREE_CAR_SENDING_DISTANCE"]);
 const TARIFF_DISPATCH = parseInt(parsedData["TARIFF_CAR_DISPATCH"]);
-const KM_COST = parseInt(kmCost);
+const TARIFF_OUTSIDE_DISPATCH = parseInt(parsedData["TARIFF_CAR_OUTSIDE_DISPATCH"]);
+const TARIFF_IN_THE_CITY = parseInt(parsedData["TARIFF_IN_THE_CITY"]);
+const TARIFF_OUTSIDE_THE_CITY = parseInt(parsedData["TARIFF_OUTSIDE_THE_CITY"]);
 const CENTRE_CITY_LAT = parseFloat(parsedData["CENTRE_CITY_LAT"]);
 const CENTRE_CITY_LNG = parseFloat(parsedData["CENTRE_CITY_LNG"]);
 const CENTRE_CITY_RADIUS = parseInt(parsedData["CENTRE_CITY_RADIUS"]);
 
-
+const city_boundaries = function () {
+  return [
+    [50.482433, 30.758250], [50.491685, 30.742045], [50.517374, 30.753721], [50.529704, 30.795370],
+    [50.537806, 30.824810], [50.557504, 30.816837], [50.579778, 30.783808], [50.583684, 30.766494],
+    [50.590833, 30.717995], [50.585827, 30.721184], [50.575221, 30.709590], [50.555702, 30.713665],
+    [50.534572, 30.653589], [50.572107, 30.472565], [50.571557, 30.464734], [50.584574, 30.464120],
+    [50.586367, 30.373054], [50.573406, 30.373049], [50.570661, 30.307423], [50.557272, 30.342127],
+    [50.554324, 30.298128], [50.533394, 30.302445], [50.423057, 30.244148], [50.446055, 30.348753],
+    [50.381271, 30.442675], [50.372075, 30.430830], [50.356963, 30.438040], [50.360358, 30.468252],
+    [50.333520, 30.475291], [50.302393, 30.532814], [50.213270, 30.593929], [50.226755, 30.642478],
+    [50.291609, 30.590369], [50.335279, 30.628839], [50.389522, 30.775925], [50.394966, 30.776293],
+    [50.397798, 30.790669], [50.392594, 30.806395], [50.404878, 30.825881], [50.458385, 30.742751],
+    [50.481657, 30.748158], [50.482454, 30.758345]
+  ].map(function([lat, lng]){
+    return {
+      lat, lng
+    }
+  });
+}
 function getMarkerIcon(type) {
   return {
     url: 'static/app/images/icon_' + type + '.png',
@@ -79,8 +136,134 @@ function getMarkerIcon(type) {
   };
 }
 
+function orderUpdate(id_order) {
+  var intervalId = setInterval(function() {
+    $.ajax({
+      url: ajaxPostUrl,
+      method: 'GET',
+      data: {
+        "action": "order_confirm",
+        "id_order": id_order
+      },
+      success: function(response) {
+        var driverOrder = JSON.parse(response.data)
+        if (driverOrder.length > 0) {
+          clearInterval(intervalId);
 
-function onOrderCash(paymentMethod) {
+          removeAllMarkers();
+
+           const driverMarker = addMarker({
+            position: new google.maps.LatLng(driverOrder[0].lat, driverOrder[0].lon),
+            map,
+            title: driverOrder[0].vehicle__licence_plate,
+            icon: getMarkerIcon('taxi1'),
+            animation: google.maps.Animation.DROP
+          });
+
+          var from = JSON.parse(getCookie('address'));
+          var to = JSON.parse(getCookie('to_address'));
+
+          const clientMarker = addMarker({
+            position: from[0].geometry.location,
+            map,
+            title: from[0].formatted_address,
+            icon: getMarkerIcon('address'),
+            animation: google.maps.Animation.DROP
+          });
+          const destinationMarker =  addMarker({
+            position: to[0].geometry.location,
+            map,
+            title: to[0].formatted_address,
+            icon: getMarkerIcon('to_address'),
+            animation: google.maps.Animation.DROP
+          });
+
+          // Create a directions service object to get the route
+          var directionsService = new google.maps.DirectionsService();
+
+          // Create a directions renderer object to display the route
+          var directionsRenderer = new google.maps.DirectionsRenderer();
+
+          // Bind the directions renderer to the map
+          directionsRenderer.setMap(map);
+          directionsRenderer.setOptions({suppressMarkers: true})
+
+          // Set the options for the route
+          var routeOptions = {
+            origin: driverMarker.position,
+            waypoints: [
+              {
+                location: clientMarker.position,
+                stopover: true,
+              },
+              {
+                location: destinationMarker.position,
+                stopover: true,
+              },
+            ],
+            destination: destinationMarker.position,
+            travelMode: google.maps.TravelMode.DRIVING,
+          };
+
+          // Call the directions service to get the route
+          directionsService.route(routeOptions, function (result, status) {
+            if (status == google.maps.DirectionsStatus.OK) {
+              // Display the route on the map
+              directionsRenderer.setDirections(result);
+
+              var pickupDistanceInMeters = result.routes[0].legs[0]['steps'];
+              var finalDistanceInMeters = result.routes[0].legs[1]['steps'];
+
+              var allPathsAddress = getAllPath(finalDistanceInMeters)
+              var allPathsServing = getAllPath(pickupDistanceInMeters)
+
+              var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
+              var inCitOrOutCityServing = pathSeparation(allPathsServing)
+              var inCity = inCitOrOutCityAddress[0]
+              var outOfCity = inCitOrOutCityAddress[1]
+              var inCityServing = inCitOrOutCityServing[0]
+              var outOfCityServing = inCitOrOutCityServing[1]
+
+              var inCityCoords = getPathCoords(inCity)
+              var outOfCityCoords = getPathCoords(outOfCity)
+              var inCityCoordsServing = getPathCoords(inCityServing)
+              var outOfCityCoordsServing = getPathCoords(outOfCityServing)
+
+
+              let inCityDistance = calculateDistance(inCityCoords)
+              let outOfCityDistance = calculateDistance(outOfCityCoords)
+              let inCityDistanceServing = calculateDistance(inCityCoordsServing)
+              let outOfCityDistanceServing = calculateDistance(outOfCityCoordsServing)
+
+              var servingTaxi;
+              if (inCityDistanceServing <= FREE_DISPATCH){
+                servingTaxi = 0;
+              } else {
+                servingTaxi = ((inCityDistanceServing - FREE_DISPATCH) * TARIFF_DISPATCH) + (outOfCityDistanceServing * TARIFF_OUTSIDE_DISPATCH);
+              }
+
+              var tripAmount = (inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY);
+
+              var cost = servingTaxi + tripAmount;
+              cost = Math.ceil(cost);
+              setCookie('sum', cost, 1)
+
+                $('.alert-message').html('Ціна поїздки:' +cost+ 'грн.');
+              $('.order-confirm').remove();
+              $('.order-reject').before('<button class="order-go btn btn-primary ml-3" onclick="consentTrip()">Погодитись</button>');
+
+              google.maps.event.trigger(map, 'resize');
+            }
+          });
+        }
+      }
+    });
+  }, 5000);
+}
+
+
+
+function onOrderPayment(paymentMethod) {
   var savedOrderData = getCookie('orderData');
   if (!savedOrderData) {
     alert('Помилка: дані замовлення не знайдені.');
@@ -88,7 +271,7 @@ function onOrderCash(paymentMethod) {
   }
 
   var orderData = JSON.parse(savedOrderData);
-  orderData.sum = getCookie('sum');
+  orderData.sum = 0;
   orderData.payment_method = paymentMethod;
 
   $.ajax({
@@ -99,26 +282,12 @@ function onOrderCash(paymentMethod) {
       'X-CSRF-Token': getCookie("csrfToken")
     },
     success: function(response) {
-      destroyMap();
-      var applicationAccepted = document.createElement("div");
-      applicationAccepted.innerHTML = `
-        <div class="modal">
-          <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Ваша заявка прийнята. Очікуйте на автомобіль!</h3>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(applicationAccepted);
-      deleteCookie("address")
+      var idOrder = JSON.parse(response.data)
+      setCookie("idOrder", idOrder.id, 1);
+      orderUpdate(idOrder.id)
 
-      // We attach an event to close the window when the cross is clicked
-      var closeButton = applicationAccepted.querySelector(".close");
-      closeButton.addEventListener("click", function() {
-        applicationAccepted.parentNode.removeChild(applicationAccepted);
-        deleteAllCookies();
-        location.reload();
-      });
+      var paymentDiv = document.querySelector('.gm-style > div:first-child > div:last-child');
+      paymentDiv.style.display = 'none';
     },
     error: function(error) {
       // Handle the error
@@ -129,8 +298,21 @@ function onOrderCash(paymentMethod) {
 
 
 function onOrderReject() {
-  // Destroy the map
-  destroyMap();
+  var idOrder = getCookie('idOrder')
+  var sum = getCookie('sum')
+  destroyMap()
+
+  if (idOrder)
+    $.ajax({
+      url: ajaxPostUrl,
+      method: 'POST',
+      data: {
+        csrfmiddlewaretoken: getCookie("csrfToken"),
+        action: 'user_opt_out',
+        idOrder: idOrder,
+        sum: sum,
+      },
+    })
 
   // Create an HTML window element with a comment form
   var commentForm = document.createElement("div");
@@ -184,6 +366,43 @@ function sendComment() {
   });
 }
 
+function consentTrip(){
+  var idOrder = getCookie('idOrder')
+  var sum = getCookie('sum')
+  $.ajax({
+    url: ajaxPostUrl,
+    method: 'POST',
+    data: {
+      csrfmiddlewaretoken: getCookie("csrfToken"),
+      action: 'order_sum',
+      idOrder: idOrder,
+      sum: sum,
+    },
+    success: function(response) {
+      destroyMap();
+      var applicationAccepted = document.createElement("div");
+      applicationAccepted.innerHTML = `
+        <div class="modal">
+          <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Ваша заявка прийнята. Очікуйте на автомобіль!</h3>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(applicationAccepted);
+      deleteCookie("address")
+
+      // We attach an event to close the window when the cross is clicked
+      var closeButton = applicationAccepted.querySelector(".close");
+      closeButton.addEventListener("click", function() {
+        applicationAccepted.parentNode.removeChild(applicationAccepted);
+        deleteAllCookies();
+        location.reload();
+      });
+    },
+  })
+}
+
 
 
 function createMap(address, to_address, taxiArr) {
@@ -199,183 +418,82 @@ function createMap(address, to_address, taxiArr) {
     center: new google.maps.LatLng(50.4546600, 30.5238000)
   };
   map = new google.maps.Map(mapCanvas, mapOpts);
+      // Add from_address marker
+    addMarker({
+      position: address[0].geometry.location,
+      map,
+      title: address[0].formatted_address,
+      icon: getMarkerIcon('address'),
+      animation: google.maps.Animation.DROP
+    });
 
-  var bounds = new google.maps.LatLngBounds(
-    new google.maps.LatLng(44.387799, 22.137054), // Southwest coordinates
-    new google.maps.LatLng(52.545875, 40.227580)  // Northeast coordinates
-  );
-  map.fitBounds(bounds);
+    addMarker({
+      position:  to_address[0].geometry.location,
+      map,
+      title: to_address[0].formatted_address,
+      icon: getMarkerIcon('to_address'),
+      animation: google.maps.Animation.DROP
+    });
 
-
-  // Create a geocoder object to convert the address to coordinates
-  var geocoder = new google.maps.Geocoder();
-
-  // Create a geocoder object to convert the to_address to coordinates
-  var toGeocoder = new google.maps.Geocoder();
-
-  geocoder.geocode({ address }, function (results, status) {
-    if (status == google.maps.GeocoderStatus.OK) {
-      // Get the coordinates of the address
-      var latLng = results[0].geometry.location;
-
-      // Create a marker for the address
-      var marker = new google.maps.Marker({
-        position: latLng,
-        map: map,
-        title: address,
-        icon: getMarkerIcon('address'),
+    taxiArr.forEach(taxi => {
+      // Create a marker for the taxi with the custom icon
+      addMarker({
+        position: new google.maps.LatLng(taxi.lat, taxi.lon),
+        map,
+        title: taxi.vehicle__licence_plate,
+        icon: getMarkerIcon('taxi1'),
         animation: google.maps.Animation.DROP
       });
+    });
 
-      toGeocoder.geocode({address: to_address}, function (toResults, toStatus) {
-        if (toStatus == google.maps.GeocoderStatus.OK) {
-          // Get the coordinates of the to_address
-          var toLatLng = toResults[0].geometry.location;
+    setAutoCenter(map);
 
-          // Create a marker for the to_address
-          var toMarker = new google.maps.Marker({
-            position: toLatLng,
-            map: map,
-            title: to_address,
-            icon: getMarkerIcon('to_address'),
-            animation: google.maps.Animation.DROP
-          });
 
-          var markers = [];
+    // Add the cost text to the map
+    var costText = "Оберіть будь ласка метод оплати та заждіть поки ми підберемо вам автомобіль.";
+    var costDiv = document.createElement('div');
+    costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
+    map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
 
-          taxiArr.forEach(taxi => {
-            // Create a marker for the taxi with the custom icon
-            var taxiLatLng = new google.maps.LatLng(taxi.lat, taxi.lon);
-            var taxiMarker = new google.maps.Marker({
-                position: taxiLatLng,
-                map: map,
-                title: taxi.vehicle__licence_plate,
-                icon: getMarkerIcon('taxi1'),
-                animation: google.maps.Animation.DROP
-            });
-            // Add the marker to the markers array
-            markers.push(taxiMarker);
-          });
-          var bounds = new google.maps.LatLngBounds();
-          markers.forEach(marker => {
-            bounds.extend(marker.getPosition());
-          });
-          map.fitBounds(bounds);
+    // Add the payment buttons to the map
+    var paymentDiv = document.createElement('div');
+    paymentDiv.innerHTML =
+      "<div class='mb-3'>" +
+      "<button class='order-confirm btn btn-primary'>Готівка</button>" +
+      "<button class='order-confirm btn btn-primary ml-3'>Картка</button>" +
+      "<button class='order-reject btn btn-danger ml-3'>Відмовитись</button>" +
+      "</div>";
 
-          // Create a directions service object to get the route
-          var directionsService = new google.maps.DirectionsService();
+    map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
 
-          // Create a directions renderer object to display the route
-          var directionsRenderer = new google.maps.DirectionsRenderer();
+    // Add event listener to the "Готівка" button to send a post request to views.py
+    orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
+    orderConfirm.addEventListener("click", function (){
+      onOrderPayment('Готівка')
+      hidePaymentButtons();
+    });
 
-          // Bind the directions renderer to the map
-          directionsRenderer.setMap(map);
-          directionsRenderer.setOptions({suppressMarkers: true})
+    // Add event listener to the "Картка" button to send a post request to views.py
+    orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[1];
+    orderConfirm.addEventListener("click", function () {
+      onOrderPayment('Картка')
+      hidePaymentButtons();
+    });
 
-          var closestMarker;
-          var closestDistance = Infinity;
-          markers.forEach(function (marker) {
-            var distance = google.maps.geometry.spherical.computeDistanceBetween(latLng, marker.position);
-            if (distance < closestDistance) {
-              closestMarker = marker;
-              closestDistance = distance;
-            }
-          });
-          // Set the options for the route
-          var routeOptions = {
-            origin: closestMarker.position,
-            waypoints: [
-              {
-                location: address,
-                stopover: true,
-              },
-              {
-                location: to_address,
-                stopover: true,
-              },
-            ],
-            destination: to_address,
-            travelMode: google.maps.TravelMode.DRIVING,
-          };
-
-          // Call the directions service to get the route
-          directionsService.route(routeOptions, function (result, status) {
-            if (status == google.maps.DirectionsStatus.OK) {
-              // Display the route on the map
-              directionsRenderer.setDirections(result);
-
-              // Calculate the distance between the taxi and the address in kilometers
-              var pickupDistanceInMeters = result.routes[0].legs[0].distance.value;
-              var pickupDistanceInKm = pickupDistanceInMeters / 1000;
-
-              // Calculate the distance between the pickup address and the final address in kilometers
-              var finalDistanceInMeters = result.routes[0].legs[1].distance.value;
-              var finalDistanceInKm = finalDistanceInMeters / 1000;
-
-              var serving;
-              if (pickupDistanceInKm <= FREE_DISPATCH) {
-                serving = 0;
-              } else {
-                serving = (pickupDistanceInKm - FREE_DISPATCH) * TARIFF_DISPATCH;
-              }
-              var trip = finalDistanceInKm * KM_COST;
-              // Calculate the cost of the taxi ride
-              var cost = serving + trip;
-              cost = Math.ceil(cost);
-              setCookie('sum', cost, 1)
-
-              // Add the cost text to the map
-              var costText = "Вартість поїздки буде коштувати " + cost.toFixed(2) + " грн";
-              var costDiv = document.createElement('div');
-              costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading mb-0">' + costText + '</h6></div>';
-              map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
-
-              // Add the payment buttons to the map
-              var paymentDiv = document.createElement('div');
-              paymentDiv.innerHTML =
-                "<div class='mb-3'>" +
-                "<button class='order-confirm btn btn-primary'>Готівка</button>" +
-                "<button class='order-confirm btn btn-primary ml-3'>Картка</button>" +
-                "<button class='order-reject btn btn-danger ml-3'>Відмовитись</button>" +
-                "</div>";
-
-              map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
-
-              // Add event listener to the "Готівка" button to send a post request to views.py
-              orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
-              orderConfirm.addEventListener("click", function (){
-                onOrderCash('Готівка')
-              });
-
-              // Add event listener to the "Картка" button to send a post request to views.py
-              orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[1];
-              orderConfirm.addEventListener("click", function () {
-                onOrderCash('Картка')
-              });
-
-              // Add event listener to the "Відмовитись" button to redirect to the homepage
-              orderReject = paymentDiv.getElementsByClassName('order-reject')[0]
-              orderReject.addEventListener("click", onOrderReject);
-
-              google.maps.event.trigger(map, 'resize');
-            }
-          });
-        }
-      });
-    }
-  });
+    // Add event listener to the "Відмовитись" button to redirect to the homepage
+    orderReject = paymentDiv.getElementsByClassName('order-reject')[0]
+    orderReject.addEventListener("click", onOrderReject);
 }
 
 function destroyMap(){
      map = null;
      orderData = null
-     orderConfirm.removeEventListener('click', onOrderCash)
+     orderConfirm.removeEventListener('click', onOrderPayment)
      orderReject.removeEventListener('click', onOrderReject)
      document.getElementById('order-modal').remove()
 }
 
 $(document).ready(function(){
-  // deleteAllCookies()
   setCookie("csrfToken", $.parseHTML(csrfToken)[0].value)
 
   $('#order-form').on('submit', function(event){
@@ -406,12 +524,12 @@ $(document).ready(function(){
       var toAddress = form.get('to_the_address');
 
       var geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ 'address': fromAddress }, function(results, status) {
+      geocoder.geocode({ 'address': fromAddress }, function(fromGeocoded, status) {
         if (status !== 'OK') {
           $('#from_address-error').html('Некоректна адреса');
           return;
         }
-        geocoder.geocode({ 'address': toAddress }, function(results, status) {
+        geocoder.geocode({ 'address': toAddress }, function(toGeocoded, status) {
           if (status !== 'OK') {
             $('#to_the_address-error').html('Некоректна адреса');
             return;
@@ -429,7 +547,7 @@ $(document).ready(function(){
               var taxiArr = JSON.parse(response.data);
 
               if (taxiArr.length > 0) {
-                createMap(fromAddress, toAddress, taxiArr);
+                createMap(fromGeocoded, toGeocoded, taxiArr);
               } else {
                 var noTaxiArr = document.createElement("div");
                 noTaxiArr.innerHTML = `
@@ -452,8 +570,8 @@ $(document).ready(function(){
             }
           });
 
-          setCookie("address", fromAddress, 1);
-          setCookie("to_address", toAddress, 1);
+          setCookie("address", JSON.stringify(fromGeocoded), 1);
+          setCookie("to_address", JSON.stringify(toGeocoded), 1);
           setCookie("phone", form.get('phone_number'), 1);
           setCookie('orderData', JSON.stringify(orderData), 1);
         });
