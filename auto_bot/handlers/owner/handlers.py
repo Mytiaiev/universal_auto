@@ -3,7 +3,7 @@ from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup
 from app.models import Owner, Privat24
 from app.portmone.generate_link import Portmone
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
-from auto_bot.handlers.owner.keyboards import payments_buttons, data_buttons, comission_buttons
+from auto_bot.handlers.owner.keyboards import payments_buttons, data_buttons, commission_buttons
 from auto_bot.handlers.owner.static_text import *
 from scripts.driversrating import DriversRatingMixin
 
@@ -64,11 +64,9 @@ def wrong_transfer(update, context):
 # Generate link debt
 
 
-
 def commission(update, context):
-
     context.bot.send_message(chat_id=update.effective_chat.id, text='Виберіть, яку комісію бажаєте встановити:',
-                             reply_markup=markup_keyboard_onetime([comission_buttons]))
+                             reply_markup=markup_keyboard_onetime([commission_buttons]))
 
 
 def get_my_commission(update, context):

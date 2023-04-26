@@ -8,6 +8,7 @@ from auto_bot.handlers.driver.handlers import change_status_car
 from auto_bot.handlers.driver_manager.handlers import get_gps_imea, get_n_vehicle, get_fleet_for_job_application, \
     get_vin_code_vehicle, get_licence_plate_vehicle, get_model_vehicle, get_name_vehicle, add_information_to_driver, \
     get_fleet, viewing_status_driver, second_name, email, phone_number, create_user, get_list_vehicle
+from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.order.handlers import to_the_address, payment_method, first_address_check, second_address_check, \
     order_on_time
 from auto_bot.handlers.owner.handlers import get_sum, generate_link_v1, get_sum_for_portmone, transfer, generate_link_v2
@@ -23,11 +24,6 @@ from auto_bot.handlers.order.static_text import FROM_ADDRESS, TO_THE_ADDRESS, FI
 
 
 def text(update, context):
-    """ STATE - for all users, STATE_D - for drivers, STATE_O - for owner,
-            STATE_DM - for driver manager, STATE_SSM - for service station manager"""
-    global STATE_DM
-    global STATE_SSM
-
     if context.user_data.get('state'):
         if context.user_data['state'] == FROM_ADDRESS:
             return to_the_address(update, context)
@@ -59,36 +55,36 @@ def text(update, context):
             return get_sum_for_portmone(update, context)
         elif context.user_data['owner_state'] == GENERATE_LINK_PORTMONE:
             return generate_link_v2(update, context)
-    elif STATE_DM is not None:
-        if STATE_DM == STATUS:
+    elif context.user_data.get('manager_state') is not None:
+        if context.user_data['manager_state'] == STATUS:
             return viewing_status_driver(update, context)
-        elif STATE_DM == NAME:
+        elif context.user_data['manager_state'] == NAME:
             return second_name(update, context)
-        elif STATE_DM == SECOND_NAME:
+        elif context.user_data['manager_state'] == SECOND_NAME:
             return email(update, context)
-        elif STATE_DM == EMAIL:
+        elif context.user_data['manager_state'] == EMAIL:
             return phone_number(update, context)
-        elif STATE_DM == PHONE_NUMBER:
+        elif context.user_data['manager_state'] == PHONE_NUMBER:
             return create_user(update, context)
-        elif STATE_DM == DRIVER:
+        elif context.user_data['manager_state'] == DRIVER:
             return get_list_vehicle(update, context)
-        elif STATE_DM == CAR_NUMBERPLATE:
+        elif context.user_data['manager_state'] == CAR_NUMBERPLATE:
             return get_fleet(update, context)
-        elif STATE_DM == RATE:
+        elif context.user_data['manager_state'] == RATE:
             return add_information_to_driver(update, context)
-        elif STATE_DM == NAME_VEHICLE:
+        elif context.user_data['manager_state'] == NAME_VEHICLE:
             return get_name_vehicle(update, context)
-        elif STATE_DM == MODEL_VEHICLE:
+        elif context.user_data['manager_state'] == MODEL_VEHICLE:
             return get_model_vehicle(update, context)
-        elif STATE_DM == LICENCE_PLATE_VEHICLE:
+        elif context.user_data['manager_state'] == LICENCE_PLATE_VEHICLE:
             return get_licence_plate_vehicle(update, context)
-        elif STATE_DM == VIN_CODE_VEHICLE:
+        elif context.user_data['manager_state'] == VIN_CODE_VEHICLE:
             return get_vin_code_vehicle(update, context)
-        elif STATE_DM == JOB_APPLICATION:
+        elif context.user_data['manager_state'] == JOB_APPLICATION:
             return get_fleet_for_job_application(update, context)
-        elif STATE_DM == V_GPS:
+        elif context.user_data['manager_state'] == V_GPS:
             return get_n_vehicle(update, context)
-        elif STATE_DM == V_GPS_IMEI:
+        elif context.user_data['manager_state'] == V_GPS_IMEI:
             return get_gps_imea(update, context)
     elif context.user_data.get('state_ssm') is not None:
         if context.user_data['state_ssm'] == LICENCE_PLATE:

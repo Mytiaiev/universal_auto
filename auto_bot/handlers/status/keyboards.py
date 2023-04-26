@@ -11,6 +11,7 @@ status_buttons = [
     [KeyboardButton(Driver.RENT)]
 ]
 
+
 choose_auto_keyboard = [KeyboardButton(f'{CORRECT_AUTO}'), KeyboardButton(f'{NOT_CORRECT_AUTO}')]
 correct_keyboard = [KeyboardButton(f'{CORRECT_CHOICE}'),
                     KeyboardButton(f'{NOT_CORRECT_CHOICE}')]
