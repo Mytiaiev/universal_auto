@@ -53,7 +53,7 @@ start_keyboard = [
 # Ordering taxi
 def start(update, context):
     menu(update, context)
-    chat_id = update.message.chat.id
+    chat_id = update.effective_chat.id
     user = User.get_by_chat_id(chat_id)
     context.user_data.clear()
     if user:
@@ -1871,7 +1871,7 @@ def generate_link_v2(update, context):
 
 
 def menu(update, context):
-    chat_id = update.message.chat.id
+    chat_id = update.effective_chat.id
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     driver = Driver.get_by_chat_id(chat_id)
     manager = ServiceStationManager.get_by_chat_id(chat_id)
