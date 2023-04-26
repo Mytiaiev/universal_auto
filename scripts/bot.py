@@ -115,7 +115,11 @@ CASH = 'Готівка'
 
 
 def continue_order(update, context):
-    update.message.reply_text(f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')}грн/км\n" +
+    order = Order.objects.filter(chat_id_client=update.message.chat.id, status_order__in=[Order.ON_TIME, Order.WAITING])
+    if order:
+        update.message.reply_text("У вас вже є активне замовлення бажаєте замовити ще одне авто?")
+    else:
+        update.message.reply_text(f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')}грн/км\n" +
                               f"Ціна поїздки за містом {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')}грн/км")
 
     keyboard = [KeyboardButton(text=f"\u2705 {CONTINUE}"),
@@ -225,8 +229,8 @@ def payment_method(update, context):
     else:
         STATE = None
 
-        keyboard = [KeyboardButton(text=f"\U0001f4b7 {CASH}"),
-                    KeyboardButton(text=f"\U0001f4b8 {_CARD}")]
+        keyboard = [KeyboardButton(text=f"\U0001f4b7 {CASH}"),]
+                    #KeyboardButton(text=f"\U0001f4b8 {_CARD}")
 
         reply_markup = ReplyKeyboardMarkup(
             keyboard=[keyboard],
@@ -278,10 +282,10 @@ def order_create(update, context):
         context.user_data['from_address'] = context.user_data['location_address']
     else:
         from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
-        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place,
-                                                                                os.environ["GOOGLE_API_KEY"])
-    order = Order.get_order(chat_id_client=update.message.chat.id, phone=user.phone_number, status_order=Order.ON_TIME)
-    if order and not order.payment_method:
+        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place, os.environ["GOOGLE_API_KEY"])
+    order = Order.objects.filter(chat_id_client=update.message.chat.id, payment_method="",
+                                  status_order=Order.ON_TIME).first()
+    if order:
         order.from_address = context.user_data['from_address']
         order.latitude = context.user_data['latitude']
         order.longitude = context.user_data['longitude']
@@ -291,6 +295,7 @@ def order_create(update, context):
         order.phone_number = user.phone_number
         order.payment_method = payment.split()[1]
         order.save()
+        update.message.reply_text(f'Замовлення прийняте, очікуйте водія о {timezone.localtime(order.order_time).time()}')
     else:
         Order.objects.create(
             from_address=context.user_data['from_address'],
@@ -384,9 +389,12 @@ def send_time_orders(context):
                                   order_time__lte=min_sending_time)
     if orders:
         for timeorder in orders:
-            message = f"Адреса посадки: {timeorder.from_address}\nМісце прибуття: {timeorder.to_the_address}\n \
-            Спосіб оплати: {timeorder.payment_method}\nНомер телефону: {timeorder.phone_number}\n \
-            Час подачі:{timezone.localtime(timeorder.order_time).time()}"
+            message = f"<u>Замовлення на певний час:</u>\n" \
+            f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
+            f"Адреса посадки: {timeorder.from_address}\n" \
+            f"Місце прибуття: {timeorder.to_the_address}\n" \
+            f"Спосіб оплати: {timeorder.payment_method}\n" \
+            f"Номер телефону: {timeorder.phone_number}\n"
             drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
             if drivers:
                 keyboard = [
@@ -396,7 +404,7 @@ def send_time_orders(context):
                 for driver in drivers:
                     try:
                         context.bot.send_message(chat_id=driver, text=message,
-                                                 reply_markup=InlineKeyboardMarkup(keyboard))
+                                 reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.HTML)
                     except:
                         pass
 
@@ -495,36 +503,36 @@ def handle_callback_order(update, context):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "End_trip":
-        if order.payment_method == _CARD:
-            payment_id = str(uuid4())
-            payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
-                            os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
-            liqpay_cert_path = os.environ["LIQPAY_CERF"]
-            liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"],
-                                   ssl_cert=liqpay_cert_path)
-
-            response = liqpay_client.api("request",
-                                         data={
-                                             "action": "status",
-                                             "version": "3",
-                                             "order_id": payment_id
-                                         },
-                                         headers={
-                                             "Content-Type": "application/json",
-                                             "Accept": "application/json",
-                                         },
-                                         cert=liqpay_cert_path,
-                                         verify=True
-                                         )
-
-            check_payment_status_tg.delay(data[1], query.message.message_id, response)
-        else:
-            context.bot.send_message(chat_id=order.chat_id_client,
+        # if order.payment_method == _CARD:
+        #     payment_id = str(uuid4())
+        #     payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
+        #                     os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
+        #     liqpay_cert_path = os.environ["LIQPAY_CERF"]
+        #     liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"],
+        #                            ssl_cert=liqpay_cert_path)
+        #
+        #     response = liqpay_client.api("request",
+        #                                  data={
+        #                                      "action": "status",
+        #                                      "version": "3",
+        #                                      "order_id": payment_id
+        #                                  },
+        #                                  headers={
+        #                                      "Content-Type": "application/json",
+        #                                      "Accept": "application/json",
+        #                                  },
+        #                                  cert=liqpay_cert_path,
+        #                                  verify=True
+        #                                  )
+        #
+        #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
+        #else:
+        context.bot.send_message(chat_id=order.chat_id_client,
                                      text="Дякуємо, що скористались послугами нашої компанії")
-            query.edit_message_text(text=f"<<Поїздку завершено>>")
-            order.status_order = Order.COMPLETED
-            order.save()
-            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+        query.edit_message_text(text=f"<<Поїздку завершено>>")
+        order.status_order = Order.COMPLETED
+        order.save()
+        ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
 
 
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):

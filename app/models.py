@@ -189,11 +189,7 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return 'new_uklon'
 
     def total_drivers_amount(self, rate=0.35):
-        if self.signal == '512329' or self.signal == '542114' or self.signal == '517489':
-            return self.kassa() * (1 - rate) - float(self.total_amount_cach)
-        else:
-            return -(self.kassa()) * rate
-
+        return self.kassa() * (1 - rate) - float(self.total_amount_cach)
 
     def total_owner_amount(self, rate=0.35):
         return -self.total_drivers_amount(rate)
@@ -2750,7 +2746,7 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
         else:
             incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
             totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" + \
-                f"-" * 42
+                "-" * 42
     return owner, totals
 
 

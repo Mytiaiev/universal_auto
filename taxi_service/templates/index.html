@@ -379,7 +379,7 @@
 {% include 'footer.html' %}
 
 <script>
-	var tariff = '{{ tariff }}';
+	var parkSettings = '{{ parkSettings }}';
 	var apiGoogle = '{{ google_api }}';
 	var csrfToken = '{% csrf_token %}';
 	var ajaxPostUrl = "{% url 'index' %}";
@@ -389,6 +389,7 @@
   <script src="{% static 'app/js/bootstrap.js' %}"></script>
   <script src="{% static 'app/js/defer-google-maps.js' %}"></script>
   <script src="{% static 'app/js/custom.js' %}"></script>
+  <script src="{% static 'app/js/cookies.js' %}"></script>
 
 </body>
 
