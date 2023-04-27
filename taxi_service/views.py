@@ -4,6 +4,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
 from django.shortcuts import render
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
+from django.forms.models import model_to_dict
+
 from app.models import *
 
 
@@ -22,6 +24,33 @@ def active_vehicles_gps():
     return json_data
 
 
+def order_confirm(id_order):
+    order = Order.objects.get(id=id_order)
+    driver = order.driver
+    vehicle = UseOfCars.objects.filter(user_vehicle=driver).first()
+    if vehicle is not None:
+        vehicle_gps = VehicleGPS.objects.filter(
+            vehicle__licence_plate=vehicle.licence_plate
+        ).values('vehicle__licence_plate', 'lat', 'lon')
+        json_data = json.dumps(list(vehicle_gps), cls=DjangoJSONEncoder)
+        return json_data
+    else:
+        return "[]"
+
+
+def update_order_sum_or_status(id_order, arg, action):
+    if action == 'order_sum':
+        order = Order.objects.get(id=id_order)
+        order.sum = arg
+        order.save()
+
+    if action == 'user_opt_out':
+        order = Order.objects.get(id=id_order)
+        order.status_order = Order.CANCELED
+        order.sum = arg
+        order.save()
+
+
 def index(request):
     sub_form = SubscriberForm()
     order_form = MainOrderForm()
@@ -29,10 +58,13 @@ def index(request):
         if request.POST.get('action') == 'order':
             order_form = MainOrderForm(request.POST)
             if order_form.is_valid():
-                order_form.save(
+                save_form = order_form.save(
                     request.POST.get('sum'),
                     request.POST.get('payment_method')
                 )
+                order_dict = model_to_dict(save_form)
+                json_data = json.dumps(order_dict, cls=DjangoJSONEncoder)
+                return JsonResponse({'data': json_data}, safe=False)
             else:
                 return JsonResponse(order_form.errors, status=400)
 
@@ -52,9 +84,27 @@ def index(request):
                 return JsonResponse(
                     {'success': False, 'errors': 'Щось пішло не так!'})
 
+        elif request.POST.get('action') == 'order_sum':
+            update_order_sum_or_status(
+                request.POST.get('idOrder'),
+                request.POST.get('sum'),
+                request.POST.get('action')
+            )
+
+        elif request.POST.get('action') == 'user_opt_out':
+            update_order_sum_or_status(
+                request.POST.get('idOrder'),
+                request.POST.get('sum'),
+                request.POST.get('action')
+            )
+
         elif request.GET.get('action') == 'active_vehicles_locations':
             active_vehicle_locations = active_vehicles_gps()
             return JsonResponse({'data': active_vehicle_locations}, safe=False)
+
+        elif request.GET.get('action') == 'order_confirm':
+            driver = order_confirm(request.GET.get('id_order'))
+            return JsonResponse({'data': driver}, safe=False)
 
     park_setting = ParkSettings.objects.all()
     park_settings = {}

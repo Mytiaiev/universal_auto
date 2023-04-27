@@ -2711,6 +2711,7 @@ class UaGps(SeleniumTools):
                                                rent_time=rent_time,
                                                rent_distance=rent_distance)
 
+
 def get_report(week_number=None, driver=True, sleep=5, headless=True):
     owner = {"Fleet Owner": 0}
     reports = {}
@@ -2740,7 +2741,7 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
         else:
             incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
             totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" + \
-                f"-" * 42
+                "-" * 42
     return owner, totals
 
 
