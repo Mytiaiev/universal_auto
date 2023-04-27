@@ -222,6 +222,14 @@ def get_report_for_tg(self):
         logger.info(e)
 
 
+@app.task(bind=True)
+def withdraw_uklon(self):
+    try:
+        UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('withdraw_money')
+    except Exception as e:
+        logger.info(e)
+
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
@@ -236,6 +244,7 @@ def setup_periodic_tasks(sender, **kwargs):
 
 @app.on_after_finalize.connect
 def setup_rent_task(sender, **kwargs):
+    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s())
     #sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
     sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())

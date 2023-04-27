@@ -16,7 +16,8 @@ settings = {
     'CITY_PARK': "Київ|Київська",
     'SEND_TIME_ORDER_MIN': '20',
     'CHECK_ORDER_TIME_SEC': '305',
-    'TARIFF_CAR_OUTSIDE_DISPATCH': '15'
+    'TARIFF_CAR_OUTSIDE_DISPATCH': '15',
+    'Залишок Uklon': '150'
 }
 
 
