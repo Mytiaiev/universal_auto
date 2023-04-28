@@ -564,8 +564,17 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         #else:
-        context.bot.send_message(chat_id=order.chat_id_client,
+        if order.chat_id_client:
+            context.bot.send_message(chat_id=order.chat_id_client,
                                      text="Дякуємо, що скористались послугами нашої компанії")
+        else:
+            params = {
+                "recipient": phone,
+                "text": "Дякуємо, що скористались послугами нашої компанії",
+                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "output": "json"
+            }
+            requests.post(url_mobizon, params=params)
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         order.status_order = Order.COMPLETED
         order.save()
