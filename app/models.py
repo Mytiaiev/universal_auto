@@ -497,6 +497,9 @@ class ParkStatus(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.status
+
     class Meta:
         ordering = ['-created_at']
 
@@ -1083,6 +1086,7 @@ class Comment(models.Model):
 class Order(models.Model):
     WAITING = 'Очікується'
     IN_PROGRESS = 'Виконується'
+    COMPLETED = 'Виконаний'
     CANCELED = 'Скасовано клієнтом'
     ON_TIME = 'На певний час'
 
@@ -1094,6 +1098,7 @@ class Order(models.Model):
     to_longitude = models.CharField(max_length=10, null=True)
     phone_number = models.CharField(max_length=13)
     chat_id_client = models.CharField(max_length=15)
+    car_delivery_price = models.CharField(max_length=30, null=True, blank=True)
     sum = models.CharField(max_length=30)
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
     payment_method = models.CharField(max_length=70)
