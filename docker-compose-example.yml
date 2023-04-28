@@ -34,6 +34,8 @@ services:
       PORTMONE_PASSWORD:
       PORTMONE_PAYEE_ID:
       GOOGLE_API_KEY:
+      MOBIZON_DOMAIN: "https://api.mobizon.ua/service/message/sendsmsmessage"
+      MOBIZON_API_KEY:
       REDIS_URL: redis://redis
       DATABASE_URL: "postgres://universal_auto_dev:pass@postgres:5432/universal_auto_dev"
       SECRET_KEY:

@@ -35,6 +35,8 @@ from django.dispatch import receiver
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
 
+url_mobizon = os.environ['MOBIZON_DOMAIN']
+
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -410,6 +412,9 @@ def handle_callback_order(update, context):
     if data[0] == "Accept_order":
         order_id = int(data[1])
         order = Order.objects.filter(pk=order_id).first()
+        phone = order.phone_number.replace("+", "")
+        if phone.startswith("0"):
+            phone = "38" + phone
         if order:
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
@@ -425,7 +430,7 @@ def handle_callback_order(update, context):
                 else:
                     price = order.sum
                 keyboard = [
-                            [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data="On_the_spot")],
+                            [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data=f"On_the_spot {order.pk}")],
                             [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {order.pk}")],
                            ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -449,14 +454,28 @@ def handle_callback_order(update, context):
                                     f'Номер машини: {licence_plate}\n' \
                                     f'Номер телефону: {driver.phone_number}\n' \
                                     f'Сума замовлення:{order.sum}грн'
-                try:
-                    context.bot.send_message(chat_id=order.chat_id_client, text=report_for_client)
-                    context.user_data['running'] = True
-                    r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order.chat_id_client, vehicle), daemon=True)
-                    r.start()
-                except:
-                    pass
+
+                if order.chat_id_client:
+                    try:
+                        context.bot.send_message(chat_id=order.chat_id_client,
+                                                 text=report_for_client)
+                        context.user_data['running'] = True
+                        r = threading.Thread(target=send_map_to_client,
+                                             args=(update, context,
+                                                   order.chat_id_client,
+                                                   vehicle), daemon=True)
+                        r.start()
+                    except:
+                        pass
+                else:
+                    params = {
+                        "recipient": phone,
+                        "text": report_for_client,
+                        "apiKey": os.environ['MOBIZON_API_KEY'],
+                        "output": "json"
+                    }
+                    requests.post(url_mobizon, params=params)
+
             else:
                 query.edit_message_text(
                     text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
@@ -467,19 +486,43 @@ def handle_callback_order(update, context):
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
         order_id = int(data[1])
         order = Order.objects.filter(pk=order_id).first()
+        phone = order.phone_number.replace("+", "")
+        if phone.startswith("0"):
+            phone = "38" + phone
         if order:
             order.status_order = Order.WAITING
             order.save()
             # remove inline keyboard markup from the message
-            context.bot.send_message(chat_id=order.chat_id_client,
-                text="Водій відхилив замовлення. Пошук іншого водія...")
+            if order.chat_id_client:
+                context.bot.send_message(chat_id=order.chat_id_client,
+                    text="Водій відхилив замовлення. Пошук іншого водія...")
+            else:
+                params = {
+                    "recipient": phone,
+                    "text": "Водій відхилив замовлення. Пошук іншого водія...",
+                    "apiKey": os.environ['MOBIZON_API_KEY'],
+                    "output": "json"
+                }
+                requests.post(url_mobizon, params=params)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
-    elif query.data == "On_the_spot":
+    elif data[0] == "On_the_spot":
         order_id = int(data[1])
         order = Order.objects.filter(pk=order_id).first()
+        phone = order.phone_number.replace("+", "")
+        if phone.startswith("0"):
+            phone = "38" + phone
         context.user_data['running'] = False
-        context.bot.send_message(chat_id=order.chat_id_client, text='Машину подано. Водій вас очікує')
+        if order.chat_id_client:
+            context.bot.send_message(chat_id=order.chat_id_client, text='Машину подано. Водій вас очікує')
+        else:
+            params = {
+                "recipient": phone,
+                "text": "'Машину подано. Водій вас очікує'.",
+                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "output": "json"
+            }
+            requests.post(url_mobizon, params=params)
 
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):
