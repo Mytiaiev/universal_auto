@@ -416,6 +416,9 @@ def handle_callback_order(update, context):
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.message.chat_id)
     order = Order.objects.filter(pk=int(data[1])).first()
+    phone = order.phone_number.replace("+", "")
+    if phone.startswith("0"):
+        phone = "38" + phone
     if data[0] == "Accept_order":
         if order:
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
@@ -453,14 +456,29 @@ def handle_callback_order(update, context):
                                     f'Номер машини: {licence_plate}\n' \
                                     f'Номер телефону: {driver.phone_number}\n' \
                                     f'Сума замовлення:{order.sum}грн'
-                try:
-                    context.bot.send_message(chat_id=order.chat_id_client, text=report_for_client)
-                    context.user_data['running'] = True
-                    r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order.chat_id_client, vehicle), daemon=True)
-                    r.start()
-                except:
-                    pass
+                if order.chat_id_client:
+                    try:
+                        context.bot.send_message(chat_id=order.chat_id_client, text=report_for_client)
+                        context.user_data['running'] = True
+                        r = threading.Thread(target=send_map_to_client,
+                                             args=(update, context, order.chat_id_client, vehicle), daemon=True)
+                        r.start()
+                    except:
+                        pass
+                else:
+                    sms_for_client = f'Вас вітає Ninja-Taxi!\n' \
+                                     f'Ваш водій: {driver}\n' \
+                                     f'Назва: {vehicle.name}\n' \
+                                     f'Номер машини: {licence_plate}\n' \
+                                     f'Номер телефону: {driver.phone_number}\n'
+                    params = {
+                        "recipient": phone,
+                        "text": sms_for_client,
+                        "apiKey": os.environ['MOBIZON_API_KEY'],
+                        "output": "json"
+                    }
+                    requests.post(url_mobizon, params=params)
+
             else:
                 query.edit_message_text(
                     text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
@@ -472,16 +490,33 @@ def handle_callback_order(update, context):
             order.status_order = Order.WAITING
             order.save()
             # remove inline keyboard markup from the message
-            context.bot.send_message(chat_id=order.chat_id_client,
-                                     text="Водій відхилив замовлення. Пошук іншого водія...")
+            if order.chat_id_client:
+                context.bot.send_message(chat_id=order.chat_id_client,
+                                         text="Водій відхилив замовлення. Пошук іншого водія...")
+            else:
+                params = {
+                    "recipient": phone,
+                    "text": "Водій відхилив замовлення. Пошук іншого водія...",
+                    "apiKey": os.environ['MOBIZON_API_KEY'],
+                    "output": "json"
+                }
+                requests.post(url_mobizon, params=params)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
     elif data[0] == "On_the_spot":
         keyboard = [[InlineKeyboardButton("\u2705 Клієнт на місці", callback_data=f"Сlient_on_site {order.pk}")]]
-
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_reply_markup(reply_markup=reply_markup)
-        context.bot.send_message(chat_id=order.chat_id_client, text='Машину подано. Водій вас очікує')
+        if order.chat_id_client:
+            context.bot.send_message(chat_id=order.chat_id_client, text='Машину подано. Водій вас очікує')
+        else:
+            params = {
+                "recipient": phone,
+                "text": "'Машину подано. Водій вас очікує'.",
+                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "output": "json"
+            }
+            requests.post(url_mobizon, params=params)
     elif data[0] == "Сlient_on_site":
         keyboard = [
             [InlineKeyboardButton("\u2705 Рухались по маршруту", callback_data=f"Along_the_route {order.pk}")],
