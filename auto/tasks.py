@@ -234,13 +234,14 @@ def check_payment_status_tg(order, query, response):
         logger.info(e)
 
 
-@shared_task
-def get_distance_trip(order, query, start_trip_with_client, end, licence_plate):
+@app.task(bind=True)
+def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
     end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
     try:
-        result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).generate_report(start, end, licence_plate)
+        result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('generate_report', start,
+                                                                              end, licence_plate)
         minutes = result[1].total_seconds() // 60
         return order, query, minutes, result[0]
     except Exception as e:

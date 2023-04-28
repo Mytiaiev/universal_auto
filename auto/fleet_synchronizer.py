@@ -29,7 +29,7 @@ class Synchronizer:
             super().__init__(driver=False, sleep=3, headless=True)
             self.driver = chrome_driver
 
-    def try_to_execute(self, func_name):
+    def try_to_execute(self, func_name, *args, **kwargs):
         if not self.driver.service.is_connectable():
             print('###################### Driver recreating... ########################')
             self.driver = self.build_driver()
@@ -42,7 +42,7 @@ class Synchronizer:
             time.sleep(self.sleep)
         except TimeoutException:
             pass
-        return getattr(self, func_name)()
+        return getattr(self, func_name)(*args, **kwargs)
 
     def get_target_element_of_page(self, url, xpath):
         try:
