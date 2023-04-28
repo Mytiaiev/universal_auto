@@ -71,10 +71,7 @@ function calculateDistance(obj) {
 }
 
 function hidePaymentButtons() {
-  var paymentButtons = document.getElementsByClassName('order-confirm');
-  for (var i = 0; i < paymentButtons.length; i++) {
-    paymentButtons[i].classList.add('clicked');
-  }
+  $(".order-confirm").remove()
 }
 
 function addMarker(obj) {
@@ -285,9 +282,6 @@ function onOrderPayment(paymentMethod) {
       var idOrder = JSON.parse(response.data)
       setCookie("idOrder", idOrder.id, 1);
       orderUpdate(idOrder.id)
-
-      var paymentDiv = document.querySelector('.gm-style > div:first-child > div:last-child');
-      paymentDiv.style.display = 'none';
     },
     error: function(error) {
       // Handle the error
