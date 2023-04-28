@@ -2,6 +2,7 @@ import time
 import pendulum
 from contextlib import contextmanager
 from datetime import datetime
+
 try:
     import zoneinfo
 except ImportError:
@@ -10,6 +11,7 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
+from celery import shared_task
 from selenium.common import InvalidSessionIdException
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
@@ -23,8 +25,10 @@ UKLON_CHROME_DRIVER = None
 UBER_CHROME_DRIVER = None
 UAGPS_CHROME_DRIVER = None
 
-UPDATE_DRIVER_DATA_FREQUENCY = 60*60*1
-UPDATE_DRIVER_STATUS_FREQUENCY = 60*1.5
+
+UPDATE_DRIVER_DATA_FREQUENCY = 60 * 60 * 1
+UPDATE_DRIVER_STATUS_FREQUENCY = 60 * 1.5
+
 MEMCASH_LOCK_EXPIRE = 60 * 10
 MEMCASH_LOCK_AFTER_FINISHING = 10
 
@@ -220,6 +224,31 @@ def get_report_for_tg(self):
         logger.info(e)
 
 
+@shared_task
+def check_payment_status_tg(order, query, response):
+    try:
+        while True:
+            time.sleep(5)
+            status = response.get('status')
+            if status == 'success':
+                return query, order, response
+    except Exception as e:
+        logger.info(e)
+
+
+@shared_task
+def get_distance_trip(order, query, start_trip_with_client, end, licence_plate):
+    start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
+    start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
+    end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    try:
+        result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).generate_report(start, end, licence_plate)
+        minutes = result[1].total_seconds() // 60
+        return order, query, minutes, result[0]
+    except Exception as e:
+        logger.info(e)
+
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
@@ -231,7 +260,7 @@ def setup_periodic_tasks(sender, **kwargs):
     #sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
     # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
-    sender.add_periodic_task(crontab(minute='*/5'), get_rent_information.s())
+    sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
 
 
 @app.on_after_finalize.connect
@@ -249,3 +278,4 @@ def init_chrome_driver():
     UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=3, headless=True, profile='Uklon_CeleryTasks')
     UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=3, headless=True, profile='Uber_CeleryTasks')
     UAGPS_CHROME_DRIVER = UaGps(headless=True, profile='Uagps_CeleryTasks')
+
