@@ -24,9 +24,9 @@ class Synchronizer:
 
     def __init__(self, chrome_driver=None):
         if chrome_driver is None:
-            super().__init__(driver=True, sleep=3, headless=True)
+            super().__init__(driver=True, sleep=5, headless=True)
         else:
-            super().__init__(driver=False, sleep=3, headless=True)
+            super().__init__(driver=False, sleep=5, headless=True)
             self.driver = chrome_driver
 
     def try_to_execute(self, func_name, *args, **kwargs):
@@ -410,7 +410,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         online = []
         width_client = []
         try:
-            xpath = f'//div[@id="mat-tab-label-0-1"]'
+            xpath = f'//div[@role="tab"]/div[text()="Поїздки"]'
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
             # xpath = f'//mat-select[@id="mat-select-4"]'
             # WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
@@ -472,7 +472,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
     def get_driver_status(self):
         try:
             url = f'{self.base_url}/workspace/orders'
-            xpath = f'//div[@id="mat-tab-label-0-1"]'
+            xpath = f'//div[@role="tab"]/div[text()="Поїздки"]'
             self.get_target_element_of_page(url, xpath)
             return self.get_driver_status_from_table()
         except WebDriverException as err:
