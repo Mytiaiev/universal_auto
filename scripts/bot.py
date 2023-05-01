@@ -32,6 +32,9 @@ from django.utils import timezone
 from scripts.conversion import *
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
 
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
