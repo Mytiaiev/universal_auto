@@ -2742,11 +2742,11 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     totals = {k: v + reports[k] for k, v in totals.items()}
     for k, v in totals.items():
         if plan[k] > int(ParkSettings.get_value("DRIVER_PLAN", 10000)):
-            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 42
+            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
         else:
             incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
             totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" + \
-                "-" * 42
+                "-" * 39
     return owner, totals
 
 

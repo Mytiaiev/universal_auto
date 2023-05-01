@@ -20,7 +20,7 @@ processed_files = []
 def start(update, context):
     context.user_data.clear()
     menu(update, context)
-    chat_id = update.message.chat.id
+    chat_id = update.effective_chat.id
     user = User.get_by_chat_id(chat_id)
     if user:
         if user.phone_number:
@@ -99,7 +99,7 @@ def error_handler(update, context) -> None:
 
 
 def menu(update, context):
-    chat_id = update.message.chat.id
+    chat_id = update.effective_chat.id
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     driver = Driver.get_by_chat_id(chat_id)
     manager = ServiceStationManager.get_by_chat_id(chat_id)

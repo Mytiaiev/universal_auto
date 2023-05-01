@@ -1,5 +1,7 @@
 import os
 
+import requests
+
 from app.models import ParkSettings
 from scripts.conversion import get_addresses_by_radius
 
@@ -12,3 +14,16 @@ def buttons_addresses(address):
         return dict_addresses
     else:
         return None
+
+
+def text_to_client(context,order,text):
+    if order.chat_id_client:
+        context.bot.send_message(chat_id=order.chat_id_client, text=text)
+    else:
+        params = {
+            "recipient": order.phone_number[1:],
+            "text": text,
+            "apiKey": os.environ['MOBIZON_API_KEY'],
+            "output": "json"
+        }
+        requests.post(os.environ['MOBIZON_DOMAIN'], params=params)

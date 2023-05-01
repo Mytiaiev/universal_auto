@@ -3,19 +3,22 @@ import datetime
 import threading
 import time
 import os
+
+from celery.signals import task_postrun
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode, \
-    KeyboardButton
+    KeyboardButton, LabeledPrice
 
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger
+from auto.tasks import logger, get_distance_trip, check_payment_status_tg
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
-    payment_keyboard, inline_markup_accept, inline_spot_keyboard
-from auto_bot.handlers.order.utils import buttons_addresses
+    payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
+    inline_finish_order
+from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price
 from auto_bot.handlers.order.static_text import *
@@ -271,9 +274,8 @@ def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.message.chat_id)
+    order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] == "Accept_order":
-        order_id = int(data[1])
-        order = Order.objects.filter(pk=order_id).first()
         if order:
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
@@ -285,14 +287,9 @@ def handle_callback_order(update, context):
                                                      order.to_latitude, order.to_longitude,
                                                      driver_lat, driver_long,
                                                      os.environ["GOOGLE_API_KEY"])
-                    price = distance_price[1]
-                else:
-                    price = order.sum
-
+                    order.car_delivery_price, order.sum = distance_price[1], distance_price[0]
                 markup = inline_spot_keyboard(order.pk)
-                order.status_order = Order.IN_PROGRESS
-                order.driver = driver
-                order.sum = price
+                order.status_order, order.driver = Order.IN_PROGRESS, driver
                 order.save()
                 ParkStatus.objects.create(driver=driver,
                                           status=Driver.WAIT_FOR_CLIENT)
@@ -304,42 +301,138 @@ def handle_callback_order(update, context):
                           f"Загальна вартість: {order.sum}грн"
                 query.edit_message_text(text=message)
                 query.edit_message_reply_markup(reply_markup=markup)
-
-                report_for_client = f'Ваш водій: {driver}\n' \
+                report_for_client = f'Вас вітає Ninja-Taxi!\n' \
+                                    f'Ваш водій: {driver}\n' \
                                     f'Назва: {vehicle.name}\n' \
                                     f'Номер машини: {licence_plate}\n' \
                                     f'Номер телефону: {driver.phone_number}\n' \
                                     f'Сума замовлення:{order.sum}грн'
                 try:
-                    context.bot.send_message(chat_id=order.chat_id_client, text=report_for_client)
                     context.user_data['running'] = True
                     r = threading.Thread(target=send_map_to_client,
                                          args=(update, context, order.chat_id_client, vehicle), daemon=True)
                     r.start()
                 except:
                     pass
+                text_to_client(context, order, report_for_client)
             else:
                 query.edit_message_text(text=select_car_error)
         else:
             query.edit_message_text(text="Це замовлення вже виконується.")
-
     elif data[0] == 'Reject_order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
-        order_id = int(data[1])
-        order = Order.objects.filter(pk=order_id).first()
         if order:
             order.status_order = Order.WAITING
             order.save()
             # remove inline keyboard markup from the message
-            context.bot.send_message(chat_id=order.chat_id_client,
-                                     text="Водій відхилив замовлення. Пошук іншого водія...")
+            text_to_client(context, order, "Водій відхилив замовлення. Пошук іншого водія...")
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
     elif data[0] == "On_the_spot":
-        order_id = int(data[1])
+        markup = inline_client_spot(pk=order.id)
+        query.edit_message_reply_markup(reply_markup=markup)
+        text_to_client(context, order, 'Машину подано. Водій вас очікує')
+    elif data[0] == "Сlient_on_site":
+        ParkStatus.objects.create(driver=driver, status=Driver.WITH_CLIENT)
+        reply_markup, context.user_data['running'] = inline_route_keyboard(pk=order.id), False
+        query.edit_message_reply_markup(reply_markup=reply_markup)
+    elif data[0] == "Along_the_route" or data[0] == "Off_route":
+        if data[0] == "Off_route":
+            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+            licence_plate = (list(record))[-1].licence_plate
+            status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
+            s, e = timezone.localtime(status_driver.created_at), timezone.localtime(timezone.localtime())
+            get_distance_trip.delay(data[1], query.message.message_id, s, e, licence_plate)
+        else:
+            query.edit_message_reply_markup(reply_markup=inline_finish_order(order.id))
+    elif data[0] == "End_trip":
+        # if order.payment_method == PAYCARD:
+        #     payment_id = str(uuid4())
+        #     payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
+        #                     os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
+        #     liqpay_cert_path = os.environ["LIQPAY_CERF"]
+        #     liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"],
+        #                            ssl_cert=liqpay_cert_path)
+        #
+        #     response = liqpay_client.api("request",
+        #                                  data={
+        #                                      "action": "status",
+        #                                      "version": "3",
+        #                                      "order_id": payment_id
+        #                                  },
+        #                                  headers={
+        #                                      "Content-Type": "application/json",
+        #                                      "Accept": "application/json",
+        #                                  },
+        #                                  cert=liqpay_cert_path,
+        #                                  verify=True
+        #                                  )
+        #
+        #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
+        #else:
+        text_to_client(context, order, "Дякуємо, що скористались послугами нашої компанії")
+        query.edit_message_text(text=f"<<Поїздку завершено>>")
+        order.status_order = Order.COMPLETED
+        order.save()
+        ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+
+
+def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
+    title = 'Послуга особистого водія'
+    description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
+    payload = 'Додаткові дані для ідентифікації користувача'
+    currency = 'UAH'
+    prices = [LabeledPrice(label='Ціна', amount=int(price) * 100)]
+    need_shipping_address = False
+
+    # Sending a request for payment
+    context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
+                             provider_token=provider_token, currency=currency, start_parameter=start_parameter,
+                             prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
+                             photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
+
+
+@task_postrun.connect
+def check_payment_status(sender=None, **kwargs):
+    if sender == check_payment_status_tg:
+        rep = kwargs.get("retval")
+        query_id, order_id, status_payment = rep
+        if status_payment:
+            order = Order.objects.filter(pk=order_id).first()
+            bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
+            bot.send_message(chat_id=order.chat_id_client,
+                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
+            order.status_order = Order.COMPLETED
+            order.save()
+            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+
+
+@task_postrun.connect
+def change_sum_trip(sender=None, **kwargs):
+    if sender == get_distance_trip:
+        rep = kwargs.get("retval")
+        order_id, query_id, minutes_of_trip, distance = rep
         order = Order.objects.filter(pk=order_id).first()
-        context.user_data['running'] = False
-        context.bot.send_message(chat_id=order.chat_id_client, text='Машину подано. Водій вас очікує')
+        price_per_minute = (AVERAGE_DISTANCE_PER_HOUR * COST_PER_KM) / 60
+        price_per_minute = price_per_minute * minutes_of_trip
+        price_per_distance = round(COST_PER_KM * distance)
+        if price_per_distance > price_per_minute:
+            order.sum = int(price_per_distance) + int(order.car_delivery_price)
+        else:
+            order.sum = int(price_per_minute) + int(order.car_delivery_price)
+        order.save()
+        bot.send_message(chat_id=order.chat_id_client,
+                         text=f'Сума до оплати: {order.sum}грн')
+
+        message = f"Адреса посадки: {order.from_address}\n" \
+                  f"Місце прибуття: {order.to_the_address}\n" \
+                  f"Спосіб оплати: {order.payment_method}\n" \
+                  f"Номер телефону: {order.phone_number}\n" \
+                  f"Загальна вартість: {order.sum}грн"
+
+        bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
+        bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+                                      message_id=query_id, reply_markup=inline_finish_order(order.id))
 
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):
@@ -352,7 +445,7 @@ def send_map_to_client(update, context, client_chat_id, licence_plate):
         latitude, longitude = get_location_from_db(licence_plate)
         try:
             m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
-            print(m)
+            time.sleep(10)
         except Exception as e:
             logger.error(msg=e.message)
             time.sleep(30)
