@@ -236,14 +236,14 @@ def check_payment_status_tg(order, query, response):
         logger.info(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
-    end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    format_end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
     try:
         result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('generate_report', start,
-                                                                              end, licence_plate)
+                                                                              format_end, licence_plate)
         minutes = result[1].total_seconds() // 60
         return order, query, minutes, result[0]
     except Exception as e:
@@ -255,7 +255,7 @@ def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
-
+    global UAGPS_CHROME_DRIVER
     if os.getenv('CREATE_CHROME_INSTANCE', False):
         init_chrome_driver()
         sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
@@ -264,22 +264,19 @@ def setup_periodic_tasks(sender, **kwargs):
         sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     else:
+        init_priority_driver()
         sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s(), queue='priority')
-    global UAGPS_CHROME_DRIVER
-    init_chrome_driver()
-    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
-    #sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
-    # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
-    sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
 
 
 def init_chrome_driver():
     global BOLT_CHROME_DRIVER
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
-    global UAGPS_CHROME_DRIVER
     BOLT_CHROME_DRIVER = Bolt(week_number=None, driver=True, sleep=3, headless=True, profile='Bolt_CeleryTasks')
     UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=3, headless=True, profile='Uklon_CeleryTasks')
     UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=3, headless=True, profile='Uber_CeleryTasks')
+
+
+def init_priority_driver():
+    global UAGPS_CHROME_DRIVER
     UAGPS_CHROME_DRIVER = UaGps(headless=True, profile='Uagps_CeleryTasks')
