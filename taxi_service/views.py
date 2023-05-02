@@ -68,6 +68,13 @@ def index(request):
             else:
                 return JsonResponse(order_form.errors, status=400)
 
+        elif request.POST.get('action') == 'later_order':
+            order_form = MainOrderForm(request.POST)
+            if order_form.is_valid():
+                order_form.save(on_time=request.POST.get('order_time'))
+            else:
+                return JsonResponse(sub_form.errors, status=400)
+
         elif request.POST.get('action') == 'subscribe':
             sub_form = SubscriberForm(request.POST)
             if sub_form.is_valid():

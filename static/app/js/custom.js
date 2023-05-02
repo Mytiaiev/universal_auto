@@ -106,6 +106,7 @@ const TARIFF_OUTSIDE_THE_CITY = parseInt(parsedData["TARIFF_OUTSIDE_THE_CITY"]);
 const CENTRE_CITY_LAT = parseFloat(parsedData["CENTRE_CITY_LAT"]);
 const CENTRE_CITY_LNG = parseFloat(parsedData["CENTRE_CITY_LNG"]);
 const CENTRE_CITY_RADIUS = parseInt(parsedData["CENTRE_CITY_RADIUS"]);
+const SEND_TIME_ORDER_MIN = parseInt(parsedData["SEND_TIME_ORDER_MIN"]);
 
 const city_boundaries = function () {
   return [
@@ -628,4 +629,104 @@ loadGoogleMaps( 3, apiGoogle, "uk",'','geometry,places').then(function() {
  initAutocomplete('address');
  initAutocomplete('to_address');
  checkCookies()
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  const laterBtn = document.querySelector('#later-order');
+  const orderTimeField = document.querySelector('#order-time-field');
+  const deliveryTimeInput = document.querySelector('input[name="order_time"]');
+  const orderNowBtn = document.querySelector('#order-form button[type="submit"]');
+
+  laterBtn.addEventListener('click', function() {
+    if (!orderTimeField.classList.contains('hidden')) {
+      var form = new FormData(document.querySelector('#order-form'));
+      var fields = form.keys();
+      var errorFields = 0;
+      var errorMsgs = {
+        'phone_number': "Номер телефону обов'язковий",
+        'from_address': "Адреса обов'язкова",
+        'to_the_address': "Адреса обов'язкова",
+        'order_time': "Час замовлення обов'язково"
+      }
+
+      var formIsValid = true;
+
+      for (const field of fields) {
+        const err = $(`#${field}-error`);
+        if (form.get(field).length === 0) {
+          errorFields++;
+          err.html(errorMsgs[field]);
+          formIsValid = false;
+        } else {
+          err.html('');
+        }
+      }
+      if (formIsValid) { // Перевіряємо, чи всі поля заповнені
+        const orderForm = document.querySelector('#order-form');
+        const formData = new FormData(orderForm);
+        formData.append('action', 'later_order');
+        // If the order time field is already shown, submit the order time
+        sendOrderTime(formData);
+      }
+    } else {
+      // If the order time field is hidden, show it
+      orderTimeField.classList.remove('hidden');
+      document.querySelector('#order_time-error').classList.remove('hidden');
+    }
+  });
+
+  orderNowBtn.addEventListener('click', function() {
+    orderTimeField.classList.add('hidden');
+    document.querySelector('#order_time-error').classList.add('hidden');
+  });
+
+  orderTimeField.addEventListener('keypress', function(event) {
+    const key = event.key;
+    const allowedCharacters = /[0-9:]/;
+    if (!allowedCharacters.test(key)) {
+      event.preventDefault();
+    }
+  });
+  function sendOrderTime(formData) {
+    const formattedDeliveryTime = moment(formData.get('order_time'), 'HH:mm').format('YYYY-MM-DD HH:mm:ss');
+    const currentTime = moment();
+    const minCurrentTime = moment(currentTime).add(SEND_TIME_ORDER_MIN, 'minutes');
+    formData.set('order_time', formattedDeliveryTime);
+    if (moment(formattedDeliveryTime, 'YYYY-MM-DD HH:mm:ss').isSameOrAfter(minCurrentTime)) {
+      $.ajax({
+        type: 'POST',
+        url: ajaxPostUrl,
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+          var applicationAccepted = document.createElement("div");
+          applicationAccepted.innerHTML = `
+            <div class="modal">
+              <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3>Дякую за замовлення. Очікуйте на автомобіль!</h3>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(applicationAccepted);
+          deleteCookie("address")
+
+          // We attach an event to close the window when the cross is clicked
+          var closeButton = applicationAccepted.querySelector(".close");
+          closeButton.addEventListener("click", function() {
+            applicationAccepted.parentNode.removeChild(applicationAccepted);
+            deleteAllCookies();
+            location.reload();
+          });
+        },
+      });
+      orderTimeField.classList.add('hidden');
+      deliveryTimeInput.value = '';
+    } else {
+      document.querySelector('#order_time-error').classList.remove('hidden');
+      const orderTimeError = document.querySelector('#order_time-error');
+      orderTimeError.innerHTML = 'Виберіть час не менше ніж через ' + SEND_TIME_ORDER_MIN + ' хвилин';
+    }
+  }
 });
