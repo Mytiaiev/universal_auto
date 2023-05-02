@@ -215,6 +215,12 @@ class VehicleGPSAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
+@admin.register(RentInformation)
+class RentInformationAdmin(admin.ModelAdmin):
+    list_display = ('driver_name', 'rent_time', 'rent_distance', 'created_at')
+    list_display_links = ('driver_name',)
+
+
 @admin.register(PaymentsOrder)
 class PaymentsOrderAdmin(admin.ModelAdmin):
     list_display = [f.name for f in PaymentsOrder._meta.fields]
