@@ -225,18 +225,6 @@ def get_report_for_tg(self):
 
 
 @shared_task
-def check_payment_status_tg(order, query, response):
-    try:
-        while True:
-            time.sleep(5)
-            status = response.get('status')
-            if status == 'success':
-                return query, order, response
-    except Exception as e:
-        logger.info(e)
-
-
-@shared_task
 def get_distance_trip(order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
