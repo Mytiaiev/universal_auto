@@ -1268,6 +1268,7 @@ class UseOfCars(models.Model):
 class ParkSettings(models.Model):
     key = models.CharField(max_length=255, verbose_name='Ключ')
     value = models.CharField(max_length=255, verbose_name='Значення')
+    description = models.CharField(max_length=255, null=True, verbose_name='Опиc')
 
 
     class Meta:
@@ -1284,8 +1285,6 @@ class ParkSettings(models.Model):
             return setting.value
         except ParkSettings.DoesNotExist:
             return default
-
-
 
 
 from selenium import webdriver
