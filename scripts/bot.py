@@ -463,9 +463,9 @@ def handle_callback_order(update, context):
                     try:
                         context.bot.send_message(chat_id=order.chat_id_client, text=report_for_client)
                         context.user_data['running'] = True
-                        r = threading.Thread(target=send_map_to_client,
-                                             args=(update, context, order.chat_id_client, vehicle), daemon=True)
-                        r.start()
+                        #r = threading.Thread(target=send_map_to_client,
+                        #                     args=(update, context, order.chat_id_client, vehicle), daemon=True)
+                        #r.start()
                     except:
                         pass
                 else:
