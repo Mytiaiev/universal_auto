@@ -15,9 +15,10 @@ settings = {
     'CENTRE_CITY_RADIUS': '75000',
     'CITY_PARK': "Київ|Київська",
     'SEND_TIME_ORDER_MIN': '20',
-    'CHECK_ORDER_TIME_SEC': '305',
+    'CHECK_ORDER_TIME_MIN': '5',
     'TARIFF_CAR_OUTSIDE_DISPATCH': '15',
-    'Залишок Uklon': '150'
+    'Залишок Uklon': '150',
+    'DRIVERS_CHAT': '-863882769'
 }
 
 

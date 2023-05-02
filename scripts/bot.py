@@ -19,7 +19,7 @@ import traceback
 from celery.signals import task_postrun
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
-    send_on_job_application_on_driver_to_Uber, get_report_for_tg
+    send_on_job_application_on_driver_to_Uber, get_report_for_tg, send_daily_into_group, check_time_order
 from scripts.driversrating import DriversRatingMixin
 import traceback
 import hashlib
@@ -376,31 +376,30 @@ def order_on_time(update, context):
         STATE = TIME_ORDER
 
 
-def send_time_orders(context):
-    min_sending_time = timezone.localtime()+datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
-    orders = Order.objects.filter(status_order=Order.ON_TIME,
-                                  order_time__gte=timezone.localtime(),
-                                  order_time__lte=min_sending_time)
-    if orders:
-        for timeorder in orders:
-            message = f"<u>Замовлення на певний час:</u>\n" \
-            f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
-            f"Адреса посадки: {timeorder.from_address}\n" \
-            f"Місце прибуття: {timeorder.to_the_address}\n" \
-            f"Спосіб оплати: {timeorder.payment_method}\n" \
-            f"Номер телефону: {timeorder.phone_number}\n"
-            drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
-            if drivers:
-                for driver in drivers:
-                    keyboard = [
-                        [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
-                        [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
-                               ]
-                    try:
-                        context.bot.send_message(chat_id=driver, text=message,
-                                                 reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.HTML)
-                    except:
-                        pass
+@task_postrun.connect
+def send_time_orders(sender=None, **kwargs):
+    if sender == check_time_order:
+        orders = kwargs.get("retval")
+        if orders:
+            for timeorder in orders:
+                message = f"<u>Замовлення на певний час:</u>\n" \
+                f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
+                f"Адреса посадки: {timeorder.from_address}\n" \
+                f"Місце прибуття: {timeorder.to_the_address}\n" \
+                f"Спосіб оплати: {timeorder.payment_method}\n" \
+                f"Номер телефону: {timeorder.phone_number}\n"
+                drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
+                if drivers:
+                    for driver in drivers:
+                        keyboard = [
+                            [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {timeorder.pk}")],
+                            [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {timeorder.pk}")],
+                                   ]
+                        try:
+                            bot.send_message(chat_id=driver, text=message,
+                                                     reply_markup=InlineKeyboardMarkup(keyboard), parse_mode=ParseMode.HTML)
+                        except:
+                            pass
 
 
 def handle_callback_order(update, context):
@@ -2056,6 +2055,13 @@ def send_report(sender=None, **kwargs):
                     pass
 
 
+@task_postrun.connect
+def send_report_daily_in_group(sender=None, **kwargs):
+    if sender == send_daily_into_group:
+        message = '\U0001f3c6'+kwargs.get("retval")
+        bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', -863882769), text=message)
+
+
 def download_report(update, context):
     update.message.reply_text("Запит на завантаження щотижневого звіту подано")
     download_weekly_report_force.delay()
@@ -2261,7 +2267,6 @@ dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f696 Викликати Т
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_address))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
 dp.add_handler(MessageHandler(Filters.regex(fr"^Замовити на інший час$"), time_order))
-updater.job_queue.run_repeating(send_time_orders, interval=int(ParkSettings.get_value('CHECK_ORDER_TIME_SEC', 100)))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
 dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {CONTINUE}$"), time_for_order))
 
