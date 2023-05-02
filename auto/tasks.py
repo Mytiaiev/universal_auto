@@ -262,12 +262,12 @@ def setup_periodic_tasks(sender, **kwargs):
     if os.getenv('CREATE_CHROME_INSTANCE', False):
         init_chrome_driver()
         sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute='*/10'), update_driver_data.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute=0, hour='*/2'), update_driver_data.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     else:
-        sender.add_periodic_task(crontab(minute='*/10'), get_rent_information.s(), queue='priority')
+        sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s(), queue='priority')
     # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
 
 

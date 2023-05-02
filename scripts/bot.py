@@ -9,7 +9,9 @@ import ast
 
 from auto_bot.dispatcher import setup_dispatcher
 from auto_bot.main import bot
+import warnings
 
+warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
 PORT = int(os.environ.get('PORT', '8443'))
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
 updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
