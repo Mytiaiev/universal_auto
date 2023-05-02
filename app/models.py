@@ -19,7 +19,6 @@ from auto import settings
 
 
 class PaymentsOrder(models.Model):
-
     class Meta:
         verbose_name = 'Payments order'
         verbose_name_plural = 'Payments order'
@@ -49,7 +48,6 @@ class PaymentsOrder(models.Model):
 
 
 class GenericPaymentsOrder(ModelBase):
-
     _registry = {}
 
     def __new__(cls, name, bases, attrs):
@@ -93,7 +91,6 @@ class GenericPaymentsOrder(ModelBase):
 
 
 class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-
     class Meta:
         verbose_name = 'Payments order: Uklon'
         verbose_name_plural = 'Payments order: Uklon'
@@ -126,7 +123,7 @@ class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return self.signal
 
     def report_text(self, name=None, rate=0.35):
-        return f'Uklon {name} {self.signal}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'Uklon {name} {self.signal}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.35):
         return -(self.kassa()) * rate
@@ -142,7 +139,6 @@ class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-
     class Meta:
         verbose_name = 'Payments order: NewUklon'
         verbose_name_plural = 'Payments order: NewUklon'
@@ -150,19 +146,19 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     report_from = models.DateTimeField()
     report_to = models.DateTimeField()
     report_file_name = models.CharField(max_length=255)
-    full_name = models.CharField(max_length=255) # "Водій"
-    signal = models.CharField(max_length=8) # "Позивний"
-    total_rides = models.PositiveIntegerField() # "Кількість поїздок"
-    total_distance = models.DecimalField(decimal_places=2, max_digits=10) # "Пробіг під замовленнями, км"
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10) # "Готівкою, грн"
-    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10) # "На гаманець, грн"
-    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10)   # "На картку, грн"
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10) # "Всього, грн"
-    tips = models.DecimalField(decimal_places=2, max_digits=10) # "Чайові, грн"
-    bonuses = models.DecimalField(decimal_places=2, max_digits=10) # "Бонуси, грн"
-    fares = models.DecimalField(decimal_places=2, max_digits=10) # "Штрафи, грн"
-    comission  = models.DecimalField(decimal_places=2, max_digits=10) # "Комісія Уклон, грн"
-    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10) #" Разом, грн"
+    full_name = models.CharField(max_length=255)  # "Водій"
+    signal = models.CharField(max_length=8)  # "Позивний"
+    total_rides = models.PositiveIntegerField()  # "Кількість поїздок"
+    total_distance = models.DecimalField(decimal_places=2, max_digits=10)  # "Пробіг під замовленнями, км"
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10)  # "Готівкою, грн"
+    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10)  # "На гаманець, грн"
+    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10)  # "На картку, грн"
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10)  # "Всього, грн"
+    tips = models.DecimalField(decimal_places=2, max_digits=10)  # "Чайові, грн"
+    bonuses = models.DecimalField(decimal_places=2, max_digits=10)  # "Бонуси, грн"
+    fares = models.DecimalField(decimal_places=2, max_digits=10)  # "Штрафи, грн"
+    comission = models.DecimalField(decimal_places=2, max_digits=10)  # "Комісія Уклон, грн"
+    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10)  # " Разом, грн"
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -180,7 +176,7 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return self.signal
 
     def report_text(self, name=None, rate=0.35):
-        return f'Uklon: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'Uklon: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.35):
         return -(self.kassa()) * rate
@@ -199,7 +195,6 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-
     class Meta:
         verbose_name = 'Payments order: Bolt'
         verbose_name_plural = 'Payments order: Bolt'
@@ -239,14 +234,15 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return self.mobile_number
 
     def report_text(self, name=None, rate=0.65):
-        return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
         res = self.total_cach_less_drivers_amount() * rate + float(self.total_amount_cach)
         return res
 
     def total_cach_less_drivers_amount(self):
-        return float(self.total_amount) + float(self.fee) + float(self.cancels_amount) + float(self.driver_bonus) + float(self.autorization_payment) + float(self.tips)
+        return float(self.total_amount) + float(self.fee) + float(self.cancels_amount) + float(
+            self.driver_bonus) + float(self.autorization_payment) + float(self.tips)
 
     def vendor(self):
         return 'bolt'
@@ -259,7 +255,6 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-
     class Meta:
         verbose_name = 'Payments order: Uber'
         verbose_name_plural = 'Payments order: Uber'
@@ -292,10 +287,10 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return str(self.driver_uuid)
 
     def report_text(self, name=None, rate=0.65):
-        return f'Uber: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate*100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'Uber: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
-       return float(self.total_amount) * rate + float(self.total_amount_cach)
+        return float(self.total_amount) * rate + float(self.total_amount_cach)
 
     def vendor(self):
         return 'uber'
@@ -313,7 +308,6 @@ class FileNameProcessed(models.Model):
     @staticmethod
     def save_filename_to_db(processed_files: list):
         for name in processed_files:
-
             order = FileNameProcessed(
                 filename_weekly=name)
 
@@ -364,7 +358,6 @@ class User(models.Model):
             return user
         except User.DoesNotExist:
             return None
-
 
     @staticmethod
     def fill_deleted_at_by_number(number):
@@ -421,7 +414,7 @@ class Driver(User):
     RENT = 'Орендую авто'
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
-    #partner = models.ManyToManyField('Partner', blank=True)
+    # partner = models.ManyToManyField('Partner', blank=True)
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
 
@@ -431,20 +424,22 @@ class Driver(User):
 
     def get_driver_external_id(self, vendor: str) -> str:
         try:
-            return Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self, deleted_at=None).driver_external_id
+            return Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self,
+                                                            deleted_at=None).driver_external_id
         except Fleets_drivers_vehicles_rate.DoesNotExist:
             return ''
 
     def get_rate(self, vendor: str) -> float:
         try:
-            return float(Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor.capitalize(), driver=self, deleted_at=None).rate)
+            return float(Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor.capitalize(), driver=self,
+                                                                  deleted_at=None).rate)
         except Fleets_drivers_vehicles_rate.DoesNotExist:
             return 0
 
     def get_kassa(self, vendor: str, week_number: [str, None] = None) -> float:
         driver_external_id = self.get_driver_external_id(vendor)
         st = SeleniumTools(session='', week_number=week_number)
-        qset = GenericPaymentsOrder.filter_by_driver(vendor, driver_external_id)\
+        qset = GenericPaymentsOrder.filter_by_driver(vendor, driver_external_id) \
             .filter(report_from__lte=st.end_of_week(), report_to__gte=st.start_of_week())
         return sum(map(lambda x: x.kassa(), qset))
 
@@ -470,7 +465,6 @@ class Driver(User):
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
 
-
     @staticmethod
     def save_driver_status(status):
         driver = Driver.objects.create(driver_status=status)
@@ -492,7 +486,6 @@ class Driver(User):
 
 
 class ParkStatus(models.Model):
-
     status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія в ParkFleet')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -537,9 +530,9 @@ class Fleet(PolymorphicModel):
 
 
 class Client(User):
-    #support_manager_id: ManyToManyField already exists in SupportManager
-    #we have to delete this
-    support_manager_id = models.ManyToManyField('SupportManager',  blank=True)
+    # support_manager_id: ManyToManyField already exists in SupportManager
+    # we have to delete this
+    support_manager_id = models.ManyToManyField('SupportManager', blank=True)
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.CLIENT)
 
     class Meta:
@@ -588,12 +581,11 @@ class ServiceStationManager(User):
     service_station = models.OneToOneField('ServiceStation', on_delete=models.RESTRICT, verbose_name='Сервісний центр')
 
     class Meta:
-        verbose_name ='Менеджер сервісного центра'
+        verbose_name = 'Менеджер сервісного центра'
         verbose_name_plural = 'Менеджери сервісних центрів'
 
     def __str__(self):
         return self.full_name()
-
 
     @staticmethod
     def save_name_of_service_station(name_of_service_station):
@@ -610,12 +602,12 @@ class ServiceStationManager(User):
 
 
 class SupportManager(User):
-    client_id = models.ManyToManyField(Client,  blank=True)
-    driver_id = models.ManyToManyField(Driver,  blank=True)
+    client_id = models.ManyToManyField(Client, blank=True)
+    driver_id = models.ManyToManyField(Driver, blank=True)
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.SUPPORT_MANAGER)
 
     class Meta:
-        verbose_name ='Менеджер служби підтримки'
+        verbose_name = 'Менеджер служби підтримки'
         verbose_name_plural = 'Менеджери служби підтримки'
 
     @staticmethod
@@ -631,7 +623,7 @@ class Owner(User):
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.OWNER)
 
     class Meta:
-        verbose_name ='Власник'
+        verbose_name = 'Власник'
         verbose_name_plural = 'Власники'
 
     @staticmethod
@@ -1041,8 +1033,8 @@ class RepairReport(models.Model):
     driver = models.ForeignKey(Driver, null=True, blank=True, on_delete=models.CASCADE, verbose_name='Водій')
 
     class Meta:
-        verbose_name='Звіт про ремонт'
-        verbose_name_plural='Звіти про ремонти'
+        verbose_name = 'Звіт про ремонт'
+        verbose_name_plural = 'Звіти про ремонти'
 
     def __str__(self):
         return f'{self.numberplate}'
@@ -1058,8 +1050,8 @@ class ServiceStation(models.Model):
     description = models.CharField(max_length=255, verbose_name='Опис')
 
     class Meta:
-        verbose_name="Сервісний Центр"
-        verbose_name_plural='Сервісні центри'
+        verbose_name = "Сервісний Центр"
+        verbose_name_plural = 'Сервісні центри'
 
     def __str__(self):
         return f'{self.name}'
@@ -1178,8 +1170,10 @@ class JobApplication(models.Model):
     driver_license_back = models.ImageField(blank=True, upload_to='job/licenses/back',
                                             verbose_name='Тильна сторона посвідчення')
     photo = models.ImageField(blank=True, upload_to='job/photo', verbose_name='Фото водія')
-    car_documents = models.ImageField(blank=True, upload_to='job/car', default="docs/default_car.jpg", verbose_name='Фото техпаспорту')
-    insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png", verbose_name='Автоцивілка')
+    car_documents = models.ImageField(blank=True, upload_to='job/car', default="docs/default_car.jpg",
+                                      verbose_name='Фото техпаспорту')
+    insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png",
+                                  verbose_name='Автоцивілка')
     insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
     role = models.CharField(max_length=255, verbose_name='Роль')
     status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
@@ -1269,7 +1263,6 @@ class ParkSettings(models.Model):
     key = models.CharField(max_length=255, verbose_name='Ключ')
     value = models.CharField(max_length=255, verbose_name='Значення')
 
-
     class Meta:
         verbose_name = 'Налаштування автопарка'
         verbose_name_plural = 'Налаштування автопарків'
@@ -1286,6 +1279,26 @@ class ParkSettings(models.Model):
             return default
 
 
+class Service(PolymorphicModel):
+    key = models.CharField(max_length=255, verbose_name='Ключ')
+    value = models.CharField(max_length=255, verbose_name='Значення')
+    description = models.CharField(max_length=255, null=True, verbose_name='Опиc')
+
+    class Meta:
+        verbose_name = 'Сервіс'
+        verbose_name_plural = 'Сервіси'
+
+    @staticmethod
+    def get_value(key, default=None):
+        try:
+            setting = ParkSettings.objects.get(key=key)
+            return setting.value
+        except ParkSettings.DoesNotExist:
+            return default
+
+
+class BoltService(Service):
+    pass
 
 
 from selenium import webdriver
@@ -1334,7 +1347,7 @@ class SeleniumTools:
         filenames = os.listdir(os.curdir)
         for file in filenames:
             if re.search(patern, file):
-                return file 
+                return file
 
     def week_number(self):
         return f'{self.start_of_week().strftime("%W")}'
@@ -1367,7 +1380,7 @@ class SeleniumTools:
 
     def remove_session(self):
         os.remove(self.session_file_name)
-    
+
     # def retry(self, fun, headless=False):
     #     for i in range(2):
     #         try:
@@ -1395,7 +1408,7 @@ class SeleniumTools:
         options.add_argument('--allow-profiles-outside-user-dir')
         options.add_argument('--enable-profile-shortcut-manager')
         options.add_argument(f'user-data-dir={os.path.join(os.getcwd(), "_SeleniumChromeUsers", self.profile)}')
-        
+
         if headless:
             options.add_argument('--headless=new')
             options.add_argument('--disable-gpu')
@@ -1405,7 +1418,8 @@ class SeleniumTools:
             options.add_argument("--start-maximized")
             options.add_argument("--disable-extensions")
             options.add_argument('--disable-dev-shm-usage')
-            options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
+            options.add_argument(
+                "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
 
         driver = webdriver.Chrome(options=options, port=9514)
         return driver
@@ -1496,7 +1510,7 @@ class SeleniumTools:
         files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
         if len(files):
             fname = os.path.basename(files[0]) if save_as is None else save_as
-            shutil.copyfile(files[0],os.path.join(os.getcwd(), fname))
+            shutil.copyfile(files[0], os.path.join(os.getcwd(), fname))
         for filename in files:
             if '.csv' in filename:
                 file_path = os.path.join(folder, filename)
@@ -1509,7 +1523,8 @@ class SeleniumTools:
 
 
 class Uber(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://supplier.uber.com", remote=False, profile=None):
+    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
+                 base_url="https://supplier.uber.com", remote=False, profile=None):
         super().__init__('uber', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -1526,7 +1541,7 @@ class Uber(SeleniumTools):
 
     def login_v2(self, link="https://drivers.uber.com/"):
         self.driver.get(link)
-        self.login_form('PHONE_NUMBER_or_EMAIL_ADDRESS', 'forward-button', By.ID)  
+        self.login_form('PHONE_NUMBER_or_EMAIL_ADDRESS', 'forward-button', By.ID)
         self.force_opt_form()
         self.otp_code_v2()
         # self.otp_code_v1()
@@ -1541,7 +1556,8 @@ class Uber(SeleniumTools):
             self.password_form_v3()
         except TimeoutException:
             try:
-                el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'alt-PASSWORD')))
+                el = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.ID, 'alt-PASSWORD')))
                 el.click()
                 self.password_form_v3()
             except TimeoutException:
@@ -1563,7 +1579,7 @@ class Uber(SeleniumTools):
         self.password_form('password', 'next-button-wrapper', By.CLASS_NAME)
         if self.sleep:
             time.sleep(self.sleep)
-    
+
     def generate_payments_order(self):
         url = f"{self.base_url}/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/reports"
         xpath = '//div[@data-testid="report-type-dropdown"]/div/div'
@@ -1571,7 +1587,7 @@ class Uber(SeleniumTools):
         self.driver.get_screenshot_as_file('generate_payments_order.png')
         menu = '//div[@data-testid="report-type-dropdown"]/div/div'
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, menu)))
-        self.driver.find_element(By.XPATH, menu).click()   
+        self.driver.find_element(By.XPATH, menu).click()
         try:
             xpath = '//ul/li/div[text()[contains(.,"Payments Driver")]]'
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
@@ -1588,7 +1604,8 @@ class Uber(SeleniumTools):
 
         if self.day:
             self.driver.find_element(By.XPATH, '//div[2]/div/div/div[1]/button[2]').click()
-            start = self.driver.find_element(By.XPATH,'(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
+            start = self.driver.find_element(By.XPATH,
+                                             '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
             start.send_keys(Keys.NULL)
             date_by_def = pendulum.now().start_of('week').subtract(days=7)
             if date_by_def.month - self.day.month == -1:  # if month of day is different from month of last week Monday
@@ -1596,27 +1613,38 @@ class Uber(SeleniumTools):
             elif date_by_def.month - self.day.month > 0:
                 for _ in range(date_by_def.month - self.day.month):
                     self.driver.find_element(By.XPATH, f'//button[@aria-label="Previous month."]').click()
-            self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()={self.day.strftime("%-d")}]').click()
-            end = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
+            self.driver.find_element(By.XPATH,
+                                     f'//div[@aria-roledescription="button"]/div[text()={self.day.strftime("%-d")}]').click()
+            end = self.driver.find_element(By.XPATH,
+                                           '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
             end.send_keys(Keys.NULL)
-            self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
+            self.driver.find_element(By.XPATH,
+                                     f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
 
         else:
             self.driver.find_element(By.XPATH, '//div[2]/div/div/div[1]/button[2]').click()
-            start = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
+            start = self.driver.find_element(By.XPATH,
+                                             '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
             start.send_keys(Keys.NULL)
             self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[1]').click()
-            self.driver.find_element(By.XPATH, f'(//li[@role="option" and text()[contains(.,"{self.start_of_week().strftime("%B")}")]])').click()
+            self.driver.find_element(By.XPATH,
+                                     f'(//li[@role="option" and text()[contains(.,"{self.start_of_week().strftime("%B")}")]])').click()
             self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[2]').click()
-            self.driver.find_element(By.XPATH, f'(//li[@role="option" and text()[contains(.,"{self.start_of_week().strftime("%Y")}")]])').click()
-            self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()={self.start_of_week().day}]').click()
-            end = self.driver.find_element(By.XPATH, '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
+            self.driver.find_element(By.XPATH,
+                                     f'(//li[@role="option" and text()[contains(.,"{self.start_of_week().strftime("%Y")}")]])').click()
+            self.driver.find_element(By.XPATH,
+                                     f'//div[@aria-roledescription="button"]/div[text()={self.start_of_week().day}]').click()
+            end = self.driver.find_element(By.XPATH,
+                                           '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
             end.send_keys(Keys.NULL)
             self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[1]').click()
-            self.driver.find_element(By.XPATH, f'(//li[@role="option" and text()[contains(.,"{self.end_of_week().strftime("%B")}")]])').click()
+            self.driver.find_element(By.XPATH,
+                                     f'(//li[@role="option" and text()[contains(.,"{self.end_of_week().strftime("%B")}")]])').click()
             self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[2]').click()
-            self.driver.find_element(By.XPATH, f'(//li[@role="option" and text()[contains(.,"{self.end_of_week().strftime("%Y")}")]])').click()
-            self.driver.find_element(By.XPATH, f'//div[@aria-roledescription="button"]/div[text()={self.end_of_week().day}]').click()
+            self.driver.find_element(By.XPATH,
+                                     f'(//li[@role="option" and text()[contains(.,"{self.end_of_week().strftime("%Y")}")]])').click()
+            self.driver.find_element(By.XPATH,
+                                     f'//div[@aria-roledescription="button"]/div[text()={self.end_of_week().day}]').click()
 
         self.driver.find_element(By.XPATH, '//button[@data-testid="generate-report-button"]').click()
         return f'{self.payments_order_file_name()}'
@@ -1632,7 +1660,8 @@ class Uber(SeleniumTools):
             in_progress_text = '//i[@class="_css-bvkFtm"]'
             WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, in_progress_text)))
             WebDriverWait(self.driver, 600).until_not(EC.presence_of_element_located((By.XPATH, in_progress_text)))
-            expected_element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, download_button)))
+            expected_element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, download_button)))
             WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
             time.sleep(self.sleep)
             if self.remote:
@@ -1642,7 +1671,7 @@ class Uber(SeleniumTools):
 
         except Exception as e:
             self.logger.error(str(e))
-            pass 
+            pass
 
     def payments_order_file_name(self):
         return self.report_file_name(self.file_patern())
@@ -1728,15 +1757,15 @@ class Uber(SeleniumTools):
                     otpa = list(f'{otp["data"]}')
                     otpa = list(filter(lambda d: d.isdigit(), otpa))
                     digits = [s.isdigit() for s in otpa]
-                    if not(digits) or (not all(digits)) or len(digits) != 4:
+                    if not (digits) or (not all(digits)) or len(digits) != 4:
                         continue
-                    break 
+                    break
             except redis.ConnectionError as e:
                 self.logger.error(str(e))
                 p = r.pubsub()
                 p.subscribe('code')
-            time.sleep(1)  
-        return otpa 
+            time.sleep(1)
+        return otpa
 
     def otp_code_v2(self):
         while True:
@@ -1749,7 +1778,7 @@ class Uber(SeleniumTools):
             self.driver.find_element(By.ID, 'PHONE_SMS_OTP-3').send_keys(otp[3])
             # self.driver.find_element(By.ID, "forward-button").click()
             break
-    
+
     def wait_code_form(self, id):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
@@ -1769,7 +1798,7 @@ class Uber(SeleniumTools):
             self.driver.find_element(By.ID, 'verificationCode').send_keys(otp)
             self.driver.find_element(By.CLASS_NAME, "next-button-wrapper").click()
             break
-    
+
     def force_opt_form(self):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'alt-PHONE-OTP')))
@@ -1777,7 +1806,7 @@ class Uber(SeleniumTools):
         except Exception as e:
             # self.logger.error(str(e))
             pass
-    
+
     def password_form(self, id, button, selector):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
@@ -1791,7 +1820,7 @@ class Uber(SeleniumTools):
         element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
         element.send_keys(os.environ["UBER_NAME"])
         e = self.driver.find_element(selector, button)
-        e.click() 
+        e.click()
         self.driver.get_screenshot_as_file('UBER_NAME.png')
 
     def add_driver(self, phone_number, email, name, second_name):
@@ -1805,7 +1834,8 @@ class Uber(SeleniumTools):
             time.sleep(self.sleep)
         data = self.driver.find_element(By.XPATH, '//div[2]/div/input')
         data.click()
-        data.send_keys(f'{phone_number[4:]}' + Keys.TAB + Keys.TAB + f'{email}' + Keys.TAB + f'{name}' + Keys.TAB + f'{second_name}')
+        data.send_keys(
+            f'{phone_number[4:]}' + Keys.TAB + Keys.TAB + f'{email}' + Keys.TAB + f'{name}' + Keys.TAB + f'{second_name}')
         send_data = self.driver.find_element(By.XPATH, '//div[5]/div[2]/button')
         send_data.click()
         if self.sleep:
@@ -1838,8 +1868,9 @@ class Uber(SeleniumTools):
         return list(report)
 
 
-class Bolt(SeleniumTools):    
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://fleets.bolt.eu", remote=False, profile=None):
+class Bolt(SeleniumTools):
+    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
+                 base_url=f"{BoltService.get_value('BASE_URL')}", remote=False, profile=None):
         super().__init__('bolt', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -1849,45 +1880,49 @@ class Bolt(SeleniumTools):
                 self.driver = self.build_driver(headless)
         self.remote = remote
         self.base_url = base_url
-    
+
     def quit(self):
         self.driver.quit()
         self.driver = None
 
     def login(self):
-        self.driver.get(f"{self.base_url}/login")
+        self.driver.get(f"{BoltService.get_value('BOLT_LOGIN_1')}")
         if self.sleep:
             time.sleep(self.sleep)
-        element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'username')))
+        element = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_2'))))
         element.clear()
         element.send_keys(os.environ["BOLT_NAME"])
-        element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'password')))
+        element = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_3'))))
         element.clear()
         element.send_keys(os.environ["BOLT_PASSWORD"])
-        self.driver.find_element(By.XPATH, '//button[@type="submit"]').click()
+        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_4')).click()
         if self.sleep:
             time.sleep(self.sleep)
 
     def download_payments_order(self):
-        url = f"{self.base_url}/company/58225/reports/weekly"
-        xpath = '//div/div/table'
+        url = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')
+        xpath = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')
         self.get_target_page_or_login(url, xpath, self.login)
         if self.day:
-            self.driver.get(f"{self.base_url}/company/58225/reports/daily/")
+            self.driver.get(BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_3'))
             if self.sleep:
                 time.sleep(self.sleep)
-            xpath = f'//table/tbody/tr/td[text()="{self.file_patern()}"]'
+            xpath = f'{BoltService.get_value("BOLT_DOWNLOAD_PAYMENTS_ORDER_4")}"{self.file_patern()}"]'
             element_date = self.driver.find_element(By.XPATH, xpath)
-            element_date.find_element(By.XPATH, "./../td/a").click()
+            element_date.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_5')).click()
         else:
-            self.driver.get(f"{self.base_url}/company/58225/reports/weekly/{self.file_patern()}")
+            self.driver.get(f"{url}/{self.file_patern()}")
 
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            self.get_last_downloaded_file_frome_remote(
+                save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
         else:
-            self.get_last_downloaded_file(save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            self.get_last_downloaded_file(
+                save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
 
     def file_patern(self):
         if self.day:
@@ -1970,30 +2005,33 @@ class Bolt(SeleniumTools):
 
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:
-            url = 'https://fleets.bolt.eu/company/58225/driver/add'
+            url = BoltService.get_value('BOLT_ADD_DRIVER_1')
             self.driver.get(f"{url}")
             if self.sleep:
                 time.sleep(self.sleep)
-            form_email = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'email')))
+            form_email = WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_ADD_DRIVER_2'))))
             clickandclear(form_email)
             form_email.send_keys(jobapplication.email)
-            form_phone_number = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'phone')))
+            form_phone_number = WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_ADD_DRIVER_3'))))
             clickandclear(form_phone_number)
             form_phone_number.send_keys(jobapplication.phone_number)
-            button = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'ember38')))
+            button = WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_ADD_DRIVER_4'))))
             button.click()
             if self.sleep:
                 time.sleep(self.sleep)
-            self.driver.find_element(By.XPATH, '//a[text()="Продовжити реєстрацію"]').click()
+            self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_5')).click()
             new_window = self.driver.window_handles[1]
             self.driver.switch_to.window(new_window)
-            form_first_name = self.driver.find_element(By.XPATH, '//input[@id="first_name"]')
+            form_first_name = self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_6'))
             clickandclear(form_first_name)
             form_first_name.send_keys(jobapplication.first_name)
-            form_last_name = self.driver.find_element(By.XPATH, '//input[@id="last_name"]')
+            form_last_name = self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_7'))
             clickandclear(form_last_name)
             form_last_name.send_keys(jobapplication.last_name)
-            self.driver.find_element(By.XPATH, '//button[@type="submit"]').click()
+            self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_8')).click()
             if self.sleep:
                 time.sleep(self.sleep)
             elements_to_select = [str(jobapplication.license_expired).split("-")[0],
@@ -2004,30 +2042,30 @@ class Bolt(SeleniumTools):
                                   str(jobapplication.insurance_expired).split("-")[2]
                                   ]
 
-            form_fields = self.driver.find_elements(By.XPATH, "//div[@class='form-group']")
+            form_fields = self.driver.find_elements(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_9'))
             for i, select_elem in enumerate(elements_to_select):
                 form_fields[i].click()
-                dropdown_div = self.driver.find_element(By.XPATH,
-                '//div[@class="ember-basic-dropdown-content-wormhole-origin"]/div[contains(@id, "ember-basic-dropdown-content-")]')
-                dropdown_div.find_element(By.XPATH, f'.//a[.//span[text()="{select_elem}"]]').click()
-            upload_elements = self.driver.find_elements(By.XPATH, "//label[contains(., 'Завантажити файл')]")
+                dropdown_div = self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_10'))
+                dropdown_div.find_element(By.XPATH,
+                                          f'{BoltService.get_value("BOLT_ADD_DRIVER_11")}"{select_elem}"]]').click()
+            upload_elements = self.driver.find_elements(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_12'))
             file_paths = [
-                            os.getcwd()+f"/data/mediafiles/{jobapplication.driver_license_front}",  #license_front
-                            os.getcwd()+f"/data/mediafiles/{jobapplication.driver_license_back}", #license_back
-                            os.getcwd()+f"/data/mediafiles/{jobapplication.car_documents}", #car_document
-                            os.getcwd()+f"/data/mediafiles/{jobapplication.insurance}", #insurance
+                os.getcwd() + f"/data/mediafiles/{jobapplication.driver_license_front}",  # license_front
+                os.getcwd() + f"/data/mediafiles/{jobapplication.driver_license_back}",  # license_back
+                os.getcwd() + f"/data/mediafiles/{jobapplication.car_documents}",  # car_document
+                os.getcwd() + f"/data/mediafiles/{jobapplication.insurance}",  # insurance
             ]
             for i, file_path in enumerate(file_paths):
                 upload_element = upload_elements[i]
                 upload_element.click()
-                upload_input = upload_element.find_element(By.XPATH, "./input")
+                upload_input = upload_element.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_13'))
                 # Execute JavaScript code to remove the display property from the element's style
                 self.driver.execute_script("arguments[0].style.removeProperty('display');", upload_input)
                 upload_input.send_keys(file_path)
             if self.sleep:
                 time.sleep(self.sleep)
 
-            submit = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+            submit = self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_14'))
             submit.click()
             jobapplication.status_bolt = datetime.datetime.now().date()
             jobapplication.save()
@@ -2037,7 +2075,7 @@ class Bolt(SeleniumTools):
         """Can download and save weekly report"""
         b = Bolt(week_number=week_number, day=day, driver=False, sleep=sleep, headless=headless)
         report = BoltPaymentsOrder.objects.filter(
-                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
         if not report:
             b = Bolt(week_number=week_number, day=day, driver=driver, sleep=sleep, headless=headless)
             b.download_payments_order()
@@ -2052,7 +2090,7 @@ class Bolt(SeleniumTools):
         """Can download and save daily report if day is not None"""
         b = Bolt(day=day, driver=False, sleep=sleep, headless=headless)
         report = BoltPaymentsOrder.objects.filter(
-                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
         if not report:
             b = Bolt(day=day, driver=driver, sleep=sleep, headless=headless)
             b.download_payments_order()
@@ -2064,7 +2102,8 @@ class Bolt(SeleniumTools):
 
 
 class Uklon(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://partner.uklon.com.ua"):
+    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
+                 base_url="https://partner.uklon.com.ua"):
         super().__init__('uklon', week_number=week_number, day=day)
         self.sleep = sleep
         if driver:
@@ -2111,18 +2150,18 @@ class Uklon(SeleniumTools):
                 for row in reader:
                     row = row[0].split('||')
                     order = UklonPaymentsOrder(
-                                               report_from=self.start_of_week(),
-                                               report_to=self.end_of_week(),
-                                               report_file_name=file.name,
-                                               signal=row[0],
-                                               licence_plate=row[1],
-                                               total_rides=row[2],
-                                               total_distance = int(row[3]),
-                                               total_amount_cach=row[4],
-                                               total_amount_cach_less=row[5],
-                                               total_amount=row[6],
-                                               total_amount_without_comission=row[7],
-                                               bonuses=row[8])
+                        report_from=self.start_of_week(),
+                        report_to=self.end_of_week(),
+                        report_file_name=file.name,
+                        signal=row[0],
+                        licence_plate=row[1],
+                        total_rides=row[2],
+                        total_distance=int(row[3]),
+                        total_amount_cach=row[4],
+                        total_amount_cach_less=row[5],
+                        total_amount=row[6],
+                        total_amount_without_comission=row[7],
+                        bonuses=row[8])
                     try:
                         order.save()
                     except IntegrityError:
@@ -2161,7 +2200,7 @@ class Uklon(SeleniumTools):
 
     def end_of_week_timestamp(self):
         return round(self.end_of_week().timestamp())
-    
+
     def payments_order_file_name(self):
         return self.report_file_name(self.file_patern())
 
@@ -2187,9 +2226,9 @@ class Uklon(SeleniumTools):
         return u.save_report()
 
 
-
 class NewUklon(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False, base_url="https://fleets.uklon.com.ua", remote=False, profile=None):
+    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
+                 base_url="https://fleets.uklon.com.ua", remote=False, profile=None):
         super().__init__('nuklon', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -2267,17 +2306,17 @@ class NewUklon(SeleniumTools):
                     report_file_name=file.name,
                     full_name=row[0],
                     signal=row[1],
-                    total_rides=float((row[2] or '0').replace(',','')),
-                    total_distance=float((row[3] or '0').replace(',','')),
-                    total_amount_cach=float((row[4] or '0').replace(',','')),
-                    total_amount_cach_less=float((row[5] or '0').replace(',','')),
-                    total_amount_on_card=float((row[6] or '0').replace(',','')),
-                    total_amount=float((row[7] or '0').replace(',','')),
-                    tips=float((row[8] or '0').replace(',','') ),
-                    bonuses=float((row[9] or '0').replace(',','')),
-                    fares=float((row[10] or '0').replace(',','')),
-                    comission=float((row[11] or '0').replace(',','')),
-                    total_amount_without_comission=float((row[12] or '0').replace(',','')))
+                    total_rides=float((row[2] or '0').replace(',', '')),
+                    total_distance=float((row[3] or '0').replace(',', '')),
+                    total_amount_cach=float((row[4] or '0').replace(',', '')),
+                    total_amount_cach_less=float((row[5] or '0').replace(',', '')),
+                    total_amount_on_card=float((row[6] or '0').replace(',', '')),
+                    total_amount=float((row[7] or '0').replace(',', '')),
+                    tips=float((row[8] or '0').replace(',', '')),
+                    bonuses=float((row[9] or '0').replace(',', '')),
+                    fares=float((row[10] or '0').replace(',', '')),
+                    comission=float((row[11] or '0').replace(',', '')),
+                    total_amount_without_comission=float((row[12] or '0').replace(',', '')))
                 try:
                     order.save()
                 except IntegrityError:
@@ -2336,7 +2375,7 @@ class NewUklon(SeleniumTools):
                     otpa = list(f'{otp["data"]}')
                     otpa = list(filter(lambda d: d.isdigit(), otpa))
                     digits = [s.isdigit() for s in otpa]
-                    if not(digits) or (not all(digits)) or len(digits) != 4:
+                    if not (digits) or (not all(digits)) or len(digits) != 4:
                         continue
                     break
             except redis.ConnectionError as e:
@@ -2404,7 +2443,8 @@ class NewUklon(SeleniumTools):
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
             WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
-        fleet_code = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
+        fleet_code = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.ID, "mat-input-2")))
         clickandclear(fleet_code)
         fleet_code.send_keys(os.environ.get("UKLON_TOKEN", NewUklonFleet.token))
         WebDriverWait(self.driver, self.sleep).until(
@@ -2440,7 +2480,7 @@ class NewUklon(SeleniumTools):
 
 
 class Privat24(SeleniumTools):
-    def __init__(self, card=None, sum=None, driver=True, sleep=3, headless=False, base_url ='https://next.privat24.ua/'):
+    def __init__(self, card=None, sum=None, driver=True, sleep=3, headless=False, base_url='https://next.privat24.ua/'):
         self.sleep = sleep
         self.card = card
         self.sum = sum
@@ -2468,7 +2508,7 @@ class Privat24(SeleniumTools):
         password = self.driver.find_element(By.XPATH, '//input')
         ActionChains(self.driver).move_to_element(password).send_keys('').perform()
         ActionChains(self.driver).move_to_element(password).send_keys('PRIVAT24_PASSWORD').perform()
-        ActionChains(self.driver).move_to_element(password).send_keys( Keys.TAB + Keys.TAB + Keys.ENTER).perform()
+        ActionChains(self.driver).move_to_element(password).send_keys(Keys.TAB + Keys.TAB + Keys.ENTER).perform()
         if self.sleep:
             time.sleep(self.sleep)
 
@@ -2505,7 +2545,6 @@ class Privat24(SeleniumTools):
             if self.sleep:
                 time.sleep(self.sleep)
             self.driver.find_element(By.XPATH, '//div[2]/div[2]/div/div[2]/button').click()
-
 
     @staticmethod
     def card_validator(card):
@@ -2573,12 +2612,12 @@ class UaGps(SeleniumTools):
         from_field.send_keys(start_time.strftime("%d %B %Y %H:%M"))
         from_field.send_keys(Keys.ENTER)
         to_field = WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.ID, "time_to_report_templates_filter_time")))
+            EC.element_to_be_clickable((By.ID, "time_to_report_templates_filter_time")))
         clickandclear(to_field)
         to_field.send_keys(end_time.strftime("%d %B %Y %H:%M"))
         to_field.send_keys(Keys.ENTER)
         WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, '//input[@value="Execute"]'))).click()
+            EC.element_to_be_clickable((By.XPATH, '//input[@value="Execute"]'))).click()
         if self.sleep:
             time.sleep(self.sleep)
         road_distance = self.driver.find_element(By.XPATH, "//tr[@pos='5']/td[2]").text
@@ -2687,9 +2726,10 @@ class UaGps(SeleniumTools):
                             rent_time += rent_after[1]
                     #  car not used in that day
                     else:
-            # driver work at that day
+                        # driver work at that day
                         rent_statuses = StatusChange.objects.filter(driver=_driver.id,
-                                                                    name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
+                                                                    name__in=[Driver.ACTIVE, Driver.OFFLINE,
+                                                                              Driver.RENT],
                                                                     start_time__gte=timezone.localtime(start),
                                                                     start_time__lte=timezone.localtime(now))
                         for status in rent_statuses:
@@ -2724,12 +2764,13 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
     salary = {}
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
-        all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
+        all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep,
+                                                          headless=headless)
         for rate in Fleets_drivers_vehicles_rate.objects.filter(fleet_id=fleet.id, deleted_at=None):
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:
                 r = r[0]
-                #print(r)
+                # print(r)
                 name = rate.driver.full_name()
                 reports[name] = reports.get(name, '') + r.report_text(name, float(rate.rate)) + '\n'
                 totals[name] = totals.get(name, 0) + r.kassa()
@@ -2744,9 +2785,10 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
         if plan[k] > int(ParkSettings.get_value("DRIVER_PLAN", 10000)):
             totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 42
         else:
-            incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
-            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" + \
-                "-" * 42
+            incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000)) - plan[k]) / 2
+            totals[
+                k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + \
+                     "-" * 42
     return owner, totals
 
 
@@ -2754,6 +2796,3 @@ def download_and_save_daily_report(day=None, driver=False, sleep=5, headless=Tru
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
-
-
-
