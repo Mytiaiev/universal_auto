@@ -37,8 +37,6 @@ class MainOrderForm(ModelForm):
                 'id': 'phone', 'class': 'form-control', 'placeholder': _('Номер телефону'), 'style': 'font-size: medium'}),
             'order_time': forms.TextInput(attrs={
                 'id': 'delivery_time', 'class': 'form-control', 'placeholder': _('На яку годину? формат HH:MM(напр. 18:45)'), 'style': 'font-size: medium'}),
-            # 'order_time': PhoneInput(attrs={
-            #     'id': 'delivery_time', 'class': 'form-control', 'placeholder': _('На яку годину? формат HH:MM(напр. 18:45)'), 'style': 'font-size: medium'})
         }
 
     def save(self, sum=None, payment=None, on_time=None):
