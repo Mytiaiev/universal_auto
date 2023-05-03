@@ -55,14 +55,14 @@ def sending_report(update, context):
         update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
 
-def get_debt_photo(update):
+def get_debt_photo(update, context):
     empty_keyboard = InlineKeyboardMarkup([])
     update.callback_query.answer()
     update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості', reply_markup=empty_keyboard)
     return 'WAIT_FOR_DEBT_PHOTO'
 
 
-def save_debt_report(update):
+def save_debt_report(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if update.message.photo:
@@ -80,7 +80,7 @@ def save_debt_report(update):
         return 'WAIT_FOR_DEBT_PHOTO'
 
 
-def option(update):
+def option(update, context):
     chat_id = update.message.chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
@@ -89,7 +89,7 @@ def option(update):
         update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
 
 
-def take_a_day_off_or_sick_leave(update):
+def take_a_day_off_or_sick_leave(update, context):
     event = update.message.text
     chat_id = update.message.chat.id
     event = event.split()

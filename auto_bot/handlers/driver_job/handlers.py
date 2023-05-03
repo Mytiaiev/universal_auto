@@ -15,7 +15,7 @@ from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 
 def job_application(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
-                             reply_markup=markup_keyboard_onetime([job_name_buttons]))
+                             reply_markup=markup_keyboard_onetime(job_name_buttons))
     update.message.reply_text(
         "Якщо ви десь помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
 

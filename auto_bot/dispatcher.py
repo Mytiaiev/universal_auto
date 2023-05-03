@@ -141,8 +141,8 @@ def setup_dispatcher(dp):
         take_a_day_off_or_sick_leave))
 
     # Сar registration for today
-    dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$') |
-                                  Filters.command("car_change"), get_vehicle_licence_plate))
+    dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_licence_plate))
+    dp.add_handler(CommandHandler("car_change", get_vehicle_licence_plate))
     # Get correct auto
     dp.add_handler(MessageHandler(
         Filters.regex(fr'^{CORRECT_AUTO}$') |

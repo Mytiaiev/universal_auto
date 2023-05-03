@@ -6,11 +6,10 @@ from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehi
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import JOB_DRIVER
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
-    fleet_job_keyboard
+    fleet_job_keyboard, drivers_status_buttons
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto.tasks import send_on_job_application_on_driver_to_Uber, send_on_job_application_on_driver_to_Bolt
-from auto_bot.handlers.status.keyboards import status_buttons
 
 
 # Add users and vehicle to db and others
@@ -115,6 +114,7 @@ def broken_car(update, context):
     else:
         update.message.reply_text(not_manager_text)
 
+
 # Viewing status driver
 def driver_status(update, context):
     chat_id = update.message.chat.id
@@ -122,7 +122,7 @@ def driver_status(update, context):
     if driver_manager is not None:
         context.user_data['manager_state'] = STATUS
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
-                                 reply_markup=markup_keyboard_onetime(status_buttons))
+                                 reply_markup=markup_keyboard_onetime(drivers_status_buttons))
     else:
         update.message.reply_text(not_manager_text)
 
@@ -140,6 +140,7 @@ def viewing_status_driver(update, context):
             report += f'{i}\n'
     update.message.reply_text(f'{report}', reply_markup=ReplyKeyboardRemove())
     context.user_data['manager_state'] = None
+
 
 # Add Vehicle to driver
 def get_list_drivers(update, context):
