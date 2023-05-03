@@ -26,7 +26,11 @@ class MainOrderForm(ModelForm):
 
     class Meta:
         model = Order
-        fields = ('from_address', 'to_the_address', 'phone_number', 'order_time')
+        fields = (
+            'from_address', 'to_the_address', 'phone_number',
+            'order_time', 'latitude', 'longitude', 'to_latitude',
+            'to_longitude'
+        )
 
         widgets = {
             'from_address': forms.TextInput(attrs={
@@ -39,13 +43,11 @@ class MainOrderForm(ModelForm):
                 'id': 'delivery_time', 'class': 'form-control', 'placeholder': _('На яку годину? формат HH:MM(напр. 18:45)'), 'style': 'font-size: medium'}),
         }
 
-    def save(self, sum=None, payment=None, on_time=None):
+    def save(self, payment=None, on_time=None):
         order = super().save(commit=False)
         if on_time is not None:
             order.order_time = on_time
             order.status_order = Order.ON_TIME
-        if sum is not None:
-            order.sum = sum
         if payment is not None:
             order.payment_method = payment
         order.save()

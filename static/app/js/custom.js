@@ -157,7 +157,6 @@ function orderUpdate(id_order) {
             icon: getMarkerIcon('taxi1'),
             animation: google.maps.Animation.DROP
           });
-
           var from = JSON.parse(getCookie('address'));
           var to = JSON.parse(getCookie('to_address'));
 
@@ -269,25 +268,32 @@ function onOrderPayment(paymentMethod) {
   }
 
   var orderData = JSON.parse(savedOrderData);
-  orderData.sum = 0;
+  orderData.latitude = getCookie('fromLat')
+  orderData.longitude = getCookie('fromLon')
+  orderData.to_latitude = getCookie('toLat')
+  orderData.to_longitude = getCookie('toLon')
   orderData.payment_method = paymentMethod;
 
-  $.ajax({
-    url: ajaxPostUrl,
-    method: 'POST',
-    data: orderData,
-    headers: {
-      'X-CSRF-Token': getCookie("csrfToken")
-    },
-    success: function(response) {
-      var idOrder = JSON.parse(response.data)
-      setCookie("idOrder", idOrder.id, 1);
-      orderUpdate(idOrder.id)
-    },
-    error: function(error) {
-      // Handle the error
-      console.log("Сталася помилка при відправленні замовлення:", error);
-    }
+  return new Promise((resolve, reject) => {
+    $.ajax({
+      url: ajaxPostUrl,
+      method: 'POST',
+      data: orderData,
+      headers: {
+        'X-CSRF-Token': getCookie("csrfToken")
+      },
+      success: function(response) {
+        var idOrder = JSON.parse(response.data)
+        setCookie("idOrder", idOrder.id, 1);
+        orderUpdate(idOrder.id);
+        resolve(idOrder)
+      },
+      error: function(error) {
+        // Handle the error
+        console.log("Сталася помилка при відправленні замовлення:", error);
+        reject(error);
+      }
+    });
   });
 }
 
@@ -385,7 +391,7 @@ function consentTrip(){
         </div>
       `;
       document.body.appendChild(applicationAccepted);
-      deleteCookie("address")
+      deleteAllCookies();
 
       // We attach an event to close the window when the cross is clicked
       var closeButton = applicationAccepted.querySelector(".close");
@@ -494,13 +500,28 @@ $(document).ready(function(){
   $('#order-form').on('submit', function(event){
     event.preventDefault();
 
+    var isLateOrder = event.originalEvent.submitter.id === 'later-order';
     var form = new FormData(this);
+    var timeWrapper = $('#order-time-field');
+    var noTime = timeWrapper.hasClass('hidden');
+
+    if (isLateOrder && noTime) {
+      timeWrapper.removeClass('hidden').next().html('');
+      return;
+    }
+
+    if(!isLateOrder) {
+       timeWrapper.addClass('hidden').next().html('');
+       form.delete('order_time')
+    }
+
     var fields = form.keys()
     var errorFields = 0;
     var errorMsgs = {
       'phone_number': "Номер телефону обов'язковий",
       'from_address': "Адреса обов'язкова",
-      'to_the_address': "Адреса обов'язкова"
+      'to_the_address': "Адреса обов'язкова",
+      'order_time': "Час замовлення обов'язково"
     }
 
     for(const field of fields) {
@@ -510,6 +531,18 @@ $(document).ready(function(){
         err.html(errorMsgs[field]);
       } else {
         err.html('');
+      }
+    }
+
+    if (!errorFields && form.has('order_time')){
+      const formattedDeliveryTime = moment(form.get('order_time'), 'HH:mm').format('YYYY-MM-DD HH:mm:ss');
+      const currentTime = moment();
+      const minCurrentTime = moment(currentTime).add(SEND_TIME_ORDER_MIN, 'minutes');
+      if (moment(formattedDeliveryTime, 'YYYY-MM-DD HH:mm:ss').isSameOrAfter(minCurrentTime)){
+        form.set('order_time', formattedDeliveryTime);
+      }else {
+        errorFields++;
+        $('#order_time-error').html('Виберіть час не менше ніж через ' + SEND_TIME_ORDER_MIN + ' хвилин')
       }
     }
 
@@ -532,43 +565,64 @@ $(document).ready(function(){
           form.append('action', 'order');
           orderData = Object.fromEntries(form);
 
-          $.ajax({
-            url: ajaxPostUrl,
-            method: 'GET',
-            data: {
-              "action": "active_vehicles_locations"
-            },
-            success: function(response){
-              var taxiArr = JSON.parse(response.data);
+          var fromGeocode = fromGeocoded[0].geometry.location
+          var toGeocode = toGeocoded[0].geometry.location
+          setCookie("fromLat", fromGeocode.lat().toFixed(6), 1);
+          setCookie("fromLon", fromGeocode.lng().toFixed(6), 1);
+          setCookie("toLat", toGeocode.lat().toFixed(6), 1);
+          setCookie("toLon", toGeocode.lng().toFixed(6), 1);
+          setCookie('orderData', JSON.stringify(orderData));
 
-              if (taxiArr.length > 0) {
-                createMap(fromGeocoded, toGeocoded, taxiArr);
-              } else {
-                var noTaxiArr = document.createElement("div");
-                noTaxiArr.innerHTML = `
-                  <div class="modal-taxi">
-                    <div class="modal-content-taxi">
-                      <span class="close">&times;</span>
-                      <h3>Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою пізніше!</h3>
+          if(form.has('order_time')) {
+            $('body').prepend( `
+              <div class="modal">
+                <div class="modal-content">
+                  <span class="close" onclick="$('.modal').remove(); window.location.reload();">&times;</span>
+                  <h3>Дякую за замовлення. Очікуйте на автомобіль!</h3>
+                </div>
+              </div>
+            `);
+
+            onOrderPayment().then(function(){
+                deleteAllCookies();
+            })
+          } else {
+            $.ajax({
+              url: ajaxPostUrl,
+              method: 'GET',
+              data: {
+                "action": "active_vehicles_locations"
+              },
+              success: function (response) {
+                var taxiArr = JSON.parse(response.data);
+
+                if (taxiArr.length > 0) {
+                  createMap(fromGeocoded, toGeocoded, taxiArr);
+                } else {
+                  var noTaxiArr = document.createElement("div");
+                  noTaxiArr.innerHTML = `
+                    <div class="modal-taxi">
+                      <div class="modal-content-taxi">
+                        <span class="close">&times;</span>
+                        <h3>Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою пізніше!</h3>
+                      </div>
                     </div>
-                  </div>
-                `;
-                document.body.appendChild(noTaxiArr);
-                deleteCookie("address")
+                  `;
+                  document.body.appendChild(noTaxiArr);
+                  deleteCookie("address")
 
-                // We attach an event to close the window when the cross is clicked
-                var closeButton = noTaxiArr.querySelector(".close");
-                closeButton.addEventListener("click", function() {
-                  noTaxiArr.parentNode.removeChild(noTaxiArr);
-                });
+                  // We attach an event to close the window when the cross is clicked
+                  var closeButton = noTaxiArr.querySelector(".close");
+                  closeButton.addEventListener("click", function () {
+                    noTaxiArr.parentNode.removeChild(noTaxiArr);
+                  });
+                }
               }
-            }
-          });
-
-          setCookie("address", JSON.stringify(fromGeocoded), 1);
-          setCookie("to_address", JSON.stringify(toGeocoded), 1);
-          setCookie("phone", form.get('phone_number'), 1);
-          setCookie('orderData', JSON.stringify(orderData), 1);
+            });
+            setCookie("address", JSON.stringify(fromGeocoded), 1);
+            setCookie("to_address", JSON.stringify(toGeocoded), 1);
+            setCookie("phone", form.get('phone_number'), 1);
+          }
         });
       });
     }
@@ -629,104 +683,4 @@ loadGoogleMaps( 3, apiGoogle, "uk",'','geometry,places').then(function() {
  initAutocomplete('address');
  initAutocomplete('to_address');
  checkCookies()
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-  const laterBtn = document.querySelector('#later-order');
-  const orderTimeField = document.querySelector('#order-time-field');
-  const deliveryTimeInput = document.querySelector('input[name="order_time"]');
-  const orderNowBtn = document.querySelector('#order-form button[type="submit"]');
-
-  laterBtn.addEventListener('click', function() {
-    if (!orderTimeField.classList.contains('hidden')) {
-      var form = new FormData(document.querySelector('#order-form'));
-      var fields = form.keys();
-      var errorFields = 0;
-      var errorMsgs = {
-        'phone_number': "Номер телефону обов'язковий",
-        'from_address': "Адреса обов'язкова",
-        'to_the_address': "Адреса обов'язкова",
-        'order_time': "Час замовлення обов'язково"
-      }
-
-      var formIsValid = true;
-
-      for (const field of fields) {
-        const err = $(`#${field}-error`);
-        if (form.get(field).length === 0) {
-          errorFields++;
-          err.html(errorMsgs[field]);
-          formIsValid = false;
-        } else {
-          err.html('');
-        }
-      }
-      if (formIsValid) { // Перевіряємо, чи всі поля заповнені
-        const orderForm = document.querySelector('#order-form');
-        const formData = new FormData(orderForm);
-        formData.append('action', 'later_order');
-        // If the order time field is already shown, submit the order time
-        sendOrderTime(formData);
-      }
-    } else {
-      // If the order time field is hidden, show it
-      orderTimeField.classList.remove('hidden');
-      document.querySelector('#order_time-error').classList.remove('hidden');
-    }
-  });
-
-  orderNowBtn.addEventListener('click', function() {
-    orderTimeField.classList.add('hidden');
-    document.querySelector('#order_time-error').classList.add('hidden');
-  });
-
-  orderTimeField.addEventListener('keypress', function(event) {
-    const key = event.key;
-    const allowedCharacters = /[0-9:]/;
-    if (!allowedCharacters.test(key)) {
-      event.preventDefault();
-    }
-  });
-  function sendOrderTime(formData) {
-    const formattedDeliveryTime = moment(formData.get('order_time'), 'HH:mm').format('YYYY-MM-DD HH:mm:ss');
-    const currentTime = moment();
-    const minCurrentTime = moment(currentTime).add(SEND_TIME_ORDER_MIN, 'minutes');
-    formData.set('order_time', formattedDeliveryTime);
-    if (moment(formattedDeliveryTime, 'YYYY-MM-DD HH:mm:ss').isSameOrAfter(minCurrentTime)) {
-      $.ajax({
-        type: 'POST',
-        url: ajaxPostUrl,
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-          var applicationAccepted = document.createElement("div");
-          applicationAccepted.innerHTML = `
-            <div class="modal">
-              <div class="modal-content">
-                <span class="close">&times;</span>
-                <h3>Дякую за замовлення. Очікуйте на автомобіль!</h3>
-              </div>
-            </div>
-          `;
-          document.body.appendChild(applicationAccepted);
-          deleteCookie("address")
-
-          // We attach an event to close the window when the cross is clicked
-          var closeButton = applicationAccepted.querySelector(".close");
-          closeButton.addEventListener("click", function() {
-            applicationAccepted.parentNode.removeChild(applicationAccepted);
-            deleteAllCookies();
-            location.reload();
-          });
-        },
-      });
-      orderTimeField.classList.add('hidden');
-      deliveryTimeInput.value = '';
-    } else {
-      document.querySelector('#order_time-error').classList.remove('hidden');
-      const orderTimeError = document.querySelector('#order_time-error');
-      orderTimeError.innerHTML = 'Виберіть час не менше ніж через ' + SEND_TIME_ORDER_MIN + ' хвилин';
-    }
-  }
 });
