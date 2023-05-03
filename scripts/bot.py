@@ -2058,7 +2058,10 @@ def send_report(sender=None, **kwargs):
 @task_postrun.connect
 def send_report_daily_in_group(sender=None, **kwargs):
     if sender == send_daily_into_group:
-        message = '\U0001f3c6'+kwargs.get("retval")
+        result = kwargs.get("retval")
+        message = '\U0001f3c6' + result[0] + '\U0001f3c6' + '\n'
+        for num, driver in enumerate(result[1:], 2):
+            message += f"{num}. {driver}\n"
         bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', -863882769), text=message)
 
 

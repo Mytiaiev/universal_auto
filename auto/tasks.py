@@ -236,10 +236,18 @@ def withdraw_uklon(self):
 @app.task(bind=True)
 def send_daily_into_group(self):
     try:
-        day = pendulum.now().start_of('day').subtract(days=1)
-        report = get_report(week=False, day=day, week_number=None, driver=True, sleep=5, headless=True)[2]
-        sort_report = dict(sorted(report.items(), key=lambda item: item[1], reverse=True))
-        message = ''.join([f'{k}: %.2f\n' % v for k, v in sort_report.items()])
+        total_values = {}
+        today = pendulum.now().day_of_week
+        if today > 1:
+            for i in range(1, today):
+                day = pendulum.now().start_of('day').subtract(days=i)
+                report = get_report(week=False, day=day, week_number=None, driver=True, sleep=5, headless=True)[2]
+                for key, value in report.items():
+                    total_values[key] = total_values.get(key, 0) + value
+        else:
+            total_values = get_report(week=True, week_number=None, driver=True, sleep=5, headless=True)[2]
+        sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
+        message = [f'{k}: %.2f' % v for k, v in sort_report.items()]
         return message
     except Exception as e:
         logger.info(e)
