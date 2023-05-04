@@ -3,7 +3,8 @@ django-extensions==3.1.5
 djangorestframework==3.13.1
 Pillow
 requests
-selenium
+liqpay-sdk-python3
+selenium==4.8.3
 pendulum
 python-telegram-bot==13.13
 honcho

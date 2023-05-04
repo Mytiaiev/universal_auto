@@ -2,6 +2,7 @@ from telegram import *
 from telegram.ext import *
 from app.models import *
 import ast
+from liqpay import LiqPay
 import os
 import threading
 import time
@@ -19,8 +20,9 @@ import traceback
 from celery.signals import task_postrun
 from app.portmone.generate_link import *
 from auto.tasks import download_weekly_report_force, send_on_job_application_on_driver_to_Bolt, \
-    send_on_job_application_on_driver_to_Uber, get_report_for_tg, send_daily_into_group, check_time_order
+    send_on_job_application_on_driver_to_Uber, get_report_for_tg, send_daily_into_group, check_time_order, get_distance_trip
 from scripts.driversrating import DriversRatingMixin
+from uuid import uuid4
 import traceback
 import hashlib
 from django.views.decorators.csrf import csrf_exempt
@@ -30,10 +32,14 @@ from django.utils import timezone
 from scripts.conversion import *
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import warnings
 
+warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
 
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
+
+url_mobizon = os.environ['MOBIZON_DOMAIN']
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -52,8 +58,8 @@ start_keyboard = [
 
 # Ordering taxi
 def start(update, context):
-    menu(update, context)
     chat_id = update.effective_chat.id
+    menu(update, context, chat_id)
     user = User.get_by_chat_id(chat_id)
     context.user_data.clear()
     if user:
@@ -62,9 +68,9 @@ def start(update, context):
             user.chat_id = chat_id
             user.save()
             reply_markup = ReplyKeyboardMarkup(
-                    keyboard=[start_keyboard[:3]],
-                    resize_keyboard=True,
-                )
+                keyboard=[start_keyboard[:3]],
+                resize_keyboard=True,
+            )
             update.message.reply_text('Зробіть вибір', reply_markup=reply_markup)
         else:
             reply_markup = ReplyKeyboardMarkup(
@@ -79,9 +85,10 @@ def start(update, context):
             second_name=update.message.from_user.last_name
         )
         reply_markup = ReplyKeyboardMarkup(
-          keyboard=[start_keyboard[3:]],
-          resize_keyboard=True,)
-        update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом", reply_markup=reply_markup)
+            keyboard=[start_keyboard[3:]],
+            resize_keyboard=True, )
+        update.message.reply_text("Будь ласка розшарьте номер телефону для роботи з нашим ботом",
+                                  reply_markup=reply_markup)
 
 
 def update_phone_number(update, context):
@@ -98,8 +105,7 @@ def update_phone_number(update, context):
                                   reply_markup=ReplyKeyboardMarkup(keyboard=[start_keyboard[:3]], resize_keyboard=True))
 
 
-
-STATE = None       # range (1-50)
+STATE = None  # range (1-50)
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
 U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(6, 11)
 LOCATION_WRONG = "Місце посадки - невірне"
@@ -109,6 +115,8 @@ CONTINUE = 'Продовжити замовлення'
 CANCEL = 'Скасувати замовлення'
 TOMORROW = "Замовити на завтра"
 TODAY = "Замовити на інший час"
+_CARD = 'Картка'
+CASH = 'Готівка'
 
 
 def continue_order(update, context):
@@ -143,7 +151,8 @@ def time_for_order(update, context):
 
 
 def cancel_order(update, context):
-    update.message.reply_text('Гарного дня. Дякуємо, що скористались нашими послугами',  reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text('Гарного дня. Дякуємо, що скористались нашими послугами',
+                              reply_markup=ReplyKeyboardRemove())
     cancel(update, context)
 
 
@@ -164,7 +173,6 @@ def location(update: Update, context: CallbackContext):
 
 
 def the_confirmation_of_location(update, context):
-
     keyboard = [KeyboardButton(text=f"\u2705 {LOCATION_CORRECT}"),
                 KeyboardButton(text=f"\u274c {LOCATION_WRONG}")]
 
@@ -190,9 +198,11 @@ def to_the_address(update, context):
         if addresses is not None:
             for key in addresses.keys():
                 buttons.append([KeyboardButton(key)])
-            reply_markup = ReplyKeyboardMarkup(buttons)
+            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
             context.user_data['addresses_first'] = addresses
-            update.message.reply_text(f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу", reply_markup=reply_markup)
+            update.message.reply_text(
+                f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу",
+                reply_markup=reply_markup)
             STATE = FIRST_ADDRESS_CHECK
         else:
             update.message.reply_text('Нам не вдалось обробити вашу адресу, спробуйте ще раз')
@@ -211,7 +221,8 @@ def payment_method(update, context):
         if addresses is not None:
             for key in addresses.keys():
                 buttons.append([KeyboardButton(key)])
-            reply_markup = ReplyKeyboardMarkup(buttons)
+            reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+
             context.user_data['addresses_second'] = addresses
             update.message.reply_text(
                 f"Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси' та вкажіть більш детально вашу адресу",
@@ -223,20 +234,16 @@ def payment_method(update, context):
     else:
         STATE = None
 
-        keyboard = [KeyboardButton(text=f"\U0001f4b7 {CASH}"),
-                    KeyboardButton(text=f"\U0001f4b8 {_CARD}")]
+        keyboard = [KeyboardButton(text=f"\U0001f4b7 {CASH}"),]
+                    #KeyboardButton(text=f"\U0001f4b8 {_CARD}")
 
         reply_markup = ReplyKeyboardMarkup(
             keyboard=[keyboard],
             resize_keyboard=True,
             one_time_keyboard=True,
-            )
+        )
 
         update.message.reply_text('Виберіть спосіб оплати:', reply_markup=reply_markup)
-
-
-_CARD = 'Картка'
-CASH = 'Готівка'
 
 
 def second_address_check(update, context):
@@ -262,7 +269,8 @@ def first_address_check(update, context):
 def buttons_addresses(update, context, address):
     center_lat, center_lng = f"{ParkSettings.get_value('CENTRE_CITY_LAT')}", f"{ParkSettings.get_value('CENTRE_CITY_LNG')}"
     center_radius = int(f"{ParkSettings.get_value('CENTRE_CITY_RADIUS')}")
-    dict_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius, os.environ["GOOGLE_API_KEY"])
+    dict_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius,
+                                             os.environ["GOOGLE_API_KEY"])
     if dict_addresses is not None:
         return dict_addresses
     else:
@@ -341,7 +349,8 @@ def time_order(update, context):
         answer = update.message.text
         context.user_data['time_order'] = answer
     STATE = TIME_ORDER
-    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)', reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)',
+                              reply_markup=ReplyKeyboardRemove())
 
 
 def order_on_time(update, context):
@@ -352,7 +361,8 @@ def order_on_time(update, context):
     user = User.get_by_chat_id(update.message.chat.id)
     if re.match(pattern, user_time):
         format_time = datetime.datetime.strptime(user_time, '%H:%M').time()
-        min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+        min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(
+            minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
             if context.user_data['time_order'] == TODAY:
@@ -406,9 +416,11 @@ def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.message.chat_id)
+    order = Order.objects.filter(pk=int(data[1])).first()
+    phone = order.phone_number.replace("+", "")
+    if phone.startswith("0"):
+        phone = "38" + phone
     if data[0] == "Accept_order":
-        order_id = int(data[1])
-        order = Order.objects.filter(pk=order_id).first()
         if order:
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
@@ -417,23 +429,20 @@ def handle_callback_order(update, context):
                 driver_lat, driver_long = get_location_from_db(vehicle)
                 if not order.sum:
                     distance_price = get_route_price(order.latitude, order.longitude,
-                                            order.to_latitude, order.to_longitude,
-                                            driver_lat, driver_long,
-                                            os.environ["GOOGLE_API_KEY"])
-                    price = distance_price[1]
-                else:
-                    price = order.sum
+                                                     order.to_latitude, order.to_longitude,
+                                                     driver_lat, driver_long,
+                                                     os.environ["GOOGLE_API_KEY"])
+                    order.car_delivery_price, order.sum = distance_price[1], distance_price[0]
+
                 keyboard = [
-                            [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data="On_the_spot")],
-                            [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {order.pk}")],
-                           ]
+                    [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data=f"On_the_spot {order.pk}")],
+                    [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {order.pk}")],
+                ]
+
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                order.status_order = Order.IN_PROGRESS
-                order.driver = driver
-                order.sum = price
+                order.status_order, order.driver = Order.IN_PROGRESS, driver
                 order.save()
-                ParkStatus.objects.create(driver=driver,
-                                          status=Driver.WAIT_FOR_CLIENT)
+                ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
 
                 message = f"Адреса посадки: {order.from_address}\n" \
                           f"Місце прибуття: {order.to_the_address}\n" \
@@ -448,37 +457,192 @@ def handle_callback_order(update, context):
                                     f'Номер машини: {licence_plate}\n' \
                                     f'Номер телефону: {driver.phone_number}\n' \
                                     f'Сума замовлення:{order.sum}грн'
-                try:
-                    context.bot.send_message(chat_id=order.chat_id_client, text=report_for_client)
-                    context.user_data['running'] = True
-                    r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order.chat_id_client, vehicle), daemon=True)
-                    r.start()
-                except:
-                    pass
+                if order.chat_id_client:
+                    try:
+                        context.bot.send_message(chat_id=order.chat_id_client, text=report_for_client)
+                        context.user_data['running'] = True
+                        #r = threading.Thread(target=send_map_to_client,
+                        #                     args=(update, context, order.chat_id_client, vehicle), daemon=True)
+                        #r.start()
+                    except:
+                        pass
+                else:
+                    sms_for_client = f'Вас вітає Ninja-Taxi!\n' \
+                                     f'Ваш водій: {driver}\n' \
+                                     f'Назва: {vehicle.name}\n' \
+                                     f'Номер машини: {licence_plate}\n' \
+                                     f'Номер телефону: {driver.phone_number}\n'
+                    params = {
+                        "recipient": phone,
+                        "text": sms_for_client,
+                        "apiKey": os.environ['MOBIZON_API_KEY'],
+                        "output": "json"
+                    }
+                    requests.post(url_mobizon, params=params)
+
             else:
                 query.edit_message_text(
                     text='Щоб приймати замовлення, скористайтесь спочатку командой /status, щоб позначити на якому ви сьогодні авто')
         else:
             query.edit_message_text(text="Це замовлення вже виконується.")
-
     elif data[0] == 'Reject_order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
-        order_id = int(data[1])
-        order = Order.objects.filter(pk=order_id).first()
         if order:
             order.status_order = Order.WAITING
             order.save()
             # remove inline keyboard markup from the message
-            context.bot.send_message(chat_id=order.chat_id_client,
-                text="Водій відхилив замовлення. Пошук іншого водія...")
+            if order.chat_id_client:
+                context.bot.send_message(chat_id=order.chat_id_client,
+                                         text="Водій відхилив замовлення. Пошук іншого водія...")
+            else:
+                params = {
+                    "recipient": phone,
+                    "text": "Водій відхилив замовлення. Пошук іншого водія...",
+                    "apiKey": os.environ['MOBIZON_API_KEY'],
+                    "output": "json"
+                }
+                requests.post(url_mobizon, params=params)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
-    elif query.data == "On_the_spot":
-        order_id = int(data[1])
+    elif data[0] == "On_the_spot":
+        keyboard = [[InlineKeyboardButton("\u2705 Клієнт на місці", callback_data=f"Сlient_on_site {order.pk}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.edit_message_reply_markup(reply_markup=reply_markup)
+        if order.chat_id_client:
+            context.bot.send_message(chat_id=order.chat_id_client, text='Машину подано. Водій вас очікує')
+        else:
+            params = {
+                "recipient": phone,
+                "text": "'Машину подано. Водій вас очікує'.",
+                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "output": "json"
+            }
+            requests.post(url_mobizon, params=params)
+    elif data[0] == "Сlient_on_site":
+        keyboard = [
+            [InlineKeyboardButton("\u2705 Рухались по маршруту", callback_data=f"Along_the_route {order.pk}")],
+            [InlineKeyboardButton("\u274c Відхилялись від маршрута", callback_data=f"Off_route {order.pk}")],
+        ]
+
+        ParkStatus.objects.create(driver=driver, status=Driver.WITH_CLIENT)
+        reply_markup, context.user_data['running'] = InlineKeyboardMarkup(keyboard), False
+        query.edit_message_reply_markup(reply_markup=reply_markup)
+    elif data[0] == "Along_the_route" or data[0] == "Off_route":
+        if data[0] == "Off_route":
+            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+            licence_plate = (list(record))[-1].licence_plate
+            status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
+            s, e = timezone.localtime(status_driver.created_at), timezone.localtime(timezone.localtime())
+            get_distance_trip.delay(data[1], query.message.message_id, s, e, licence_plate)
+        else:
+            keyboard = [[
+                InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
+            ]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_reply_markup(reply_markup=reply_markup)
+    elif data[0] == "End_trip":
+        # if order.payment_method == _CARD:
+        #     payment_id = str(uuid4())
+        #     payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
+        #                     os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
+        #     liqpay_cert_path = os.environ["LIQPAY_CERF"]
+        #     liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"],
+        #                            ssl_cert=liqpay_cert_path)
+        #
+        #     response = liqpay_client.api("request",
+        #                                  data={
+        #                                      "action": "status",
+        #                                      "version": "3",
+        #                                      "order_id": payment_id
+        #                                  },
+        #                                  headers={
+        #                                      "Content-Type": "application/json",
+        #                                      "Accept": "application/json",
+        #                                  },
+        #                                  cert=liqpay_cert_path,
+        #                                  verify=True
+        #                                  )
+        #
+        #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
+        #else:
+        if order.chat_id_client:
+            context.bot.send_message(chat_id=order.chat_id_client,
+                                     text="Дякуємо, що скористались послугами нашої компанії")
+        else:
+            params = {
+                "recipient": phone,
+                "text": "Дякуємо, що скористались послугами нашої компанії",
+                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "output": "json"
+            }
+            requests.post(url_mobizon, params=params)
+        query.edit_message_text(text=f"<<Поїздку завершено>>")
+        order.status_order = Order.COMPLETED
+        order.save()
+        ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+
+
+def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
+    title = 'Послуга особистого водія'
+    description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
+    payload = 'Додаткові дані для ідентифікації користувача'
+    currency = 'UAH'
+    prices = [LabeledPrice(label='Ціна', amount=int(price) * 100)]
+    need_shipping_address = False
+
+    # Sending a request for payment
+    context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
+                             provider_token=provider_token, currency=currency, start_parameter=start_parameter,
+                             prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
+                             photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
+
+
+@task_postrun.connect
+def check_payment_status(sender=None, **kwargs):
+    if sender == check_payment_status_tg:
+        rep = kwargs.get("retval")
+        query_id, order_id, status_payment = rep
+        if status_payment:
+            order = Order.objects.filter(pk=order_id).first()
+            bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
+            bot.send_message(chat_id=order.chat_id_client,
+                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
+            order.status_order = Order.COMPLETED
+            order.save()
+            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+
+
+@task_postrun.connect
+def change_sum_trip(sender=None, **kwargs):
+    if sender == get_distance_trip:
+        rep = kwargs.get("retval")
+        order_id, query_id, minutes_of_trip, distance = rep
         order = Order.objects.filter(pk=order_id).first()
-        context.user_data['running'] = False
-        context.bot.send_message(chat_id=order.chat_id_client, text='Машину подано. Водій вас очікує')
+        AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')}"), int(
+            f"{ParkSettings.get_value('COST_PER_KM')}")
+        price_per_minute = (AVERAGE_DISTANCE_PER_HOUR * COST_PER_KM) / 60
+        price_per_minute = price_per_minute * minutes_of_trip
+        price_per_distance = round(COST_PER_KM * distance)
+        if price_per_distance > price_per_minute:
+            order.sum = int(price_per_distance) + int(order.car_delivery_price)
+        else:
+            order.sum = int(price_per_minute) + int(order.car_delivery_price)
+        order.save()
+        bot.send_message(chat_id=order.chat_id_client,
+                         text=f'Сума до оплати: {order.sum}грн')
+
+        message = f"Адреса посадки: {order.from_address}\n" \
+                  f"Місце прибуття: {order.to_the_address}\n" \
+                  f"Спосіб оплати: {order.payment_method}\n" \
+                  f"Номер телефону: {order.phone_number}\n" \
+                  f"Загальна вартість: {order.sum}грн"
+
+        keyboard = [[
+            InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
+        ]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
+        bot.edit_message_reply_markup(chat_id=order.driver.chat_id, message_id=query_id, reply_markup=reply_markup)
 
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):
@@ -494,7 +658,7 @@ def send_map_to_client(update, context, client_chat_id, licence_plate):
         latitude, longitude = get_location_from_db(licence_plate)
         try:
             m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
-            print(m)
+            time.sleep(10)
         except Exception as e:
             logger.error(msg=e.message)
             time.sleep(30)
@@ -517,7 +681,6 @@ def status(update, context):
 
 
 def send_set_status(update, context):
-
     buttons = [[KeyboardButton(Driver.ACTIVE)],
                [KeyboardButton(Driver.WITH_CLIENT)],
                [KeyboardButton(Driver.WAIT_FOR_CLIENT)],
@@ -548,7 +711,8 @@ def set_status(update, context):
         record.save()
         update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
     else:
-        update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
+        update.message.reply_text(f'Твій статус: <b>{status}</b>', reply_markup=ReplyKeyboardRemove(),
+                                  parse_mode=ParseMode.HTML)
 
 
 CORRECT_AUTO = '- ТАК -'
@@ -572,10 +736,12 @@ def get_vehicle_of_driver(update, context):
         if len(vehicles) == 1:
             vehicle = Vehicle.objects.get(licence_plate=vehicles[0])
             if vehicle.gps_imei:
-                update.message.reply_text(f'Ви сьогодні на авто з номерним знаком {vehicles[0]}?', reply_markup=reply_markup)
+                update.message.reply_text(f'Ви сьогодні на авто з номерним знаком {vehicles[0]}?',
+                                          reply_markup=reply_markup)
                 context.user_data['use_vehicle'] = vehicles[0]
             else:
-                update.message.reply_text('За вашим авто не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
+                update.message.reply_text(
+                    'За вашим авто не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
         else:
             global STATE_D
             licence_plates = {i.id: i.licence_plate for i in Vehicle.objects.all() if i.licence_plate in vehicles}
@@ -602,10 +768,12 @@ def add_vehicle_to_driver(update, context):
         else:
             update.message.reply_text('Такого ключа немає у вашому списку, спробуйте ще раз')
     except:
-        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+        update.message.reply_text(
+            'Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
     record = UseOfCars.objects.filter(licence_plate=vehicle, created_at__date=timezone.now().date(), end_at=None)
     if record:
-        update.message.reply_text('Це авто вже використовує інший водій. Спробуйте інше авто. Якщо всі авто заняті зверніться до менеджерів')
+        update.message.reply_text(
+            'Це авто вже використовує інший водій. Спробуйте інше авто. Якщо всі авто заняті зверніться до менеджерів')
         get_vehicle_of_driver(update, context)
     else:
         if vehicle.gps_imei:
@@ -617,7 +785,8 @@ def add_vehicle_to_driver(update, context):
             STATE_D = None
             send_set_status(update, context)
         else:
-            update.message.reply_text('За авто, яке ви обрали не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
+            update.message.reply_text(
+                'За авто, яке ви обрали не закріпленний imei_gps. Зверніться до менеджера автопарку/водіїв')
             STATE_D = None
 
 
@@ -634,11 +803,13 @@ def correct_or_not_auto(update, context):
                 user_vehicle=context.user_data['u_driver'],
                 chat_id=chat_id,
                 licence_plate=context.user_data['use_vehicle'])
-            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня',
+                                      reply_markup=ReplyKeyboardRemove())
             send_set_status(update, context)
     else:
-        update.message.reply_text('Зверніться до менеджерів водіїв та проконсультуйтесь, яку машину вам використовувати сьогодні.' +
-                                  ' Та скористайтесь наступною командою /car_change', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(
+            'Зверніться до менеджерів водіїв та проконсультуйтесь, яку машину вам використовувати сьогодні.' +
+            ' Та скористайтесь наступною командою /car_change', reply_markup=ReplyKeyboardRemove())
 
 
 def get_vehicle_licence_plate(update, context):
@@ -653,10 +824,13 @@ def get_vehicle_licence_plate(update, context):
             for k, v in vehicles.items():
                 report_list_vehicles += f'{k}: {v}\n'
             update.message.reply_text(f'{report_list_vehicles}')
-            update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, яку ви будете використовувати сьогодні', reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text(
+                f'Укажіть номер машини від 1-{len(vehicles)}, яку ви будете використовувати сьогодні',
+                reply_markup=ReplyKeyboardRemove())
             STATE_D = V_ID
         else:
-            update.message.reply_text("Не здайдено жодного авто у автопарку. Зверніться до Менеджера автопарку", reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text("Не здайдено жодного авто у автопарку. Зверніться до Менеджера автопарку",
+                                      reply_markup=ReplyKeyboardRemove())
     else:
         update.message.reply_text(f'Зареєструйтесь як водій')
 
@@ -671,7 +845,8 @@ def correct_choice(update, context):
         id_vehicle = int(id_vehicle)
         context.user_data['vehicle'] = Vehicle.objects.get(id=id_vehicle)
     except:
-        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+        update.message.reply_text(
+            'Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
         context.user_data['vehicle'] = False
     if context.user_data['vehicle']:
         keyboard = [KeyboardButton(f'{CORRECT_CHOICE}'),
@@ -693,10 +868,12 @@ def get_imei(update, context):
             user_vehicle=driver,
             chat_id=chat_id,
             licence_plate=context.user_data['vehicle'])
-        update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text('Ми закріпили авто за вами на сьогодні. Гарного робочого дня',
+                                  reply_markup=ReplyKeyboardRemove())
         send_set_status(update, context)
     else:
-        update.message.reply_text('Авто яке ви обрали без imei_gps. Зверніться до менеджера автопарку/водіїв', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text('Авто яке ви обрали без imei_gps. Зверніться до менеджера автопарку/водіїв',
+                                  reply_markup=ReplyKeyboardRemove())
     STATE_D = None
 
 
@@ -712,7 +889,8 @@ def get_licence_plate_for_gps_imei(update, context):
             for k, v in vehicles.items():
                 report_list_vehicles += f'{k}: {v}\n'
             update.message.reply_text(f'{report_list_vehicles}')
-            update.message.reply_text(f'Укажіть номер машини від 1-{len(vehicles)}, для якого ви бажаєте добавити gps_imei')
+            update.message.reply_text(
+                f'Укажіть номер машини від 1-{len(vehicles)}, для якого ви бажаєте добавити gps_imei')
             STATE_DM = V_GPS
         else:
             update.message.reply_text("Не здайдено жодного авто у автопарку")
@@ -729,7 +907,8 @@ def get_n_vehicle(update, context):
         update.message.reply_text('Введіть gps_imei для данного авто')
         STATE_DM = V_GPS_IMEI
     except:
-        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+        update.message.reply_text(
+            'Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
 
 
 def get_gps_imea(update, context):
@@ -750,7 +929,8 @@ def send_day_rent(sender, instance, **kwargs):
     try:
         chat_id = instance.driver.chat_id
         if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
-            rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
+            rent_cost = int((instance.rent_distance - ParkSettings.get_value('FREE_RENT', 20)) * ParkSettings.get_value(
+                'RENT_PRICE', 15))
             message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
              вартість оренди {rent_cost}грн"""
             bot.send_message(chat_id=chat_id, text=message)
@@ -766,9 +946,10 @@ JOB_DRIVER = 'Водій'
 def job_application(update, context):
     buttons = [[KeyboardButton(f'{JOB_DRIVER}')]]
     context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть посаду на яку ви притендуєте:',
-                                reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True,
-                                                                  one_time_keyboard=True))
-    update.message.reply_text("Якщо ви десь помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
+                             reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True,
+                                                              one_time_keyboard=True))
+    update.message.reply_text(
+        "Якщо ви десь помилитесь, ви завжди можете почати спочатку, скориставшись командою /restart")
 
 
 def restart_jobapplication(update, context):
@@ -827,7 +1008,9 @@ def update_user_information(update, context):
         user.email = clear_email
         user.save()
         buttons = [[InlineKeyboardButton(text='Завантажити документи', callback_data='job_photo')]]
-        update.message.reply_text('Ваші дані оновлені, надайте будь-ласка необхідні документи, скориставшись кнопкою під повідомленням', reply_markup=InlineKeyboardMarkup(buttons))
+        update.message.reply_text(
+            'Ваші дані оновлені, надайте будь-ласка необхідні документи, скориставшись кнопкою під повідомленням',
+            reply_markup=InlineKeyboardMarkup(buttons))
         return "WAIT_FOR_JOB_OPTION"
     else:
         update.message.reply_text('Eлектронна адреса некоректна. Спробуйте ще раз')
@@ -837,7 +1020,9 @@ def update_user_information(update, context):
 def get_job_photo(update, context):
     empty_inline_keyboard = InlineKeyboardMarkup([])
     update.callback_query.answer()
-    update.callback_query.edit_message_text(text='Надішліть ваше фото не розмите, без головного убору та окулярів (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=empty_inline_keyboard)
+    update.callback_query.edit_message_text(
+        text='Надішліть ваше фото не розмите, без головного убору та окулярів (селфі).Для відправки скористайтеся \U0001F4CE біля menu',
+        reply_markup=empty_inline_keyboard)
     return 'WAIT_FOR_JOB_PHOTO'
 
 
@@ -849,10 +1034,12 @@ def upload_photo(update, context):
         context.user_data['photo_job'] = f'job/photo/{image["file_unique_id"]}.jpg'
         image.download(filename)
         update.message.reply_text('Ваше фото збережено.Надішліть лицьову сторону посвідчення')
-        context.bot.send_photo(update.effective_chat.id, 'https://kourier.in.ua/uploads/posts/2016-12/1480604684_1702.jpg')
+        context.bot.send_photo(update.effective_chat.id,
+                               'https://kourier.in.ua/uploads/posts/2016-12/1480604684_1702.jpg')
         return 'WAIT_FOR_FRONT_PHOTO'
     else:
-        update.message.reply_text('Будь ласка, надішліть фото (селфі).Для відправки скористайтеся \U0001F4CE біля menu', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text('Будь ласка, надішліть фото (селфі).Для відправки скористайтеся \U0001F4CE біля menu',
+                                  reply_markup=ReplyKeyboardRemove())
         return 'WAIT_FOR_JOB_PHOTO'
 
 
@@ -864,7 +1051,8 @@ def upload_license_front_photo(update, context):
         context.user_data['front_license'] = f'job/licenses/front/{image["file_unique_id"]}.jpg'
         image.download(filename)
         update.message.reply_text('Лицьова сторона посвідчення збережена.Надішліть тильну сторону')
-        context.bot.send_photo(update.effective_chat.id, 'https://www.autoconsulting.com.ua/pictures/_upload/1582561870fbTo_h.jpg')
+        context.bot.send_photo(update.effective_chat.id,
+                               'https://www.autoconsulting.com.ua/pictures/_upload/1582561870fbTo_h.jpg')
         return 'WAIT_FOR_BACK_PHOTO'
     else:
         update.message.reply_text('Будь ласка, надішліть лицьову сторону', reply_markup=ReplyKeyboardRemove())
@@ -878,7 +1066,8 @@ def upload_license_back_photo(update, context):
         filename = f'data/mediafiles/job/licenses/back/{image["file_unique_id"]}.jpg'
         context.user_data['back_license'] = f'job/licenses/back/{image["file_unique_id"]}.jpg'
         image.download(filename)
-        update.message.reply_text('Тильна сторона посвідчення збережена.Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25).')
+        update.message.reply_text(
+            'Тильна сторона посвідчення збережена.Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25).')
         update.message.reply_text(
             'Якщо посвідчення безстрокове введіть 2077-12-31 або будь-яку іншу дату у далекому майбутньому до 2077р.:')
         return 'WAIT_FOR_EXPIRED'
@@ -891,22 +1080,25 @@ def upload_expired_date(update, context):
     date = update.message.text
     if JobApplication.validate_date(date):
         context.user_data['expired_license'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
-        buttons = [[InlineKeyboardButton(text='так', callback_data='have_auto')], [InlineKeyboardButton(text='ні', callback_data='no_auto')]]
+        buttons = [[InlineKeyboardButton(text='так', callback_data='have_auto')],
+                   [InlineKeyboardButton(text='ні', callback_data='no_auto')]]
         update.message.reply_text('Чи є у вас авто для роботи:', reply_markup=InlineKeyboardMarkup(buttons))
         return "WAIT_ANSWER"
     else:
-        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        update.message.reply_text(
+            f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
 
-def check_auto(update,context):
+def check_auto(update, context):
     query = update.callback_query
     empty_inline_keyboard = InlineKeyboardMarkup([])
     if query.data == 'have_auto':
         query.answer()
-        query.edit_message_text('Дякуємо! Будь ласка, надішліть фото посвідчення про реєстрацію авто.', reply_markup=empty_inline_keyboard)
+        query.edit_message_text('Дякуємо! Будь ласка, надішліть фото посвідчення про реєстрацію авто.',
+                                reply_markup=empty_inline_keyboard)
         context.bot.send_photo(query.message.chat_id,
-                       'https://protocol.ua/userfiles/tehpasport-na-avto.jpg')
+                               'https://protocol.ua/userfiles/tehpasport-na-avto.jpg')
         return 'WAIT_FOR_AUTO_YES_OPTION'
     else:
         chat_id = update.effective_chat.id
@@ -916,17 +1108,18 @@ def check_auto(update,context):
             update.message.reply_text('Ви вже подали заявку.Очікуйте дзвінка від нашого менеджера')
         except JobApplication.DoesNotExist:
             JobApplication.objects.create(
-            first_name=user.name,
-            last_name=user.second_name,
-            email=user.email,
-            phone_number=user.phone_number,
-            license_expired=context.user_data['expired_license'],
-            driver_license_front=context.user_data['front_license'],
-            driver_license_back=context.user_data['back_license'],
-            photo=context.user_data['photo_job'],
-            role=context.user_data['role'])
+                first_name=user.name,
+                last_name=user.second_name,
+                email=user.email,
+                phone_number=user.phone_number,
+                license_expired=context.user_data['expired_license'],
+                driver_license_front=context.user_data['front_license'],
+                driver_license_back=context.user_data['back_license'],
+                photo=context.user_data['photo_job'],
+                role=context.user_data['role'])
         finally:
-            query.edit_message_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
+            query.edit_message_text(
+                f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду мені будь-ласка')
             context.user_data['thread'] = True
             t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
             t.start()
@@ -994,10 +1187,12 @@ def upload_expired_insurance(update, context):
             context.user_data['thread'] = True
             t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
             t.start()
-            update.message.reply_text(f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду нам протягом 3 хвилин будь-ласка')
+            update.message.reply_text(
+                f'Заявка сформована.На номер {user.phone_number} відправлено СМС перешліть чотири цифри коду нам протягом 3 хвилин будь-ласка')
             return "JOB_UKLON_CODE"
     else:
-        update.message.reply_text(f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
+        update.message.reply_text(
+            f'{date} не вірний формат або дата, Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25):')
         return 'WAIT_FOR_EXPIRED'
 
 
@@ -1015,7 +1210,7 @@ def uklon_code(update, context):
 def code_timer(update, context, timer, sleep):
     def timer_callback(context):
         context.bot.send_message(update.effective_chat.id,
-            f'Заявку відхилено.Ви завжди можете подати її повторно')
+                                 f'Заявку відхилено.Ви завжди можете подати її повторно')
         JobApplication.objects.filter(phone_number=context.user_data['phone']).first().delete()
         return ConversationHandler.END
 
@@ -1024,15 +1219,15 @@ def code_timer(update, context, timer, sleep):
         try:
             tread_state = context.user_data['thread']
             if tread_state:
-                if remaining_time < sleep+1:
+                if remaining_time < sleep + 1:
                     context.bot.send_message(update.effective_chat.id,
-                            f'Залишилось {int(remaining_time)} секунд.Якщо ви не відправите код заявку буде скасовано')
+                                             f'Залишилось {int(remaining_time)} секунд.Якщо ви не відправите код заявку буде скасовано')
                     time.sleep(remaining_time)
                     remaining_time = 0
                     timer_callback(context)
                 else:
                     context.bot.send_message(update.effective_chat.id,
-                        f'Коду лишилось діяти {int(remaining_time)} секунд.Поспішіть будь-ласка')
+                                             f'Коду лишилось діяти {int(remaining_time)} секунд.Поспішіть будь-ласка')
                     time.sleep(sleep)
                     remaining_time = int(remaining_time - sleep)
             else:
@@ -1057,7 +1252,8 @@ def comment(update, context):
     if order:
         order.status_order = Order.CANCELED
         order.save()
-        update.message.reply_text('Поставте оцінку або напишіть відгук', reply_markup=ReplyKeyboardMarkup(keyboard=[keyboard]))
+        update.message.reply_text('Поставте оцінку або напишіть відгук',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard=[keyboard]))
     else:
         update.message.reply_text('Залишіть відгук або сповістіть про проблему', reply_markup=ReplyKeyboardRemove())
 
@@ -1094,7 +1290,7 @@ def add(update, context):
     chat_id = update.message.chat.id
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     keyboard = [[KeyboardButton(f'{CREATE_USER}')],
-               [KeyboardButton(f'{CREATE_VEHICLE}')]]
+                [KeyboardButton(f'{CREATE_VEHICLE}')]]
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[keyboard[0], keyboard[1]],
@@ -1192,7 +1388,7 @@ def create_user(update, context):
 SERVICEABLE = 'Придатна'
 BROKEN = 'Зламана'
 
-STATE_D = None    # range(50 - 100)
+STATE_D = None  # range(50 - 100)
 NUMBERPLATE, REPORT, V_ID, V_CAR = range(50, 54)
 
 
@@ -1203,7 +1399,7 @@ def status_car(update, context):
     if driver is not None:
         buttons = [[KeyboardButton(f'{SERVICEABLE}')], [KeyboardButton(f'{BROKEN}')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус автомобіля',
-                                        reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+                                 reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
     else:
         update.message.reply_text(f'Зареєструтесь як водій', reply_markup=ReplyKeyboardRemove())
 
@@ -1227,7 +1423,8 @@ def change_status_car(update, context):
         numberplates.clear()
         update.message.reply_text('Статус авто був змінений')
     else:
-        update.message.reply_text('Цього номера немає в базі даних або надіслано неправильні дані. Зверніться до менеджера або повторіть команду')
+        update.message.reply_text(
+            'Цього номера немає в базі даних або надіслано неправильні дані. Зверніться до менеджера або повторіть команду')
 
     STATE_D = None
 
@@ -1251,7 +1448,8 @@ def sending_report(update, context):
 def get_debt_photo(update, context):
     empty_inline_keyboard = InlineKeyboardMarkup([])
     update.callback_query.answer()
-    update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості', reply_markup=empty_inline_keyboard)
+    update.callback_query.edit_message_text(text='Надішліть фото оплати заборгованості',
+                                            reply_markup=empty_inline_keyboard)
     return 'WAIT_FOR_DEBT_PHOTO'
 
 
@@ -1273,7 +1471,6 @@ def save_debt_report(update, context):
         return 'WAIT_FOR_DEBT_PHOTO'
 
 
-
 # Viewing broken car
 def broken_car(update, context):
     chat_id = update.message.chat.id
@@ -1292,9 +1489,10 @@ def broken_car(update, context):
         update.message.reply_text('Зареєструйтесь як менеджер водіїв')
 
 
-STATE_DM = None     # range (100 -150)
+STATE_DM = None  # range (100 -150)
 NAME, SECOND_NAME, EMAIL, PHONE_NUMBER = range(100, 104)
-STATUS, DRIVER, CAR_NUMBERPLATE, RATE, NAME_VEHICLE, MODEL_VEHICLE, LICENCE_PLATE_VEHICLE, VIN_CODE_VEHICLE = range(104, 112)
+STATUS, DRIVER, CAR_NUMBERPLATE, RATE, NAME_VEHICLE, MODEL_VEHICLE, LICENCE_PLATE_VEHICLE, VIN_CODE_VEHICLE = range(104,
+                                                                                                                    112)
 JOB_APPLICATION, V_GPS, V_GPS_IMEI = range(112, 115)
 
 
@@ -1365,17 +1563,19 @@ def take_a_day_off_or_sick_leave(update, context):
     events = Event.objects.filter(full_name_driver=driver, status_event=False)
     list_event = [i for i in events]
     if len(list_event) > 0:
-        update.message.reply_text(f"У вас вже відкритий <<Лікарняний>> або <<Вихідний>>.\nЩоб закрити подію скористайтесь командою /status")
+        update.message.reply_text(
+            f"У вас вже відкритий <<Лікарняний>> або <<Вихідний>>.\nЩоб закрити подію скористайтесь командою /status")
     else:
         driver.driver_status = f'{Driver.OFFLINE}'
         driver.save()
         Event.objects.create(
-                full_name_driver=driver,
-                event=event[1].title(),
-                chat_id=chat_id,
-                created_at=datetime.datetime.now())
-        update.message.reply_text(f'Ваш статус зміненно на <<{Driver.OFFLINE}>> та ваш <<{event[1].title()}>> розпочато',
-                                            reply_markup=ReplyKeyboardRemove())
+            full_name_driver=driver,
+            event=event[1].title(),
+            chat_id=chat_id,
+            created_at=datetime.datetime.now())
+        update.message.reply_text(
+            f'Ваш статус зміненно на <<{Driver.OFFLINE}>> та ваш <<{event[1].title()}>> розпочато',
+            reply_markup=ReplyKeyboardRemove())
 
 
 # Add Vehicle to driver
@@ -1384,7 +1584,7 @@ def get_list_drivers(update, context):
     chat_id = update.message.chat.id
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     if driver_manager is not None:
-        drivers = {i.id: f'{i.name } {i.second_name}' for i in Driver.objects.all()}
+        drivers = {i.id: f'{i.name} {i.second_name}' for i in Driver.objects.all()}
         if len(drivers) == 0:
             update.message.reply_text('Кількість зареєстрованих водіїв 0')
         else:
@@ -1407,7 +1607,8 @@ def get_list_vehicle(update, context):
         id_driver = int(id_driver)
         context.user_data['driver'] = Driver.objects.get(id=id_driver)
     except:
-        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер водія виявився недійсним. Спробуйте ще раз')
+        update.message.reply_text(
+            'Не вдалось обробити ваше значення, або переданий номер водія виявився недійсним. Спробуйте ще раз')
     vehicles = {i.id: i.licence_plate for i in Vehicle.objects.all()}
     if len(vehicles) == 0:
         update.message.reply_text('Кількисть зареєстрованих траспортних засобів 0')
@@ -1430,7 +1631,8 @@ def get_fleet(update, context):
         id_vehicle = int(id_vehicle)
         context.user_data['vehicle'] = Vehicle.objects.get(id=id_vehicle)
     except:
-        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
+        update.message.reply_text(
+            'Не вдалось обробити ваше значення, або переданий номер автомобільного номера виявився недійсним. Спробуйте ще раз')
     if context.user_data['vehicle'] is not None:
         buttons = [[KeyboardButton(F_UKLON)],
                    [KeyboardButton(F_UBER)],
@@ -1486,8 +1688,9 @@ def get_driver_external_id(update, context):
             rate += f'{k}: {v}\n'
 
         context.user_data['rate'] = drivers_rate
-        update.message.reply_text(f"{rate}",  reply_markup=ReplyKeyboardRemove())
-        update.message.reply_text(f"Укажіть номер рейтингу, який ви хочете встановити для {context.user_data['driver']} в автопарку {context.user_data['fleet']}")
+        update.message.reply_text(f"{rate}", reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(
+            f"Укажіть номер рейтингу, який ви хочете встановити для {context.user_data['driver']} в автопарку {context.user_data['fleet']}")
         STATE_DM = RATE
     try:
         if isinstance(response, str):
@@ -1505,14 +1708,15 @@ def add_information_to_driver(update, context):
         rate = context.user_data['rate']
         rate = rate[id_rate]
     except:
-        update.message.reply_text('Не вдалось обробити ваше значення, або переданий номер рейтингу не є дійсним. Спробуйте ще раз')
+        update.message.reply_text(
+            'Не вдалось обробити ваше значення, або переданий номер рейтингу не є дійсним. Спробуйте ще раз')
     if isinstance(rate, float):
         Fleets_drivers_vehicles_rate.objects.create(
-                fleet=Fleet.objects.get(name=context.user_data['fleet']),
-                driver=context.user_data['driver'],
-                vehicle=context.user_data['vehicle'],
-                driver_external_id=context.user_data['driver_external_id'],
-                rate=rate)
+            fleet=Fleet.objects.get(name=context.user_data['fleet']),
+            driver=context.user_data['driver'],
+            vehicle=context.user_data['vehicle'],
+            driver_external_id=context.user_data['driver_external_id'],
+            rate=rate)
         update.message.reply_text(f"Ви добавили водію машину та рейтинг в автопарк {context.user_data['fleet']}")
         if context.user_data['driver_external_id'] == 'pass':
             update.message.reply_text(f"Водія {context.user_data['driver']} збереженно зі значенням driver_external_id = \
@@ -1526,7 +1730,8 @@ def get_list_job_application(update, context):
     chat_id = update.message.chat.id
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     if driver_manager is not None:
-        applications = {i.id: f'{i}' for i in JobApplication.objects.all() if (i.role == f'{JOB_DRIVER}' and i.status_job_application == False)}
+        applications = {i.id: f'{i}' for i in JobApplication.objects.all() if
+                        (i.role == f'{JOB_DRIVER}' and i.status_job_application == False)}
         if len(applications) == 0:
             update.message.reply_text('Заявок на роботу водія поки немає')
         else:
@@ -1569,7 +1774,8 @@ def add_job_application_to_fleet(update, context):
                                                         second_name=last_name)
 
         update.message.reply_text('Заявка була додана в автопарк Uber', reply_markup=ReplyKeyboardRemove())
-        update.message.reply_text('Якщо заявки немає в автопарку, користувачу потрібно зареєструватись на сайті як водій')
+        update.message.reply_text(
+            'Якщо заявки немає в автопарку, користувачу потрібно зареєструватись на сайті як водій')
 
 
 # Add vehicle to db
@@ -1631,7 +1837,7 @@ def get_vin_code_vehicle(update, context):
         update.message.reply_text('Vin code занадто довгий. Спробуйте ще раз')
 
 
-STATE_SSM = None   # range(150-200)
+STATE_SSM = None  # range(150-200)
 LICENCE_PLATE, PHOTO, START_OF_REPAIR, END_OF_REPAIR = range(150, 154)
 
 
@@ -1684,10 +1890,10 @@ def send_report_to_db_and_driver(update, context):
         update.message.reply_text('Недійсна дата')
 
     order = RepairReport(
-                    repair=context.user_data['photo']["file_path"],
-                    numberplate=context.user_data['licence_plate'],
-                    start_of_repair=context.user_data['start_of_repair'],
-                    end_of_repair=context.user_data['end_of_repair'])
+        repair=context.user_data['photo']["file_path"],
+        numberplate=context.user_data['licence_plate'],
+        start_of_repair=context.user_data['start_of_repair'],
+        end_of_repair=context.user_data['end_of_repair'])
     order.save()
     STATE_SSM = None
     update.message.reply_text('Ваш звіт збережено в базі даних')
@@ -1735,7 +1941,7 @@ def help(update, context) -> str:
     update.message.reply_text('Для першого кроку зробіть реєстрацію або авторизуйтеся командою /start')
 
 
-STATE_O = None     # range(200-250)
+STATE_O = None  # range(200-250)
 CARD, SUM, PORTMONE_SUM, PORTMONE_COMMISSION, GENERATE_LINK = range(200, 205)
 
 TRANSFER_MONEY = 'Перевести кошти'
@@ -1750,7 +1956,7 @@ def payments(update, context):
         buttons = [[KeyboardButton(f'{TRANSFER_MONEY}')],
                    [KeyboardButton(f'{_GENERATE_LINK}')]]
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
-                                reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
+                                 reply_markup=ReplyKeyboardMarkup(buttons, one_time_keyboard=True))
     else:
         update.message.reply_text('Ця команда тільки для власника')
 
@@ -1869,8 +2075,7 @@ def generate_link_v2(update, context):
         update.message.reply_text('Не вдалось обробити вашу суму, спробуйте ще раз')
 
 
-def menu(update, context):
-    chat_id = update.effective_chat.id
+def menu(update, context, chat_id):
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     driver = Driver.get_by_chat_id(chat_id)
     manager = ServiceStationManager.get_by_chat_id(chat_id)
@@ -1879,6 +2084,7 @@ def menu(update, context):
         BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
         BotCommand("/help", "Допомога"),
         BotCommand("/id", "Дізнатись id"),
+        BotCommand("/cancel", "Вийти з процесу"),
     ]
     if driver is not None:
         standart_commands.extend([
@@ -1904,7 +2110,7 @@ def menu(update, context):
             BotCommand("/rating", "Побачити рейтинг водіїв по автопарках за тиждень"),
             BotCommand("/total_weekly_rating", "Побачити рейтинг водіїв загальну за тиждень"),
             BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
-            BotCommand("/download_report", "Загрузити тижневі звіти") ])
+            BotCommand("/download_report", "Загрузити тижневі звіти")])
 
     context.bot.set_my_commands(standart_commands)
 
@@ -2000,7 +2206,9 @@ def drivers_rating(update, context):
         for period in fleet['rating']:
             text += f"{period['start']:%d.%m.%Y} - {period['end']:%d.%m.%Y}" + '\n'
             if period['rating']:
-                text += '\n'.join([f"{item['num']} {item['driver']} {item['amount']:15.2f} {- item['trips'] if item['trips']>0 else ''}" for item in period['rating']]) + '\n\n'
+                text += '\n'.join([
+                    f"{item['num']} {item['driver']} {item['amount']:15.2f} {- item['trips'] if item['trips'] > 0 else ''}"
+                    for item in period['rating']]) + '\n\n'
             else:
                 text += 'Отримання даних... Спробуйте пізніше\n'
     update.message.reply_text(text)
@@ -2080,7 +2288,7 @@ def cancel(update, context):
     STATE, STATE_D, STATE_O, STATE_DM, STATE_SSM = None, None, None, None, None
 
 
-#Need fix
+# Need fix
 def update_db(update, context):
     """Pushing data to database from weekly_csv files"""
     # getting and opening files
@@ -2093,7 +2301,7 @@ def update_db(update, context):
 
     files = os.listdir(directory)
     files_csv = filter(lambda x: x.endswith('.csv'), files)
-    list_new_files = list(set(files_csv)-set(processed_files))
+    list_new_files = list(set(files_csv) - set(processed_files))
 
     if len(list_new_files) == 0:
         update.message.reply_text('No new updates yet')
@@ -2125,12 +2333,12 @@ def get_owner_today_report(update, context) -> str:
 
 
 def get_driver_today_report(update, context) -> str:
-    driver_first_name = User.objects.filter(user_id = {update.message.chat.id})
+    driver_first_name = User.objects.filter(user_id={update.message.chat.id})
     driver_ident = PaymentsOrder.objects.filter(driver_uuid='')
     if user.type == 0:
-        data = PaymentsOrder.objects.filter(transaction_time = date.today(), driver_uuid = {driver_ident} )
+        data = PaymentsOrder.objects.filter(transaction_time=date.today(), driver_uuid={driver_ident})
         update.message.reply_text(f'Hi {update.message.chat.username} driver')
-        update.message.reply_text(text = data)
+        update.message.reply_text(text=data)
 
 
 def get_driver_week_report(update, context) -> str:
@@ -2138,25 +2346,26 @@ def get_driver_week_report(update, context) -> str:
 
 
 def choice_driver_option(update, context) -> list:
-        update.message.reply_text(f'Hi {update.message.chat.username} driver')
-        buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')], [KeyboardButton('Update report')]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
-        reply_markup=ReplyKeyboardMarkup(buttons))
+    update.message.reply_text(f'Hi {update.message.chat.username} driver')
+    buttons = [[KeyboardButton('Get today statistic')], [KeyboardButton('Choice week number')],
+               [KeyboardButton('Update report')]]
+    context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
+                             reply_markup=ReplyKeyboardMarkup(buttons))
 
 
 def get_manager_today_report(update, context) -> str:
     if user.type == 1:
-        data = PaymentsOrder.objects.filter(transaction_time = date.today())
+        data = PaymentsOrder.objects.filter(transaction_time=date.today())
         update.message.reply_text(text=data)
     else:
         error_handler()
 
 
 def get_stat_for_manager(update, context) -> list:
-        update.message.reply_text(f'Hi {update.message.chat.username} manager')
-        buttons = [[KeyboardButton('Get all today statistic')]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
-        reply_markup=ReplyKeyboardMarkup(buttons))
+    update.message.reply_text(f'Hi {update.message.chat.username} manager')
+    buttons = [[KeyboardButton('Get all today statistic')]]
+    context.bot.send_message(chat_id=update.effective_chat.id, text='choice option',
+                             reply_markup=ReplyKeyboardMarkup(buttons))
 
 
 def aut_handler(update, context) -> list:
@@ -2217,7 +2426,6 @@ job_docs_conversation = ConversationHandler(
     fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
     allow_reentry=True,
 )
-
 
 WEBHOOK_URL = os.environ['WEBHOOK_URL']
 bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
@@ -2287,7 +2495,6 @@ dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити за�
 
 dp.add_handler(job_docs_conversation)
 
-
 # Commands for Drivers
 # Changing status of driver
 dp.add_handler(CommandHandler("status", status))
@@ -2308,7 +2515,6 @@ dp.add_handler(MessageHandler(
 
 # Sending report(payment debt)
 dp.add_handler(debt_conversation)
-
 
 # Take a day off/Take sick leave
 dp.add_handler(CommandHandler("option", option))
@@ -2369,9 +2575,7 @@ dp.add_handler(CommandHandler("add_imei_gps_to_driver", get_licence_plate_for_gp
 # Sending report on repair
 dp.add_handler(CommandHandler("send_report", numberplate_car))
 
-# dp.add_handler(CallbackQueryHandler(inline_buttons_for_driver, pattern='^(Accept order|Reject order|On the spot)$'))
 dp.add_handler(CallbackQueryHandler(handle_callback_order))
-
 
 # System commands
 dp.add_handler(CommandHandler("cancel", cancel))

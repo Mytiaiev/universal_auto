@@ -13,6 +13,7 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
+from celery import shared_task
 from selenium.common import InvalidSessionIdException
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
@@ -25,8 +26,8 @@ BOLT_CHROME_DRIVER = None
 UKLON_CHROME_DRIVER = None
 UBER_CHROME_DRIVER = None
 
-UPDATE_DRIVER_DATA_FREQUENCY = 60*60*1
-UPDATE_DRIVER_STATUS_FREQUENCY = 60*2
+UPDATE_DRIVER_DATA_FREQUENCY = 60 * 60 * 1
+UPDATE_DRIVER_STATUS_FREQUENCY = 60 * 2
 MEMCASH_LOCK_EXPIRE = 60 * 10
 MEMCASH_LOCK_AFTER_FINISHING = 10
 
@@ -262,6 +263,21 @@ def check_time_order(self):
                                       order_time__gte=timezone.localtime(),
                                       order_time__lte=min_sending_time)
         return list(orders)
+    except Exception as e:
+        logger.info(e)
+
+
+@shared_task
+def get_distance_trip(order, query, start_trip_with_client, end, licence_plate):
+    start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
+    start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
+    end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    try:
+        gps = UaGps(driver=True, sleep=5, headless=True)
+        gps.login()
+        result = gps.generate_report(start, end, licence_plate)
+        minutes = result[1].total_seconds() // 60
+        return order, query, minutes, result[0]
     except Exception as e:
         logger.info(e)
 
