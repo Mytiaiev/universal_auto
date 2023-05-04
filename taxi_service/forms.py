@@ -26,18 +26,11 @@ class MainOrderForm(ModelForm):
 
     class Meta:
         model = Order
-        fields = ('from_address', 'to_the_address', 'phone_number')
-        error_messages = {
-            "from_address": {
-                "required": _("Введіть, будь ласка, адресу"),
-            },
-            "phone_number": {
-                "required": _("Введіть, будь ласка, ваш номер телефону"),
-            },
-            "to_the_address": {
-                "required": _("Введіть, будь ласка, адресу"),
-            },
-        }
+        fields = (
+            'from_address', 'to_the_address', 'phone_number',
+            'order_time', 'latitude', 'longitude', 'to_latitude',
+            'to_longitude'
+        )
 
         widgets = {
             'from_address': forms.TextInput(attrs={
@@ -45,13 +38,18 @@ class MainOrderForm(ModelForm):
             'to_the_address': forms.TextInput(attrs={
                 'id': 'to_address', 'class': 'form-control', 'placeholder': _('Куди їдемо?'), 'style': 'font-size: medium'}),
             'phone_number': PhoneInput(attrs={
-                'id': 'phone', 'class': 'form-control', 'placeholder': _('Номер телефону'), 'style': 'font-size: medium'})
+                'id': 'phone', 'class': 'form-control', 'placeholder': _('Номер телефону'), 'style': 'font-size: medium'}),
+            'order_time': forms.TextInput(attrs={
+                'id': 'delivery_time', 'class': 'form-control', 'placeholder': _('На яку годину? формат HH:MM(напр. 18:45)'), 'style': 'font-size: medium'}),
         }
 
-    def save(self, sum, payment):
+    def save(self, payment=None, on_time=None):
         order = super().save(commit=False)
-        order.sum = sum
-        order.payment_method = payment
+        if on_time is not None:
+            order.order_time = on_time
+            order.status_order = Order.ON_TIME
+        if payment is not None:
+            order.payment_method = payment
         order.save()
         return order
 
