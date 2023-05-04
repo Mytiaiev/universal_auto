@@ -270,8 +270,8 @@ def check_time_order(self):
 @shared_task
 def get_distance_trip(order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
-    start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
-    end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
+    end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
     try:
         gps = UaGps(driver=True, sleep=5, headless=True)
         gps.login()
