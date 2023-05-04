@@ -1301,6 +1301,14 @@ class BoltService(Service):
     pass
 
 
+class NewUklonService(Service):
+    pass
+
+
+class UaGpsService(Service):
+    pass
+
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
@@ -2228,7 +2236,7 @@ class Uklon(SeleniumTools):
 
 class NewUklon(SeleniumTools):
     def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
-                 base_url="https://fleets.uklon.com.ua", remote=False, profile=None):
+                 base_url=f"{NewUklonService.get_value('BASE_URL')}", remote=False, profile=None):
         super().__init__('nuklon', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -2240,44 +2248,47 @@ class NewUklon(SeleniumTools):
         self.base_url = base_url
 
     def login(self):
-        self.driver.get(self.base_url + '/auth/login')
+        self.driver.get(NewUklonService.get_value('NEWUKLON_LOGIN_1'))
         if self.sleep:
             time.sleep(self.sleep)
 
-        login = self.driver.find_element(By.XPATH, '//input[@data-cy="phone-number-control"]')
+        login = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_2'))
         login.send_keys(os.environ["UKLON_NAME"])
 
-        password = self.driver.find_element(By.XPATH, '//input[@data-cy="password"]')
+        password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
         password.send_keys('')
         password.send_keys(os.environ["UKLON_PASSWORD"])
 
-        self.driver.find_element(By.XPATH, '//button[@data-cy="login-btn"]').click()
+        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
         if self.sleep:
             time.sleep(self.sleep)
 
     def download_payments_order(self):
-        url = f'{self.base_url}/workspace/orders'
-        xpath = '//flt-group-filter[1]/flt-date-range-filter/mat-form-field/div'
+        url = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_1')
+        xpath = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_2')
         self.get_target_page_or_login(url, xpath, self.login)
         self.driver.find_element(By.XPATH, xpath).click()
         if self.day:
             if self.sleep:
                 time.sleep(self.sleep)
             WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, '//mat-option/span/div[text()=" Вибрати період "]'))).click()
+                EC.element_to_be_clickable(
+                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
             input_data = WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, '//input')))
+                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_4'))))
             input_data.click()
             input_data.send_keys(self.day.format("DD.MM.YYYY") + Keys.TAB + self.day.format("DD.MM.YYYY"))
             WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, '//span[text()= " Застосувати "]'))).click()
+                EC.element_to_be_clickable(
+                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_5')))).click()
         else:
             WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, '//span[text()=" Минулий тиждень "]'))).click()
+                EC.element_to_be_clickable(
+                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_6')))).click()
 
         if self.sleep:
             time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, '//flt-filter-group/div/div/button').click()
+        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_7')).click()
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
@@ -2386,32 +2397,32 @@ class NewUklon(SeleniumTools):
         return otpa
 
     def add_driver(self, jobapplication):
-        url = 'https://partner-registration.uklon.com.ua/registration'
+        url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
         self.driver.get(f"{url}")
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='Обрати зі списку']"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_2')))).click()
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[@class='region-name' and contains(text(),'Київ')]"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_3')))).click()
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
-        form_phone_number = self.driver.find_element(By.XPATH, "//input[@type='tel']")
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+        form_phone_number = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_5'))
         clickandclear(form_phone_number)
         form_phone_number.send_keys(jobapplication.phone_number[4:])
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_6')))).click()
 
         # 2FA
         code = self.wait_otp_code(jobapplication)
-        digits = self.driver.find_elements(By.XPATH, "//input")
+        digits = self.driver.find_elements(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_7'))
         for i, element in enumerate(digits):
             element.send_keys(code[i])
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_8')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, "//label[@for='registration-type-fleet']").click()
+        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_9')).click()
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_10')))).click()
         if self.sleep:
             time.sleep(self.sleep)
         registration_fields = {"firstName": jobapplication.first_name,
@@ -2423,7 +2434,7 @@ class NewUklon(SeleniumTools):
             clickandclear(element)
             element.send_keys(value)
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_11')))).click()
 
         file_paths = [
             os.getcwd() + f"/data/mediafiles/{jobapplication.photo}",
@@ -2434,21 +2445,21 @@ class NewUklon(SeleniumTools):
         for i in range(3):
             if self.sleep:
                 time.sleep(self.sleep)
-            photo_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
+            photo_input = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_12'))
             photo_input.send_keys(file_paths[i])
             WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
+                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_13')))).click()
             time.sleep(1)
             WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'green')]"))).click()
+                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_14')))).click()
             WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_15')))).click()
         fleet_code = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, "mat-input-2")))
+            EC.presence_of_element_located((By.ID, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_16'))))
         clickandclear(fleet_code)
         fleet_code.send_keys(os.environ.get("UKLON_TOKEN", NewUklonFleet.token))
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_17')))).click()
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
 
@@ -2557,7 +2568,8 @@ class Privat24(SeleniumTools):
 
 
 class UaGps(SeleniumTools):
-    def __init__(self, driver=True, sleep=5, headless=False, base_url="https://uagps.net/", remote=False, profile=None):
+    def __init__(self, driver=True, sleep=5, headless=False, base_url=f"{UaGpsService.get_value('BASE_URL')}",
+                 remote=False, profile=None):
         super().__init__('uagps', profile=profile)
         self.sleep = sleep
         if driver:
@@ -2576,13 +2588,14 @@ class UaGps(SeleniumTools):
         self.driver.get(self.base_url)
         if self.sleep:
             time.sleep(self.sleep)
-        user_field = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'user')))
+        user_field = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.ID, UaGpsService.get_value('UAGPS_LOGIN_1'))))
         clickandclear(user_field)
         user_field.send_keys(os.environ["UAGPS_LOGIN"])
-        pass_field = self.driver.find_element(By.ID, 'passw')
+        pass_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_2'))
         clickandclear(pass_field)
         pass_field.send_keys(os.environ["UAGPS_PASSWORD"])
-        self.driver.find_element(By.ID, 'submit').click()
+        self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
         if self.sleep:
             time.sleep(self.sleep)
 
@@ -2597,32 +2610,33 @@ class UaGps(SeleniumTools):
         :type report_object: str
         :return: distance and time in rent
         """
-        xpath = "//div[@title='Reports']"
+        xpath = UaGpsService.get_value('UAGPS_GENERATE_REPORT_1')
         self.get_target_page_or_login(self.base_url, xpath, self.login)
         self.driver.find_element(By.XPATH, xpath).click()
         unit = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//input[@id='report_templates_filter_units']")))
+            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_2'))))
         unit.click()
         try:
-            self.driver.find_element(By.XPATH, f'//div[starts-with(text(), "{report_object}")]').click()
+            self.driver.find_element(By.XPATH,
+                                     f'{UaGpsService.get_value("UAGPS_GENERATE_REPORT_3")} "{report_object}")]').click()
         except:
             return 0, datetime.timedelta()
-        from_field = self.driver.find_element(By.ID, "time_from_report_templates_filter_time")
+        from_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_GENERATE_REPORT_4'))
         clickandclear(from_field)
         from_field.send_keys(start_time.strftime("%d %B %Y %H:%M"))
         from_field.send_keys(Keys.ENTER)
         to_field = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.ID, "time_to_report_templates_filter_time")))
+            EC.element_to_be_clickable((By.ID, UaGpsService.get_value('UAGPS_GENERATE_REPORT_5'))))
         clickandclear(to_field)
         to_field.send_keys(end_time.strftime("%d %B %Y %H:%M"))
         to_field.send_keys(Keys.ENTER)
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, '//input[@value="Execute"]'))).click()
+            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_6')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        road_distance = self.driver.find_element(By.XPATH, "//tr[@pos='5']/td[2]").text
+        road_distance = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_7')).text
         rent_distance = float(road_distance.split(' ')[0])
-        roadtimestr = self.driver.find_element(By.XPATH, "//tr[@pos='4']/td[2]").text
+        roadtimestr = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_8')).text
         roadtime = [int(i) for i in roadtimestr.split(':')]
         rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
         return rent_distance, rent_time
