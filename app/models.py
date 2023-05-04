@@ -6,7 +6,7 @@ import shutil
 import string
 import sys
 import random
-
+from django.contrib.auth.hashers import make_password, check_password
 from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
@@ -1270,10 +1270,15 @@ class ParkSettings(models.Model):
     value = models.CharField(max_length=255, verbose_name='Значення')
     description = models.CharField(max_length=255, null=True, verbose_name='Опиc')
 
-
     class Meta:
         verbose_name = 'Налаштування автопарка'
         verbose_name_plural = 'Налаштування автопарків'
+
+    def set_password(self, password):
+        self.value = make_password(password)
+
+    def check_password(self, password):
+        return check_password(password, self.value)
 
     def __str__(self):
         return f'{self.value}'
@@ -1551,7 +1556,7 @@ class Uber(SeleniumTools):
     def password_form_v3(self):
         el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'PASSWORD')))
         el.clear()
-        el.send_keys(os.environ["UBER_PASSWORD"])
+        el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
         el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'forward-button')))
         el.click()
 
@@ -1780,7 +1785,8 @@ class Uber(SeleniumTools):
     def password_form(self, id, button, selector):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-            el = self.driver.find_element(By.ID, id).send_keys(os.environ["UBER_PASSWORD"])
+            el = self.driver.find_element(By.ID, id)
+            el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
             self.driver.find_element(selector, button).click()
             self.driver.get_screenshot_as_file('UBER_PASSWORD.png')
         except Exception as e:
@@ -1788,7 +1794,7 @@ class Uber(SeleniumTools):
 
     def login_form(self, id, button, selector):
         element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-        element.send_keys(os.environ["UBER_NAME"])
+        element.send_keys(ParkSettings.get_value("UBER_NAME"))
         e = self.driver.find_element(selector, button)
         e.click() 
         self.driver.get_screenshot_as_file('UBER_NAME.png')
@@ -1859,10 +1865,10 @@ class Bolt(SeleniumTools):
             time.sleep(self.sleep)
         element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'username')))
         element.clear()
-        element.send_keys(os.environ["BOLT_NAME"])
+        element.send_keys(ParkSettings.get_value("BOLT_NAME"))
         element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'password')))
         element.clear()
-        element.send_keys(os.environ["BOLT_PASSWORD"])
+        element.send_keys(ParkSettings.get_value("BOLT_PASSWORD"))
         self.driver.find_element(By.XPATH, '//button[@type="submit"]').click()
         if self.sleep:
             time.sleep(self.sleep)
@@ -2075,8 +2081,10 @@ class Uklon(SeleniumTools):
 
     def login(self):
         self.driver.get(self.base_url)
-        element = self.driver.find_element("name", 'login').send_keys(os.environ["UKLON_NAME"])
-        element = self.driver.find_element("name", "loginPassword").send_keys(os.environ["UKLON_PASSWORD"])
+        username = self.driver.find_element("name", 'login')
+        username.send_keys(ParkSettings.get_value("UKLON_NAME"))
+        element = self.driver.find_element("name", "loginPassword")
+        element.send_keys(ParkSettings.get_value("UKLON_PASSWORD"))
         self.driver.find_element("name", "Login").click()
         if self.sleep:
             time.sleep(self.sleep)
@@ -2205,11 +2213,11 @@ class NewUklon(SeleniumTools):
             time.sleep(self.sleep)
 
         login = self.driver.find_element(By.XPATH, '//input[@data-cy="phone-number-control"]')
-        login.send_keys(os.environ["UKLON_NAME"])
+        login.send_keys(ParkSettings.get_value("UKLON_NAME"))
 
         password = self.driver.find_element(By.XPATH, '//input[@data-cy="password"]')
         password.send_keys('')
-        password.send_keys(os.environ["UKLON_PASSWORD"])
+        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD"))
 
         self.driver.find_element(By.XPATH, '//button[@data-cy="login-btn"]').click()
         if self.sleep:
@@ -2405,7 +2413,7 @@ class NewUklon(SeleniumTools):
                 EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         fleet_code = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, "mat-input-2")))
         clickandclear(fleet_code)
-        fleet_code.send_keys(os.environ.get("UKLON_TOKEN", NewUklonFleet.token))
+        fleet_code.send_keys(ParkSettings.get_value("UKLON_TOKEN"))
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, "//button[@color='accent']"))).click()
         jobapplication.status_uklon = datetime.datetime.now().date()
@@ -2538,10 +2546,10 @@ class UaGps(SeleniumTools):
             time.sleep(self.sleep)
         user_field = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'user')))
         clickandclear(user_field)
-        user_field.send_keys(os.environ["UAGPS_LOGIN"])
+        user_field.send_keys(ParkSettings.get_value("UAGPS_LOGIN"))
         pass_field = self.driver.find_element(By.ID, 'passw')
         clickandclear(pass_field)
-        pass_field.send_keys(os.environ["UAGPS_PASSWORD"])
+        pass_field.send_keys(ParkSettings.get_value("UAGPS_PASSWORD"))
         self.driver.find_element(By.ID, 'submit').click()
         if self.sleep:
             time.sleep(self.sleep)

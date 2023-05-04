@@ -39,7 +39,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
 PORT = int(os.environ.get('PORT', '8443'))
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
 
-url_mobizon = os.environ['MOBIZON_DOMAIN']
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -162,7 +161,9 @@ def location(update: Update, context: CallbackContext):
     m = update.message
     # geocoding lat and lon to address
     context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
-    address = get_address(context.user_data['latitude'], context.user_data['longitude'], os.environ["GOOGLE_API_KEY"])
+    address = get_address(context.user_data['latitude'],
+                          context.user_data['longitude'],
+                          ParkSettings.get_value("GOOGLE_API_KEY", 'no_google_api'))
     if address is not None:
         context.user_data['location_address'] = address
         update.message.reply_text(f'Ваша адреса: {address}')
@@ -270,7 +271,7 @@ def buttons_addresses(update, context, address):
     center_lat, center_lng = f"{ParkSettings.get_value('CENTRE_CITY_LAT')}", f"{ParkSettings.get_value('CENTRE_CITY_LNG')}"
     center_radius = int(f"{ParkSettings.get_value('CENTRE_CITY_RADIUS')}")
     dict_addresses = get_addresses_by_radius(address, center_lat, center_lng, center_radius,
-                                             os.environ["GOOGLE_API_KEY"])
+                                             ParkSettings.get_value("GOOGLE_API_KEY", 'no_google_api'))
     if dict_addresses is not None:
         return dict_addresses
     else:
@@ -282,14 +283,16 @@ def order_create(update, context):
     user = User.get_by_chat_id(update.message.chat.id)
     context.user_data['phone_number'] = user.phone_number
     destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
-    destination_lat, destination_long = geocode(destination_place, os.environ["GOOGLE_API_KEY"])
+    destination_lat, destination_long = geocode(destination_place,
+                                                ParkSettings.get_value("GOOGLE_API_KEY", 'no_google_api'))
     if not context.user_data.get('from_address'):
         context.user_data['from_address'] = context.user_data['location_address']
     else:
         from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
-        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place, os.environ["GOOGLE_API_KEY"])
+        context.user_data['latitude'], context.user_data['longitude'] = \
+            geocode(from_place, ParkSettings.get_value("GOOGLE_API_KEY", 'no_google_api'))
     order = Order.objects.filter(chat_id_client=update.message.chat.id, payment_method="",
-                                  status_order=Order.ON_TIME).first()
+                                 status_order=Order.ON_TIME).first()
     if order:
         order.from_address = context.user_data['from_address']
         order.latitude = context.user_data['latitude']
@@ -433,7 +436,7 @@ def handle_callback_order(update, context):
                     distance_price = get_route_price(order.latitude, order.longitude,
                                                      order.to_latitude, order.to_longitude,
                                                      driver_lat, driver_long,
-                                                     os.environ["GOOGLE_API_KEY"])
+                                                     ParkSettings.get_value("GOOGLE_API_KEY", 'no_google_api'))
                     order.car_delivery_price, order.sum = distance_price[1], distance_price[0]
 
                 keyboard = [
@@ -477,10 +480,10 @@ def handle_callback_order(update, context):
                     params = {
                         "recipient": phone,
                         "text": sms_for_client,
-                        "apiKey": os.environ['MOBIZON_API_KEY'],
+                        "apiKey": ParkSettings.get_value("MOBIZON_API_KEY"),
                         "output": "json"
                     }
-                    requests.post(url_mobizon, params=params)
+                    requests.post(ParkSettings.get_value("MOBIZON_DOMAIN"), params=params)
 
             else:
                 query.edit_message_text(
@@ -500,10 +503,10 @@ def handle_callback_order(update, context):
                 params = {
                     "recipient": phone,
                     "text": "Водій відхилив замовлення. Пошук іншого водія...",
-                    "apiKey": os.environ['MOBIZON_API_KEY'],
+                    "apiKey": ParkSettings.get_value("MOBIZON_API_KEY"),
                     "output": "json"
                 }
-                requests.post(url_mobizon, params=params)
+                requests.post(ParkSettings.get_value("MOBIZON_DOMAIN"), params=params)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
     elif data[0] == "On_the_spot":
@@ -516,10 +519,10 @@ def handle_callback_order(update, context):
             params = {
                 "recipient": phone,
                 "text": "'Машину подано. Водій вас очікує'.",
-                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "apiKey": ParkSettings.get_value("MOBIZON_API_KEY"),
                 "output": "json"
             }
-            requests.post(url_mobizon, params=params)
+            requests.post(ParkSettings.get_value("MOBIZON_DOMAIN"), params=params)
     elif data[0] == "Сlient_on_site":
         keyboard = [
             [InlineKeyboardButton("\u2705 Рухались по маршруту", callback_data=f"Along_the_route {order.pk}")],
@@ -574,10 +577,10 @@ def handle_callback_order(update, context):
             params = {
                 "recipient": phone,
                 "text": "Дякуємо, що скористались послугами нашої компанії",
-                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "apiKey": ParkSettings.get_value("MOBIZON_API_KEY"),
                 "output": "json"
             }
-            requests.post(url_mobizon, params=params)
+            requests.post(ParkSettings.get_value("MOBIZON_DOMAIN"), params=params)
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         order.status_order = Order.COMPLETED
         order.save()
@@ -599,19 +602,19 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
                              photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
 
 
-@task_postrun.connect
-def check_payment_status(sender=None, **kwargs):
-    if sender == check_payment_status_tg:
-        rep = kwargs.get("retval")
-        query_id, order_id, status_payment = rep
-        if status_payment:
-            order = Order.objects.filter(pk=order_id).first()
-            bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
-            bot.send_message(chat_id=order.chat_id_client,
-                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
-            order.status_order = Order.COMPLETED
-            order.save()
-            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+# @task_postrun.connect
+# def check_payment_status(sender=None, **kwargs):
+#     if sender == check_payment_status_tg:
+#         rep = kwargs.get("retval")
+#         query_id, order_id, status_payment = rep
+#         if status_payment:
+#             order = Order.objects.filter(pk=order_id).first()
+#             bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
+#             bot.send_message(chat_id=order.chat_id_client,
+#                              text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
+#             order.status_order = Order.COMPLETED
+#             order.save()
+#             ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
 
 
 @task_postrun.connect

@@ -18,26 +18,29 @@ settings = {
     'TARIFF_CAR_OUTSIDE_DISPATCH': ('15', 'Доставка авто за місто (грн)'),
     'AVERAGE_DISTANCE_PER_HOUR': ('25', 'Середня проходимість авто по місту (км)'),
     'COST_PER_KM': ('20', 'Середня ціна за км (грн, для UaGPS)'),
+    'GOOGLE_API_KEY': ('Enter google api', 'Ключ Google api'),
+    'UBER_NAME': ('Enter username for Uber', 'Ім\'я користувача Uber'),
+    'UBER_PASSWORD': ('Enter password for Uber', 'Пароль користувача Uber'),
+    'BOLT_NAME': ('Enter username for Bolt', 'Ім\'я користувача Bolt'),
+    'BOLT_PASSWORD': ('Enter password for Bolt', 'Пароль користувача Bolt'),
+    'UKLON_NAME': ('Enter username for Uklon', 'Ім\'я користувача Uklon'),
+    'UKLON_PASSWORD': ('Enter password for Uklon', 'Пароль користувача Uklon'),
+    'UKLON_TOKEN': ('Enter token for Uklon', 'Код автопарку в Uklon'),
+    'UAGPS_LOGIN': ('Enter username for Uagps', 'Ім\'я користувача Uagps'),
+    'UAGPS_PASSWORD': ('Enter password for Uagps', 'Пароль Uagps'),
+    'MOBIZON_DOMAIN': ('https://api.mobizon.ua/service/message/sendsmsmessage', 'Домен для смс розсилки'),
 }
 
 
 def init_park_settings():
     for key, value in settings.items():
-        response = ParkSettings.objects.filter(key=key).first()
-        if not response:
-            park_setting = ParkSettings(
-                key=key,
-                value=value[0],
-                description=value[1] or '')
-            try:
-                park_setting.save()
-            except IntegrityError:
-                pass
-        else:
-            if not response.description:
-                response.description = settings[f'{key}'][1]
-                response.save()
-            continue
+        description = value[1] or ''
+        park_setting, created = ParkSettings.objects.get_or_create(key=key, defaults={'value': value[0],
+                                                                                      'description': description})
+        if not created:
+            park_setting.value = value[0]
+            park_setting.description = description
+            park_setting.save()
 
 
 def run():
