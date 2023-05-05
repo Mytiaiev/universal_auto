@@ -597,7 +597,7 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
                              photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
 
 
-@task_postrun.connect
+'''@task_postrun.connect
 def check_payment_status(sender=None, **kwargs):
     if sender == check_payment_status_tg:
         rep = kwargs.get("retval")
@@ -609,7 +609,7 @@ def check_payment_status(sender=None, **kwargs):
                              text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
             order.status_order = Order.COMPLETED
             order.save()
-            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)'''
 
 
 @task_postrun.connect
