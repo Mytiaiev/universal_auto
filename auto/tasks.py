@@ -301,6 +301,21 @@ def setup_periodic_tasks(sender, **kwargs):
         sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s(), queue='priority')
         sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                                  check_time_order.s(), queue='priority')
+    init_chrome_driver()
+    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
+    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s())
+    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s())
+    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
+                             check_time_order.s())
+    sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s())
+    sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
+    sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s())
+
+
+@app.on_after_finalize.connect
+def setup_rent_task(sender, **kwargs):
+    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
+    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
 
 
 def init_chrome_driver():
