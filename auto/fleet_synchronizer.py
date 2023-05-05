@@ -279,7 +279,7 @@ class BoltSynchronizer(Synchronizer, Bolt):
         raw_data = []
         try:
             WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, "//button[@type='button']"))).click()
+                EC.presence_of_element_located((By.XPATH, "//button[@aria-label='Close']"))).click()
         except:
             pass
         try:
@@ -350,22 +350,22 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 break
         for url in driver_urls:
             self.driver.get(url)
-            xpath = '//div[@data-cy="driver-name"]'
+            xpath = '//span[@data-cy="driver-name"]'
             self.get_target_element_of_page(url, xpath)
             name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = f'//input[@data-cy="email-control"]'
+            xpath = '//dd[@data-cy="driver-email"]'
             email = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("value")
-            xpath = f'//input[@data-cy="phone-control"]'
+                EC.presence_of_element_located((By.XPATH, xpath))).text
+            xpath = '//span[@data-cy="driver-phone"]'
             phone_number = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("value")
-            xpath = f'//input[@data-cy="signal-control"]'
+                EC.presence_of_element_located((By.XPATH, xpath))).text
+            xpath = '//dd[@data-cy="driver-signal"]'
             driver_external_id = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("value")
+                EC.presence_of_element_located((By.XPATH, xpath))).text
             try:
-                xpath = f'//div[@class="mat-tab-labels"]/div[@aria-posinset="4"]'
+                xpath = '//div[@class="mat-tab-labels"]/div[@aria-posinset="4"]'
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-                xpath = f'//mat-slide-toggle[@formcontrolname="walletToCard"]//input'
+                xpath = '//mat-slide-toggle[@formcontrolname="walletToCard"]//input'
                 withdraw_money = 'true' in WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("aria-checked")
             except TimeoutException:
@@ -374,18 +374,18 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             vehicle_name = ''
             vin_code = ''
             try:
-                xpath = f'//div/a[@class="vehicle-make"]'
+                xpath = '//div/a[contains(@class, "tw-font-medium")]'
                 vehicle_url = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("href")
                 self.driver.get(vehicle_url)
-                xpath = '//div[@data-cy="license-plate-control"]'
+                xpath = '//span[@data-cy="license-plate"]'
                 self.get_target_element_of_page(vehicle_url, xpath)
                 licence_plate = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//div[@data-cy="vehicle-control"]'
+                xpath = '//span[@data-cy="make-model-year"]'
                 vehicle_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//div[@data-cy="vin-control"]'
+                xpath = '//dd[@data-cy="vin-code"]'
                 vin_code = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:

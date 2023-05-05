@@ -291,10 +291,9 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s())
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              check_time_order.s())
-    #sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
+    sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s())
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
-    # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
-    sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
+    sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s())
 
 
 @app.on_after_finalize.connect
