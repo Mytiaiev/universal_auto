@@ -171,39 +171,13 @@ def download_weekly_report_force(self):
         logger.info(e)
 
 
-@app.task(bind=True, priority=5)
-def send_on_job_application_on_driver_to_Bolt(self, id):
+@app.task(bind=True, queue='non_priority')
+def send_on_job_application_on_driver(self, job_id):
     try:
-        b = Bolt(driver=True, sleep=3, headless=True)
-        b.login()
-        candidate = JobApplication.objects.get(id=id)
-        b.add_driver(candidate)
-        b.quit()
-        print('The job application has been sent to Bolt')
-    except Exception as e:
-        logger.info(e)
-
-
-@app.task(bind=True, priority=6)
-def send_on_job_application_on_driver_to_Uber(self, phone_number, email, name, second_name):
-    try:
-        ub = Uber(driver=True, sleep=5, headless=True)
-        ub.login_v3()
-        ub.add_driver(phone_number, email, name, second_name)
-        ub.quit()
-        print('The job application has been sent to Uber')
-    except Exception as e:
-        logger.info(e)
-
-
-@app.task(bind=True, priority=7)
-def send_on_job_application_on_driver_to_NewUklon(self, id):
-    try:
-        uklon = NewUklon(driver=True, sleep=5, headless=True)
-        candidate = JobApplication.objects.get(id=id)
-        uklon.add_driver(candidate)
-        uklon.quit()
-        print('The job application has been sent to Uklon')
+        candidate = JobApplication.objects.get(id=job_id)
+        BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
+        UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
+        print('The job application has been sent')
     except Exception as e:
         logger.info(e)
 
@@ -290,7 +264,7 @@ def setup_periodic_tasks(sender, **kwargs):
     if os.getenv('CREATE_CHROME_INSTANCE', False):
         init_chrome_driver()
         sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute=0, hour='*/2'), update_driver_data.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
@@ -298,24 +272,9 @@ def setup_periodic_tasks(sender, **kwargs):
         sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
     else:
         init_priority_driver()
-        sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s(), queue='priority')
+        sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='priority')
         sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                                  check_time_order.s(), queue='priority')
-    init_chrome_driver()
-    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
-    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s())
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s())
-    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             check_time_order.s())
-    sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
-    sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s())
-
-
-@app.on_after_finalize.connect
-def setup_rent_task(sender, **kwargs):
-    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
 
 
 def init_chrome_driver():

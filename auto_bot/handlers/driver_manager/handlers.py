@@ -9,7 +9,7 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
     fleet_job_keyboard, drivers_status_buttons
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
-from auto.tasks import send_on_job_application_on_driver_to_Uber, send_on_job_application_on_driver_to_Bolt
+from auto.tasks import send_on_job_application_on_driver
 
 
 # Add users and vehicle to db and others
@@ -302,7 +302,7 @@ def get_fleet_for_job_application(update, context):
         context.user_data['job_application'] = JobApplication.objects.get(id=id_job_application)
 
         context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text='Оберіть автопарк. Куди ви бажаєте подати заявку',
+                                 text='Ви дійсно бажаєте подати заявку?',
                                  reply_markup=markup_keyboard(fleet_job_keyboard))
         context.user_data['manager_state'] = None
     except:
@@ -310,19 +310,9 @@ def get_fleet_for_job_application(update, context):
 
 
 def add_job_application_to_fleet(update, context):
-    response = update.message.text
     data = context.user_data['job_application']
-    if response == f'- {F_BOLT}':
-        send_on_job_application_on_driver_to_Bolt.delay(email=data.email, phone_number=data.phone_number)
-        update.message.reply_text('Заявка була додана в автопарк Bolt', reply_markup=ReplyKeyboardRemove())
-    elif response == f'- {F_UBER}':
-        send_on_job_application_on_driver_to_Uber.delay(phone_number=data.phone_number,
-                                                        email=data.email,
-                                                        name=data.first_name,
-                                                        second_name=data.last_name)
-
-        update.message.reply_text('Заявка була додана в автопарк Uber', reply_markup=ReplyKeyboardRemove())
-        update.message.reply_text('Якщо заявки немає в автопарку, користувачу потрібно зареєструватись на сайті як водій')
+    send_on_job_application_on_driver.delay(data.id)
+    update.message.reply_text('Заявки додано в Uklon та Bolt.Користувачу потрібно зареєструватись на сайті Uber як водій')
 
 
 # Add vehicle to db

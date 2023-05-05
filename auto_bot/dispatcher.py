@@ -1,3 +1,5 @@
+import re
+
 from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher, CallbackQueryHandler, ConversationHandler
 
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
@@ -5,8 +7,8 @@ from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fle
     broken_car
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
-from auto_bot.main import bot, updater
-from app.models import ParkSettings, Driver
+from auto_bot.main import bot
+from app.models import Driver
 from auto_bot.states import text
 # handlers
 from auto_bot.handlers.comment.handlers import comment
@@ -31,6 +33,9 @@ from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_C
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
 from auto_bot.handlers.driver.static_text import TAKE_SICK_LEAVE, TAKE_A_DAY_OFF, SERVICEABLE, BROKEN
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
 
 # Conversations
 debt_conversation = ConversationHandler(
@@ -102,7 +107,8 @@ def setup_dispatcher(dp):
         Filters.regex(fr"^\U0001f4b7 {CASH}$") |
         Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
         order_create))
-    dp.add_handler(CallbackQueryHandler(handle_callback_order))
+    dp.add_handler(CallbackQueryHandler(handle_callback_order,
+                                        pattern=re.compile("^(Accept_order|Reject_order|On_the_spot|Сlient_on_site|Along_the_route|Off_route|End_trip) [0-9]+$")))
     # sending comment
     dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$") |
                                   Filters.regex(fr"^Відмовитись від замовлення$"),

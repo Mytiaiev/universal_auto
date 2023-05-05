@@ -20,7 +20,7 @@ location_keyboard = [
 
 payment_keyboard = [
     KeyboardButton(text=f"\U0001f4b7 {CASH}"),
-    KeyboardButton(text=f"\U0001f4b8 {PAYCARD}")
+    # KeyboardButton(text=f"\U0001f4b8 {PAYCARD}")
 ]
 
 
