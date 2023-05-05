@@ -12,7 +12,7 @@ from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode, \
     KeyboardButton, LabeledPrice
 
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip, check_payment_status_tg
+from auto.tasks import logger, get_distance_trip
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
@@ -392,19 +392,19 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
                              photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
 
 
-@task_postrun.connect
-def check_payment_status(sender=None, **kwargs):
-    if sender == check_payment_status_tg:
-        rep = kwargs.get("retval")
-        query_id, order_id, status_payment = rep
-        if status_payment:
-            order = Order.objects.filter(pk=order_id).first()
-            bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
-            bot.send_message(chat_id=order.chat_id_client,
-                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
-            order.status_order = Order.COMPLETED
-            order.save()
-            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+# @task_postrun.connect
+# def check_payment_status(sender=None, **kwargs):
+#     if sender == check_payment_status_tg:
+#         rep = kwargs.get("retval")
+#         query_id, order_id, status_payment = rep
+#         if status_payment:
+#             order = Order.objects.filter(pk=order_id).first()
+#             bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
+#             bot.send_message(chat_id=order.chat_id_client,
+#                              text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
+#             order.status_order = Order.COMPLETED
+#             order.save()
+#             ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
 
 
 @task_postrun.connect

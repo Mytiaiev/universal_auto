@@ -336,7 +336,7 @@ class User(models.Model):
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
     email = models.EmailField(blank=True, max_length=254, verbose_name='Електрона пошта')
     phone_number = models.CharField(blank=True, max_length=13, verbose_name='Номер телефона')
-    chat_id = models.CharField(blank=True, max_length=100, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
@@ -1070,7 +1070,7 @@ class ServiceStation(models.Model):
 
 class Comment(models.Model):
     comment = models.TextField(verbose_name='Відгук')
-    chat_id = models.CharField(blank=True, max_length=9, verbose_name='ID в чаті')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='ID в чаті')
     processed = models.BooleanField(default=False, verbose_name='Опрацьовано')
 
     created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
@@ -1097,7 +1097,7 @@ class Order(models.Model):
     to_latitude = models.CharField(max_length=10, null=True)
     to_longitude = models.CharField(max_length=10, null=True)
     phone_number = models.CharField(max_length=13)
-    chat_id_client = models.CharField(max_length=15)
+    chat_id_client = models.CharField(max_length=10)
     car_delivery_price = models.CharField(max_length=30, null=True, blank=True)
     sum = models.CharField(max_length=30)
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
@@ -1135,7 +1135,7 @@ class Report_of_driver_debt(models.Model):
 class Event(models.Model):
     full_name_driver = models.CharField(max_length=255, verbose_name='Водій')
     event = models.CharField(max_length=20, verbose_name='Подія')
-    chat_id = models.CharField(blank=True, max_length=9, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     status_event = models.BooleanField(default=False, verbose_name='Працює')
 
     created_at = models.DateTimeField(editable=False, verbose_name='Створено')
@@ -1255,7 +1255,7 @@ def admin_image_preview(image, default_image=None):
 
 class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
-    chat_id = models.CharField(blank=True, max_length=100, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     licence_plate = models.CharField(max_length=24, verbose_name='Номерний знак')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата використання авто')
     end_at = models.DateTimeField(null=True, blank=True, verbose_name='Кінець використання авто')

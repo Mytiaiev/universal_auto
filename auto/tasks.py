@@ -226,7 +226,7 @@ def get_report_for_tg(self):
         logger.info(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='non_priority')
 def withdraw_uklon(self):
     try:
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('withdraw_money')
@@ -234,7 +234,7 @@ def withdraw_uklon(self):
         logger.info(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='non_priority')
 def send_daily_into_group(self):
     try:
         total_values = {}
@@ -254,7 +254,7 @@ def send_daily_into_group(self):
         logger.info(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='priority')
 def check_time_order(self):
     try:
         min_sending_time = timezone.localtime() + datetime.timedelta(
@@ -270,8 +270,8 @@ def check_time_order(self):
 @app.task(bind=True, queue='priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
-    start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
-    format_end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
+    format_end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
     try:
         result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('generate_report', start,
                                                                               format_end, licence_plate)
@@ -294,25 +294,13 @@ def setup_periodic_tasks(sender, **kwargs):
         sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
+        sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
     else:
         init_priority_driver()
         sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s(), queue='priority')
-    init_chrome_driver()
-    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
-    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s())
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s())
-    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             check_time_order.s())
-    #sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
-    # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())
-
-
-@app.on_after_finalize.connect
-def setup_rent_task(sender, **kwargs):
-    #sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s())
-    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
+        sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
+                                 check_time_order.s(), queue='priority')
 
 
 def init_chrome_driver():

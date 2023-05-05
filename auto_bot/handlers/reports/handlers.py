@@ -1,7 +1,7 @@
 from celery.signals import task_postrun
 
-from app.models import Driver
-from auto.tasks import get_report_for_tg, download_weekly_report_force
+from app.models import Driver, ParkSettings
+from auto.tasks import get_report_for_tg, download_weekly_report_force, send_daily_into_group
 from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
 from auto_bot.main import bot
 
@@ -30,6 +30,15 @@ def send_report(sender=None, **kwargs):
                     bot.send_message(chat_id=chat_id, text=message)
                 except:
                     pass
+
+@task_postrun.connect
+def send_report_daily_in_group(sender=None, **kwargs):
+    if sender == send_daily_into_group:
+        result = kwargs.get("retval")
+        message = '\U0001f3c6' + result[0] + '\U0001f3c6' + '\n'
+        for num, driver in enumerate(result[1:], 2):
+            message += f"{num}. {driver}\n"
+        bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', -863882769), text=message)
 
 
 def download_report(update, context):
