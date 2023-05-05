@@ -1,7 +1,9 @@
 import time
 import pendulum
 from contextlib import contextmanager
-from datetime import datetime
+import datetime
+
+from django.utils import timezone
 
 try:
     import zoneinfo
@@ -15,7 +17,7 @@ from celery import shared_task
 from selenium.common import InvalidSessionIdException
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
-    get_report, download_and_save_daily_report, ParkStatus
+    get_report, download_and_save_daily_report, ParkStatus, Order, ParkSettings
 
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
@@ -47,7 +49,7 @@ def raw_gps_handler(id):
     except Vehicle.DoesNotExist:
         return f'{Vehicle.DoesNotExist}: gps_imei={raw.imei}'
     try:
-        date_time = datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
+        date_time = datetime.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
         date_time = date_time.replace(tzinfo=zoneinfo.ZoneInfo(settings.TIME_ZONE))
     except ValueError as err:
         return f'{ValueError} {err}'
@@ -216,20 +218,49 @@ def get_rent_information(self):
 @app.task(bind=True, priority=9)
 def get_report_for_tg(self):
     try:
-        report = get_report(week_number=None, driver=True, sleep=5, headless=True)
+        report = get_report(week=True, week_number=None, driver=True, sleep=5, headless=True)
         return report
     except Exception as e:
         logger.info(e)
 
 
-@shared_task
-def check_payment_status_tg(order, query, response):
+@app.task(bind=True)
+def withdraw_uklon(self):
     try:
-        while True:
-            time.sleep(5)
-            status = response.get('status')
-            if status == 'success':
-                return query, order, response
+        UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('withdraw_money')
+    except Exception as e:
+        logger.info(e)
+
+
+@app.task(bind=True)
+def send_daily_into_group(self):
+    try:
+        total_values = {}
+        today = pendulum.now().day_of_week
+        if today > 1:
+            for i in range(1, today):
+                day = pendulum.now().start_of('day').subtract(days=i)
+                report = get_report(week=False, day=day, week_number=None, driver=True, sleep=5, headless=True)[2]
+                for key, value in report.items():
+                    total_values[key] = total_values.get(key, 0) + value
+        else:
+            total_values = get_report(week=True, week_number=None, driver=True, sleep=5, headless=True)[2]
+        sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
+        message = [f'{k}: %.2f' % v for k, v in sort_report.items()]
+        return message
+    except Exception as e:
+        logger.info(e)
+
+
+@app.task(bind=True)
+def check_time_order(self):
+    try:
+        min_sending_time = timezone.localtime() + datetime.timedelta(
+            minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+        orders = Order.objects.filter(status_order=Order.ON_TIME,
+                                      order_time__gte=timezone.localtime(),
+                                      order_time__lte=min_sending_time)
+        return list(orders)
     except Exception as e:
         logger.info(e)
 
@@ -237,8 +268,8 @@ def check_payment_status_tg(order, query, response):
 @app.task(bind=True)
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
-    start = datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
-    end = datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
+    end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
     try:
         result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('generate_report', start,
                                                                               end, licence_plate)
@@ -256,6 +287,10 @@ def setup_periodic_tasks(sender, **kwargs):
     global UAGPS_CHROME_DRIVER
     init_chrome_driver()
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s())
+    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s())
+    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s())
+    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
+                             check_time_order.s())
     #sender.add_periodic_task(UPDATE_DRIVER_DATA_FREQUENCY, update_driver_data.s())
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s())
     # sender.add_periodic_task(60*60*3, download_weekly_report_force.s())

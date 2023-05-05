@@ -15,7 +15,7 @@ from selenium.common import TimeoutException, WebDriverException, InvalidSession
 from translators.server import tss
 
 from app.models import Bolt, Driver, NewUklon, Uber, Fleets_drivers_vehicles_rate, Fleet, Vehicle, SeleniumTools, UaGps, \
-    clickandclear, UseOfCars, RentInformation, StatusChange
+    clickandclear, UseOfCars, RentInformation, StatusChange, ParkSettings
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -477,6 +477,26 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             return self.get_driver_status_from_table()
         except WebDriverException as err:
             print(err.msg)
+
+    def withdraw_money(self):
+        url = f'{self.base_url}/workspace/finance'
+        xpath = "//div[text()='Гаманці водіїв']"
+        self.get_target_page_or_login(url, xpath, self.login)
+        self.driver.find_element(By.XPATH, xpath).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        checkbox = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.XPATH, "//span[@class='mat-checkbox-inner-container']")))
+        checkbox.click()
+        sum_remain = WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, "//input[@formcontrolname='remaining']")))
+        clickandclear(sum_remain)
+        sum_remain.send_keys(ParkSettings.get_value("Залишок Uklon", 150))
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, "//button/span[text()=' Перевод на гаманець автопарку ']"))).click()
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, "//button/span[text()=' Перевести гроші ']"))).click()
+        print('withdraw finished')
 
     def download_weekly_report(self):
         if self.payments_order_file_name() not in os.listdir(os.curdir):

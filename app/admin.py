@@ -3,6 +3,7 @@ from .models import *
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from django.utils.safestring import mark_safe
 
+
 # class FleetChildAdmin(PolymorphicChildModelAdmin):
 #     base_model = Fleet
 #     show_in_index = False
@@ -162,6 +163,7 @@ class DriverRateLevelsAdmin(admin.ModelAdmin):
         (None, {'fields': ['fleet', 'threshold_value', 'rate_delta']}),
     ]
 
+
 @admin.register(DriverManager)
 class DriverManagerAdmin(admin.ModelAdmin):
     list_display = ('name', 'second_name', 'email', 'phone_number', 'created_at')
@@ -208,7 +210,8 @@ class RawGPSAdmin(admin.ModelAdmin):
 
 @admin.register(VehicleGPS)
 class VehicleGPSAdmin(admin.ModelAdmin):
-    list_display = ('vehicle', 'date_time', 'lat', 'lat_zone', 'lon', 'lon_zone', 'speed', 'course', 'height', 'created_at')
+    list_display = (
+    'vehicle', 'date_time', 'lat', 'lat_zone', 'lon', 'lon_zone', 'speed', 'course', 'height', 'created_at')
     search_fields = ('vehicle',)
     list_filter = ('vehicle', 'date_time', 'created_at')
     ordering = ('-date_time', 'vehicle')
@@ -326,7 +329,7 @@ class ServiceStationAdmin(admin.ModelAdmin):
     list_display_links = ('name',)
     list_filter = ['owner']
     search_fields = ('name', 'owner')
-    ordering = ('name', )
+    ordering = ('name',)
     list_per_page = 25
 
 
@@ -437,4 +440,12 @@ class JobApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(ParkSettings)
 class ParkSettingsAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in ParkSettings._meta.fields]
+    list_display = ['description', 'value', ]
+    list_display_links = ['description', 'value', ]
+    exclude = ('key', )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -1271,6 +1271,7 @@ class UseOfCars(models.Model):
 class ParkSettings(models.Model):
     key = models.CharField(max_length=255, verbose_name='Ключ')
     value = models.CharField(max_length=255, verbose_name='Значення')
+    description = models.CharField(max_length=255, null=True, verbose_name='Опиc')
 
 
     class Meta:
@@ -1287,8 +1288,6 @@ class ParkSettings(models.Model):
             return setting.value
         except ParkSettings.DoesNotExist:
             return default
-
-
 
 
 from selenium import webdriver
@@ -2549,14 +2548,19 @@ class UaGps(SeleniumTools):
         time.sleep(self.sleep)
 
 
-def get_report(week_number=None, driver=True, sleep=5, headless=True):
+def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, headless=True):
     owner = {"Fleet Owner": 0}
     reports = {}
     totals = {}
     salary = {}
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
-        all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
+        if week:
+            all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep,
+                                                              headless=headless)
+        else:
+            all_drivers_report = fleet.download_daily_report(day=day, driver=driver, sleep=sleep,
+                                                             headless=headless)
         for rate in Fleets_drivers_vehicles_rate.objects.filter(fleet_id=fleet.id, deleted_at=None):
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:
@@ -2579,7 +2583,7 @@ def get_report(week_number=None, driver=True, sleep=5, headless=True):
             incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
             totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" + \
                 "-" * 42
-    return owner, totals
+    return owner, totals, plan
 
 
 def download_and_save_daily_report(day=None, driver=False, sleep=5, headless=True):
