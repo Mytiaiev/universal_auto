@@ -494,8 +494,22 @@ function destroyMap(){
      document.getElementById('order-modal').remove()
 }
 
+$.mask.definitions['9'] = '';
+$.mask.definitions['d'] = '[0-9]';
+
+function intlTelInit(phoneEl) {
+  var phoneSelector = $(phoneEl);
+
+  if (phoneSelector.length) {
+    phoneSelector.mask("+380 dd ddd-dd-dd");
+  }
+}
+
 $(document).ready(function(){
-  setCookie("csrfToken", $.parseHTML(csrfToken)[0].value)
+  setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
+
+  $('#delivery_time').mask("dd:dd", {placeholder: "00:00 (Вкажіть час)"});
+  intlTelInit('#phone');
 
   $('#order-form').on('submit', function(event){
     event.preventDefault();
@@ -564,7 +578,7 @@ $(document).ready(function(){
           }
           form.append('action', 'order');
           orderData = Object.fromEntries(form);
-
+          orderData.phone_number = orderData.phone_number.replace(/[^+0-9]/gi, '');
           var fromGeocode = fromGeocoded[0].geometry.location
           var toGeocode = toGeocoded[0].geometry.location
           setCookie("fromLat", fromGeocode.lat().toFixed(6), 1);
