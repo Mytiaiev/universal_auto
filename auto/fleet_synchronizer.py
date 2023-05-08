@@ -293,14 +293,14 @@ class BoltSynchronizer(Synchronizer, Bolt):
             try:
                 xpath = f'//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][{i}]/div/div/div[1]/span/span'
                 driver_name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][{i}]/div/div/div[2]/span/span'
-                driver_car = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                # xpath = f'//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][{i}]/div/div/div[2]/span/span'
+                # driver_car = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
                 break
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
-            name, second_name, car = '', '', ''
+            name, second_name = '', ''
             try:
-                name, second_name, car = name_list[0], name_list[1], driver_car.split(' ')[0]
+                name, second_name = name_list[0], name_list[1]
             except IndexError:
                 pass
             raw_data.append((name, second_name))
@@ -313,7 +313,6 @@ class BoltSynchronizer(Synchronizer, Bolt):
             xpath = f'//div[contains(@class, "map-overlay")]'
             self.get_target_element_of_page(url, xpath)
             return {
-                'online': self.get_driver_status_from_map('1'),
                 'width_client': self.get_driver_status_from_map('2'),
                 'wait': self.get_driver_status_from_map('3')
             }
@@ -738,6 +737,37 @@ class UberSynchronizer(Synchronizer, Uber):
         return drivers
 
     def get_driver_status_from_map(self, search_text):
+        raw_data = []
+        try:
+            xpath = "//div[@data-baseweb='table-custom']/div[@tabindex='0']"
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
+        except TimeoutException:
+            return raw_data
+        i = 0
+        while True:
+            i += 1
+            try:
+                xpath = "//div[@data-baseweb='typo-labelsmall']"
+                driver_name = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))).text
+                xpath = "//div[@data-testid='driver-card']"
+                card = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                payload_str = card.get_attribute('data-tracking-payload')
+                payload_dict = json.loads(payload_str)
+            except TimeoutException:
+                break
+            name_list = [x for x in driver_name.split(' ') if len(x) > 0]
+            name, second_name = '', ''
+            try:
+                name, second_name = name_list[0], name_list[1]
+            except IndexError:
+                pass
+            if payload_dict[f"{search_text}"]:
+                raw_data.append((name, second_name))
+                raw_data.append((second_name, name))
+        return raw_data
+
+
         return []
         # Need to implement
 
@@ -749,9 +779,9 @@ class UberSynchronizer(Synchronizer, Uber):
             xpath = f'//div[@data-tracking-name="livemap"]'
             self.get_target_element_of_page(url, xpath)
             return {
-                'online': self.get_driver_status_from_map('Онлайн'),
-                'width_client': self.get_driver_status_from_map('У поїздці'),
-                'wait': self.get_driver_status_from_map('Очікування')
+                'online': self.get_driver_status_from_map('ONLINE'),
+                'width_client': self.get_driver_status_from_map('IN_PROGRESS'),
+                'wait': self.get_driver_status_from_map('ACCEPTED')
             }
         except WebDriverException as err:
             print(err.msg)
@@ -924,7 +954,7 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                             rent_time += status_report[1]
             #             update today rent in db
             rent_today = RentInformation.objects.filter(driver_name=_driver,
-                                                        created_at__date=timezone.now().date()).first()
+                                                        created_at__date=timezone.localtime().date()).first()
             if rent_today:
                 rent_today.rent_time = rent_time
                 rent_today.rent_distance = rent_distance

@@ -212,10 +212,10 @@ def withdraw_uklon(self):
 def send_daily_into_group(self):
     try:
         total_values = {}
-        today = pendulum.now().day_of_week
-        if today > 1:
-            for i in range(1, today):
-                day = pendulum.now().start_of('day').subtract(days=i)
+        today = pendulum.now().weekday()
+        if today > 0:
+            for i in range(today):
+                day = pendulum.now().start_of('day').subtract(days=i+1)
                 report = get_report(week=False, day=day, week_number=None, driver=True, sleep=5, headless=True)[2]
                 for key, value in report.items():
                     total_values[key] = total_values.get(key, 0) + value
@@ -230,15 +230,7 @@ def send_daily_into_group(self):
 
 @app.task(bind=True, queue='priority')
 def check_time_order(self):
-    try:
-        min_sending_time = timezone.localtime() + datetime.timedelta(
-            minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
-        orders = Order.objects.filter(status_order=Order.ON_TIME,
-                                      order_time__gte=timezone.localtime(),
-                                      order_time__lte=min_sending_time)
-        return list(orders)
-    except Exception as e:
-        logger.info(e)
+    print("check orders on time")
 
 
 @app.task(bind=True, queue='priority')
@@ -271,10 +263,10 @@ def setup_periodic_tasks(sender, **kwargs):
         sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
         sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
     else:
-        init_priority_driver()
-        sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='priority')
         sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                                  check_time_order.s(), queue='priority')
+        init_priority_driver()
+        sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='priority')
 
 
 def init_chrome_driver():

@@ -516,7 +516,8 @@ class RentInformation(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True)
     driver_name = models.CharField(max_length=50, blank=True)
     rent_time = models.DurationField(null=True, blank=True, verbose_name='Час оренди')
-    rent_distance = models.FloatField(null=True, blank=True, verbose_name='Орендована дистанція')
+    rent_distance = models.DecimalField(null=True, blank=True, max_digits=6,
+                                        decimal_places=2, verbose_name='Орендована дистанція')
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
 
     class Meta:

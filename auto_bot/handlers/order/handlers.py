@@ -12,7 +12,7 @@ from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode, \
     KeyboardButton, LabeledPrice
 
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip
+from auto.tasks import logger, get_distance_trip, check_time_order
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
@@ -244,30 +244,31 @@ def order_on_time(update, context):
         update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
         context.user_data['state'] = TIME_ORDER
 
-
-def send_time_orders(context):
-    min_sending_time = timezone.localtime() + \
-                       datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
-    orders = Order.objects.filter(status_order=Order.ON_TIME,
-                                  order_time__gte=timezone.localtime(),
-                                  order_time__lte=min_sending_time)
-    if orders:
-        for timeorder in orders:
-            message = f"<u>Замовлення на певний час:</u>\n" \
-                      f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
-                      f"Адреса посадки: {timeorder.from_address}\n" \
-                      f"Місце прибуття: {timeorder.to_the_address}\n" \
-                      f"Спосіб оплати: {timeorder.payment_method}\n" \
-                      f"Номер телефону: {timeorder.phone_number}\n"
-            drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
-            if drivers:
-                for driver in drivers:
-                    try:
-                        context.bot.send_message(chat_id=driver, text=message,
-                                                 reply_markup=inline_markup_accept(timeorder.pk),
-                                                 parse_mode=ParseMode.HTML)
-                    except:
-                        pass
+@task_postrun.connect
+def send_time_orders(sender=None, **kwargs):
+    if sender == check_time_order:
+        min_sending_time = timezone.localtime() + datetime.timedelta(
+            minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+        orders = Order.objects.filter(status_order=Order.ON_TIME,
+                                      order_time__gte=timezone.localtime(),
+                                      order_time__lte=min_sending_time)
+        if orders:
+            for timeorder in orders:
+                message = f"<u>Замовлення на певний час:</u>\n" \
+                          f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
+                          f"Адреса посадки: {timeorder.from_address}\n" \
+                          f"Місце прибуття: {timeorder.to_the_address}\n" \
+                          f"Спосіб оплати: {timeorder.payment_method}\n" \
+                          f"Номер телефону: {timeorder.phone_number}\n"
+                drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
+                if drivers:
+                    for driver in drivers:
+                        try:
+                            bot.send_message(chat_id=driver, text=message,
+                                                     reply_markup=inline_markup_accept(timeorder.pk),
+                                                     parse_mode=ParseMode.HTML)
+                        except:
+                            pass
 
 
 def handle_callback_order(update, context):
