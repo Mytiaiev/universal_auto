@@ -475,7 +475,8 @@ def handle_callback_order(update, context):
                                      f'Ваш водій: {driver}\n' \
                                      f'Назва: {vehicle.name}\n' \
                                      f'Номер машини: {licence_plate}\n' \
-                                     f'Номер телефону: {driver.phone_number}\n'
+                                     f'Номер телефону: {driver.phone_number}\n'\
+                                     f'Сума замовлення:{order.sum}грн'
                     params = {
                         "recipient": phone,
                         "text": sms_for_client,
