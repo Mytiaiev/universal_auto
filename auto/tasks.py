@@ -254,15 +254,7 @@ def send_daily_into_group(self):
 
 @app.task(bind=True)
 def check_time_order(self):
-    try:
-        min_sending_time = timezone.localtime() + datetime.timedelta(
-            minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
-        orders = Order.objects.filter(status_order=Order.ON_TIME,
-                                      order_time__gte=timezone.localtime(),
-                                      order_time__lte=min_sending_time)
-        return list(orders)
-    except Exception as e:
-        logger.info(e)
+    print("check orders on time")
 
 
 @app.task(bind=True)

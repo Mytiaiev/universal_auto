@@ -389,15 +389,19 @@ def order_on_time(update, context):
 @task_postrun.connect
 def send_time_orders(sender=None, **kwargs):
     if sender == check_time_order:
-        orders = kwargs.get("retval")
+        min_sending_time = timezone.localtime() + datetime.timedelta(
+            minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+        orders = Order.objects.filter(status_order=Order.ON_TIME,
+                                      order_time__gte=timezone.localtime(),
+                                      order_time__lte=min_sending_time)
         if orders:
             for timeorder in orders:
                 message = f"<u>Замовлення на певний час:</u>\n" \
-                f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
-                f"Адреса посадки: {timeorder.from_address}\n" \
-                f"Місце прибуття: {timeorder.to_the_address}\n" \
-                f"Спосіб оплати: {timeorder.payment_method}\n" \
-                f"Номер телефону: {timeorder.phone_number}\n"
+                    f"<b>Час подачі:{timezone.localtime(timeorder.order_time).time()}</b>\n" \
+                    f"Адреса посадки: {timeorder.from_address}\n" \
+                    f"Місце прибуття: {timeorder.to_the_address}\n" \
+                    f"Спосіб оплати: {timeorder.payment_method}\n" \
+                    f"Номер телефону: {timeorder.phone_number}\n"
                 drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
                 if drivers:
                     for driver in drivers:
