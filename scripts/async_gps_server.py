@@ -77,14 +77,14 @@ async def handle_connection(reader, writer):
         # Receive
         try:
             data = await reader.read(PACKAGE_SIZE)
-            logging.info(msg=f"{data}")
+            # logging.info(msg=f"{data}")
         except ConnectionError:
             logging.info(msg=f"Client suddenly closed while receiving from {addr}")
             break
         if not data:
             break
         answer = await ph.process_package(addr, data.decode('utf-8'))
-        logging.info(msg=f"{answer}")
+        # logging.info(msg=f"{answer}")
         try:
             writer.write(answer.encode('utf-8'))
         except ConnectionError:

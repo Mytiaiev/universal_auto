@@ -59,8 +59,8 @@ def index(request):
             order_form = MainOrderForm(request.POST)
             if order_form.is_valid():
                 save_form = order_form.save(
-                    request.POST.get('sum'),
-                    request.POST.get('payment_method')
+                    payment=request.POST.get('payment_method'),
+                    on_time=request.POST.get('order_time')
                 )
                 order_dict = model_to_dict(save_form)
                 json_data = json.dumps(order_dict, cls=DjangoJSONEncoder)

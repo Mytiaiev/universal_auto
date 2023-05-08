@@ -14,7 +14,7 @@ settings = {
     'CENTRE_CITY_RADIUS': ('75000', 'Радіус від центра міста Києва (м)'),
     'CITY_PARK': ("Київ|Київська", 'Місто автопарка (де ми надаємо послуги)'),
     'SEND_TIME_ORDER_MIN': ('20', 'Відправка замовлення водіям (хв, час замовлення - наш час)'),
-    'CHECK_ORDER_TIME_SEC': ('305', 'Перевірка чи є замовлення на певний час (с)'),
+    'CHECK_ORDER_TIME_MIN': ('5', 'Перевірка чи є замовлення на певний час (с)'),
     'TARIFF_CAR_OUTSIDE_DISPATCH': ('15', 'Доставка авто за місто (грн)'),
     'AVERAGE_DISTANCE_PER_HOUR': ('25', 'Середня проходимість авто по місту (км)'),
     'COST_PER_KM': ('20', 'Середня ціна за км (грн, для UaGPS)'),
@@ -29,18 +29,28 @@ settings = {
     'UAGPS_LOGIN': ('Enter username for Uagps', 'Ім\'я користувача Uagps'),
     'UAGPS_PASSWORD': ('Enter password for Uagps', 'Пароль Uagps'),
     'MOBIZON_DOMAIN': ('https://api.mobizon.ua/service/message/sendsmsmessage', 'Домен для смс розсилки'),
+    'Залишок Uklon': ('150', 'Залишок грн на карті водія Uklon'),
+    'DRIVERS_CHAT': ('-863882769', 'Чат водіїв')
 }
 
 
 def init_park_settings():
     for key, value in settings.items():
-        description = value[1] or ''
-        park_setting, created = ParkSettings.objects.get_or_create(key=key, defaults={'value': value[0],
-                                                                                      'description': description})
-        if not created:
-            park_setting.value = value[0]
-            park_setting.description = description
-            park_setting.save()
+        response = ParkSettings.objects.filter(key=key).first()
+        if not response:
+            park_setting = ParkSettings(
+                key=key,
+                value=value[0],
+                description=value[1] or '')
+            try:
+                park_setting.save()
+            except IntegrityError:
+                pass
+        else:
+            if not response.description:
+                response.description = settings[f'{key}'][1]
+                response.save()
+            continue
 
 
 def run():
