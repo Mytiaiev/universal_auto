@@ -1309,6 +1309,10 @@ class UaGpsService(Service):
     pass
 
 
+class UberService(Service):
+    pass
+
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
@@ -1532,7 +1536,7 @@ class SeleniumTools:
 
 class Uber(SeleniumTools):
     def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
-                 base_url="https://supplier.uber.com", remote=False, profile=None):
+                 base_url=f"{UberService.get_value('BASE_URL')}", remote=False, profile=None):
         super().__init__('uber', week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
@@ -1547,25 +1551,26 @@ class Uber(SeleniumTools):
         self.driver.quit()
         self.driver = None
 
-    def login_v2(self, link="https://drivers.uber.com/"):
+    def login_v2(self, link=f"{UberService.get_value('UBER_LOGIN_V2_1')}"):
         self.driver.get(link)
-        self.login_form('PHONE_NUMBER_or_EMAIL_ADDRESS', 'forward-button', By.ID)
+        self.login_form(UberService.get_value('UBER_LOGIN_V2_2.1'), UberService.get_value('UBER_LOGIN_V2_2.2'), By.ID)
         self.force_opt_form()
         self.otp_code_v2()
         # self.otp_code_v1()
-        self.password_form('PASSWORD', 'forward-button', By.ID)
+        self.password_form(UberService.get_value('UBER_LOGIN_V2_3.1'), UberService.get_value('UBER_LOGIN_V2_3.2'),
+                           By.ID)
         if self.sleep:
             time.sleep(self.sleep)
 
-    def login_v3(self, link="https://auth.uber.com/v2/"):
+    def login_v3(self, link=f"{UberService.get_value('UBER_LOGIN_V3_1')}"):
         self.driver.get(link)
-        self.login_form('PHONE_NUMBER_or_EMAIL_ADDRESS', 'forward-button', By.ID)
+        self.login_form(UberService.get_value('UBER_LOGIN_V3_2.1'), UberService.get_value('UBER_LOGIN_V3_2.2'), By.ID)
         try:
             self.password_form_v3()
         except TimeoutException:
             try:
                 el = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.ID, 'alt-PASSWORD')))
+                    EC.presence_of_element_located((By.ID, UberService.get_value('UBER_LOGIN_V3_3'))))
                 el.click()
                 self.password_form_v3()
             except TimeoutException:
@@ -1574,87 +1579,85 @@ class Uber(SeleniumTools):
             time.sleep(self.sleep)
 
     def password_form_v3(self):
-        el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'PASSWORD')))
+        el = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_1'))))
         el.clear()
         el.send_keys(os.environ["UBER_PASSWORD"])
-        el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'forward-button')))
+        el = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_2'))))
         el.click()
 
-    def login(self, link="https://auth.uber.com/login/"):
+    def login(self, link=f"{UberService.get_value('UBER_LOGIN_1')}"):
         self.driver.get(link)
-        self.login_form('userInput', 'next-button-wrapper', By.CLASS_NAME)
+        self.login_form(UberService.get_value('UBER_LOGIN_2.1'), UberService.get_value('UBER_LOGIN_2.2'), By.CLASS_NAME)
         self.otp_code_v1()
-        self.password_form('password', 'next-button-wrapper', By.CLASS_NAME)
+        self.password_form(UberService.get_value('UBER_LOGIN_3.1'), UberService.get_value('UBER_LOGIN_3.2'),
+                           By.CLASS_NAME)
         if self.sleep:
             time.sleep(self.sleep)
 
     def generate_payments_order(self):
-        url = f"{self.base_url}/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/reports"
-        xpath = '//div[@data-testid="report-type-dropdown"]/div/div'
+        url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"
+        xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')}"
         self.get_target_page_or_login(url, xpath, self.login_v3)
         self.driver.get_screenshot_as_file('generate_payments_order.png')
-        menu = '//div[@data-testid="report-type-dropdown"]/div/div'
-        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, menu)))
-        self.driver.find_element(By.XPATH, menu).click()
+        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath)))
+        self.driver.find_element(By.XPATH, xpath).click()
         try:
-            xpath = '//ul/li/div[text()[contains(.,"Payments Driver")]]'
+            xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3')}"
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
             self.driver.find_element(By.XPATH, xpath).click()
         except Exception:
             try:
-                xpath = '//ul/li/div[text()[contains(.,"Payments driver")]]'
+                xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3')}"
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 self.driver.find_element(By.XPATH, xpath).click()
             except Exception:
-                xpath = '//ul/li/div[text()[contains(.,"Платежи (водитель)")]]'
+                xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4')}"
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 self.driver.find_element(By.XPATH, xpath).click()
 
         if self.day:
-            self.driver.find_element(By.XPATH, '//div[2]/div/div/div[1]/button[2]').click()
-            start = self.driver.find_element(By.XPATH,
-                                             '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
+            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_5')).click()
+            start = self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_6'))
             start.send_keys(Keys.NULL)
             date_by_def = pendulum.now().start_of('week').subtract(days=7)
             if date_by_def.month - self.day.month == -1:  # if month of day is different from month of last week Monday
-                self.driver.find_element(By.XPATH, f'//button[@aria-label="Next month."]').click()
+                self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_7')).click()
             elif date_by_def.month - self.day.month > 0:
                 for _ in range(date_by_def.month - self.day.month):
-                    self.driver.find_element(By.XPATH, f'//button[@aria-label="Previous month."]').click()
+                    self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_8')).click()
             self.driver.find_element(By.XPATH,
-                                     f'//div[@aria-roledescription="button"]/div[text()={self.day.strftime("%-d")}]').click()
-            end = self.driver.find_element(By.XPATH,
-                                           '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{self.day.strftime("%-d")}]').click()
+            end = self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_10"))
             end.send_keys(Keys.NULL)
             self.driver.find_element(By.XPATH,
-                                     f'//div[@aria-roledescription="button"]/div[text()="{self.day.strftime("%-d")}"]').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}"{self.day.strftime("%-d")}"]').click()
 
         else:
-            self.driver.find_element(By.XPATH, '//div[2]/div/div/div[1]/button[2]').click()
-            start = self.driver.find_element(By.XPATH,
-                                             '(//input[@aria-describedby="datepicker--screenreader--message--input"])[1]')
+            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_5')).click()
+            start = self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_6'))
             start.send_keys(Keys.NULL)
-            self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[1]').click()
+            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
             self.driver.find_element(By.XPATH,
-                                     f'(//li[@role="option" and text()[contains(.,"{self.start_of_week().strftime("%B")}")]])').click()
-            self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[2]').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%B")}")]])').click()
+            self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_13")).click()
             self.driver.find_element(By.XPATH,
-                                     f'(//li[@role="option" and text()[contains(.,"{self.start_of_week().strftime("%Y")}")]])').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%Y")}")]])').click()
             self.driver.find_element(By.XPATH,
-                                     f'//div[@aria-roledescription="button"]/div[text()={self.start_of_week().day}]').click()
-            end = self.driver.find_element(By.XPATH,
-                                           '(//input[@aria-describedby="datepicker--screenreader--message--input"])[2]')
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{self.start_of_week().day}]').click()
+            end = self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_10"))
             end.send_keys(Keys.NULL)
-            self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[1]').click()
+            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
             self.driver.find_element(By.XPATH,
-                                     f'(//li[@role="option" and text()[contains(.,"{self.end_of_week().strftime("%B")}")]])').click()
-            self.driver.find_element(By.XPATH, '(//button[@aria-live="polite"])[2]').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.end_of_week().strftime("%B")}")]])').click()
+            self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_13")).click()
             self.driver.find_element(By.XPATH,
-                                     f'(//li[@role="option" and text()[contains(.,"{self.end_of_week().strftime("%Y")}")]])').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.end_of_week().strftime("%Y")}")]])').click()
             self.driver.find_element(By.XPATH,
-                                     f'//div[@aria-roledescription="button"]/div[text()={self.end_of_week().day}]').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{self.end_of_week().day}]').click()
 
-        self.driver.find_element(By.XPATH, '//button[@data-testid="generate-report-button"]').click()
+        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
         return f'{self.payments_order_file_name()}'
 
     def download_payments_order(self):
@@ -1663,12 +1666,12 @@ class Uber(SeleniumTools):
             return
 
         self.generate_payments_order()
-        download_button = '(//div[@data-testid="paginated-table"]//button)[1]'
+        download_button = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_1')}"
         try:
-            in_progress_text = '//i[@class="_css-bvkFtm"]'
+            in_progress_text = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_2')}"
             WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, in_progress_text)))
             WebDriverWait(self.driver, 600).until_not(EC.presence_of_element_located((By.XPATH, in_progress_text)))
-            expected_element = WebDriverWait(self.driver, 10).until(
+            WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, download_button)))
             WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
             time.sleep(self.sleep)
@@ -1780,11 +1783,11 @@ class Uber(SeleniumTools):
             if not self.wait_code_form('PHONE_SMS_OTP-0'):
                 break
             otp = self.wait_opt_code()
-            self.driver.find_element(By.ID, 'PHONE_SMS_OTP-0').send_keys(otp[0])
-            self.driver.find_element(By.ID, 'PHONE_SMS_OTP-1').send_keys(otp[1])
-            self.driver.find_element(By.ID, 'PHONE_SMS_OTP-2').send_keys(otp[2])
-            self.driver.find_element(By.ID, 'PHONE_SMS_OTP-3').send_keys(otp[3])
-            # self.driver.find_element(By.ID, "forward-button").click()
+            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_1')).send_keys(otp[0])
+            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_2')).send_keys(otp[1])
+            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_3')).send_keys(otp[2])
+            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_4')).send_keys(otp[3])
+            # self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_5')).click()
             break
 
     def wait_code_form(self, id):
@@ -1803,14 +1806,15 @@ class Uber(SeleniumTools):
             if not self.wait_code_form('verificationCode'):
                 break
             otp = self.wait_opt_code()
-            self.driver.find_element(By.ID, 'verificationCode').send_keys(otp)
-            self.driver.find_element(By.CLASS_NAME, "next-button-wrapper").click()
+            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V1_1')).send_keys(otp)
+            self.driver.find_element(By.CLASS_NAME, UberService.get_value('UBER_OTP_CODE_V1_2')).click()
             break
 
     def force_opt_form(self):
         try:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, 'alt-PHONE-OTP')))
-            el = self.driver.find_element(By.ID, 'alt-PHONE-OTP').click()
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.ID, UberService.get_value('UBER_FORCE_OPT_FORM'))))
+            self.driver.find_element(By.ID, UberService.get_value('UBER_FORCE_OPT_FORM')).click()
         except Exception as e:
             # self.logger.error(str(e))
             pass
@@ -1818,7 +1822,7 @@ class Uber(SeleniumTools):
     def password_form(self, id, button, selector):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-            el = self.driver.find_element(By.ID, id).send_keys(os.environ["UBER_PASSWORD"])
+            self.driver.find_element(By.ID, id).send_keys(os.environ["UBER_PASSWORD"])
             self.driver.find_element(selector, button).click()
             self.driver.get_screenshot_as_file('UBER_PASSWORD.png')
         except Exception as e:
@@ -1832,19 +1836,19 @@ class Uber(SeleniumTools):
         self.driver.get_screenshot_as_file('UBER_NAME.png')
 
     def add_driver(self, phone_number, email, name, second_name):
-        url = 'https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/drivers'
+        url = UberService.get_value('UBER_ADD_DRIVER_1')
         self.driver.get(f"{url}")
         if self.sleep:
             time.sleep(self.sleep)
-        add_driver = self.driver.find_element(By.XPATH, '//button')
+        add_driver = self.driver.find_element(By.XPATH, UberService.get_value('UBER_ADD_DRIVER_2'))
         add_driver.click()
         if self.sleep:
             time.sleep(self.sleep)
-        data = self.driver.find_element(By.XPATH, '//div[2]/div/input')
+        data = self.driver.find_element(By.XPATH, UberService.get_value('UBER_ADD_DRIVER_3'))
         data.click()
         data.send_keys(
             f'{phone_number[4:]}' + Keys.TAB + Keys.TAB + f'{email}' + Keys.TAB + f'{name}' + Keys.TAB + f'{second_name}')
-        send_data = self.driver.find_element(By.XPATH, '//div[5]/div[2]/button')
+        send_data = self.driver.find_element(By.XPATH, UberService.get_value('UBER_ADD_DRIVER_4'))
         send_data.click()
         if self.sleep:
             time.sleep(self.sleep)

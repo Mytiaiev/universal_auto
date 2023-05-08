@@ -12,7 +12,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import TimeoutException, WebDriverException, InvalidSessionIdException
 from translators.server import tss
 
-from app.models import Bolt, Driver, NewUklon, Uber, Fleets_drivers_vehicles_rate, Fleet, Vehicle, SeleniumTools
+from app.models import Bolt, Driver, NewUklon, Uber, Fleets_drivers_vehicles_rate, Fleet, Vehicle, SeleniumTools, \
+    UberService, UaGpsService, NewUklonService, NewUklonPaymentsOrder
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -153,14 +154,16 @@ class Synchronizer:
             try:
                 driver = self.get_driver_by_name(kwargs['second_name'], kwargs['name'])
             except Driver.DoesNotExist:
-                t_name, t_second_name = self.split_name(self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'uk'))
+                t_name, t_second_name = self.split_name(
+                    self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'uk'))
                 try:
                     driver = self.get_driver_by_name(t_name, t_second_name)
                 except Driver.DoesNotExist:
                     try:
                         driver = self.get_driver_by_name(t_second_name, t_name)
                     except Driver.DoesNotExist:
-                        t_name, t_second_name = self.split_name(self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'ru'))
+                        t_name, t_second_name = self.split_name(
+                            self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'ru'))
                         try:
                             driver = self.get_driver_by_name(t_name, t_second_name)
                         except Driver.DoesNotExist:
@@ -289,9 +292,11 @@ class BoltSynchronizer(Synchronizer, Bolt):
             i += 1
             try:
                 xpath = f'//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][{i}]/div/div/div[1]/span/span'
-                driver_name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                driver_name = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))).text
                 xpath = f'//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][{i}]/div/div/div[2]/span/span'
-                driver_car = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                driver_car = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
                 break
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
@@ -314,7 +319,7 @@ class BoltSynchronizer(Synchronizer, Bolt):
                 'width_client': self.get_driver_status_from_map('2'),
                 'wait': self.get_driver_status_from_map('3')
             }
-        except (TimeoutException,WebDriverException) as err:
+        except (TimeoutException, WebDriverException) as err:
             print(err.msg)
 
     def download_weekly_report(self):
@@ -428,13 +433,17 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             i += 1
             try:
                 xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-driver"]'
-                driver_name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                driver_name = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))).text
                 xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-license-plate"]'
-                driver_car = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                driver_car = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))).text
                 xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-pickup-time"]'
-                last_action_date = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                last_action_date = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))).text
                 xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-status"]/i'
-                status = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).get_attribute('class')
+                status = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))).get_attribute('class')
             except TimeoutException:
                 break
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
@@ -452,7 +461,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 )
                 date_time_delta = (datetime.datetime.utcnow() - date_time).total_seconds()
 
-            if ('blue' in status or date_time_delta < 60*30) and (name, second_name) not in online:
+            if ('blue' in status or date_time_delta < 60 * 30) and (name, second_name) not in online:
                 online.append((name, second_name))
                 online.append((second_name, name))
 
