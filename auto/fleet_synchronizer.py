@@ -5,6 +5,8 @@ import re
 import time
 import datetime
 
+from django.utils import timezone
+from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support.ui import WebDriverWait
@@ -13,7 +15,8 @@ from selenium.common import TimeoutException, WebDriverException, InvalidSession
 from translators.server import tss
 
 from app.models import Bolt, Driver, NewUklon, Uber, Fleets_drivers_vehicles_rate, Fleet, Vehicle, SeleniumTools, \
-    UberService, UaGpsService, NewUklonService, NewUklonPaymentsOrder
+    UaGps, clickandclear, UseOfCars, RentInformation, StatusChange, ParkSettings, UberService, UaGpsService, \
+    NewUklonService, BoltService
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -22,12 +25,12 @@ class Synchronizer:
 
     def __init__(self, chrome_driver=None):
         if chrome_driver is None:
-            super().__init__(driver=True, sleep=3, headless=True)
+            super().__init__(driver=True, sleep=5, headless=True)
         else:
-            super().__init__(driver=False, sleep=3, headless=True)
+            super().__init__(driver=False, sleep=5, headless=True)
             self.driver = chrome_driver
 
-    def try_to_execute(self, func_name):
+    def try_to_execute(self, func_name, *args, **kwargs):
         if not self.driver.service.is_connectable():
             print('###################### Driver recreating... ########################')
             self.driver = self.build_driver()
@@ -40,7 +43,7 @@ class Synchronizer:
             time.sleep(self.sleep)
         except TimeoutException:
             pass
-        return getattr(self, func_name)()
+        return getattr(self, func_name)(*args, **kwargs)
 
     def get_target_element_of_page(self, url, xpath):
         try:
@@ -279,7 +282,7 @@ class BoltSynchronizer(Synchronizer, Bolt):
         raw_data = []
         try:
             WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, "//button[@type='button']"))).click()
+                EC.presence_of_element_located((By.XPATH, "//button[@aria-label='Close']"))).click()
         except:
             pass
         try:
@@ -352,22 +355,22 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 break
         for url in driver_urls:
             self.driver.get(url)
-            xpath = '//div[@data-cy="driver-name"]'
+            xpath = '//span[@data-cy="driver-name"]'
             self.get_target_element_of_page(url, xpath)
             name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = f'//input[@data-cy="email-control"]'
+            xpath = '//dd[@data-cy="driver-email"]'
             email = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("value")
-            xpath = f'//input[@data-cy="phone-control"]'
+                EC.presence_of_element_located((By.XPATH, xpath))).text
+            xpath = '//span[@data-cy="driver-phone"]'
             phone_number = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("value")
-            xpath = f'//input[@data-cy="signal-control"]'
+                EC.presence_of_element_located((By.XPATH, xpath))).text
+            xpath = '//dd[@data-cy="driver-signal"]'
             driver_external_id = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("value")
+                EC.presence_of_element_located((By.XPATH, xpath))).text
             try:
-                xpath = f'//div[@class="mat-tab-labels"]/div[@aria-posinset="4"]'
+                xpath = '//div[@class="mat-tab-labels"]/div[@aria-posinset="4"]'
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-                xpath = f'//mat-slide-toggle[@formcontrolname="walletToCard"]//input'
+                xpath = '//mat-slide-toggle[@formcontrolname="walletToCard"]//input'
                 withdraw_money = 'true' in WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("aria-checked")
             except TimeoutException:
@@ -376,18 +379,18 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             vehicle_name = ''
             vin_code = ''
             try:
-                xpath = f'//div/a[@class="vehicle-make"]'
+                xpath = '//div/a[contains(@class, "tw-font-medium")]'
                 vehicle_url = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("href")
                 self.driver.get(vehicle_url)
-                xpath = '//div[@data-cy="license-plate-control"]'
+                xpath = '//span[@data-cy="license-plate"]'
                 self.get_target_element_of_page(vehicle_url, xpath)
                 licence_plate = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//div[@data-cy="vehicle-control"]'
+                xpath = '//span[@data-cy="make-model-year"]'
                 vehicle_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//div[@data-cy="vin-control"]'
+                xpath = '//dd[@data-cy="vin-code"]'
                 vin_code = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
@@ -412,7 +415,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         online = []
         width_client = []
         try:
-            xpath = f'//div[@id="mat-tab-label-0-1"]'
+            xpath = f'//div[@role="tab"]/div[text()="Поїздки"]'
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
             # xpath = f'//mat-select[@id="mat-select-4"]'
             # WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
@@ -429,7 +432,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 'wait': []
             }
         i = 0
-        while True:
+        while i < 10:
             i += 1
             try:
                 xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-driver"]'
@@ -459,13 +462,13 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 date_time = datetime.datetime.strptime(
                     f'{match[0][0]}.{match[0][1]}.{match[0][2]}-{match[0][3]}:{match[0][4]}', '%d.%m.%Y-%H:%M'
                 )
-                date_time_delta = (datetime.datetime.utcnow() - date_time).total_seconds()
+                date_time_delta = (datetime.datetime.now() - date_time).total_seconds()
 
             if ('blue' in status or date_time_delta < 60 * 30) and (name, second_name) not in online:
                 online.append((name, second_name))
                 online.append((second_name, name))
 
-            if 'blue' in status and (name, second_name) not in width_client:
+            if ('blue' in status or status == 'i-circle') and (name, second_name) not in width_client:
                 width_client.append((name, second_name))
                 width_client.append((second_name, name))
 
@@ -478,11 +481,31 @@ class UklonSynchronizer(Synchronizer, NewUklon):
     def get_driver_status(self):
         try:
             url = f'{self.base_url}/workspace/orders'
-            xpath = f'//div[@id="mat-tab-label-0-1"]'
+            xpath = f'//div[@role="tab"]/div[text()="Поїздки"]'
             self.get_target_element_of_page(url, xpath)
             return self.get_driver_status_from_table()
         except WebDriverException as err:
             print(err.msg)
+
+    def withdraw_money(self):
+        url = f'{self.base_url}/workspace/finance'
+        xpath = "//div[text()='Гаманці водіїв']"
+        self.get_target_page_or_login(url, xpath, self.login)
+        self.driver.find_element(By.XPATH, xpath).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        checkbox = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.XPATH, "//span[@class='mat-checkbox-inner-container']")))
+        checkbox.click()
+        sum_remain = WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, "//input[@formcontrolname='remaining']")))
+        clickandclear(sum_remain)
+        sum_remain.send_keys(ParkSettings.get_value("Залишок Uklon", 150))
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, "//button/span[text()=' Перевод на гаманець автопарку ']"))).click()
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, "//button/span[text()=' Перевести гроші ']"))).click()
+        print('withdraw finished')
 
     def download_weekly_report(self):
         if self.payments_order_file_name() not in os.listdir(os.curdir):
@@ -619,3 +642,177 @@ class UberSynchronizer(Synchronizer, Uber):
                 print(f'Uber weekly report has been downloaded')
             except Exception as err:
                 print(err.msg)
+
+
+class UaGpsSynchronizer(Synchronizer, UaGps):
+
+    def generate_report(self, start_time, end_time, report_object):
+
+        """
+        :param start_time: time from which we need to get report
+        :type start_time: datetime.datetime
+        :param end_time: time to which we need to get report
+        :type end_time: datetime.datetime
+        :param report_object: license plate
+        :type report_object: str
+        :return: distance and time in rent
+        """
+        xpath = UaGpsService.get_value('UAGPS_GENERATE_REPORT_1')
+        self.get_target_page_or_login(self.base_url, xpath, self.login)
+        self.driver.find_element(By.XPATH, xpath).click()
+        unit = WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_2'))))
+        unit.click()
+        try:
+            self.driver.find_element(By.XPATH,
+                                     f'{UaGpsService.get_value("UAGPS_GENERATE_REPORT_3")} "{report_object}")]').click()
+        except:
+            return 0, datetime.timedelta()
+        from_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_GENERATE_REPORT_4'))
+        clickandclear(from_field)
+        from_field.send_keys(start_time.strftime("%d %B %Y %H:%M"))
+        from_field.send_keys(Keys.ENTER)
+        to_field = WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.ID, UaGpsService.get_value('UAGPS_GENERATE_REPORT_5'))))
+        clickandclear(to_field)
+        to_field.send_keys(end_time.strftime("%d %B %Y %H:%M"))
+        to_field.send_keys(Keys.ENTER)
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_6')))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        road_distance = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_7')).text
+        rent_distance = float(road_distance.split(' ')[0])
+        roadtimestr = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_8')).text
+        roadtime = [int(i) for i in roadtimestr.split(':')]
+        rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
+        return rent_distance, rent_time
+
+    # def get_rent_distance(self):
+    #     now = timezone.localtime()
+    #     start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
+    #     for _driver in Driver.objects.all():
+    #         rent_distance = 0
+    #         rent_time = datetime.timedelta()
+    #         # car that have worked at that day
+    #         working_cars = UseOfCars.objects.filter(created_at__gte=start,
+    #                                                 created_at__lte=now)
+    #         vehicles = Vehicle.objects.filter(driver=_driver)
+    #         if vehicles:
+    #             for vehicle in vehicles:
+    #                 # check driver's car before they start work
+    #                 first_use = working_cars.filter(licence_plate=vehicle.licence_plate).first()
+    #                 if first_use:
+    #                     rent_before = self.generate_report(start,
+    #                                                        timezone.localtime(first_use.created_at),
+    #                                                        vehicle.licence_plate)
+    #                     rent_distance += rent_before[0]
+    #                     rent_time += rent_before[1]
+    #                     # check driver's car after work
+    #                     last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
+    #                     if last_use.end_at:
+    #                         rent_after = self.generate_report(timezone.localtime(last_use.end_at),
+    #                                                           now,
+    #                                                           vehicle.licence_plate)
+    #                         rent_distance += rent_after[0]
+    #                         rent_time += rent_after[1]
+    #                 #  car not used in that day
+    #                 else:
+    #                     rent = self.generate_report(start, now, vehicle.licence_plate)
+    #                     rent_distance += rent[0]
+    #                     rent_time += rent[1]
+    #         # driver work at that day
+    #         driver_use = working_cars.filter(user_vehicle=_driver)
+    #         if driver_use:
+    #             for car in driver_use:
+    #                 if car.end_at:
+    #                     end = car.end_at
+    #                 else:
+    #                     end = now
+    #                 rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+    #                                                             name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
+    #                                                             start_time__gte=timezone.localtime(car.created_at),
+    #                                                             start_time__lte=timezone.localtime(end))
+    #                 for status in rent_statuses:
+    #                     if status.end_time:
+    #                         end = status.end_time
+    #                     else:
+    #                         end = now
+    #                     status_report = self.generate_report(timezone.localtime(status.start_time),
+    #                                                          timezone.localtime(end),
+    #                                                          car.licence_plate)
+    #                     rent_distance += status_report[0]
+    #                     rent_time += status_report[1]
+    #         #             update today rent in db
+    #         rent_today = RentInformation.objects.filter(driver_name=_driver,
+    #                                                     created_at__date=timezone.now().date()).first()
+    #         if rent_today:
+    #             rent_today.rent_time = rent_time
+    #             rent_today.rent_distance = rent_distance
+    #             rent_today.save()
+    #         else:
+    #             #  create rent file for today
+    #             RentInformation.objects.create(driver_name=_driver,
+    #                                            driver=_driver,
+    #                                            rent_time=rent_time,
+    #                                            rent_distance=rent_distance)
+
+    def get_rent_distance(self):
+        now = timezone.localtime()
+        start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
+        for _driver in Driver.objects.all():
+            rent_distance = 0
+            rent_time = datetime.timedelta()
+            # car that have worked at that day
+            working_cars = UseOfCars.objects.filter(created_at__gte=start,
+                                                    created_at__lte=now)
+            vehicles = Vehicle.objects.filter(driver=_driver)
+            if vehicles:
+                for vehicle in vehicles:
+                    # check driver's car before they start work
+                    first_use = working_cars.filter(licence_plate=vehicle.licence_plate).first()
+                    if first_use:
+                        rent_before = self.generate_report(start,
+                                                           timezone.localtime(first_use.created_at),
+                                                           vehicle.licence_plate)
+                        rent_distance += rent_before[0]
+                        rent_time += rent_before[1]
+                        # check driver's car after work
+                        last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
+                        if last_use.end_at:
+                            rent_after = self.generate_report(timezone.localtime(last_use.end_at),
+                                                              now,
+                                                              vehicle.licence_plate)
+                            rent_distance += rent_after[0]
+                            rent_time += rent_after[1]
+                    #  car not used in that day
+                    else:
+                        # driver work at that day
+                        rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+                                                                    name__in=[Driver.ACTIVE, Driver.OFFLINE,
+                                                                              Driver.RENT],
+                                                                    start_time__gte=timezone.localtime(start),
+                                                                    start_time__lte=timezone.localtime(now))
+                        for status in rent_statuses:
+                            if status.end_time:
+                                end = status.end_time
+                            else:
+                                end = now
+                            status_report = self.generate_report(timezone.localtime(status.start_time),
+                                                                 timezone.localtime(end),
+                                                                 vehicle.licence_plate)
+                            rent_distance += status_report[0]
+                            rent_time += status_report[1]
+            #             update today rent in db
+            rent_today = RentInformation.objects.filter(driver_name=_driver,
+                                                        created_at__date=timezone.now().date()).first()
+            if rent_today:
+                rent_today.rent_time = rent_time
+                rent_today.rent_distance = rent_distance
+                rent_today.save()
+            else:
+                #  create rent file for today
+                RentInformation.objects.create(driver_name=_driver,
+                                               driver=_driver,
+                                               rent_time=rent_time,
+                                               rent_distance=rent_distance)
