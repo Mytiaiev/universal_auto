@@ -226,35 +226,37 @@ class BoltSynchronizer(Synchronizer, Bolt):
 
     def get_drivers_table(self):
         drivers = []
-        url = f'{self.base_url}/company/58225/drivers'
-        xpath = '//table[@class="table"]'
+        url = BoltService.get_value('BOLTS_GET_DRIVERS_TABLE_1')
+        xpath = BoltService.get_value('BOLTS_GET_DRIVERS_TABLE_2')
         self.get_target_element_of_page(url, xpath)
         # self.driver.get_screenshot_as_file('BoltSynchronizer.png')
         i_table = 0
         while True:
             i_table += 1
             try:
-                xpath = f'//table[@class="table"][{i_table}]'
+                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}[{i_table}]'
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
                 i = 0
                 while True:
                     i += 1
                     try:
-                        xpath = f'//table[@class="table"][{i_table}]/tbody/tr[{i}]/td[2]/span'
+                        _ = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4")
+                        xpath = f'{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4.1")}'
                         status_class = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
                         if 'success' not in status_class:
                             continue
-                        xpath = f'//table[@class="table"][{i_table}]/tbody/tr[{i}]/td[1]/a'
+                        el = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5")
+                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.1")}'
                         name = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'//table[@class="table"][{i_table}]/tbody/tr[{i}]/td[3]/a'
+                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.2")}'
                         email = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'//table[@class="table"][{i_table}]/tbody/tr[{i}]/td[4]/a'
+                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.3")}'
                         phone_number = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'//table[@class="table"][{i_table}]/tbody/tr[{i}]/td[5]/span'
+                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.4")}'
                         pay_cash = 'success' in WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
                         s_name = self.split_name(name)
@@ -282,11 +284,12 @@ class BoltSynchronizer(Synchronizer, Bolt):
         raw_data = []
         try:
             WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, "//button[@aria-label='Close']"))).click()
+                EC.presence_of_element_located(
+                    (By.XPATH, BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_1")))).click()
         except:
             pass
         try:
-            xpath = f'//div[contains(@class, "map-overlay")]/div/div[1]/div[@role="tablist"]/div[{search_text}]'
+            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]'
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
         except TimeoutException:
             return raw_data
@@ -294,18 +297,16 @@ class BoltSynchronizer(Synchronizer, Bolt):
         while True:
             i += 1
             try:
-                xpath = f'//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][{i}]/div/div/div[1]/span/span'
+                el = BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_3")
+                xpath = f'{el}{i}{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_3.1")}'
                 driver_name = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][{i}]/div/div/div[2]/span/span'
-                driver_car = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
                 break
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
-            name, second_name, car = '', '', ''
+            name, second_name = '', ''
             try:
-                name, second_name, car = name_list[0], name_list[1], driver_car.split(' ')[0]
+                name, second_name = name_list[0], name_list[1]
             except IndexError:
                 pass
             raw_data.append((name, second_name))
@@ -314,11 +315,10 @@ class BoltSynchronizer(Synchronizer, Bolt):
 
     def get_driver_status(self):
         try:
-            url = f'{self.base_url}/v2/liveMap'
-            xpath = f'//div[contains(@class, "map-overlay")]'
+            url = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_1')
+            xpath = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_2')
             self.get_target_element_of_page(url, xpath)
             return {
-                'online': self.get_driver_status_from_map('1'),
                 'width_client': self.get_driver_status_from_map('2'),
                 'wait': self.get_driver_status_from_map('3')
             }
@@ -338,8 +338,8 @@ class UklonSynchronizer(Synchronizer, NewUklon):
 
     def get_drivers_table(self):
         drivers = []
-        url = f'{self.base_url}/workspace/drivers'
-        xpath = '//upf-drivers-list[@data-cy="driver-list"]'
+        url = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_1')
+        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_2')
         self.get_target_element_of_page(url, xpath)
         # self.driver.get_screenshot_as_file('UklonSynchronizer.png')
         driver_urls = []
@@ -347,7 +347,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         while True:
             i += 1
             try:
-                xpath = f'//cdk-row[{i}]/cdk-cell[@data-cy="cell-FullName"]//a'
+                xpath = f'{NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_3.1")}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_3.2")}'
                 url = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("href")
                 driver_urls.append(url)
@@ -355,22 +355,22 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 break
         for url in driver_urls:
             self.driver.get(url)
-            xpath = '//span[@data-cy="driver-name"]'
+            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_4')
             self.get_target_element_of_page(url, xpath)
             name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = '//dd[@data-cy="driver-email"]'
+            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_5')
             email = WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = '//span[@data-cy="driver-phone"]'
+            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_6')
             phone_number = WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = '//dd[@data-cy="driver-signal"]'
+            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_7')
             driver_external_id = WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, xpath))).text
             try:
-                xpath = '//div[@class="mat-tab-labels"]/div[@aria-posinset="4"]'
+                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_8')
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-                xpath = '//mat-slide-toggle[@formcontrolname="walletToCard"]//input'
+                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_9')
                 withdraw_money = 'true' in WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("aria-checked")
             except TimeoutException:
@@ -379,18 +379,18 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             vehicle_name = ''
             vin_code = ''
             try:
-                xpath = '//div/a[contains(@class, "tw-font-medium")]'
+                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_10')
                 vehicle_url = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("href")
                 self.driver.get(vehicle_url)
-                xpath = '//span[@data-cy="license-plate"]'
+                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_11')
                 self.get_target_element_of_page(vehicle_url, xpath)
                 licence_plate = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//span[@data-cy="make-model-year"]'
+                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_12')
                 vehicle_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = '//dd[@data-cy="vin-code"]'
+                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_13')
                 vin_code = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
@@ -415,13 +415,9 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         online = []
         width_client = []
         try:
-            xpath = f'//div[@role="tab"]/div[text()="Поїздки"]'
+            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_1')
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-            # xpath = f'//mat-select[@id="mat-select-4"]'
-            # WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-            # xpath = f'//mat-option[@id="mat-option-2"]'
-            # WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-            xpath = f'//button[@data-cy="order-filter-apply-btn"]'
+            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_2')
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
             time.sleep(self.sleep)
         except TimeoutException as err:
@@ -429,30 +425,27 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             return {
                 'online': online,
                 'width_client': width_client,
-                'wait': []
             }
         i = 0
         while i < 10:
             i += 1
             try:
-                xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-driver"]'
+                _ = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3')
+                xpath = f'{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.1")}'
                 driver_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-license-plate"]'
-                driver_car = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-pickup-time"]'
+                xpath = f'{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.2")}'
                 last_action_date = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'//table[@data-cy="trips-list-table"]/tbody/tr[{i}]/td[@data-cy="td-status"]/i'
+                xpath = f'/{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.3")}'
                 status = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute('class')
             except TimeoutException:
                 break
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
-            name, second_name, car = '', '', ''
+            name, second_name = '', ''
             try:
-                name, second_name, car = name_list[0], name_list[1], driver_car.split(' ')[0]
+                name, second_name = name_list[0], name_list[1]
             except IndexError:
                 pass
 
@@ -475,36 +468,35 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         return {
             'online': online,
             'width_client': width_client,
-            'wait': []
         }
 
     def get_driver_status(self):
         try:
-            url = f'{self.base_url}/workspace/orders'
-            xpath = f'//div[@role="tab"]/div[text()="Поїздки"]'
+            url = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_1')
+            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_2')
             self.get_target_element_of_page(url, xpath)
             return self.get_driver_status_from_table()
         except WebDriverException as err:
             print(err.msg)
 
     def withdraw_money(self):
-        url = f'{self.base_url}/workspace/finance'
-        xpath = "//div[text()='Гаманці водіїв']"
+        url = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_1')
+        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_2')
         self.get_target_page_or_login(url, xpath, self.login)
         self.driver.find_element(By.XPATH, xpath).click()
         if self.sleep:
             time.sleep(self.sleep)
         checkbox = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH, "//span[@class='mat-checkbox-inner-container']")))
+            EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_3'))))
         checkbox.click()
         sum_remain = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//input[@formcontrolname='remaining']")))
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_4'))))
         clickandclear(sum_remain)
         sum_remain.send_keys(ParkSettings.get_value("Залишок Uklon", 150))
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button/span[text()=' Перевод на гаманець автопарку ']"))).click()
+            EC.element_to_be_clickable((By.XPATH,  NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_5')))).click()
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, "//button/span[text()=' Перевести гроші ']"))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_6')))).click()
         print('withdraw finished')
 
     def download_weekly_report(self):
@@ -525,27 +517,26 @@ class UberSynchronizer(Synchronizer, Uber):
 
     def get_all_vehicles(self):
         vehicles = {}
-        url = f'{self.base_url}/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/vehicles'
-        # url = f'{self.base_url}/orgs/2c5515cd-a4ed-4136-905f-99504677a324/vehicles'  #my
-        xpath = '//div[@data-testid="paginated-table"]'
+        url = UberService.get_value('UBERS_GET_ALL_VEHICLES_1')
+        xpath = UberService.get_value('UBERS_GET_ALL_VEHICLES_2')
         self.get_target_element_of_page(url, xpath)
         # self.driver.get_screenshot_as_file('UberSynchronizer.png')
         i = 0
         while True:
             i += 1
             try:
-                xpath = f'//div[@data-testid="paginated-table"]//div[@data-tracking-name="vehicle-table-row"][{i}]'
+                xpath = f'{UberService.get_value("UBERS_GET_ALL_VEHICLES_3")}[{i}]'
                 row = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 try:
                     vehicleUUID = json.loads(row.get_attribute("data-tracking-payload"))['vehicleUUID']
                 except Exception:
                     continue
-                xpath = f'div/div/div[@data-testid="vehicle-info"]'
+                xpath = UberService.get_value('UBERS_GET_ALL_VEHICLES_4')
                 vehicle_name = WebDriverWait(row, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'div[3]/div/div[1]'
+                xpath = UberService.get_value('UBERS_GET_ALL_VEHICLES_5')
                 vin_code = WebDriverWait(row, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'div[3]/div/div[2]'
+                xpath = UberService.get_value('UBERS_GET_ALL_VEHICLES_6')
                 licence_plate = WebDriverWait(row, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
@@ -557,10 +548,10 @@ class UberSynchronizer(Synchronizer, Uber):
         try:
             vehicles = self.get_all_vehicles()
             drivers = []
-            url = f'{self.base_url}/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/drivers'
+            url = UberService.get_value('UBERS_GET_DRIVERS_TABLE_1')
             # url = f'{self.base_url}/orgs/2c5515cd-a4ed-4136-905f-99504677a324/drivers'  #my
             self.driver.get(url)
-            xpath = '//div[@data-testid="paginated-table"]'
+            xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_2')
             self.get_target_element_of_page(url, xpath)
         except TimeoutException:
             return []
@@ -568,13 +559,13 @@ class UberSynchronizer(Synchronizer, Uber):
         while True:
             i += 1
             try:
-                xpath = f'//div[@data-testid="paginated-table"]//div[@data-tracking-name="driver-table-row"][{i}]'
+                xpath = f'{UberService.get_value("UBERS_GET_DRIVERS_TABLE_3")}[{i}]'
                 row = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                xpath = f'div[1]/div[2]/div[1]'
+                xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_4')
                 name = WebDriverWait(row, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'div[4]/div/div[2]'
+                xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_5')
                 email = WebDriverWait(row, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'div[4]/div/div[1]'
+                xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_6')
                 phone_number = WebDriverWait(row, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
                 try:
@@ -585,12 +576,12 @@ class UberSynchronizer(Synchronizer, Uber):
                 vehicle_name = ''
                 vin_code = ''
                 try:
-                    xpath = f'//div[@data-tracking-name="search"]'
+                    xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_7')
                     WebDriverWait(self.driver, self.sleep).until(
                         EC.presence_of_element_located((By.XPATH, xpath))).click()
-                    xpath = f'div[3]'
+                    xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_8')
                     WebDriverWait(row, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-                    xpath = f'//div[@data-baseweb="popover"]//div[@data-testid="vehicle-search-row"][1]'
+                    xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_9')
                     el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                     vehicleUUID = json.loads(el.get_attribute("data-tracking-payload"))['vehicleUUID']
                     licence_plate = vehicles[vehicleUUID]['licence_plate']
@@ -623,9 +614,9 @@ class UberSynchronizer(Synchronizer, Uber):
     def get_driver_status(self):
 
         try:
-            url = f"{self.base_url}/orgs/2c5515cd-a4ed-4136-905f-99504677a324/livemap"
+            url = UberService.get_value('UBERS_GET_DRIVER_STATUS_1')
             # url = f"https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/livemap"
-            xpath = f'//div[@data-tracking-name="livemap"]'
+            xpath = UberService.get_value('UBERS_GET_DRIVER_STATUS_2')
             self.get_target_element_of_page(url, xpath)
             return {
                 'online': self.get_driver_status_from_map('Онлайн'),
@@ -657,33 +648,33 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
         :type report_object: str
         :return: distance and time in rent
         """
-        xpath = UaGpsService.get_value('UAGPS_GENERATE_REPORT_1')
+        xpath = UaGpsService.get_value('UAGPSS_GENERATE_REPORT_1')
         self.get_target_page_or_login(self.base_url, xpath, self.login)
         self.driver.find_element(By.XPATH, xpath).click()
         unit = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_2'))))
+            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_2'))))
         unit.click()
         try:
             self.driver.find_element(By.XPATH,
-                                     f'{UaGpsService.get_value("UAGPS_GENERATE_REPORT_3")} "{report_object}")]').click()
+                                     f'{UaGpsService.get_value("UAGPSS_GENERATE_REPORT_3")} "{report_object}")]').click()
         except:
             return 0, datetime.timedelta()
-        from_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_GENERATE_REPORT_4'))
+        from_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_4'))
         clickandclear(from_field)
         from_field.send_keys(start_time.strftime("%d %B %Y %H:%M"))
         from_field.send_keys(Keys.ENTER)
         to_field = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.ID, UaGpsService.get_value('UAGPS_GENERATE_REPORT_5'))))
+            EC.element_to_be_clickable((By.ID, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_5'))))
         clickandclear(to_field)
         to_field.send_keys(end_time.strftime("%d %B %Y %H:%M"))
         to_field.send_keys(Keys.ENTER)
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_6')))).click()
+            EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_6')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        road_distance = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_7')).text
+        road_distance = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_7')).text
         rent_distance = float(road_distance.split(' ')[0])
-        roadtimestr = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPS_GENERATE_REPORT_8')).text
+        roadtimestr = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_8')).text
         roadtime = [int(i) for i in roadtimestr.split(':')]
         rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
         return rent_distance, rent_time

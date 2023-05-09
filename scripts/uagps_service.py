@@ -6,14 +6,14 @@ states = {
     'UAGPS_LOGIN_1': ('user', 'ID'),
     'UAGPS_LOGIN_2': ('passw', 'ID'),
     'UAGPS_LOGIN_3': ('submit', 'ID'),
-    'UAGPS_GENERATE_REPORT_1': ("//div[@title='Reports']", 'xpath'),
-    'UAGPS_GENERATE_REPORT_2': ("//input[@id='report_templates_filter_units']", 'XPATH'),
-    'UAGPS_GENERATE_REPORT_3': ('//div[starts-with(text(),', 'XPATH'),
-    'UAGPS_GENERATE_REPORT_4': ("time_from_report_templates_filter_time", 'ID'),
-    'UAGPS_GENERATE_REPORT_5': ("time_to_report_templates_filter_time", 'ID'),
-    'UAGPS_GENERATE_REPORT_6': ('//input[@value="Execute"]', 'XPATH'),
-    'UAGPS_GENERATE_REPORT_7': ("//tr[@pos='5']/td[2]", 'XPATH'),
-    'UAGPS_GENERATE_REPORT_8': ("//tr[@pos='4']/td[2]", 'XPATH'),
+    'UAGPSS_GENERATE_REPORT_1': ("//div[@title='Reports']", 'xpath'),
+    'UAGPSS_GENERATE_REPORT_2': ("//input[@id='report_templates_filter_units']", 'XPATH'),
+    'UAGPSS_GENERATE_REPORT_3': ('//div[starts-with(text(),', 'XPATH'),
+    'UAGPSS_GENERATE_REPORT_4': ("time_from_report_templates_filter_time", 'ID'),
+    'UAGPSS_GENERATE_REPORT_5': ("time_to_report_templates_filter_time", 'ID'),
+    'UAGPSS_GENERATE_REPORT_6': ('//input[@value="Execute"]', 'XPATH'),
+    'UAGPSS_GENERATE_REPORT_7': ("//tr[@pos='5']/td[2]", 'XPATH'),
+    'UAGPSS_GENERATE_REPORT_8': ("//tr[@pos='4']/td[2]", 'XPATH'),
 }
 
 

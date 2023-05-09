@@ -28,6 +28,24 @@ states = {
     'BOLT_ADD_DRIVER_12': ("//label[contains(., 'Завантажити файл')]", 'XPATH'),
     'BOLT_ADD_DRIVER_13': ("./input", 'XPATH'),
     'BOLT_ADD_DRIVER_14': ("//button[@type='submit']", 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_1': ('https://fleets.bolt.eu/company/58225/drivers', 'url'),
+    'BOLTS_GET_DRIVERS_TABLE_2': ('//table[@class="table"]', 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_3': ('//table[@class="table"]', 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_4': (']/tbody/tr[', '_'),
+    'BOLTS_GET_DRIVERS_TABLE_4.1': (']/td[2]/span', 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_5': ('//table[@class="table"][', 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_5.1': (']/td[1]/a', 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_5.2': (']/td[3]/a', 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_5.3': (']/td[4]/a', 'XPATH'),
+    'BOLTS_GET_DRIVERS_TABLE_5.4': (']/td[5]/span', 'XPATH'),
+    'BOLTS_GET_DRIVER_STATUS_1': ('https://fleets.bolt.eu/v2/liveMap', 'url'),
+    'BOLTS_GET_DRIVER_STATUS_2': ('//div[contains(@class, "map-overlay")]', 'XPATH'),
+    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_1': ("//button[@aria-label='Close']", 'XPATH'),
+    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_2': (
+        '//div[contains(@class, "map-overlay")]/div/div[1]/div[@role="tablist"]/div', 'XPATH'),
+    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_3': (
+        '//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][', 'XPATH'),
+    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_3.1': (']/div/div/div[1]/span/span', 'XPATH'),
 }
 
 
