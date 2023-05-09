@@ -1,5 +1,6 @@
-from app.models import Bolt
 import pendulum
+
+from scripts.webdriver import Bolt
 
 
 def run(*args):

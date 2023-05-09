@@ -1,4 +1,4 @@
-from app.models import NewUklon
+from scripts.webdriver import NewUklon
 
 
 def run():
