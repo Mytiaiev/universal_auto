@@ -211,7 +211,7 @@ class RawGPSAdmin(admin.ModelAdmin):
 @admin.register(VehicleGPS)
 class VehicleGPSAdmin(admin.ModelAdmin):
     list_display = (
-    'vehicle', 'date_time', 'lat', 'lat_zone', 'lon', 'lon_zone', 'speed', 'course', 'height', 'created_at')
+        'vehicle', 'date_time', 'lat', 'lat_zone', 'lon', 'lon_zone', 'speed', 'course', 'height', 'created_at')
     search_fields = ('vehicle',)
     list_filter = ('vehicle', 'date_time', 'created_at')
     ordering = ('-date_time', 'vehicle')
@@ -442,7 +442,61 @@ class JobApplicationAdmin(admin.ModelAdmin):
 class ParkSettingsAdmin(admin.ModelAdmin):
     list_display = ['description', 'value', ]
     list_display_links = ['description', 'value', ]
-    exclude = ('key', )
+    exclude = ('key',)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+# @admin.register(Service)
+# class ServiceAdmin(admin.ModelAdmin):
+#     list_display = ['key', 'value', 'description', ]
+#
+#     def has_add_permission(self, request, obj=None):
+#         return False
+#
+#     def has_delete_permission(self, request, obj=None):
+#         return False
+
+@admin.register(BoltService)
+class BoltServiceAdmin(admin.ModelAdmin):
+    list_display = ['key', 'value', 'description', ]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(UaGpsService)
+class UaGpsServiceAdmin(admin.ModelAdmin):
+    list_display = ['key', 'value', 'description', ]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(NewUklonService)
+class NewUklonServiceAdmin(admin.ModelAdmin):
+    list_display = ['key', 'value', 'description', ]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(UberService)
+class UberServiceAdmin(admin.ModelAdmin):
+    list_display = ['key', 'value', 'description', ]
 
     def has_add_permission(self, request, obj=None):
         return False
