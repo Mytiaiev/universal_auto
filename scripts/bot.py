@@ -623,6 +623,9 @@ def change_sum_trip(sender=None, **kwargs):
         rep = kwargs.get("retval")
         order_id, query_id, minutes_of_trip, distance = rep
         order = Order.objects.filter(pk=order_id).first()
+        phone = order.phone_number.replace("+", "")
+        if phone.startswith("0"):
+            phone = "38" + phone
         AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')}"), int(
             f"{ParkSettings.get_value('COST_PER_KM')}")
         price_per_minute = (AVERAGE_DISTANCE_PER_HOUR * COST_PER_KM) / 60
@@ -633,14 +636,23 @@ def change_sum_trip(sender=None, **kwargs):
         else:
             order.sum = int(price_per_minute) + int(order.car_delivery_price)
         order.save()
-        bot.send_message(chat_id=order.chat_id_client,
-                         text=f'Сума до оплати: {order.sum}грн')
+        if order.chat_id_client:
+            bot.send_message(chat_id=order.chat_id_client,
+                             text=f'Сума до оплати: {order.sum}грн')
+        else:
+            params = {
+                "recipient": phone,
+                "text": f"Сума до оплати: {order.sum}грн",
+                "apiKey": os.environ['MOBIZON_API_KEY'],
+                "output": "json"
+            }
+            requests.post(url_mobizon, params=params)
 
         message = f"Адреса посадки: {order.from_address}\n" \
-                  f"Місце прибуття: {order.to_the_address}\n" \
-                  f"Спосіб оплати: {order.payment_method}\n" \
-                  f"Номер телефону: {order.phone_number}\n" \
-                  f"Загальна вартість: {order.sum}грн"
+                      f"Місце прибуття: {order.to_the_address}\n" \
+                      f"Спосіб оплати: {order.payment_method}\n" \
+                      f"Номер телефону: {order.phone_number}\n" \
+                      f"Загальна вартість: {order.sum}грн"
 
         keyboard = [[
             InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {order.pk}")
