@@ -36,7 +36,7 @@ MEMCASH_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
-@app.task(priority=7)
+@app.task(queue='priority')
 def raw_gps_handler(id):
     try:
         raw = RawGPS.objects.get(id=id)
@@ -82,7 +82,7 @@ def download_weekly_report(fleet_name, missing_weeks):
             fleet.download_weekly_report(week_number=week_number, driver=True, sleep=5, headless=True)
 
 
-@app.task(bind=True, queue='priority')
+@app.task(bind=True, queue='non_priority')
 def download_daily_report(self):
     # Yesterday
     try:
@@ -182,7 +182,7 @@ def send_on_job_application_on_driver(self, job_id):
         logger.info(e)
 
 
-@app.task(bind=True, queue='priority')
+@app.task(bind=True, queue='non_priority')
 def get_rent_information(self):
     try:
         UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('get_rent_distance')
@@ -215,7 +215,7 @@ def send_daily_into_group(self):
         today = pendulum.now().weekday()
         if today > 0:
             for i in range(today):
-                day = pendulum.now().start_of('day').subtract(days=i+1)
+                day = pendulum.now().start_of('day').subtract(days=i + 1)
                 report = get_report(week=False, day=day, week_number=None, driver=True, sleep=5, headless=True)[2]
                 for key, value in report.items():
                     total_values[key] = total_values.get(key, 0) + value
@@ -228,12 +228,12 @@ def send_daily_into_group(self):
         logger.info(e)
 
 
-@app.task(bind=True, queue='priority')
+@app.task(bind=True, queue='non_priority')
 def check_time_order(self):
     print("check orders on time")
 
 
-@app.task(bind=True, queue='priority')
+@app.task(bind=True, queue='non_priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
@@ -253,31 +253,25 @@ def setup_periodic_tasks(sender, **kwargs):
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
     global UAGPS_CHROME_DRIVER
-    if os.getenv('CREATE_CHROME_INSTANCE', False):
-        init_chrome_driver()
-        sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
-        sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
-    else:
-        sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                                 check_time_order.s(), queue='priority')
-        init_priority_driver()
-        sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='priority')
+    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
+                             check_time_order.s(), queue='non_priority')
+    init_chrome_driver()
+    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='non_priority')
 
 
 def init_chrome_driver():
     global BOLT_CHROME_DRIVER
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
+    global UAGPS_CHROME_DRIVER
     BOLT_CHROME_DRIVER = Bolt(week_number=None, driver=True, sleep=3, headless=True, profile='Bolt_CeleryTasks')
     UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=3, headless=True, profile='Uklon_CeleryTasks')
     UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=3, headless=True, profile='Uber_CeleryTasks')
-
-
-def init_priority_driver():
-    global UAGPS_CHROME_DRIVER
     UAGPS_CHROME_DRIVER = UaGps(headless=True, profile='Uagps_CeleryTasks')
