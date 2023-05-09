@@ -422,8 +422,11 @@ def change_sum_trip(sender=None, **kwargs):
         else:
             order.sum = int(price_per_minute) + int(order.car_delivery_price)
         order.save()
-        bot.send_message(chat_id=order.chat_id_client,
-                         text=f'Сума до оплати: {order.sum}грн')
+        if order.chat_id_client:
+            bot.send_message(chat_id=order.chat_id_client,
+                             text=f'Сума до оплати: {order.sum}грн')
+        else:
+            text_to_client(order=order, text=f'Сума до оплати: {order.sum}грн')
 
         message = f"Адреса посадки: {order.from_address}\n" \
                   f"Місце прибуття: {order.to_the_address}\n" \

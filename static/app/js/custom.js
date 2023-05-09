@@ -461,7 +461,7 @@ function createMap(address, to_address, taxiArr) {
     paymentDiv.innerHTML =
       "<div class='mb-3'>" +
       "<button class='order-confirm btn btn-primary'>Готівка</button>" +
-      "<button class='order-confirm btn btn-primary ml-3'>Картка</button>" +
+      // "<button class='order-confirm btn btn-primary ml-3'>Картка</button>" +
       "<button class='order-reject btn btn-danger ml-3'>Відмовитись</button>" +
       "</div>";
 
@@ -475,11 +475,11 @@ function createMap(address, to_address, taxiArr) {
     });
 
     // Add event listener to the "Картка" button to send a post request to views.py
-    orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[1];
-    orderConfirm.addEventListener("click", function () {
-      onOrderPayment('Картка')
-      hidePaymentButtons();
-    });
+    // orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[1];
+    // orderConfirm.addEventListener("click", function () {
+    //   onOrderPayment('Картка')
+    //   hidePaymentButtons();
+    // });
 
     // Add event listener to the "Відмовитись" button to redirect to the homepage
     orderReject = paymentDiv.getElementsByClassName('order-reject')[0]

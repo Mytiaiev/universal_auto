@@ -16,7 +16,7 @@ def buttons_addresses(address):
         return None
 
 
-def text_to_client(context,order,text):
+def text_to_client(context=None, order=None, text=None):
     if order.chat_id_client:
         context.bot.send_message(chat_id=order.chat_id_client, text=text)
     else:
