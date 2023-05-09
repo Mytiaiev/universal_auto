@@ -461,7 +461,7 @@ function createMap(address, to_address, taxiArr) {
     paymentDiv.innerHTML =
       "<div class='mb-3'>" +
       "<button class='order-confirm btn btn-primary'>Готівка</button>" +
-      "<button class='order-confirm btn btn-primary ml-3'>Картка</button>" +
+      // "<button class='order-confirm btn btn-primary ml-3'>Картка</button>" +
       "<button class='order-reject btn btn-danger ml-3'>Відмовитись</button>" +
       "</div>";
 
@@ -475,11 +475,11 @@ function createMap(address, to_address, taxiArr) {
     });
 
     // Add event listener to the "Картка" button to send a post request to views.py
-    orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[1];
-    orderConfirm.addEventListener("click", function () {
-      onOrderPayment('Картка')
-      hidePaymentButtons();
-    });
+    // orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[1];
+    // orderConfirm.addEventListener("click", function () {
+    //   onOrderPayment('Картка')
+    //   hidePaymentButtons();
+    // });
 
     // Add event listener to the "Відмовитись" button to redirect to the homepage
     orderReject = paymentDiv.getElementsByClassName('order-reject')[0]
@@ -494,8 +494,22 @@ function destroyMap(){
      document.getElementById('order-modal').remove()
 }
 
+$.mask.definitions['9'] = '';
+$.mask.definitions['d'] = '[0-9]';
+
+function intlTelInit(phoneEl) {
+  var phoneSelector = $(phoneEl);
+
+  if (phoneSelector.length) {
+    phoneSelector.mask("+380 dd ddd-dd-dd");
+  }
+}
+
 $(document).ready(function(){
-  setCookie("csrfToken", $.parseHTML(csrfToken)[0].value)
+  setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
+
+  $('#delivery_time').mask("dd:dd", {placeholder: "00:00 (Вкажіть час)"});
+  intlTelInit('#phone');
 
   $('#order-form').on('submit', function(event){
     event.preventDefault();
@@ -564,7 +578,7 @@ $(document).ready(function(){
           }
           form.append('action', 'order');
           orderData = Object.fromEntries(form);
-
+          orderData.phone_number = orderData.phone_number.replace(/[^+0-9]/gi, '');
           var fromGeocode = fromGeocoded[0].geometry.location
           var toGeocode = toGeocoded[0].geometry.location
           setCookie("fromLat", fromGeocode.lat().toFixed(6), 1);
