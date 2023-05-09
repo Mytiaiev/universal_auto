@@ -5,7 +5,7 @@ processes = []
 
 [deploy]
   strategy = "bluegreen"
-  release_command = "python3 manage.py migrate --noinput"
+  release_command = "python3 manage.py migrate --noinput && sh deploy.sh"
 [env]
   DEBUG = 0
   ECHO_PORT = "44300"

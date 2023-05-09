@@ -47,7 +47,7 @@ states = {
     'NEWUKLONS_GET_DRIVERS_TABLE_13': ('//dd[@data-cy="vin-code"]', 'XPATH'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_1': ('//div[@role="tab"]/div[text()="Поїздки"]', 'xpath'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_2': ('//button[@data-cy="order-filter-apply-btn"]', 'xpath'),
-    'NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3': ('//table[@data-cy="trips-list-table"]/tbody/tr[', '_')
+    'NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3': ('//table[@data-cy="trips-list-table"]/tbody/tr[', '_'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.1': (']/td[@data-cy="td-driver"]', 'XPATH'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.2': (']/td[@data-cy="td-pickup-time"]', 'XPATH'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.3': (']/td[@data-cy="td-status"]/i', 'XPATH'),
