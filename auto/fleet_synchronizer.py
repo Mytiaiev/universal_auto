@@ -480,23 +480,23 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             print(err.msg)
 
     def withdraw_money(self):
-        url = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_1')
-        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_2')
+        url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')
+        xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
         self.get_target_page_or_login(url, xpath, self.login)
         self.driver.find_element(By.XPATH, xpath).click()
         if self.sleep:
             time.sleep(self.sleep)
         checkbox = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_3'))))
+            EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_3'))))
         checkbox.click()
         sum_remain = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_4'))))
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_4'))))
         clickandclear(sum_remain)
         sum_remain.send_keys(ParkSettings.get_value("Залишок Uklon", 150))
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH,  NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_5')))).click()
+            EC.element_to_be_clickable((By.XPATH,  NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_5')))).click()
         WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_6')))).click()
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_6')))).click()
         print('withdraw finished')
 
     def download_weekly_report(self):
