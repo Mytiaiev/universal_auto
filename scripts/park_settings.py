@@ -18,6 +18,17 @@ settings = {
     'TARIFF_CAR_OUTSIDE_DISPATCH': ('15', 'Доставка авто за місто (грн)'),
     'AVERAGE_DISTANCE_PER_HOUR': ('25', 'Середня проходимість авто по місту (км)'),
     'COST_PER_KM': ('20', 'Середня ціна за км (грн, для UaGPS)'),
+    'GOOGLE_API_KEY': ('Enter google api', 'Ключ Google api'),
+    'UBER_NAME': ('Enter username for Uber', 'Ім\'я користувача Uber'),
+    'UBER_PASSWORD': ('Enter password for Uber', 'Пароль користувача Uber'),
+    'BOLT_NAME': ('Enter username for Bolt', 'Ім\'я користувача Bolt'),
+    'BOLT_PASSWORD': ('Enter password for Bolt', 'Пароль користувача Bolt'),
+    'UKLON_NAME': ('Enter username for Uklon', 'Ім\'я користувача Uklon'),
+    'UKLON_PASSWORD': ('Enter password for Uklon', 'Пароль користувача Uklon'),
+    'UKLON_TOKEN': ('Enter token for Uklon', 'Код автопарку в Uklon'),
+    'UAGPS_LOGIN': ('Enter username for Uagps', 'Ім\'я користувача Uagps'),
+    'UAGPS_PASSWORD': ('Enter password for Uagps', 'Пароль Uagps'),
+    'MOBIZON_DOMAIN': ('https://api.mobizon.ua/service/message/sendsmsmessage', 'Домен для смс розсилки'),
     'Залишок Uklon': ('150', 'Залишок грн на карті водія Uklon'),
     'DRIVERS_CHAT': ('-863882769', 'Чат водіїв')
 }

@@ -6,7 +6,7 @@ from django.shortcuts import render
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from django.forms.models import model_to_dict
 
-from app.models import *
+from app.models import Driver, UseOfCars, VehicleGPS, Order, ParkSettings
 
 
 def active_vehicles_gps():
@@ -110,7 +110,7 @@ def index(request):
     park_settings = {}
     for park in park_setting:
         park_settings[park.key] = park.value
-    google_api = os.environ['GOOGLE_API_KEY']
+    google_api = ParkSettings.get_value("GOOGLE_API_KEY", os.environ["GOOGLE_API_KEY"])
     context = {
         "parkSettings": park_settings,
         "google_api": google_api,
