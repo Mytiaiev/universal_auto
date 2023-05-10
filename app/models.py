@@ -1294,49 +1294,49 @@ class Service(PolymorphicModel):
         verbose_name_plural = 'Сервіси'
 
     @staticmethod
-    def get_value(key: str) -> str:
+    def get_value(key, default=None):
         try:
             setting = Service.objects.get(key=key)
         except Service.DoesNotExist:
-            return f'{Service.DoesNotExist}: {key}'
+            return default
         return setting.value
 
 
 class BoltService(Service):
     @staticmethod
-    def get_value(key: str) -> str:
+    def get_value(key, default=None):
         try:
             setting = BoltService.objects.get(key=key)
         except BoltService.DoesNotExist:
-            return f'{BoltService.DoesNotExist}: {key}'
+            return default
         return setting.value
 
 
 class NewUklonService(Service):
     @staticmethod
-    def get_value(key: str) -> str:
+    def get_value(key, default=None):
         try:
             setting = NewUklonService.objects.get(key=key)
         except NewUklonService.DoesNotExist:
-            return f'{NewUklonService.DoesNotExist}: {key}'
+            return default
         return setting.value
 
 
 class UaGpsService(Service):
     @staticmethod
-    def get_value(key: str) -> str:
+    def get_value(key, default=None):
         try:
             setting = UaGpsService.objects.get(key=key)
         except UaGpsService.DoesNotExist:
-            return f'{UaGpsService.DoesNotExist}: {key}'
+            return default
         return setting.value
 
 
 class UberService(Service):
     @staticmethod
-    def get_value(key: str) -> str:
+    def get_value(key, default=None):
         try:
             setting = UberService.objects.get(key=key)
         except UberService.DoesNotExist:
-            return f'{UberService.DoesNotExist}: {key}'
+            return default
         return setting.value
