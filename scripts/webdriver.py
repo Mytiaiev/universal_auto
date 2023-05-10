@@ -272,14 +272,14 @@ class Uber(SeleniumTools):
             EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_2'))))
         el.click()
 
-    def login(self, link=f"{UberService.get_value('UBER_LOGIN_1')}"):
-        self.driver.get(link)
-        self.login_form(UberService.get_value('UBER_LOGIN_2.1'), UberService.get_value('UBER_LOGIN_2.2'), By.CLASS_NAME)
-        self.otp_code_v1()
-        self.password_form(UberService.get_value('UBER_LOGIN_3.1'), UberService.get_value('UBER_LOGIN_3.2'),
-                           By.CLASS_NAME)
-        if self.sleep:
-            time.sleep(self.sleep)
+    # def login(self, link=f"{UberService.get_value('UBER_LOGIN_1')}"):
+    #     self.driver.get(link)
+    #     self.login_form(UberService.get_value('UBER_LOGIN_2.1'), UberService.get_value('UBER_LOGIN_2.2'), By.CLASS_NAME)
+    #     self.otp_code_v1()
+    #     self.password_form(UberService.get_value('UBER_LOGIN_3.1'), UberService.get_value('UBER_LOGIN_3.2'),
+    #                        By.CLASS_NAME)
+    #     if self.sleep:
+    #         time.sleep(self.sleep)
 
     def generate_payments_order(self):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"

@@ -15,7 +15,7 @@ CASH = 'Готівка'
 
 already_ordered = "У вас вже є активне замовлення бажаєте замовити ще одне авто?"
 price_info = f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY', 15)}грн/км\n" +\
-             f"Ціна поїздки за містом {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY', 30)}грн/км"
+             f"За містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY', 30)}грн/км"
 AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR', 25)}"), int(
             f"{ParkSettings.get_value('COST_PER_KM', 20)}")
 continue_ask = 'Чи бажаєте ви продовжити?'

@@ -2,6 +2,7 @@ import json
 import traceback
 import html
 from telegram import BotCommand, ReplyKeyboardMarkup, Update, ParseMode
+from telegram.ext import ConversationHandler
 
 from app.models import User, Driver, DriverManager, Owner, ServiceStationManager
 from auto_bot.handlers.main.keyboards import driver_keyboard, start_keyboard, markup_keyboard
@@ -70,6 +71,7 @@ def get_id(update, context):
 
 def cancel(update, context):
     context.user_data.clear()
+    return ConversationHandler.END
 
 
 def error_handler(update, context) -> None:

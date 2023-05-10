@@ -39,34 +39,36 @@ warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
 
 # Conversations
 debt_conversation = ConversationHandler(
-    entry_points=[CommandHandler('sending_report', sending_report)],
+    entry_points=[CommandHandler('sending_report', sending_report),
+                  CommandHandler('cancel', cancel)],
     states={
         'WAIT_FOR_DEBT_OPTION': [CallbackQueryHandler(get_debt_photo, pattern='photo_debt')],
         'WAIT_FOR_DEBT_PHOTO': [MessageHandler(Filters.all, save_debt_report)]
     },
-    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+    fallbacks=[CommandHandler('cancel', cancel)],
 )
 
 job_docs_conversation = ConversationHandler(
     entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
-                  CommandHandler("restart", restart_job_application)],
+                  CommandHandler("restart", restart_job_application),
+                  CommandHandler('cancel', cancel)],
     states={
-        "JOB_USER_NAME": [MessageHandler(Filters.all, update_second_name, pass_user_data=True)],
-        "JOB_LAST_NAME": [MessageHandler(Filters.all, update_email, pass_user_data=True)],
-        "JOB_EMAIL": [MessageHandler(Filters.all, update_user_information, pass_user_data=True)],
+        "JOB_USER_NAME": [MessageHandler(Filters.text, update_second_name, pass_user_data=True)],
+        "JOB_LAST_NAME": [MessageHandler(Filters.text, update_email, pass_user_data=True)],
+        "JOB_EMAIL": [MessageHandler(Filters.text, update_user_information, pass_user_data=True)],
         'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
-        'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.all, upload_photo, pass_user_data=True)],
-        'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.all, upload_license_front_photo, pass_user_data=True)],
-        'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.all, upload_license_back_photo, pass_user_data=True)],
-        'WAIT_FOR_EXPIRED': [MessageHandler(Filters.all, upload_expired_date, pass_user_data=True)],
+        'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.photo, upload_photo, pass_user_data=True)],
+        'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.photo, upload_license_front_photo, pass_user_data=True)],
+        'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.photo, upload_license_back_photo, pass_user_data=True)],
+        'WAIT_FOR_EXPIRED': [MessageHandler(Filters.text, upload_expired_date, pass_user_data=True)],
         'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
-        'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.all, upload_auto_doc, pass_user_data=True)],
-        'WAIT_FOR_INSURANCE': [MessageHandler(Filters.all, upload_insurance, pass_user_data=True)],
-        'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.all, upload_expired_insurance, pass_user_data=True)],
+        'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.photo, upload_auto_doc, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE': [MessageHandler(Filters.photo, upload_insurance, pass_user_data=True)],
+        'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.text, upload_expired_insurance, pass_user_data=True)],
         'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
     },
 
-    fallbacks=[MessageHandler(Filters.text('cancel'), cancel)],
+    fallbacks=[CommandHandler('cancel', cancel)],
     allow_reentry=True,
 )
 
@@ -210,6 +212,3 @@ def setup_dispatcher(dp):
     # dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
     return dp
-
-
-dispatcher = setup_dispatcher(Dispatcher(bot, update_queue=None, use_context=True))
