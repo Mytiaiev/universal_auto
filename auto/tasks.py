@@ -18,7 +18,7 @@ from celery import shared_task
 from selenium.common import InvalidSessionIdException
 from scripts.webdriver import Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings
-
+from scripts.conversion import convertion
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
 
@@ -42,8 +42,10 @@ def raw_gps_handler(id):
     except RawGPS.DoesNotExist:
         return f'{RawGPS.DoesNotExist}: id={id}'
     data = raw.data.split(';')
-    lat, lon = data[2].replace('.', ''), data[4].replace('.', '')
-    lat, lon = lat[:-6] + '.' + lat[-6:], lon[:-6] + '.' + lon[-6:]
+    try:
+        lat, lon = convertion(data[2]), convertion(data[4])
+    except:
+        lat, lon = 0, 0
     try:
         vehicle = Vehicle.objects.get(gps_imei=raw.imei)
     except Vehicle.DoesNotExist:
