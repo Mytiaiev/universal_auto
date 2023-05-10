@@ -1,7 +1,7 @@
 from app.models import NewUklonService
 
 # States [key its NameService+Func in class]
-states = {
+newuklon_states = {
     'BASE_URL': ('https://fleets.uklon.com.ua', 'url'),
     'NEWUKLON_LOGIN_1': ('https://fleets.uklon.com.ua/auth/login', 'url'),
     'NEWUKLON_LOGIN_2': ('//input[@data-cy="phone-number-control"]', 'XPATH'),
@@ -63,7 +63,7 @@ states = {
 
 
 def init_service_newuklon():
-    for key, value in states.items():
+    for key, value in newuklon_states.items():
         if not NewUklonService.objects.filter(key=key):
             newuklon_service = NewUklonService(
                 key=key,

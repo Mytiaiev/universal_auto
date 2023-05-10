@@ -1,7 +1,7 @@
 from app.models import UaGpsService
 
 # States [key its NameService+Func in class]
-states = {
+uagps_states = {
     'BASE_URL': ('https://uagps.net/', 'url'),
     'UAGPS_LOGIN_1': ('user', 'ID'),
     'UAGPS_LOGIN_2': ('passw', 'ID'),
@@ -18,7 +18,7 @@ states = {
 
 
 def init_service_newuklon():
-    for key, value in states.items():
+    for key, value in uagps_states.items():
         if not UaGpsService.objects.filter(key=key):
             uagps_service = UaGpsService(
                 key=key,

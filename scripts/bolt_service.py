@@ -1,7 +1,7 @@
 from app.models import BoltService
 
 # States [key its NameService+Func in class]
-states = {
+bolt_states = {
     'BASE_URL': ('https://fleets.bolt.eu', 'url'),
     'BOLT_LOGIN_1': ('https://fleets.bolt.eu/login', 'url'),
     'BOLT_LOGIN_2': ('username', 'ID'),
@@ -50,7 +50,7 @@ states = {
 
 
 def init_service_bolt():
-    for key, value in states.items():
+    for key, value in bolt_states.items():
         if not BoltService.objects.filter(key=key):
             bolt_service = BoltService(
                 key=key,

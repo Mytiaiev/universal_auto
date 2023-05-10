@@ -1,7 +1,7 @@
 from app.models import UberService
 
 # States [key its NameService+Func in class]
-states = {
+uber_states = {
     'BASE_URL': ('https://supplier.uber.com', 'url'),
     'UBER_LOGIN_V2_1': ('https://drivers.uber.com/', 'url'),
     'UBER_LOGIN_V2_2.1': ('PHONE_NUMBER_or_EMAIL_ADDRESS', 'ID'),
@@ -74,7 +74,7 @@ states = {
 
 
 def init_service_uber():
-    for key, value in states.items():
+    for key, value in uber_states.items():
         if not UberService.objects.filter(key=key):
             uber_service = UberService(
                 key=key,

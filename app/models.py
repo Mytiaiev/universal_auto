@@ -14,7 +14,10 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from polymorphic.models import PolymorphicModel
 from selenium.common import TimeoutException, WebDriverException
-
+from scripts.bolt_service import bolt_states
+from scripts.uber_service import uber_states
+from scripts.uagps_service import uagps_states
+from scripts.newuklon_service import newuklon_states
 from auto import settings
 
 
@@ -1308,7 +1311,10 @@ class BoltService(Service):
         try:
             setting = BoltService.objects.get(key=key)
         except BoltService.DoesNotExist:
-            return default
+            try:
+                return bolt_states[key]
+            except KeyError:
+                return default
         return setting.value
 
 
@@ -1318,7 +1324,10 @@ class NewUklonService(Service):
         try:
             setting = NewUklonService.objects.get(key=key)
         except NewUklonService.DoesNotExist:
-            return default
+            try:
+                return newuklon_states[key]
+            except KeyError:
+                return default
         return setting.value
 
 
@@ -1328,7 +1337,10 @@ class UaGpsService(Service):
         try:
             setting = UaGpsService.objects.get(key=key)
         except UaGpsService.DoesNotExist:
-            return default
+            try:
+                return uagps_states[key]
+            except KeyError:
+                return default
         return setting.value
 
 
@@ -1338,5 +1350,8 @@ class UberService(Service):
         try:
             setting = UberService.objects.get(key=key)
         except UberService.DoesNotExist:
-            return default
+            try:
+                return uber_states[key]
+            except KeyError:
+                return default
         return setting.value
