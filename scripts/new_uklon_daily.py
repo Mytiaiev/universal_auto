@@ -1,6 +1,6 @@
 import pendulum
 
-from scripts.webdriver import NewUklon
+from app.models import NewUklon
 
 
 def run(*args):

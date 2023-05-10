@@ -1,4 +1,4 @@
-from scripts.webdriver import get_report
+from app.models import get_report
 
 
 def run(*args):
