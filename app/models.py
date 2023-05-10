@@ -17,10 +17,7 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from polymorphic.models import PolymorphicModel
 from selenium.common import TimeoutException, WebDriverException
-from scripts.bolt_service import bolt_states
-from scripts.uber_service import uber_states
-from scripts.uagps_service import uagps_states
-from scripts.newuklon_service import newuklon_states
+from scripts.selector_services import *
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
@@ -29,7 +26,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver import ActionChains
 from selenium.webdriver import DesiredCapabilities
-
 
 
 class PaymentsOrder(models.Model):
@@ -1320,52 +1316,41 @@ class BoltService(Service):
     @staticmethod
     def get_value(key, default=None):
         try:
-            setting = BoltService.objects.get(key=key)
+            setting = bolt_states[key][0]
         except BoltService.DoesNotExist:
-            try:
-                return bolt_states[key]
-            except KeyError:
-                return default
-        return setting.value
+            return default
+        return setting
 
 
 class NewUklonService(Service):
     @staticmethod
     def get_value(key, default=None):
         try:
-            setting = NewUklonService.objects.get(key=key)
-        except NewUklonService.DoesNotExist:
-            try:
-                return newuklon_states[key]
-            except KeyError:
-                return default
-        return setting.value
+            setting = newuklon_states[key][0]
+        except KeyError:
+            return default
+        return setting
 
 
 class UaGpsService(Service):
     @staticmethod
     def get_value(key, default=None):
         try:
-            setting = UaGpsService.objects.get(key=key)
-        except UaGpsService.DoesNotExist:
-            try:
-                return uagps_states[key]
-            except KeyError:
-                return default
-        return setting.value
+            setting = uagps_states[key][0]
+        except KeyError:
+            return default
+        return setting
 
 
 class UberService(Service):
     @staticmethod
     def get_value(key, default=None):
         try:
-            setting = UberService.objects.get(key=key)
-        except UberService.DoesNotExist:
-            try:
-                return uber_states[key]
-            except KeyError:
-                return default
-        return setting.value
+            setting = uber_states[key][0]
+        except KeyError:
+            return default
+        return setting
+
 
 def clickandclear(element):
     element.click()
@@ -1459,7 +1444,8 @@ class SeleniumTools:
             options.add_argument("--start-maximized")
             options.add_argument("--disable-extensions")
             options.add_argument('--disable-dev-shm-usage')
-            options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
+            options.add_argument(
+                "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
 
         driver = webdriver.Chrome(options=options, port=9514)
         return driver
@@ -2044,7 +2030,6 @@ class Bolt(SeleniumTools):
 
         return items
 
-
     @staticmethod
     def download_weekly_report(week_number=None, day=None, driver=True, sleep=5, headless=True):
         """Can download and save weekly report"""
@@ -2363,7 +2348,6 @@ class NewUklon(SeleniumTools):
             time.sleep(1)
         return otpa
 
-
     @staticmethod
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         """Can download and save weekly report"""
@@ -2498,6 +2482,7 @@ class UaGps(SeleniumTools):
         self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
         time.sleep(self.sleep)
 
+
 def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, headless=True):
     owner = {"Fleet Owner": 0}
     reports = {}
@@ -2530,9 +2515,10 @@ def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, hea
         if plan[k] > int(ParkSettings.get_value("DRIVER_PLAN", 10000)):
             totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
         else:
-            incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000))-plan[k])/2
-            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k]-incomplete)}\n" + \
-                "-" * 39
+            incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000)) - plan[k]) / 2
+            totals[
+                k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + \
+                     "-" * 39
     return owner, totals, plan
 
 
@@ -2540,4 +2526,3 @@ def download_and_save_daily_report(day=None, driver=False, sleep=5, headless=Tru
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
-
