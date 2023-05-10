@@ -1,6 +1,6 @@
 import pendulum
 
-from scripts.webdriver import download_and_save_daily_report
+from app.models import download_and_save_daily_report
 
 
 def run(*args):

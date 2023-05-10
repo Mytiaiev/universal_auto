@@ -1,4 +1,4 @@
-from scripts.webdriver import Bolt
+from app.models import Bolt
 
 
 def run():

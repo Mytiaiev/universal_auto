@@ -13,9 +13,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import TimeoutException, WebDriverException, InvalidSessionIdException
 from translators.server import tss
-from scripts.webdriver import Bolt, NewUklon, Uber, SeleniumTools, UaGps, clickandclear
 from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange,\
-    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet
+    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber,\
+    SeleniumTools, UaGps, clickandclear
 
 LOGGER.setLevel(logging.WARNING)
 

@@ -1,4 +1,4 @@
-from scripts.webdriver import Uber
+from app.models import Uber
 
 
 def run():

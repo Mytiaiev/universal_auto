@@ -14,10 +14,9 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
-from celery import shared_task
-from selenium.common import InvalidSessionIdException
-from scripts.webdriver import Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
+    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
+
 from scripts.conversion import convertion
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
