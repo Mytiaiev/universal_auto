@@ -5,11 +5,13 @@ from datetime import timezone
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
-from app.models import UberPaymentsOrder, BoltPaymentsOrder, UklonPaymentsOrder, SeleniumTools, NewUklonPaymentsOrder, \
-    Fleets_drivers_vehicles_rate, Bolt, Fleet
+from app.models import UberPaymentsOrder, BoltPaymentsOrder, UklonPaymentsOrder, NewUklonPaymentsOrder, \
+    Fleets_drivers_vehicles_rate, Fleet
 from auto.tasks import download_weekly_report
 
 from auto import celery_app
+from scripts.webdriver import SeleniumTools
+
 i = celery_app.control.inspect()
 sc = i.scheduled()
 ac = i.active()

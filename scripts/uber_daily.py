@@ -1,5 +1,6 @@
-from app.models import Uber
 import pendulum
+
+from scripts.webdriver import Uber
 
 
 def run(*args):

@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('contenttypes', '0002_remove_content_type_name'),
-        ('app', '0020_alter_rentinformation_options'),
+        ('app', '0021_alter_comment_chat_id_alter_event_chat_id_and_more'),
     ]
 
     operations = [

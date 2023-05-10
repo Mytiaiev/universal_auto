@@ -29,7 +29,7 @@ def continue_order(update, context):
     if order:
         update.message.reply_text(already_ordered)
     else:
-        update.message.reply_text(price_info)
+        time_for_order(update, context)
     reply_markup = markup_keyboard([order_keyboard])
     update.message.reply_text(continue_ask, reply_markup=reply_markup)
 
@@ -37,10 +37,16 @@ def continue_order(update, context):
 def time_for_order(update, context):
     context.user_data['state'] = START_TIME_ORDER
     reply_markup = markup_keyboard([timeorder_keyboard])
+    update.message.reply_text(price_info)
     update.message.reply_text(timeorder_ask, reply_markup=reply_markup)
 
 
 def cancel_order(update, context):
+    order = Order.objects.filter(chat_id_client=update.message.chat.id,
+                                 status_order__in=[Order.ON_TIME, Order.WAITING]).first()
+    if order:
+        order.status_order = Order.CANCELED
+        order.save()
     update.message.reply_text(canceled_order_text, reply_markup=ReplyKeyboardRemove())
     cancel(update, context)
 

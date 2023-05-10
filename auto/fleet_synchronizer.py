@@ -13,10 +13,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import TimeoutException, WebDriverException, InvalidSessionIdException
 from translators.server import tss
-
-from app.models import Bolt, Driver, NewUklon, Uber, Fleets_drivers_vehicles_rate, Fleet, Vehicle, SeleniumTools, \
-    UaGps, clickandclear, UseOfCars, RentInformation, StatusChange, ParkSettings, UberService, UaGpsService, \
-    NewUklonService, BoltService, NewUklonFleet
+from scripts.webdriver import Bolt, NewUklon, Uber, SeleniumTools, UaGps, clickandclear
+from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange,\
+    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -505,7 +504,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 xpath = f'{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.2")}'
                 last_action_date = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'/{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.3")}'
+                xpath = f'{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.3")}'
                 status = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute('class')
             except TimeoutException:

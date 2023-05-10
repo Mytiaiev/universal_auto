@@ -16,9 +16,8 @@ from django.conf import settings
 from django.core.cache import cache
 from celery import shared_task
 from selenium.common import InvalidSessionIdException
-
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Bolt, Driver, NewUklon, Uber, JobApplication, UaGps, \
-    get_report, download_and_save_daily_report, ParkStatus, Order, ParkSettings
+from scripts.webdriver import Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings
 
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
@@ -253,9 +252,10 @@ def setup_periodic_tasks(sender, **kwargs):
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
     global UAGPS_CHROME_DRIVER
+    if os.getenv("CHROME", False):
+        init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              check_time_order.s(), queue='non_priority')
-    init_chrome_driver()
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
@@ -272,6 +272,6 @@ def init_chrome_driver():
     global UBER_CHROME_DRIVER
     global UAGPS_CHROME_DRIVER
     BOLT_CHROME_DRIVER = Bolt(week_number=None, driver=True, sleep=3, headless=True, profile='Bolt_CeleryTasks')
-    UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=3, headless=True, profile='Uklon_CeleryTasks')
-    UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=3, headless=True, profile='Uber_CeleryTasks')
+    UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=5, headless=True, profile='Uklon_CeleryTasks')
+    UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=5, headless=True, profile='Uber_CeleryTasks')
     UAGPS_CHROME_DRIVER = UaGps(headless=True, profile='Uagps_CeleryTasks')
