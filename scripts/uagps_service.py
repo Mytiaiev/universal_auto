@@ -1,3 +1,5 @@
+from django.db import IntegrityError
+
 from app.models import UaGpsService
 
 # States [key its NameService+Func in class]
