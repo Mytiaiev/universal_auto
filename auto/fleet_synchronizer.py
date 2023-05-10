@@ -240,12 +240,12 @@ class BoltSynchronizer(Synchronizer, Bolt):
                     i += 1
                     try:
                         _ = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4")
-                        xpath = f'{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4.1")}'
+                        el = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")
+                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4.1")}'
                         status_class = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
                         if 'success' not in status_class:
                             continue
-                        el = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5")
                         xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.1")}'
                         name = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).text
