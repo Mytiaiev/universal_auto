@@ -1279,9 +1279,9 @@ class ParkSettings(models.Model):
     def get_value(key, default=None):
         try:
             setting = ParkSettings.objects.get(key=key)
-            return setting.value
         except ParkSettings.DoesNotExist:
             return default
+        return setting.value
 
 
 class Service(PolymorphicModel):
@@ -1294,49 +1294,49 @@ class Service(PolymorphicModel):
         verbose_name_plural = 'Сервіси'
 
     @staticmethod
-    def get_value(key, default=None):
+    def get_value(key: str) -> str:
         try:
             setting = Service.objects.get(key=key)
-            return setting.value
         except Service.DoesNotExist:
-            return default
+            return f'{Service.DoesNotExist}: {key}'
+        return setting.value
 
 
 class BoltService(Service):
     @staticmethod
-    def get_value(key, default=None):
+    def get_value(key: str) -> str:
         try:
             setting = BoltService.objects.get(key=key)
-            return setting.value
         except BoltService.DoesNotExist:
-            return default
+            return f'{BoltService.DoesNotExist}: {key}'
+        return setting.value
 
 
 class NewUklonService(Service):
     @staticmethod
-    def get_value(key, default=None):
+    def get_value(key: str) -> str:
         try:
             setting = NewUklonService.objects.get(key=key)
-            return setting.value
         except NewUklonService.DoesNotExist:
-            return default
+            return f'{NewUklonService.DoesNotExist}: {key}'
+        return setting.value
 
 
 class UaGpsService(Service):
     @staticmethod
-    def get_value(key, default=None):
+    def get_value(key: str) -> str:
         try:
             setting = UaGpsService.objects.get(key=key)
-            return setting.value
         except UaGpsService.DoesNotExist:
-            return default
+            return f'{UaGpsService.DoesNotExist}: {key}'
+        return setting.value
 
 
 class UberService(Service):
     @staticmethod
-    def get_value(key, default=None):
+    def get_value(key: str) -> str:
         try:
             setting = UberService.objects.get(key=key)
-            return setting.value
         except UberService.DoesNotExist:
-            return default
+            return f'{UberService.DoesNotExist}: {key}'
+        return setting.value

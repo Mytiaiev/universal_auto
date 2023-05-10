@@ -44,7 +44,7 @@ def raw_gps_handler(id):
     data = raw.data.split(';')
     try:
         lat, lon = convertion(data[2]), convertion(data[4])
-    except:
+    except ValueError:
         lat, lon = 0, 0
     try:
         vehicle = Vehicle.objects.get(gps_imei=raw.imei)
