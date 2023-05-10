@@ -12,7 +12,7 @@ from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode, \
     KeyboardButton, LabeledPrice
 
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip, check_time_order
+from auto.tasks import logger, get_distance_trip, check_time_order, reject_order_client
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
@@ -277,12 +277,21 @@ def send_time_orders(sender=None, **kwargs):
                             pass
 
 
+@task_postrun.connect
+def client_reject(sender=None, **kwargs):
+    if sender == reject_order_client:
+        print("KWARGS", kwargs)
+
+
 def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.message.chat_id)
     order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] == "Accept_order":
+        print("ORDER", order.id)
+        print("QUERY", query)
+        # reject_order_client.delay(order, query)
         if order:
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
@@ -327,14 +336,17 @@ def handle_callback_order(update, context):
         else:
             query.edit_message_text(text="Це замовлення вже виконується.")
     elif data[0] == 'Reject_order':
-        query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
-        if order:
-            order.status_order = Order.WAITING
-            order.save()
-            # remove inline keyboard markup from the message
-            text_to_client(context, order, "Водій відхилив замовлення. Пошук іншого водія...")
+        if order.status_order == Order.CANCELED:
+            query.edit_message_text(text=f"Клієнт <<Відмовився від замовлення>>")
         else:
-            query.edit_message_text(text="Це замовлення вже виконано.")
+            query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
+            if order:
+                order.status_order = Order.WAITING
+                order.save()
+                # remove inline keyboard markup from the message
+                text_to_client(context, order, "Водій відхилив замовлення. Пошук іншого водія...")
+            else:
+                query.edit_message_text(text="Це замовлення вже виконано.")
     elif data[0] == "On_the_spot":
         markup = inline_client_spot(pk=order.id)
         query.edit_message_reply_markup(reply_markup=markup)
@@ -447,15 +459,18 @@ def change_sum_trip(sender=None, **kwargs):
 
 def send_map_to_client(update, context, client_chat_id, licence_plate):
     # client_chat_id, car_gps_imei = context.args[0], context.args[1]
-    latitude, longitude = get_location_from_db(licence_plate)
-    context.bot.send_message(chat_id=client_chat_id, text=order_customer_text)
-    m = context.bot.sendLocation(client_chat_id, latitude=latitude, longitude=longitude, live_period=600)
-
-    while context.user_data['running']:
+    try:
         latitude, longitude = get_location_from_db(licence_plate)
-        try:
-            m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
-            time.sleep(10)
-        except Exception as e:
-            logger.error(msg=e.message)
-            time.sleep(30)
+        context.bot.send_message(chat_id=client_chat_id, text=order_customer_text)
+        m = context.bot.sendLocation(client_chat_id, latitude=latitude, longitude=longitude, live_period=600)
+
+        while context.user_data['running']:
+            latitude, longitude = get_location_from_db(licence_plate)
+            try:
+                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
+                time.sleep(10)
+            except Exception as e:
+                logger.error(msg=e.message)
+                time.sleep(30)
+    except Exception :
+        pass

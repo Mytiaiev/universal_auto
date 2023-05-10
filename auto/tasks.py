@@ -246,6 +246,13 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, licence_p
         logger.info(e)
 
 
+@app.task(bind=True, queue='non_priority')
+def reject_order_client(self, order, query):
+    print("ORDER", order)
+    print("QUERY", query)
+    return order, query
+
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
