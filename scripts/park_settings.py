@@ -1,3 +1,5 @@
+from django.db import IntegrityError
+
 from app.models import ParkSettings
 
 

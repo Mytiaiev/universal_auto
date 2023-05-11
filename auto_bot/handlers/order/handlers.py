@@ -207,7 +207,7 @@ def send_order_to_driver(sender, instance, **kwargs):
         else:
             bot.send_message(chat_id=instance.chat_id_client,
                              text='Вибачте, але вільних водіїв незалишилось, бажаєте замовити таксі на інший час?',
-                             reply_markup=markup_keyboard([timeorder_keyboard[1:]]))
+                             reply_markup=markup_keyboard([order_keyboard]))
 
 
 def time_order(update, context):
@@ -227,7 +227,7 @@ def order_on_time(update, context):
     if re.match(pattern, user_time):
         format_time = datetime.datetime.strptime(user_time, '%H:%M').time()
         min_time = timezone.localtime().replace(tzinfo=None) + \
-                   datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+            datetime.timedelta(minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
             if context.user_data.get('time_order') == TODAY:
@@ -250,6 +250,7 @@ def order_on_time(update, context):
         update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
         context.user_data['state'] = TIME_ORDER
 
+
 @task_postrun.connect
 def send_time_orders(sender=None, **kwargs):
     if sender == check_time_order:
@@ -271,8 +272,8 @@ def send_time_orders(sender=None, **kwargs):
                     for driver in drivers:
                         try:
                             bot.send_message(chat_id=driver, text=message,
-                                                     reply_markup=inline_markup_accept(timeorder.pk),
-                                                     parse_mode=ParseMode.HTML)
+                                             reply_markup=inline_markup_accept(timeorder.pk),
+                                             parse_mode=ParseMode.HTML)
                         except:
                             pass
 
@@ -376,7 +377,7 @@ def handle_callback_order(update, context):
         #                                  )
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
-        #else:
+        # else:
         text_to_client(context, order, "Дякуємо, що скористались послугами нашої компанії")
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         order.status_order = Order.COMPLETED

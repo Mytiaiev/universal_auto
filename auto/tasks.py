@@ -238,10 +238,11 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, licence_p
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
     format_end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    delta = format_end - start
     try:
         result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('generate_report', start,
                                                                               format_end, licence_plate)
-        minutes = result[1].total_seconds() // 60
+        minutes = delta.total_seconds() // 60
         return order, query, minutes, result[0]
     except Exception as e:
         logger.info(e)
