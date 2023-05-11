@@ -17,7 +17,7 @@ from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
-    inline_finish_order
+    inline_finish_order, inline_reject_order
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price
@@ -322,9 +322,9 @@ def handle_callback_order(update, context):
                     r.start()
                 except:
                     pass
-                text_to_client(context, order, report_for_client)
-                order.message_chat_id = query.message.message_id
-                order.save()
+                text_to_client(context=context, order=order, text=report_for_client, button=inline_reject_order(order.id))
+                # order.message_chat_id = query.message.message_id
+                # order.save()
             else:
                 query.edit_message_text(text=select_car_error)
         else:
@@ -338,13 +338,18 @@ def handle_callback_order(update, context):
                 order.status_order = Order.WAITING
                 order.save()
                 # remove inline keyboard markup from the message
-                text_to_client(context, order, "Водій відхилив замовлення. Пошук іншого водія...")
+                text_to_client(context=context, order=order, text="Водій відхилив замовлення. Пошук іншого водія...")
             else:
                 query.edit_message_text(text="Це замовлення вже виконано.")
+    elif data[0] == "Client_order_reject":
+        order.status_order = Order.CANCELED
+        order.save()
+        text_to_client(context=context, order=order, text="<<Ви відмовились від замовлення...>>")
+
     elif data[0] == "On_the_spot":
         markup = inline_client_spot(pk=order.id)
         query.edit_message_reply_markup(reply_markup=markup)
-        text_to_client(context, order, 'Машину подано. Водій вас очікує')
+        text_to_client(context=context, order=order, text='Машину подано. Водій вас очікує')
     elif data[0] == "Сlient_on_site":
         ParkStatus.objects.create(driver=driver, status=Driver.WITH_CLIENT)
         reply_markup, context.user_data['running'] = inline_route_keyboard(pk=order.id), False
@@ -383,7 +388,7 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         #else:
-        text_to_client(context, order, "Дякуємо, що скористались послугами нашої компанії")
+        text_to_client(context=context, order=order, text="Дякуємо, що скористались послугами нашої компанії")
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         order.status_order = Order.COMPLETED
         order.save()

@@ -16,9 +16,17 @@ def buttons_addresses(address):
         return None
 
 
-def text_to_client(context=None, order=None, text=None):
+def text_to_client(context=None, order=None, text=None, button=None):
     if order.chat_id_client:
-        context.bot.send_message(chat_id=order.chat_id_client, text=text)
+        message = context.bot.send_message(chat_id=order.chat_id_client, text=text, reply_markup=button)
+        message_id = message.message_id
+        # if button is not None:
+            # order.message_chat_id = message_id
+            # order.save()
+        # time.sleep(20)
+        # context.bot.edit_message_text(
+        #     chat_id=order.chat_id_client, message_id=message_id, text=text, reply_markup=None)
+
     else:
         params = {
             "recipient": order.phone_number[1:],

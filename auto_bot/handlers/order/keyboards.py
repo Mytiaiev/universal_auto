@@ -59,3 +59,10 @@ def inline_finish_order(pk=None):
         InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {pk}")
     ]]
     return InlineKeyboardMarkup(keyboard)
+
+
+def inline_reject_order(pk=None):
+    keyboard = [[
+        InlineKeyboardButton("\u274c Відмовитись від замовлення", callback_data=f"Client_order_reject {pk}")
+    ]]
+    return InlineKeyboardMarkup(keyboard)
