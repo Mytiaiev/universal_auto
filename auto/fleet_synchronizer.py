@@ -233,8 +233,8 @@ class BoltSynchronizer(Synchronizer, Bolt):
         while True:
             i_table += 1
             try:
-                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}[{i_table}]'
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}{i_table}]'
+                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 i = 0
                 while True:
                     i += 1
