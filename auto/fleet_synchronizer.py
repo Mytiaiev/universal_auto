@@ -218,7 +218,6 @@ class Synchronizer:
         drivers = self.get_drivers_table()
         print(f'Received {self.__class__.__name__} drivers: {len(drivers)}')
         for driver in drivers:
-            print(f'{driver}')
             self.create_driver(**driver)
 
 
