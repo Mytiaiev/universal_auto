@@ -12,7 +12,7 @@ from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode, \
     KeyboardButton, LabeledPrice
 
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip, check_time_order, reject_order_client
+from auto.tasks import logger, get_distance_trip, check_time_order
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
@@ -250,6 +250,7 @@ def order_on_time(update, context):
         update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
         context.user_data['state'] = TIME_ORDER
 
+
 @task_postrun.connect
 def send_time_orders(sender=None, **kwargs):
     if sender == check_time_order:
@@ -277,21 +278,12 @@ def send_time_orders(sender=None, **kwargs):
                             pass
 
 
-@task_postrun.connect
-def client_reject(sender=None, **kwargs):
-    if sender == reject_order_client:
-        print("KWARGS", kwargs)
-
-
 def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.message.chat_id)
     order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] == "Accept_order":
-        print("ORDER", order.id)
-        print("QUERY", query)
-        # reject_order_client.delay(order, query)
         if order:
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             if record:
@@ -331,6 +323,8 @@ def handle_callback_order(update, context):
                 except:
                     pass
                 text_to_client(context, order, report_for_client)
+                order.message_chat_id = query.message.message_id
+                order.save()
             else:
                 query.edit_message_text(text=select_car_error)
         else:

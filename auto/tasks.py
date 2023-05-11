@@ -17,7 +17,7 @@ from django.core.cache import cache
 from celery import shared_task
 from selenium.common import InvalidSessionIdException
 from scripts.webdriver import Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings
+from app.models import Order, RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings
 
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
@@ -244,13 +244,6 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, licence_p
         return order, query, minutes, result[0]
     except Exception as e:
         logger.info(e)
-
-
-@app.task(bind=True, queue='non_priority')
-def reject_order_client(self, order, query):
-    print("ORDER", order)
-    print("QUERY", query)
-    return order, query
 
 
 @app.on_after_finalize.connect
