@@ -9,8 +9,9 @@ order_keyboard = [
 ]
 
 timeorder_keyboard = [
-    KeyboardButton(text="Замовити на зараз", request_location=True),
-    KeyboardButton(text=f"{TODAY}")
+    [KeyboardButton(text="Замовити на зараз", request_location=True),
+     KeyboardButton(text=f"{TODAY}")],
+    [KeyboardButton(text=f"\u274c {CANCEL}")]
 ]
 
 location_keyboard = [
