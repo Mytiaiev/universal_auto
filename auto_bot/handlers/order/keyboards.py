@@ -4,7 +4,7 @@ from auto_bot.handlers.order.static_text import *
 
 
 order_keyboard = [
-    KeyboardButton(text=f"\u2705 {CONTINUE}"),
+    KeyboardButton(text=f"\u2705 {TODAY}"),
     KeyboardButton(text=f"\u274c {CANCEL}")
 ]
 

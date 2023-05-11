@@ -15,7 +15,7 @@ bolt_states = {
     'BOLT_ADD_DRIVER_2': ('email', 'ID'),
     'BOLT_ADD_DRIVER_3': ('phone', 'ID'),
     'BOLT_ADD_DRIVER_4': ('ember38', 'ID'),
-    'BOLT_ADD_DRIVER_5': ('//a[text()="Продовжити реєстрацію"]', 'XPATH'),
+    'BOLT_ADD_DRIVER_5': ('//button[contains(@class, "btn-success")]', 'XPATH'),
     'BOLT_ADD_DRIVER_6': ('//input[@id="first_name"]', 'XPATH'),
     'BOLT_ADD_DRIVER_7': ('//input[@id="last_name"]', 'XPATH'),
     'BOLT_ADD_DRIVER_8': ('//button[@type="submit"]', 'XPATH'),
