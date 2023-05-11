@@ -238,10 +238,11 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, licence_p
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
     format_end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    delta = format_end - start
     try:
         result = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('generate_report', start,
                                                                               format_end, licence_plate)
-        minutes = result[1].total_seconds() // 60
+        minutes = delta.total_seconds() // 60
         return order, query, minutes, result[0]
     except Exception as e:
         logger.info(e)
@@ -258,7 +259,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              check_time_order.s(), queue='non_priority')
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute='*/10'), update_driver_data.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=15, hour='*/2'), update_driver_data.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
