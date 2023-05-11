@@ -13,9 +13,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import TimeoutException, WebDriverException, InvalidSessionIdException
 from translators.server import tss
-from scripts.webdriver import Bolt, NewUklon, Uber, SeleniumTools, UaGps, clickandclear
 from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange,\
-    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet
+    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber,\
+    SeleniumTools, UaGps, clickandclear
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -233,19 +233,19 @@ class BoltSynchronizer(Synchronizer, Bolt):
         while True:
             i_table += 1
             try:
-                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}[{i_table}]'
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}{i_table}]'
+                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 i = 0
                 while True:
                     i += 1
                     try:
                         _ = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4")
-                        xpath = f'{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4.1")}'
+                        el = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")
+                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4.1")}'
                         status_class = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
                         if 'success' not in status_class:
                             continue
-                        el = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5")
                         xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.1")}'
                         name = WebDriverWait(self.driver, self.sleep).until(
                             EC.presence_of_element_located((By.XPATH, xpath))).text

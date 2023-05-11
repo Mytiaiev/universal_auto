@@ -7,6 +7,26 @@ import os
 from math import radians, sin, cos, sqrt, atan2
 
 
+def convertion(coordinates: str):
+    """ ex from (5045.4321 or 05045.4321) to 50.123456 or 050.123456
+        (-5045.4321 or -05045.4321) to -50.123456 or -050.123456 """
+    flag = False
+    if coordinates[0] == '-':
+        coordinates = coordinates[1:]
+        flag = True
+    if len(coordinates) == 9:
+        index = 2
+    elif len(coordinates) == 10:
+        index = 3
+
+    degrees, minutes = coordinates[:index], coordinates[index:]
+    result = float(degrees) + float(minutes) / 60
+    result = round(result, 6)
+    if flag:
+        result = float(f'-{str(result)}')
+    return result
+
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371  # Radius of the Earth in kilometers
     dLat = radians(lat2 - lat1)
@@ -42,7 +62,7 @@ def get_route_price(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, 
     response = requests.get(url)
     data = response.json()
     if data['status'] == 'OK':
-        legs = [] # Ride to client(within,outside) and with client(within,outside)
+        legs = []  # Ride to client(within,outside) and with client(within,outside)
         points = data["routes"][0]["legs"]
         ride_to_client = points[0]["distance"]["value"] / 1000
         for route in data["routes"]:
@@ -52,7 +72,7 @@ def get_route_price(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, 
                 for step in leg["steps"]:
                     start_location = Point(step["start_location"]["lat"], step["start_location"]["lng"])
                     end_location = Point(step["end_location"]["lat"], step["end_location"]["lng"])
-                    step_distance = step["distance"]["value"]/1000
+                    step_distance = step["distance"]["value"] / 1000
                     # Check if the step intersects the city boundaries
                     if city_boundaries.intersects(start_location.buffer(0.000001)) or city_boundaries.intersects(
                             end_location.buffer(0.000001)):
@@ -80,7 +100,8 @@ def get_route_price(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, 
                             legs[0][1] * int(ParkSettings.get_value("TARIFF_CAR_OUTSIDE_DISPATCH", 15))
         else:
             sending_price = 0
-        price = sending_price + legs[1][0] * int(ParkSettings.get_value("TARIFF_IN_THE_CITY")) + legs[1][1] * int(ParkSettings.get_value("TARIFF_OUTSIDE_THE_CITY"))
+        price = sending_price + legs[1][0] * int(ParkSettings.get_value("TARIFF_IN_THE_CITY")) + legs[1][1] * int(
+            ParkSettings.get_value("TARIFF_OUTSIDE_THE_CITY"))
         route = legs[1][0] + legs[1][1]
 
         return int(price), int(sending_price), route
@@ -128,7 +149,7 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int,
     """"Returns addresses by pattern {CITY_PARK} """
 
     url = f"https://maps.googleapis.com/maps/api/place/autocomplete/json?input={address}&language=uk&" \
-        f"location={center_lat},{center_lng}&radius={center_radius}&key={api_key}"
+          f"location={center_lat},{center_lng}&radius={center_radius}&key={api_key}"
 
     response = requests.get(url)
     data = response.json()

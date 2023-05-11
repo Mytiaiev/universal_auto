@@ -10,7 +10,7 @@ from app.models import UberPaymentsOrder, BoltPaymentsOrder, UklonPaymentsOrder,
 from auto.tasks import download_weekly_report
 
 from auto import celery_app
-from scripts.webdriver import SeleniumTools
+from app.models import SeleniumTools
 
 i = celery_app.control.inspect()
 sc = i.scheduled()

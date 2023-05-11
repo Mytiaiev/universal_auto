@@ -14,11 +14,10 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
-from celery import shared_task
-from selenium.common import InvalidSessionIdException
-from scripts.webdriver import Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
-from app.models import Order, RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
+    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
 
+from scripts.conversion import convertion
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
 
@@ -42,8 +41,10 @@ def raw_gps_handler(id):
     except RawGPS.DoesNotExist:
         return f'{RawGPS.DoesNotExist}: id={id}'
     data = raw.data.split(';')
-    lat, lon = data[2].replace('.', ''), data[4].replace('.', '')
-    lat, lon = lat[:-6] + '.' + lat[-6:], lon[:-6] + '.' + lon[-6:]
+    try:
+        lat, lon = convertion(data[2]), convertion(data[4])
+    except ValueError:
+        lat, lon = 0, 0
     try:
         vehicle = Vehicle.objects.get(gps_imei=raw.imei)
     except Vehicle.DoesNotExist:
@@ -257,7 +258,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              check_time_order.s(), queue='non_priority')
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=20, hour='*/2'), update_driver_data.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=15, hour='*/2'), update_driver_data.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
