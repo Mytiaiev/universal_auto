@@ -4,13 +4,13 @@ from auto_bot.handlers.order.static_text import *
 
 
 order_keyboard = [
-    KeyboardButton(text=f"\u2705 {TODAY}"),
+    KeyboardButton(text=f"\u23F0 {TODAY}"),
     KeyboardButton(text=f"\u274c {CANCEL}")
 ]
 
 timeorder_keyboard = [
     [KeyboardButton(text="Замовити на зараз", request_location=True),
-     KeyboardButton(text=f"{TODAY}")],
+     KeyboardButton(text=f"\u23F0 {TODAY}")],
     [KeyboardButton(text=f"\u274c {CANCEL}")]
 ]
 
@@ -50,6 +50,14 @@ def inline_route_keyboard(pk=None):
     keyboard = [
         [InlineKeyboardButton("\u2705 Рухались по маршруту", callback_data=f"Along_the_route {pk}")],
         [InlineKeyboardButton("\u274c Відхилялись від маршрута", callback_data=f"Off_route {pk}")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_repeat_keyboard(pk=None):
+    keyboard = [
+        [InlineKeyboardButton("\u2705 Розрахувати вартість і завершити поїздку", callback_data=f"Accept {pk}")],
+        [InlineKeyboardButton("\u274c Повернутися назад", callback_data=f"Сlient_on_site {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
 

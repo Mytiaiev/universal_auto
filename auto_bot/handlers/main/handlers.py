@@ -28,10 +28,9 @@ def start(update, context):
             if Driver.get_by_chat_id(chat_id):
                 update.message.reply_text(driver_greetings_text, reply_markup=markup_keyboard([driver_keyboard]))
             else:
-                update.message.reply_text(user_greetings_text)
+                update.message.reply_text(user_greetings_text, reply_markup=markup_keyboard([start_keyboard[:3]]))
                 user.chat_id = chat_id
                 user.save()
-                update.message.reply_text('Зробіть вибір', reply_markup=markup_keyboard([start_keyboard[:3]]))
         else:
             update.message.reply_text(share_phone_text,
                                       reply_markup=markup_keyboard([start_keyboard[3:]]))
@@ -110,6 +109,7 @@ def menu(update, context):
         BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
         BotCommand("/help", "Допомога"),
         BotCommand("/id", "Дізнатись id"),
+        BotCommand("/cancel", "Завершити активні діалоги")
     ]
     if driver is not None:
         standart_commands.extend([

@@ -1,6 +1,7 @@
 import re
 
-from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher, CallbackQueryHandler, ConversationHandler
+from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher, CallbackQueryHandler, ConversationHandler, \
+    RegexHandler
 
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
     get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, driver_status, \
@@ -28,7 +29,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
     upload_expired_insurance, uklon_code, job_application
 # text
-from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE
+from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE, TODAY
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -49,9 +50,10 @@ debt_conversation = ConversationHandler(
 )
 
 job_docs_conversation = ConversationHandler(
-    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
+    entry_points=[RegexHandler(r'^Водій$', update_name),
                   CommandHandler("restart", restart_job_application),
-                  CommandHandler('cancel', cancel)],
+                  RegexHandler(r'^\/.*', cancel)
+                  ],
     states={
         "JOB_USER_NAME": [MessageHandler(Filters.text, update_second_name, pass_user_data=True)],
         "JOB_LAST_NAME": [MessageHandler(Filters.text, update_email, pass_user_data=True)],
@@ -68,8 +70,9 @@ job_docs_conversation = ConversationHandler(
         'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
     },
 
-    fallbacks=[CommandHandler('cancel', cancel)],
+    fallbacks=[RegexHandler(r'^\/.*', cancel), CommandHandler('cancel', cancel)],
     allow_reentry=True,
+    per_user=True
 )
 
 
@@ -102,7 +105,7 @@ def setup_dispatcher(dp):
     dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f696 Викликати Таксі$"), continue_order))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_address))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^Замовити на інший час$"), time_order))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\u23F0 {TODAY}$"), time_order))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {CONTINUE}$"), time_for_order))
     dp.add_handler(MessageHandler(
@@ -110,14 +113,14 @@ def setup_dispatcher(dp):
         Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
         order_create))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile("^(Accept_order|Reject_order|On_the_spot|Сlient_on_site|Along_the_route|Off_route|End_trip) [0-9]+$")))
+                                        pattern=re.compile(
+                                            "^(Accept_order|Reject_order|On_the_spot|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip) [0-9]+$")))
     # sending comment
     dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$") |
                                   Filters.regex(fr"^Відмовитись від замовлення$"),
                                   comment))
     # Add job application
     dp.add_handler(MessageHandler(Filters.regex(r"^\U0001F4E8 Залишити заявку на роботу$"), job_application))
-    dp.add_handler(job_docs_conversation)
     # Commands for Drivers
     # Changing status of driver
     dp.add_handler(CommandHandler("status", status))
@@ -199,6 +202,7 @@ def setup_dispatcher(dp):
     #
     # # System commands
     dp.add_handler(CommandHandler("cancel", cancel))
+    dp.add_handler(job_docs_conversation)
     dp.add_handler(MessageHandler(Filters.text, text))
     dp.add_error_handler(error_handler)
     #
