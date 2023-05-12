@@ -15,7 +15,8 @@ def comment(update, context):
     if order:
         order.status_order = Order.CANCELED
         order.save()
-        update.message.reply_text('Поставте оцінку або напишіть відгук', reply_markup=markup_keyboard([comment_keyboard]))
+        update.message.reply_text('Поставте оцінку або напишіть відгук',
+                                  reply_markup=markup_keyboard([comment_keyboard]))
     else:
         update.message.reply_text('Залишіть відгук або сповістіть про проблему', reply_markup=ReplyKeyboardRemove())
 

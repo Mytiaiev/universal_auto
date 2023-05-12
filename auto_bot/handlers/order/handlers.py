@@ -39,8 +39,7 @@ def continue_order(update, context):
 def time_for_order(update, context):
     context.user_data['state'] = START_TIME_ORDER
     reply_markup = markup_keyboard(timeorder_keyboard)
-    update.message.reply_text(price_info)
-    update.message.reply_text(timeorder_ask, reply_markup=reply_markup)
+    update.message.reply_text(price_info, reply_markup=reply_markup)
 
 
 def cancel_order(update, context):
