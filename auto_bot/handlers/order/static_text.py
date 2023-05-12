@@ -30,6 +30,20 @@ select_car_error = 'Щоб приймати замовлення, скорист
                    ' щоб позначити на якому ви сьогодні авто'
 driver_cancel = "Водій відхилив замовлення. Пошук іншого водія..."
 
+order_inline_buttons = (
+    "\u2705 Машина вже на місці",
+    "\u274c Відхилити",
+    "\u2705 Прийняти замовлення",
+    "\u2705 Клієнт на місці",
+    "\u2705 Рухались по маршруту",
+    "\u274c Відхилялись від маршрута",
+    "\u2705 Розрахувати вартість і завершити поїздку",
+    "\u274c Повернутися назад",
+    "\u2705 Завершити поїздку"
+
+
+)
+
 
 def order_info(number, address, to_address, payment, phone, price=None, distance=None, time=None):
     time_message = f"<u>Замовлення на певний час {number}:</u>\n" \
@@ -47,14 +61,3 @@ def order_info(number, address, to_address, payment, phone, price=None, distance
         message = now_message + message
     return message
 
-
-order_inline_buttons = (
-    "\u2705 Машина вже на місці",
-    "\u274c Відхилити",
-    "\u2705 Прийняти замовлення",
-    "\u2705 Клієнт на місці",
-    "\u2705 Рухались по маршруту",
-    "\u274c Відхилялись від маршрута",
-    "\u2705 Завершити поїздку"
-
-)

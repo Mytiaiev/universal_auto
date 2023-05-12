@@ -55,14 +55,14 @@ def inline_route_keyboard(pk=None):
 
 def inline_repeat_keyboard(pk=None):
     keyboard = [
-        [InlineKeyboardButton("\u2705 Розрахувати вартість і завершити поїздку", callback_data=f"Accept {pk}")],
-        [InlineKeyboardButton("\u274c Повернутися назад", callback_data=f"Сlient_on_site {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data=f"Accept {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[7], callback_data=f"Сlient_on_site {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def inline_finish_order(pk=None):
     keyboard = [[
-        InlineKeyboardButton(order_inline_buttons[6], callback_data=f"End_trip {pk}")
+        InlineKeyboardButton(order_inline_buttons[8], callback_data=f"End_trip {pk}")
     ]]
     return InlineKeyboardMarkup(keyboard)
