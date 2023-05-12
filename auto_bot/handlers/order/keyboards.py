@@ -2,14 +2,13 @@ from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 from auto_bot.handlers.order.static_text import *
 
-
 order_keyboard = [
     KeyboardButton(text=f"\u23F0 {TODAY}"),
     KeyboardButton(text=f"\u274c {CANCEL}")
 ]
 
 timeorder_keyboard = [
-    [KeyboardButton(text="Замовити на зараз", request_location=True),
+    [KeyboardButton(text=f"\u2705 {NOW}", request_location=True),
      KeyboardButton(text=f"\u23F0 {TODAY}")],
     [KeyboardButton(text=f"\u274c {CANCEL}")]
 ]
@@ -27,29 +26,29 @@ payment_keyboard = [
 
 def inline_spot_keyboard(pk=None):
     keyboard = [
-                    [InlineKeyboardButton("\u2705 Машина вже на місці", callback_data=f"On_the_spot {pk}")],
-                    [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {pk}")],
-                    ]
+        [InlineKeyboardButton(order_inline_buttons[0], callback_data=f"On_the_spot {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[1], callback_data=f"Reject_order {pk}")],
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def inline_markup_accept(pk=None):
     keyboard = [
-        [InlineKeyboardButton("\u2705 Прийняти замовлення", callback_data=f"Accept_order {pk}")],
-        [InlineKeyboardButton("\u274c Відхилити", callback_data=f"Reject_order {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Accept_order {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[1], callback_data=f"Reject_order {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def inline_client_spot(pk=None):
-    keyboard = [[InlineKeyboardButton("\u2705 Клієнт на місці", callback_data=f"Сlient_on_site {pk}")]]
+    keyboard = [[InlineKeyboardButton(order_inline_buttons[3], callback_data=f"Сlient_on_site {pk}")]]
     return InlineKeyboardMarkup(keyboard)
 
 
 def inline_route_keyboard(pk=None):
     keyboard = [
-        [InlineKeyboardButton("\u2705 Рухались по маршруту", callback_data=f"Along_the_route {pk}")],
-        [InlineKeyboardButton("\u274c Відхилялись від маршрута", callback_data=f"Off_route {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[4], callback_data=f"Along_the_route {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[5], callback_data=f"Off_route {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -64,6 +63,6 @@ def inline_repeat_keyboard(pk=None):
 
 def inline_finish_order(pk=None):
     keyboard = [[
-        InlineKeyboardButton("Завершити поїздку", callback_data=f"End_trip {pk}")
+        InlineKeyboardButton(order_inline_buttons[6], callback_data=f"End_trip {pk}")
     ]]
     return InlineKeyboardMarkup(keyboard)

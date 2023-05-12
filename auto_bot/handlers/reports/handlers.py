@@ -31,6 +31,7 @@ def send_report(sender=None, **kwargs):
                 except:
                     pass
 
+
 @task_postrun.connect
 def send_report_daily_in_group(sender=None, **kwargs):
     if sender == send_daily_into_group:

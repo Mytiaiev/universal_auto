@@ -135,6 +135,6 @@ def menu(update, context):
             BotCommand("/rating", "Побачити рейтинг водіїв по автопарках за тиждень"),
             BotCommand("/total_weekly_rating", "Побачити рейтинг водіїв загальну за тиждень"),
             BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
-            BotCommand("/download_report", "Загрузити тижневі звіти") ])
+            BotCommand("/download_report", "Загрузити тижневі звіти")])
 
     context.bot.set_my_commands(standart_commands)
