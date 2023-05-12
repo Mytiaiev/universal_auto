@@ -63,6 +63,6 @@ def inline_finish_order(pk=None):
 
 def inline_reject_order(pk=None):
     keyboard = [[
-        InlineKeyboardButton("\u274c Відмовитись від замовлення", callback_data=f"Client_order_reject {pk}")
+        InlineKeyboardButton(f"\u274c {CANCEL}", callback_data=f"Client_reject {pk}")
     ]]
     return InlineKeyboardMarkup(keyboard)

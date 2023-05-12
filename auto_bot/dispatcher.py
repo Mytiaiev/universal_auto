@@ -110,7 +110,7 @@ def setup_dispatcher(dp):
         Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
         order_create))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile("^(Accept_order|Reject_order|On_the_spot|Сlient_on_site|Along_the_route|Off_route|End_trip) [0-9]+$")))
+                                        pattern=re.compile("^(Accept_order|Reject_order|On_the_spot|Сlient_on_site|Along_the_route|Off_route|End_trip|Client_reject) [0-9]+$")))
     # sending comment
     dp.add_handler(MessageHandler(Filters.regex(r"^\U0001f4e2 Залишити відгук$") |
                                   Filters.regex(fr"^Відмовитись від замовлення$"),

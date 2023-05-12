@@ -2,7 +2,8 @@ from django.utils import timezone
 from auto.tasks import send_on_job_application_on_driver
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings
+from app.models import Driver, Order, StatusChange, JobApplication, \
+    RentInformation, ParkSettings, ParkStatus
 from auto_bot.main import bot
 
 
@@ -54,7 +55,8 @@ def reject_order_client(sender, instance, **kwargs):
 
     if instance.status_order == Order.CANCELED:
         driver_chat_id = instance.driver.chat_id
-        message_id = instance.message_chat_id
+        driver = Driver.get_by_chat_id(chat_id=driver_chat_id)
+        message_id = instance.driver_message_id
         bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
         bot.send_message(
             chat_id=driver_chat_id,
@@ -66,5 +68,4 @@ def reject_order_client(sender, instance, **kwargs):
                  f"Загальна вартість: {instance.sum}грн\n"
                  f"Ваш статус : Готовий прийняти заказ"
         )
-        instance.driver.status = Driver.ACTIVE
-        instance.driver.save()
+        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)

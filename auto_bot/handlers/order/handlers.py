@@ -1,4 +1,5 @@
 import re
+import sys
 import datetime
 import threading
 import time
@@ -12,7 +13,8 @@ from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode, \
     KeyboardButton, LabeledPrice
 
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip, check_time_order
+from auto.tasks import logger, get_distance_trip, check_time_order, \
+    delete_button
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
@@ -278,6 +280,24 @@ def send_time_orders(sender=None, **kwargs):
                             pass
 
 
+@task_postrun.connect
+def delete_button_client(sender=None, **kwargs):
+    if sender == delete_button:
+        data = kwargs.get("retval")
+        order_id, message_id, text = data
+        time.sleep(120)
+        order = Order.objects.filter(pk=order_id).first()
+        try:
+            bot.edit_message_text(
+                chat_id=order.chat_id_client,
+                message_id=message_id,
+                text=text,
+                reply_markup=None
+            )
+        except Exception:
+            return
+
+
 def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
@@ -318,32 +338,34 @@ def handle_callback_order(update, context):
                 try:
                     context.user_data['running'] = True
                     r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order.chat_id_client, vehicle), daemon=True)
+                                         args=(update, context, order, vehicle), daemon=True)
                     r.start()
                 except:
                     pass
-                text_to_client(context=context, order=order, text=report_for_client, button=inline_reject_order(order.id))
-                # order.message_chat_id = query.message.message_id
-                # order.save()
+                text_to_client(context=context, order=order, text=report_for_client, button=inline_reject_order(order.pk))
+                order.driver_message_id = query.message.message_id
+                order.save()
             else:
                 query.edit_message_text(text=select_car_error)
         else:
             query.edit_message_text(text="Це замовлення вже виконується.")
     elif data[0] == 'Reject_order':
-        if order.status_order == Order.CANCELED:
-            query.edit_message_text(text=f"Клієнт <<Відмовився від замовлення>>")
+        query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
+        if order:
+            order.status_order = Order.WAITING
+            order.save()
+            # remove inline keyboard markup from the message
+            text_to_client(context=context, order=order, text="Водій відхилив замовлення. Пошук іншого водія...")
         else:
-            query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
-            if order:
-                order.status_order = Order.WAITING
-                order.save()
-                # remove inline keyboard markup from the message
-                text_to_client(context=context, order=order, text="Водій відхилив замовлення. Пошук іншого водія...")
-            else:
-                query.edit_message_text(text="Це замовлення вже виконано.")
-    elif data[0] == "Client_order_reject":
+            query.edit_message_text(text="Це замовлення вже виконано.")
+
+    elif data[0] == "Client_reject":
         order.status_order = Order.CANCELED
         order.save()
+        client_message_id = order.client_message_id
+        client_chat_id = order.chat_id_client
+        for i in range(3):
+            bot.delete_message(chat_id=client_chat_id, message_id=int(client_message_id) + i)
         text_to_client(context=context, order=order, text="<<Ви відмовились від замовлення...>>")
 
     elif data[0] == "On_the_spot":
@@ -456,20 +478,24 @@ def change_sum_trip(sender=None, **kwargs):
                                       message_id=query_id, reply_markup=inline_finish_order(order.id))
 
 
-def send_map_to_client(update, context, client_chat_id, licence_plate):
+def send_map_to_client(update, context, order, licence_plate):
     # client_chat_id, car_gps_imei = context.args[0], context.args[1]
     try:
         latitude, longitude = get_location_from_db(licence_plate)
-        context.bot.send_message(chat_id=client_chat_id, text=order_customer_text)
-        m = context.bot.sendLocation(client_chat_id, latitude=latitude, longitude=longitude, live_period=600)
+        context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
+        m = context.bot.sendLocation(order.chat_id_client, latitude=latitude, longitude=longitude, live_period=600)
 
         while context.user_data['running']:
             latitude, longitude = get_location_from_db(licence_plate)
+            order = Order.objects.filter(pk=order.id).first()
             try:
+                if order.status_order == Order.CANCELED:
+                    context.user_data['running'] = False
+                    return
                 m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
                 time.sleep(10)
             except Exception as e:
                 logger.error(msg=e.message)
                 time.sleep(30)
-    except Exception :
+    except Exception:
         pass
