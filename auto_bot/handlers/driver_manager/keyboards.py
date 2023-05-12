@@ -2,8 +2,7 @@ from telegram import KeyboardButton
 
 from app.models import Driver
 from auto_bot.handlers.driver_manager.static_text import *
-SEND_JOB = 'Подати заявку'
-DECLINE_JOB = 'Відхилити заявку'
+
 create_user_keyboard = [KeyboardButton(f'{CREATE_USER}'),
                         KeyboardButton(f'{CREATE_VEHICLE}')]
 
