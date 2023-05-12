@@ -212,7 +212,7 @@ def send_order_to_driver(sender, instance, **kwargs):
 def time_order(update, context):
     if context.user_data['state'] == START_TIME_ORDER:
         answer = update.message.text
-        context.user_data['time_order'] = answer
+        context.user_data['time_order'] = answer.split()[1]
     context.user_data['state'] = TIME_ORDER
     update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)',
                               reply_markup=ReplyKeyboardRemove())
