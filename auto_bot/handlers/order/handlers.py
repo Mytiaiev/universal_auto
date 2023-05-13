@@ -19,7 +19,7 @@ from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard,
     inline_finish_order, inline_repeat_keyboard
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
-from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price
+from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
 from auto_bot.handlers.order.static_text import *
 
 
@@ -308,7 +308,7 @@ def handle_callback_order(update, context):
                 try:
                     context.user_data['running'] = True
                     r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order.chat_id_client, vehicle), daemon=True)
+                                         args=(update, context, order, query.message.message_id, vehicle), daemon=True)
                     r.start()
                 except:
                     pass
@@ -326,17 +326,13 @@ def handle_callback_order(update, context):
             text_to_client(context, order, driver_cancel)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
-    elif data[0] == "On_the_spot":
-        markup = inline_client_spot(pk=order.id)
-        query.edit_message_reply_markup(reply_markup=markup)
-        text_to_client(context, order, 'Машину подано. Водій вас очікує')
     elif data[0] == "Сlient_on_site":
         if not context.user_data.get('recheck'):
+            context.user_data['running'] = False
             ParkStatus.objects.create(driver=driver, status=Driver.WITH_CLIENT)
         message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
                              order.phone_number, order.sum, order.distance_google)
         query.edit_message_text(text=message)
-        context.user_data['running'] = False
         reply_markup = inline_route_keyboard(order.latitude, order.longitude,
                                              order.to_latitude, order.to_longitude, pk=order.id)
         query.edit_message_reply_markup(reply_markup=reply_markup)
@@ -348,7 +344,6 @@ def handle_callback_order(update, context):
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "Accept":
         ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
-        print(context.user_data)
         if context.user_data['recheck'] == "Off_route":
             message = 'Проводимо розрахунок вартості...'
             query.edit_message_text(text=message)
@@ -455,14 +450,19 @@ def change_sum_trip(sender=None, **kwargs):
                                       message_id=query_id, reply_markup=inline_finish_order(order.id))
 
 
-def send_map_to_client(update, context, client_chat_id, licence_plate):
+def send_map_to_client(update, context, order, query_id, licence_plate):
     # client_chat_id, car_gps_imei = context.args[0], context.args[1]
-    latitude, longitude = get_location_from_db(licence_plate)
-    context.bot.send_message(chat_id=client_chat_id, text=order_customer_text)
-    m = context.bot.sendLocation(client_chat_id, latitude=latitude, longitude=longitude, live_period=600)
+    lat, long = get_location_from_db(licence_plate)
+    context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
+    m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
 
     while context.user_data['running']:
         latitude, longitude = get_location_from_db(licence_plate)
+        distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
+        if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
+            text_to_client(context, order, driver_arrived)
+            bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+                                          message_id=query_id, reply_markup=inline_client_spot(pk=order.id))
         try:
             m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
             time.sleep(10)
