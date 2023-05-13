@@ -40,10 +40,10 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
 def send_day_rent(sender, instance, **kwargs):
     try:
         chat_id = instance.driver.chat_id
-        if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
-            rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
-            message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
-             вартість оренди {rent_cost}грн"""
-            bot.send_message(chat_id=chat_id, text=message)
+        # if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
+        #     rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
+        #     message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
+        #      вартість оренди {rent_cost}грн"""
+        #     bot.send_message(chat_id=chat_id, text=message)
     except:
         pass

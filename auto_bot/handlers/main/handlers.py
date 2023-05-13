@@ -1,15 +1,17 @@
 import json
 import traceback
 import html
+
+from django.utils import timezone
 from telegram import BotCommand, ReplyKeyboardMarkup, Update, ParseMode
 from telegram.ext import ConversationHandler
 
-from app.models import User, Driver, DriverManager, Owner, ServiceStationManager
+from app.models import User, Driver, DriverManager, Owner, ServiceStationManager, UseOfCars
 from auto_bot.handlers.main.keyboards import driver_keyboard, start_keyboard, markup_keyboard
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, driver_greetings_text, help_text, \
-    DEVELOPER_CHAT_ID
+    DEVELOPER_CHAT_ID, driver_bye_text
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -25,15 +27,20 @@ def start(update, context):
     user = User.get_by_chat_id(chat_id)
     if user:
         if user.phone_number:
-            if Driver.get_by_chat_id(chat_id):
-                update.message.reply_text(driver_greetings_text, reply_markup=markup_keyboard([driver_keyboard]))
+            driver = Driver.get_by_chat_id(chat_id)
+            if driver:
+                if UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None):
+                    update.message.reply_text(driver_bye_text, reply_markup=markup_keyboard([driver_keyboard[2:]]))
+                else:
+                    update.message.reply_text(driver_greetings_text,
+                                              reply_markup=markup_keyboard([driver_keyboard[:2]]))
             else:
-                update.message.reply_text(user_greetings_text, reply_markup=markup_keyboard([start_keyboard[:3]]))
+                update.message.reply_text(user_greetings_text, reply_markup=markup_keyboard([start_keyboard[:1]]))
                 user.chat_id = chat_id
                 user.save()
         else:
             update.message.reply_text(share_phone_text,
-                                      reply_markup=markup_keyboard([start_keyboard[3:]]))
+                                      reply_markup=markup_keyboard([start_keyboard[1:]]))
     else:
         User.objects.create(
             chat_id=chat_id,
@@ -41,7 +48,7 @@ def start(update, context):
             second_name=update.message.from_user.last_name
         )
         update.message.reply_text(share_phone_text,
-                                  reply_markup=markup_keyboard([start_keyboard[3:]]))
+                                  reply_markup=markup_keyboard([start_keyboard[1:]]))
 
 
 def update_phone_number(update, context):
@@ -55,7 +62,7 @@ def update_phone_number(update, context):
         user.chat_id = chat_id
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
-                                  reply_markup=markup_keyboard([start_keyboard[:3]]))
+                                  reply_markup=markup_keyboard([start_keyboard[:1]]))
 
 
 def helptext(update, context) -> str:

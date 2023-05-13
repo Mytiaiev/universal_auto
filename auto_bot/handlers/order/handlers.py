@@ -278,7 +278,7 @@ def handle_callback_order(update, context):
     order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] == "Accept_order":
         if order:
-            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
+            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None)
             if record:
                 licence_plate = (list(record))[-1].licence_plate
                 vehicle = Vehicle.objects.get(licence_plate=licence_plate)
@@ -290,7 +290,7 @@ def handle_callback_order(update, context):
                                                      ParkSettings.get_value('GOOGLE_API_KEY'))
                     order.car_delivery_price, order.sum = distance_price[1], distance_price[0],
                     order.distance_google = round(distance_price[2], 2)
-                markup = inline_spot_keyboard(order.pk)
+                markup = inline_spot_keyboard(driver_lat, driver_long, order.latitude, order.longitude, order.pk)
                 order.status_order, order.driver = Order.IN_PROGRESS, driver
                 order.save()
                 ParkStatus.objects.create(driver=driver,
@@ -336,7 +336,9 @@ def handle_callback_order(update, context):
         message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
                              order.phone_number, order.sum, order.distance_google)
         query.edit_message_text(text=message)
-        reply_markup, context.user_data['running'] = inline_route_keyboard(pk=order.id), False
+        context.user_data['running'] = False
+        reply_markup = inline_route_keyboard(order.latitude, order.longitude,
+                                             order.to_latitude, order.to_longitude, pk=order.id)
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "Along_the_route" or data[0] == "Off_route":
         context.user_data['recheck'] = data[0]

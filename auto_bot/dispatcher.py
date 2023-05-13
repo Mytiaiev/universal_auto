@@ -18,7 +18,7 @@ from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
 from auto_bot.handlers.reports.handlers import report, download_report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, get_vehicle_licence_plate, \
-    get_imei
+    get_imei, finish_job_main
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
     cancel_order, order_create, location, time_for_order, handle_callback_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
@@ -51,9 +51,9 @@ debt_conversation = ConversationHandler(
 )
 
 job_docs_conversation = ConversationHandler(
-    entry_points=[RegexHandler(r'^Водій$', update_name),
+    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
                   CommandHandler("restart", restart_job_application),
-                  RegexHandler(r'^\/.*', cancel)
+                  MessageHandler(Filters.regex(r'^\/.*'), cancel)
                   ],
     states={
         "JOB_USER_NAME": [MessageHandler(Filters.text, update_second_name, pass_user_data=True)],
@@ -71,7 +71,7 @@ job_docs_conversation = ConversationHandler(
         'JOB_UKLON_CODE': [MessageHandler(Filters.regex(r'^\d{4}$'), uklon_code)]
     },
 
-    fallbacks=[RegexHandler(r'^\/.*', cancel), CommandHandler('cancel', cancel)],
+    fallbacks=[MessageHandler(Filters.regex(r'^\/.*'), cancel), CommandHandler('cancel', cancel)],
     allow_reentry=True,
     per_user=True
 )
@@ -127,6 +127,7 @@ def setup_dispatcher(dp):
     # Changing status of driver
     dp.add_handler(CommandHandler("status", status))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[4]}$"), status))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[5]}$"), finish_job_main))
     dp.add_handler(MessageHandler(
         Filters.regex(fr"^{Driver.ACTIVE}$") |
         Filters.regex(fr"^{Driver.OFFLINE}$") |

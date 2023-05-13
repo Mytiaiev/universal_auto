@@ -1,6 +1,7 @@
 from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 from auto_bot.handlers.order.static_text import *
+from scripts.conversion import coord_to_link
 
 order_keyboard = [
     KeyboardButton(text=f"\u23F0 {TODAY}"),
@@ -24,8 +25,9 @@ payment_keyboard = [
 ]
 
 
-def inline_spot_keyboard(pk=None):
+def inline_spot_keyboard(start_lat, start_lng, end_lat, end_lng, pk=None):
     keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[9], url=coord_to_link(start_lat, start_lng, end_lat, end_lng))],
         [InlineKeyboardButton(order_inline_buttons[0], callback_data=f"On_the_spot {pk}")],
         [InlineKeyboardButton(order_inline_buttons[1], callback_data=f"Reject_order {pk}")],
     ]
@@ -45,10 +47,11 @@ def inline_client_spot(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_route_keyboard(pk=None):
+def inline_route_keyboard(start_lat, start_lng, end_lat, end_lng, pk=None):
     keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[9], url=coord_to_link(start_lat, start_lng, end_lat, end_lng))],
         [InlineKeyboardButton(order_inline_buttons[4], callback_data=f"Along_the_route {pk}")],
-        [InlineKeyboardButton(order_inline_buttons[5], callback_data=f"Off_route {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[5], callback_data=f"Off_route {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
