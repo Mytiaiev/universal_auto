@@ -404,8 +404,8 @@ class OrderAdmin(admin.ModelAdmin):
 
     fieldsets = [
         (None, {'fields': ['from_address', 'to_the_address',
-                           'phone_number', 'chat_id_client', 'order_time',
-                           'status_order', 'payment_method', 'sum']}),
+                           'phone_number', 'chat_id_client',
+                           'status_order', 'payment_method']}),
     ]
 
 
