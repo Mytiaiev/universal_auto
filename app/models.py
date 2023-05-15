@@ -2516,9 +2516,7 @@ def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, hea
             totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
         else:
             incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000)) - plan[k]) / 2
-            totals[
-                k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + \
-                     "-" * 39
+            totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + "-" * 39
     return owner, totals, plan
 
 

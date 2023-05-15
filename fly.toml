@@ -5,7 +5,7 @@ processes = []
 
 [deploy]
   strategy = "bluegreen"
-  release_command = "python3 manage.py migrate --noinput && sh deploy.sh"
+  release_command = "python3 manage.py migrate --noinput"
 [env]
   DEBUG = 0
   ECHO_PORT = "44300"
@@ -19,9 +19,8 @@ processes = []
   exec = []
 
 [processes]
-  app    =  "bash ./entrypoint.sh"
-  worker = "CHROME=true celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q non_priority"
-  worker2 = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q priority -n priority"
+  app    = "bash ./entrypoint.sh"
+  worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q non_priority"
   gps    = "python3 manage.py runscript async_gps_server"
   beat   = "celery -A auto beat -l INFO"
   bot    = "python3 manage.py runscript bot"
