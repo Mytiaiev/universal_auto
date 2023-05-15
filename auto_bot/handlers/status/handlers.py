@@ -38,16 +38,22 @@ def set_status(update, context):
         update.message.reply_text(f"{context.user_data['u_driver']}: Ваш - {event[-1].event} завершено")
     except IndexError:
         pass
-    ParkStatus.objects.create(driver=context.user_data['u_driver'], status=driver_status)
     if driver_status == Driver.OFFLINE:
-        record = UseOfCars.objects.get(user_vehicle=context.user_data['u_driver'],
-                                       created_at__date=timezone.now().date(), end_at=None)
-        record.end_at = timezone.now()
-        record.save()
-        update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
+        finish_job_main(update, context)
     else:
+        ParkStatus.objects.create(driver=context.user_data['u_driver'], status=driver_status)
         update.message.reply_text(f'Твій статус: <b>{driver_status}</b>', reply_markup=ReplyKeyboardRemove(),
                                   parse_mode=ParseMode.HTML)
+
+
+def finish_job_main(update, context):
+    driver = Driver.get_by_chat_id(update.message.chat.id)
+    record = UseOfCars.objects.get(user_vehicle=driver,
+                                   created_at__date=timezone.now().date(), end_at=None)
+    record.end_at = timezone.now()
+    record.save()
+    ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
+    update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
 
 
 def get_vehicle_of_driver(update, context):
@@ -66,7 +72,7 @@ def get_vehicle_of_driver(update, context):
             for k, v in vehicles.items():
                 report_list_vehicles += f'{k}: {v}\n'
             update.message.reply_text(f'{report_list_vehicles}')
-            update.message.reply_text(choose_car_text)
+            update.message.reply_text(choose_car_text, reply_markup=ReplyKeyboardRemove())
             context.user_data['driver_state'] = V_ID
     else:
         update.message.reply_text("За вами не закріплено жодного авто з gps. Зверніться до менеджерів")
