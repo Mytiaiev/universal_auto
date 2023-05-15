@@ -467,7 +467,9 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
             if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
                 text_to_client(context, order, driver_arrived)
                 bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                              message_id=query_id, reply_markup=inline_client_spot(pk=order.id))
+                                              message_id=query_id,
+                                              reply_markup=inline_client_spot(pk=order.id,
+                                                                              phone_number=order.phone_number))
                 context.user_data['flag'] = False
         try:
             m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
