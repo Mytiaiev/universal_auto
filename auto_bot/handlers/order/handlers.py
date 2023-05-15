@@ -17,7 +17,7 @@ from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
-    inline_finish_order
+    inline_finish_order, share_location
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price
@@ -36,6 +36,7 @@ def continue_order(update, context):
 
 def time_for_order(update, context):
     context.user_data['state'] = START_TIME_ORDER
+    context.user_data['location_button'] = False
     reply_markup = markup_keyboard(timeorder_keyboard)
     update.message.reply_text(price_info, reply_markup=reply_markup)
 
@@ -52,6 +53,7 @@ def cancel_order(update, context):
 
 def location(update, context):
     context.user_data['state'] = None
+    context.user_data['location_button'] = True
     m = update.message
     # geocoding lat and lon to address
     context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
@@ -72,7 +74,11 @@ def the_confirmation_of_location(update, context):
 
 def from_address(update, context):
     context.user_data['state'] = FROM_ADDRESS
-    update.message.reply_text('Введіть адресу місця посадки:', reply_markup=ReplyKeyboardRemove())
+    if not context.user_data['location_button']:
+        reply_markup = markup_keyboard(share_location)
+    else:
+        reply_markup = ReplyKeyboardRemove()
+    update.message.reply_text('Введіть адресу місця посадки:', reply_markup=reply_markup)
 
 
 def to_the_address(update, context):
