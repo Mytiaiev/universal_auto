@@ -44,11 +44,9 @@ def inline_markup_accept(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_client_spot(pk=None, phone_number=None):
+def inline_client_spot(pk=None):
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Сlient_on_site {pk}")],
-        [InlineKeyboardButton(order_inline_buttons[9], url=f"tel:{phone_number}")]
-    ]
+        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Сlient_on_site {pk}")]]
     return InlineKeyboardMarkup(keyboard)
 
 
