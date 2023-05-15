@@ -191,7 +191,7 @@ def send_order_to_driver(sender, instance, **kwargs):
                              instance.payment_method, instance.phone_number)
 
         markup = inline_markup_accept(instance.pk)
-        drivers = [i.chat_id for i in Driver.objects.all() if all(i.driver_status == Driver.ACTIVE, i.chat_id)]
+        drivers = [i.chat_id for i in Driver.objects.all() if all((i.driver_status == Driver.ACTIVE, i.chat_id))]
         # drivers = Driver.objects.filter(driver_status=Driver.ACTIVE).order_by('Fleets_drivers_vehicles_rate__rate')
         if drivers:
             try:
