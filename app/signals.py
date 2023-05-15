@@ -54,18 +54,21 @@ def send_day_rent(sender, instance, **kwargs):
 def reject_order_client(sender, instance, **kwargs):
 
     if instance.status_order == Order.CANCELED:
-        driver_chat_id = instance.driver.chat_id
-        driver = Driver.get_by_chat_id(chat_id=driver_chat_id)
-        message_id = instance.driver_message_id
-        bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
-        bot.send_message(
-            chat_id=driver_chat_id,
-            text=f"КЛІЄНТ ВІДМОВИВСЯ ВІД ЗАМОВЛЕННЯ!!!\n"
-                 f"Адреса посадки: {instance.from_address}\n"
-                 f"Місце прибуття: {instance.to_the_address}\n"
-                 f"Спосіб оплати: {instance.payment_method}\n"
-                 f"Номер телефону: {instance.phone_number}\n"
-                 f"Загальна вартість: {instance.sum}грн\n"
-                 f"Ваш статус : Готовий прийняти заказ"
-        )
-        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
+        try:
+            driver_chat_id = instance.driver.chat_id
+            driver = Driver.get_by_chat_id(chat_id=driver_chat_id)
+            message_id = instance.driver_message_id
+            bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
+            bot.send_message(
+                chat_id=driver_chat_id,
+                text=f"КЛІЄНТ ВІДМОВИВСЯ ВІД ЗАМОВЛЕННЯ!!!\n"
+                     f"Адреса посадки: {instance.from_address}\n"
+                     f"Місце прибуття: {instance.to_the_address}\n"
+                     f"Спосіб оплати: {instance.payment_method}\n"
+                     f"Номер телефону: {instance.phone_number}\n"
+                     f"Загальна вартість: {instance.sum}грн\n"
+                     f"Ваш статус : Готовий прийняти заказ"
+            )
+            ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
+        except Exception:
+            pass

@@ -487,13 +487,13 @@ def change_sum_trip(sender=None, **kwargs):
 
 def send_map_to_client(update, context, order, query_id, licence_plate):
     # client_chat_id, car_gps_imei = context.args[0], context.args[1]
-    lat, long = get_location_from_db(licence_plate)
-    context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
-    m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
+    if order.chat_id_client:
+        lat, long = get_location_from_db(licence_plate)
+        context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
+        m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
     context.user_data['flag'] = True
     while context.user_data['running']:
         latitude, longitude = get_location_from_db(licence_plate)
-        order = Order.objects.filter(pk=order.id).first()
         distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
         if context.user_data['flag']:
             if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
@@ -502,11 +502,15 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
                                               message_id=query_id, reply_markup=inline_client_spot(pk=order.id))
                 context.user_data['flag'] = False
         try:
-            if order.status_order == Order.CANCELED:
+            order_ = Order.objects.filter(pk=order.id).first()
+            if order_.status_order == Order.CANCELED:
                 context.user_data['running'] = False
                 return
-            m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
+
+            if order.chat_id_client:
+                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
             time.sleep(10)
+
         except Exception as e:
-            logger.error(msg=e.message)
+            logger.error(msg=str(e))
             time.sleep(30)
