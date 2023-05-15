@@ -444,12 +444,6 @@ class ParkSettingsAdmin(admin.ModelAdmin):
     list_display_links = ['description', 'value', ]
     exclude = ('key',)
 
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
 
 # @admin.register(Service)
 # class ServiceAdmin(admin.ModelAdmin):
