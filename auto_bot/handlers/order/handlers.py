@@ -9,7 +9,6 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, KeyboardButton, LabeledPrice
-from auto_bot.handlers.driver_job.keyboards import empty_inline_keyboard
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
 from auto.tasks import logger, get_distance_trip, check_time_order, \
     delete_button
@@ -17,7 +16,7 @@ from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
-    inline_finish_order, inline_repeat_keyboard, inline_reject_order
+    inline_finish_order, inline_repeat_keyboard, share_location, inline_reject_order
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
@@ -27,14 +26,15 @@ from auto_bot.handlers.order.static_text import *
 def continue_order(update, context):
     order = Order.objects.filter(chat_id_client=update.message.chat.id, status_order__in=[Order.ON_TIME, Order.WAITING])
     if order:
-        update.message.reply_text(already_ordered)
         reply_markup = markup_keyboard([order_keyboard])
-        update.message.reply_text(continue_ask, reply_markup=reply_markup)
+        update.message.reply_text(already_ordered, reply_markup=reply_markup)
     else:
         time_for_order(update, context)
 
 
 def time_for_order(update, context):
+    context.user_data['state'] = START_TIME_ORDER
+    context.user_data['location_button'] = False
     reply_markup = markup_keyboard(timeorder_keyboard)
     update.message.reply_text(price_info, reply_markup=reply_markup)
 
@@ -45,12 +45,13 @@ def cancel_order(update, context):
     if order:
         order.status_order = Order.CANCELED
         order.save()
-    update.message.reply_text(canceled_order_text, reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text(complete_order_text, reply_markup=ReplyKeyboardRemove())
     cancel(update, context)
 
 
 def location(update, context):
     context.user_data['state'] = None
+    context.user_data['location_button'] = True
     m = update.message
     # geocoding lat and lon to address
     context.user_data['latitude'], context.user_data['longitude'] = m.location.latitude, m.location.longitude
@@ -72,7 +73,11 @@ def the_confirmation_of_location(update, context):
 
 def from_address(update, context):
     context.user_data['state'] = FROM_ADDRESS
-    update.message.reply_text('Введіть адресу місця посадки:', reply_markup=ReplyKeyboardRemove())
+    if not context.user_data.get('location_button'):
+        reply_markup = markup_keyboard(share_location)
+    else:
+        reply_markup = ReplyKeyboardRemove()
+    update.message.reply_text('Введіть адресу місця посадки:', reply_markup=reply_markup)
 
 
 def to_the_address(update, context):
@@ -211,7 +216,6 @@ def time_order(update, context):
         answer = update.message.text
         context.user_data['time_order'] = ' '.join(answer.split()[1:])
     context.user_data['state'] = TIME_ORDER
-    print(context.user_data)
     update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)',
                               reply_markup=ReplyKeyboardRemove())
 
@@ -237,9 +241,10 @@ def order_on_time(update, context):
                 order = Order.get_order(chat_id_client=context.user_data['client_chat_id'],
                                         phone=context.user_data['phone_number'],
                                         status_order=Order.WAITING)
-                order.status = Order.ON_TIME
+                order.status_order = Order.ON_TIME
                 order.order_time = conv_time
                 order.save()
+                update.message.reply_text(order_complete)
         else:
             update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
             context.user_data['state'] = TIME_ORDER
@@ -367,7 +372,7 @@ def handle_callback_order(update, context):
         reply_markup = inline_route_keyboard(order.latitude, order.longitude,
                                              order.to_latitude, order.to_longitude, pk=order.id)
         query.edit_message_reply_markup(reply_markup=reply_markup)
-    elif data[0] == "Along_the_route" or data[0] == "Off_route":
+    elif data[0] in ("Along_the_route", "Off_route"):
         context.user_data['recheck'] = data[0]
         reply_markup = inline_repeat_keyboard(order.id)
         message = "Ви вже доїхали до місця призначення?"
@@ -378,7 +383,6 @@ def handle_callback_order(update, context):
         if context.user_data['recheck'] == "Off_route":
             message = 'Проводимо розрахунок вартості...'
             query.edit_message_text(text=message)
-            query.edit_message_reply_markup(reply_markup=empty_inline_keyboard)
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             licence_plate = (list(record))[-1].licence_plate
             status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
@@ -415,7 +419,7 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
-        text_to_client(context, order, "Дякуємо, що скористались послугами нашої компанії")
+        text_to_client(context=context, order=order, text=complete_order_text)
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         context.user_data.clear()
         order.status_order = Order.COMPLETED
@@ -486,15 +490,17 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
     lat, long = get_location_from_db(licence_plate)
     context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
     m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
-
+    context.user_data['flag'] = True
     while context.user_data['running']:
         latitude, longitude = get_location_from_db(licence_plate)
         order = Order.objects.filter(pk=order.id).first()
         distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
-        if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
-            text_to_client(context, order, driver_arrived)
-            bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                          message_id=query_id, reply_markup=inline_client_spot(pk=order.id))
+        if context.user_data['flag']:
+            if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
+                text_to_client(context, order, driver_arrived)
+                bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+                                              message_id=query_id, reply_markup=inline_client_spot(pk=order.id))
+                context.user_data['flag'] = False
         try:
             if order.status_order == Order.CANCELED:
                 context.user_data['running'] = False

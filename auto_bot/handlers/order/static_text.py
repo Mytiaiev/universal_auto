@@ -10,17 +10,17 @@ CANCEL = "Скасувати замовлення"
 TOMORROW = "Замовити на завтра"
 TODAY = "Замовити на інший час"
 NOW = "Замовити на зараз"
+LOCATION = "Розшарити локацію"
 
 PAYCARD = "Картка"
 CASH = "Готівка"
 
-already_ordered = "У вас вже є активне замовлення бажаєте замовити ще одне авто?"
+already_ordered = "У вас вже є активне замовлення, бажаєте замовити ще одне авто?"
 price_info = f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY', 15)}грн/км\n" + \
              f"За містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY', 30)}грн/км"
 AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR', 25)}"), int(
     f"{ParkSettings.get_value('COST_PER_KM', 20)}")
-continue_ask = "Чи бажаєте ви продовжити?"
-canceled_order_text = "Гарного дня. Дякуємо, що скористались нашими послугами"
+complete_order_text = "Гарного дня. Дякуємо, що скористались нашими послугами"
 choose_address_text = "Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси'" \
                       " та вкажіть більш детально вашу адресу"
 wrong_address_request = "Нам не вдалось обробити вашу адресу, спробуйте ще раз"
@@ -30,6 +30,7 @@ driver_arrived = "Машину подано. Водій вас очікує"
 select_car_error = "Щоб приймати замовлення, скористайтесь спочатку командой /status," \
                    "щоб позначити на якому ви сьогодні авто"
 driver_cancel = "Водій відхилив замовлення. Пошук іншого водія..."
+order_complete = "Ваше замовлення прийняте, очікуйте водія"
 
 order_inline_buttons = (
     "\u274c Відхилити",
