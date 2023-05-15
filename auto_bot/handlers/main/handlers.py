@@ -36,7 +36,7 @@ def start(update, context):
                 reply_markup = markup_keyboard([start_keyboard[:1]])
                 user.chat_id = chat_id
                 user.save()
-            update.message.reply_text(user_greetings_text, reply_markup)
+            update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
         else:
             update.message.reply_text(share_phone_text,
                                       reply_markup=markup_keyboard([start_keyboard[1:]]))
