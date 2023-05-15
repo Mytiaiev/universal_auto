@@ -8,7 +8,7 @@ from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardBu
 from telegram.ext import ConversationHandler
 
 from app.models import User, JobApplication
-from auto_bot.handlers.driver_job.keyboards import job_name_buttons, empty_inline_keyboard
+from auto_bot.handlers.driver_job.keyboards import job_name_buttons
 from auto_bot.handlers.driver_job.static_text import JOB_DRIVER
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 
@@ -88,8 +88,7 @@ def update_user_information(update, context):
 def get_job_photo(update, context):
     update.callback_query.answer()
     update.callback_query.edit_message_text(
-        text='Надішліть ваше фото не розмите, без головного убору та окулярів (селфі).Для відправки скористайтеся \U0001F4CE біля menu',
-        reply_markup=empty_inline_keyboard)
+        text='Надішліть ваше фото не розмите, без головного убору та окулярів (селфі).Для відправки скористайтеся \U0001F4CE біля menu')
     return 'WAIT_FOR_JOB_PHOTO'
 
 

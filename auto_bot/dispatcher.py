@@ -124,7 +124,6 @@ def setup_dispatcher(dp):
                                   comment))
     # Add job application
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[2]}$"), job_application))
-    dp.add_handler(job_docs_conversation)
     # Commands for Drivers
     # Changing status of driver
     dp.add_handler(CommandHandler("status", status))
@@ -204,6 +203,7 @@ def setup_dispatcher(dp):
 
     #
     # # System commands
+    dp.add_handler(job_docs_conversation)
     dp.add_handler(CommandHandler("cancel", cancel))
     dp.add_handler(MessageHandler(Filters.text, text))
     dp.add_error_handler(error_handler)

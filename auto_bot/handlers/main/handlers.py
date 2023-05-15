@@ -7,11 +7,10 @@ from telegram import BotCommand, ReplyKeyboardMarkup, Update, ParseMode
 from telegram.ext import ConversationHandler
 
 from app.models import User, Driver, DriverManager, Owner, ServiceStationManager, UseOfCars
-from auto_bot.handlers.main.keyboards import driver_keyboard, start_keyboard, markup_keyboard
+from auto_bot.handlers.main.keyboards import driver_keyboard, start_keyboard, markup_keyboard, markup_keyboard_onetime
 import logging
 
-from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, driver_greetings_text, help_text, \
-    DEVELOPER_CHAT_ID, driver_bye_text
+from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -30,14 +29,14 @@ def start(update, context):
             driver = Driver.get_by_chat_id(chat_id)
             if driver:
                 if UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None):
-                    update.message.reply_text(driver_bye_text, reply_markup=markup_keyboard([driver_keyboard[2:]]))
+                    reply_markup = markup_keyboard_onetime([driver_keyboard[2:]])
                 else:
-                    update.message.reply_text(driver_greetings_text,
-                                              reply_markup=markup_keyboard([driver_keyboard[:2]]))
+                    reply_markup = markup_keyboard([driver_keyboard[:2]])
             else:
-                update.message.reply_text(user_greetings_text, reply_markup=markup_keyboard([start_keyboard[:1]]))
+                reply_markup = markup_keyboard([start_keyboard[:1]])
                 user.chat_id = chat_id
                 user.save()
+            update.message.reply_text(user_greetings_text, reply_markup)
         else:
             update.message.reply_text(share_phone_text,
                                       reply_markup=markup_keyboard([start_keyboard[1:]]))
