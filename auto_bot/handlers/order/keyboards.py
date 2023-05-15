@@ -9,9 +9,13 @@ order_keyboard = [
 ]
 
 timeorder_keyboard = [
-    [KeyboardButton(text=f"\u2705 {NOW}", request_location=True),
+    [KeyboardButton(text=f"\u2705 {NOW}"),
      KeyboardButton(text=f"\u23F0 {TODAY}")],
     [KeyboardButton(text=f"\u274c {CANCEL}")]
+]
+
+share_location = [
+    [KeyboardButton(text=f"\U0001F4CD {LOCATION}", request_location=True)]
 ]
 
 location_keyboard = [
