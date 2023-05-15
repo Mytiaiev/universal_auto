@@ -511,10 +511,19 @@ $(document).ready(function(){
   $('#delivery_time').mask("dd:dd", {placeholder: "00:00 (Вкажіть час)"});
   intlTelInit('#phone');
 
+  $('input[name="radio"]').on('change', function() {
+    var selectedValue = $('input[name="radio"]:checked').val();
+    if (selectedValue === '2') {
+      $('#order-time-field').removeClass('hidden');
+    } else {
+      $('#order-time-field').addClass('hidden');
+    }
+  });
+
   $('#order-form').on('submit', function(event){
     event.preventDefault();
 
-    var isLateOrder = event.originalEvent.submitter.id === 'later-order';
+    var isLateOrder = $('input[name="radio"]:checked').val() === '2';
     var form = new FormData(this);
     var timeWrapper = $('#order-time-field');
     var noTime = timeWrapper.hasClass('hidden');
@@ -618,7 +627,7 @@ $(document).ready(function(){
                     <div class="modal-taxi">
                       <div class="modal-content-taxi">
                         <span class="close">&times;</span>
-                        <h3>Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою пізніше!</h3>
+                        <h3>Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою замовлення на інший час!</h3>
                       </div>
                     </div>
                   `;
