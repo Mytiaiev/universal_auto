@@ -20,5 +20,4 @@ shapely
 python-gettext
 translators
 gunicorn
-fake-useragent
 backports.zoneinfo
