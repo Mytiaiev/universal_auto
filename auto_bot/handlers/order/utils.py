@@ -33,4 +33,4 @@ def text_to_client(context=None, order=None, text=None, button=None):
             "apiKey": ParkSettings.get_value('MOBIZON_API_KEY'),
             "output": "json"
         }
-        requests.post(ParkSettings.get_value('MOBIZON_DOMIAN'), params=params)
+        requests.post(ParkSettings.get_value('MOBIZON_DOMAIN'), params=params)

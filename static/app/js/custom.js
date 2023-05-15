@@ -245,7 +245,9 @@ function orderUpdate(id_order) {
               cost = Math.ceil(cost);
               setCookie('sum', cost, 1)
 
-                $('.alert-message').html('Ціна поїздки:' +cost+ 'грн.');
+              var durationToA = result.routes[0].legs[0].duration.text;
+
+              $('.alert-message').html('Ціна поїздки:' +cost+ 'грн. Приблизний час прибуття авто: ' + durationToA);
               $('.order-confirm').remove();
               $('.order-reject').before('<button class="order-go btn btn-primary ml-3" onclick="consentTrip()">Погодитись</button>');
 
@@ -451,7 +453,7 @@ function createMap(address, to_address, taxiArr) {
 
 
     // Add the cost text to the map
-    var costText = "Оберіть будь ласка метод оплати та заждіть поки ми підберемо вам автомобіль.";
+    var costText = "Оберіть будь ласка метод оплати.";
     var costDiv = document.createElement('div');
     costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
     map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
@@ -470,6 +472,8 @@ function createMap(address, to_address, taxiArr) {
     // Add event listener to the "Готівка" button to send a post request to views.py
     orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
     orderConfirm.addEventListener("click", function (){
+      costText = "Заждіть поки ми підберемо вам автомобіль.";
+      costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
       onOrderPayment('Готівка')
       hidePaymentButtons();
     });
@@ -515,8 +519,13 @@ $(document).ready(function(){
     var selectedValue = $('input[name="radio"]:checked').val();
     if (selectedValue === '2') {
       $('#order-time-field').removeClass('hidden');
+      $('#order_time-error').removeClass('hidden');
     } else {
       $('#order-time-field').addClass('hidden');
+    }
+
+    if (selectedValue === '1') {
+      $('#order_time-error').addClass('hidden');
     }
   });
 
