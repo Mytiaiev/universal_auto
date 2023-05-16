@@ -388,7 +388,6 @@ function consentTrip(){
       applicationAccepted.innerHTML = `
         <div class="modal">
           <div class="modal-content">
-            <span class="close">&times;</span>
             <h3>Ваша заявка прийнята. Очікуйте на автомобіль!</h3>
           </div>
         </div>
@@ -396,14 +395,14 @@ function consentTrip(){
       document.body.appendChild(applicationAccepted);
       deleteAllCookies();
 
-      // We attach an event to close the window when the cross is clicked
-      var closeButton = applicationAccepted.querySelector(".close");
-      closeButton.addEventListener("click", function() {
-        applicationAccepted.parentNode.removeChild(applicationAccepted);
+      var modal = applicationAccepted.querySelector(".modal");
+
+      setTimeout(function() {
+        modal.parentNode.removeChild(modal);
         deleteAllCookies();
         location.reload();
-      });
-    },
+      }, 5000);
+    }
   })
 }
 
@@ -454,7 +453,7 @@ function createMap(address, to_address, taxiArr) {
 
 
     // Add the cost text to the map
-    var costText = "Оберіть будь ласка метод оплати.";
+    var costText = "Оберіть метод оплати.";
     var costDiv = document.createElement('div');
     costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
     map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
@@ -606,15 +605,20 @@ $(document).ready(function(){
           setCookie("toLon", toGeocode.lng().toFixed(6), 1);
           setCookie('orderData', JSON.stringify(orderData));
 
-          if(form.has('order_time')) {
-            $('body').prepend( `
-              <div class="modal">
-                <div class="modal-content">
-                  <span class="close" onclick="$('.modal').remove(); window.location.reload();">&times;</span>
-                  <h3>Дякую за замовлення. Очікуйте на автомобіль!</h3>
-                </div>
-              </div>
-            `);
+          if (form.has('order_time')) {
+            var modal = $(
+              '<div class="modal">' +
+                '<div class="modal-content">' +
+                  '<h3>Дякую за замовлення. Очікуйте на автомобіль!</h3>' +
+                '</div>' +
+              '</div>'
+            );
+            $('body').prepend(modal);
+
+            setTimeout(function() {
+              modal.remove();
+              window.location.reload();
+            }, 5000);
 
             onOrderPayment().then(function(){
                 deleteAllCookies();

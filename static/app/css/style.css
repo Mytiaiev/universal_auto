@@ -832,7 +832,8 @@ header button start
   background-color: #ff7070;
   border: 1px solid #ff7070;
   color: #ffffff;
-  border-radius: 0px;
+  border-radius: 12px;
+  margin-top: 15px;
 }
 
 .info_section .info_form button:hover {
