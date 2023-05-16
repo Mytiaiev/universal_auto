@@ -10,7 +10,6 @@ app = Celery('auto')
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.conf.task_queues = (
-    Queue('priority', Exchange('priority'), routing_key='priority'),
     Queue('non_priority', Exchange('non_priority'), routing_key='non_priority'),
 )
 

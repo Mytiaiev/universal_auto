@@ -34,7 +34,7 @@ MEMCASH_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
-@app.task(queue='priority')
+@app.task(queue='non_priority')
 def raw_gps_handler(id):
     try:
         raw = RawGPS.objects.get(id=id)
@@ -259,8 +259,7 @@ def setup_periodic_tasks(sender, **kwargs):
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
     global UAGPS_CHROME_DRIVER
-    if os.getenv("CHROME", False):
-        init_chrome_driver()
+    init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              check_time_order.s(), queue='non_priority')
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')

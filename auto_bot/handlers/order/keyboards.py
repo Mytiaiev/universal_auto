@@ -45,7 +45,8 @@ def inline_markup_accept(pk=None):
 
 
 def inline_client_spot(pk=None):
-    keyboard = [[InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Сlient_on_site {pk}")]]
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Сlient_on_site {pk}")]]
     return InlineKeyboardMarkup(keyboard)
 
 

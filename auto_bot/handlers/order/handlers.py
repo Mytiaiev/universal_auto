@@ -192,7 +192,7 @@ def send_order_to_driver(sender, instance, **kwargs):
                              instance.payment_method, instance.phone_number)
 
         markup = inline_markup_accept(instance.pk)
-        drivers = [i.chat_id for i in Driver.objects.all() if i.driver_status == Driver.ACTIVE]
+        drivers = [i.chat_id for i in Driver.objects.all() if all((i.driver_status == Driver.ACTIVE, i.chat_id))]
         # drivers = Driver.objects.filter(driver_status=Driver.ACTIVE).order_by('Fleets_drivers_vehicles_rate__rate')
         if drivers:
             try:
@@ -499,7 +499,8 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
             if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
                 text_to_client(context, order, driver_arrived)
                 bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                              message_id=query_id, reply_markup=inline_client_spot(pk=order.id))
+                                              message_id=query_id,
+                                              reply_markup=inline_client_spot(pk=order.id))
                 context.user_data['flag'] = False
         try:
             order_ = Order.objects.filter(pk=order.id).first()
