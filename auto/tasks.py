@@ -233,7 +233,7 @@ def check_time_order(self):
     print("check orders on time")
 
 
-@app.task(bind=True, queue='priority')
+@app.task(bind=True, queue='non_priority')
 def delete_button(self, order_id, query, text):
     return order_id, query, text
 

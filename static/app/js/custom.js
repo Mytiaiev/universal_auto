@@ -107,6 +107,7 @@ const CENTRE_CITY_LAT = parseFloat(parsedData["CENTRE_CITY_LAT"]);
 const CENTRE_CITY_LNG = parseFloat(parsedData["CENTRE_CITY_LNG"]);
 const CENTRE_CITY_RADIUS = parseInt(parsedData["CENTRE_CITY_RADIUS"]);
 const SEND_TIME_ORDER_MIN = parseInt(parsedData["SEND_TIME_ORDER_MIN"]);
+const userLanguage = navigator.language || navigator.userLanguage;
 
 const city_boundaries = function () {
   return [
@@ -247,7 +248,7 @@ function orderUpdate(id_order) {
 
               var durationToA = result.routes[0].legs[0].duration.text;
 
-              $('.alert-message').html('Ціна поїздки:' +cost+ 'грн. Приблизний час прибуття авто: ' + durationToA);
+              $('.alert-message').html('Ціна поїздки:' +cost+ ' грн. Приблизний час прибуття авто: ' + durationToA);
               $('.order-confirm').remove();
               $('.order-reject').before('<button class="order-go btn btn-primary ml-3" onclick="consentTrip()">Погодитись</button>');
 
