@@ -248,9 +248,9 @@ function orderUpdate(id_order) {
 
               var durationToA = result.routes[0].legs[0].duration.text;
 
-              $('.alert-message').html('Ціна поїздки:' +cost+ ' грн. Приблизний час прибуття авто: ' + durationToA);
+              $('.alert-message').html(gettext('Ціна поїздки:') +cost+ gettext(' грн. Приблизний час прибуття авто: ') + durationToA);
               $('.order-confirm').remove();
-              $('.order-reject').before('<button class="order-go btn btn-primary ml-3" onclick="consentTrip()">Погодитись</button>');
+              $('.order-reject').before('<button class="order-go btn btn-primary ml-3" onclick="consentTrip()">' + gettext("Погодитись") + '</button>');
 
               google.maps.event.trigger(map, 'resize');
             }
@@ -319,17 +319,19 @@ function onOrderReject() {
     })
 
   // Create an HTML window element with a comment form
+  var modalText = gettext("Коментар про відмову від поїздки")
+  var modalButton = gettext("Відправити")
   var commentForm = document.createElement("div");
   commentForm.innerHTML = `
     <div class="modal">
       <div class="modal-content">
         <span class="close">&times;</span>
-        <h3>Коментар про відмову від поїздки</h3>
+        <h3>${modalText}</h3>
         <div class="form-group">
-            <label for="reject_comment">Залишіть будьласка відгук</label>
-            <textarea class="form-control" id="reject_comment" name="reject_comment" rows="3"></textarea>
+          <label for="reject_comment">${gettext("Залишіть, будь ласка, відгук")}</label>
+          <textarea class="form-control" id="reject_comment" name="reject_comment" rows="3"></textarea>
         </div>
-        <button class="btn btn-block btn-primary" onclick="sendComment()">Відправити</button>
+        <button class="btn btn-block btn-primary" onclick="sendComment()">${modalButton}</button>
       </div>
     </div>
   `;
@@ -384,11 +386,12 @@ function consentTrip(){
     },
     success: function(response) {
       destroyMap();
+      var text1 = gettext('Ваша заявка прийнята. Очікуйте на автомобіль!')
       var applicationAccepted = document.createElement("div");
       applicationAccepted.innerHTML = `
         <div class="modal">
           <div class="modal-content">
-            <h3>Ваша заявка прийнята. Очікуйте на автомобіль!</h3>
+            <h3>${text1}</h3>
           </div>
         </div>
       `;
@@ -453,18 +456,21 @@ function createMap(address, to_address, taxiArr) {
 
 
     // Add the cost text to the map
-    var costText = "Оберіть метод оплати.";
+    var costText = gettext("Оберіть метод оплати.");
     var costDiv = document.createElement('div');
     costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
     map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
 
     // Add the payment buttons to the map
     var paymentDiv = document.createElement('div');
+    var button1 = gettext('Готівка');
+    var button2 = gettext('Картка');
+    var button3 = gettext('Відмовитись');
     paymentDiv.innerHTML =
       "<div class='mb-3'>" +
-      "<button class='order-confirm btn btn-primary'>Готівка</button>" +
-      // "<button class='order-confirm btn btn-primary ml-3'>Картка</button>" +
-      "<button class='order-reject btn btn-danger ml-3'>Відмовитись</button>" +
+      "<button class='order-confirm btn btn-primary'>" + button1 + "</button>" +
+      // "<button class='order-confirm btn btn-primary ml-3'>" + button2 + "</button>" +
+      "<button class='order-reject btn btn-danger ml-3'>" + button3 + "</button>" +
       "</div>";
 
     map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
@@ -472,7 +478,7 @@ function createMap(address, to_address, taxiArr) {
     // Add event listener to the "Готівка" button to send a post request to views.py
     orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
     orderConfirm.addEventListener("click", function (){
-      costText = "Заждіть поки ми підберемо вам автомобіль.";
+      costText = gettext("Заждіть поки ми підберемо вам автомобіль.");
       costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
       onOrderPayment('Готівка')
       hidePaymentButtons();
@@ -512,7 +518,7 @@ function intlTelInit(phoneEl) {
 $(document).ready(function(){
   setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
 
-  $('#delivery_time').mask("dd:dd", {placeholder: "00:00 (Вкажіть час)"});
+  $('#delivery_time').mask("dd:dd", {placeholder: gettext("00:00 (Вкажіть час)")});
   intlTelInit('#phone');
 
   $('input[name="radio"]').on('change', function() {
@@ -550,10 +556,10 @@ $(document).ready(function(){
     var fields = form.keys()
     var errorFields = 0;
     var errorMsgs = {
-      'phone_number': "Номер телефону обов'язковий",
-      'from_address': "Адреса обов'язкова",
-      'to_the_address': "Адреса обов'язкова",
-      'order_time': "Час замовлення обов'язково"
+      'phone_number': gettext("Номер телефону обов'язковий"),
+      'from_address': gettext("Адреса обов'язкова"),
+      'to_the_address': gettext("Адреса обов'язкова"),
+      'order_time': gettext("Час замовлення обов'язково")
     }
 
     for(const field of fields) {
@@ -574,7 +580,9 @@ $(document).ready(function(){
         form.set('order_time', formattedDeliveryTime);
       }else {
         errorFields++;
-        $('#order_time-error').html('Виберіть час не менше ніж через ' + SEND_TIME_ORDER_MIN + ' хвилин')
+        var orderTimeError1 = gettext('Виберіть час не менше ніж через ');
+        var orderTimeError2 = gettext(' хвилин');
+        $('#order_time-error').html(orderTimeError1 + SEND_TIME_ORDER_MIN + orderTimeError2)
       }
     }
 
@@ -586,12 +594,12 @@ $(document).ready(function(){
       var geocoder = new google.maps.Geocoder();
       geocoder.geocode({ 'address': fromAddress }, function(fromGeocoded, status) {
         if (status !== 'OK') {
-          $('#from_address-error').html('Некоректна адреса');
+          $('#from_address-error').html(gettext('Некоректна адреса'));
           return;
         }
         geocoder.geocode({ 'address': toAddress }, function(toGeocoded, status) {
           if (status !== 'OK') {
-            $('#to_the_address-error').html('Некоректна адреса');
+            $('#to_the_address-error').html(gettext('Некоректна адреса'));
             return;
           }
           form.append('action', 'order');
@@ -606,13 +614,13 @@ $(document).ready(function(){
           setCookie('orderData', JSON.stringify(orderData));
 
           if (form.has('order_time')) {
-            var modal = $(
-              '<div class="modal">' +
-                '<div class="modal-content">' +
-                  '<h3>Дякую за замовлення. Очікуйте на автомобіль!</h3>' +
-                '</div>' +
-              '</div>'
-            );
+            var text2 = gettext('Дякую за замовлення. Очікуйте на автомобіль!');
+            var modal = $('<div class="modal">' +
+              '<div class="modal-content">' +
+              '<h3>' + text2 + '</h3>' +
+              '</div>' +
+              '</div>');
+
             $('body').prepend(modal);
 
             setTimeout(function() {
@@ -636,15 +644,15 @@ $(document).ready(function(){
                 if (taxiArr.length > 0) {
                   createMap(fromGeocoded, toGeocoded, taxiArr);
                 } else {
+                  var text3 = gettext('Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою замовлення на інший час!')
                   var noTaxiArr = document.createElement("div");
                   noTaxiArr.innerHTML = `
                     <div class="modal-taxi">
-                      <div class="modal-content-taxi">
-                        <span class="close">&times;</span>
-                        <h3>Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою замовлення на інший час!</h3>
-                      </div>
+                    <div class="modal-content-taxi">
+                    <span class="close">&times;</span>
+                    <h3>${text3}</h3>
                     </div>
-                  `;
+                    </div>`;
                   document.body.appendChild(noTaxiArr);
                   deleteCookie("address")
 
@@ -711,7 +719,7 @@ function initAutocomplete(inputID) {
       inputField.value = place.formatted_address;
     } else {
       inputField.value = '';
-      inputField.placeholder = "Будь ласка, введіть коректну адресу";
+      inputField.placeholder = gettext("Будь ласка, введіть коректну адресу");
     }
   });
 }
