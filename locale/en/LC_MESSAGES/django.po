@@ -174,14 +174,10 @@ msgstr ""
 "satisfaction during your travels."
 
 #: taxi_service/templates/index.html:119
-#, fuzzy
-#| msgid "Замовити таксі"
 msgid "Замовити на інший час"
-msgstr "Order taxi"
+msgstr "Order for another time"
 
 #: taxi_service/templates/index.html:166
-#, fuzzy
-#| msgid "Замовити зараз"
 msgid "Замовити"
 msgstr "Order now"
 

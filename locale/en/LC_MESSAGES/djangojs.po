@@ -56,11 +56,11 @@ msgstr "Cash"
 
 #: static/app/js/custom.js:467
 msgid "Картка"
-msgstr ""
+msgstr "Card"
 
 #: static/app/js/custom.js:468
 msgid "Відмовитись"
-msgstr "Card"
+msgstr "Refuse"
 
 #: static/app/js/custom.js:481
 msgid "Заждіть поки ми підберемо вам автомобіль."
