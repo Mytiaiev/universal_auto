@@ -30,7 +30,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
 from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE, \
-    TODAY, NOW
+    TODAY, NOW, complete_order_text
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -116,12 +116,15 @@ def setup_dispatcher(dp):
         Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
         order_create))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile(
-                                            "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip) [0-9]+$")))
+                    pattern=re.compile(
+                    "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(comment, pattern=re.compile("^Comment client$")))
     # sending comment
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[1]}$") |
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$") |
                                   Filters.regex(fr"^Відмовитись від замовлення$"),
                                   comment))
+    dp.add_handler(CommandHandler("comment", comment))
+
     # Add job application
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[2]}$"), job_application))
     # Commands for Drivers

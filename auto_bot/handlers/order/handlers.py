@@ -20,6 +20,7 @@ from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
 from auto_bot.handlers.order.static_text import *
+from auto_bot.handlers.comment.handlers import comment
 
 
 def continue_order(update, context):
@@ -41,11 +42,12 @@ def time_for_order(update, context):
 def cancel_order(update, context):
     order = Order.objects.filter(chat_id_client=update.message.chat.id,
                                  status_order__in=[Order.ON_TIME, Order.WAITING]).first()
+    update.message.reply_text(complete_order_text, reply_markup=ReplyKeyboardRemove())
+    context.user_data.clear()
     if order:
         order.status_order = Order.CANCELED
         order.save()
-    update.message.reply_text(complete_order_text, reply_markup=ReplyKeyboardRemove())
-    cancel(update, context)
+        comment(update, context)
 
 
 def location(update, context):
@@ -362,7 +364,6 @@ def handle_callback_order(update, context):
                                  order.phone_number, order.sum, order.distance_google)
             query.edit_message_text(text=message)
             query.edit_message_reply_markup(reply_markup=inline_finish_order(order.id))
-
     elif data[0] == "End_trip":
         # if order.payment_method == PAYCARD:
         #     payment_id = str(uuid4())
@@ -388,7 +389,7 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
-        text_to_client(context, order, complete_order_text)
+        text_to_client(context, order, complete_order_text, comment=True)
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         context.user_data.clear()
         order.status_order = Order.COMPLETED
