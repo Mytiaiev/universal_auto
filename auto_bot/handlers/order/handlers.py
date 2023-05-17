@@ -342,7 +342,7 @@ def handle_callback_order(update, context):
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "End_trip":
         reply_markup = inline_route_keyboard(order.id)
-        message = "Ви вже доїхали до місця призначення?"
+        message = "Поїздка була згідно маршруту?"
         query.edit_message_text(text=message)
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] in ("Along_the_route", "Off_route"):
