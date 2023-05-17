@@ -3,6 +3,7 @@ import os
 import requests
 
 from app.models import ParkSettings
+from auto_bot.main import bot
 from scripts.conversion import get_addresses_by_radius
 
 
@@ -17,9 +18,9 @@ def buttons_addresses(address):
         return None
 
 
-def text_to_client(context=None, order=None, text=None):
+def text_to_client(order=None, text=None):
     if order.chat_id_client:
-        context.bot.send_message(chat_id=order.chat_id_client, text=text)
+        bot.send_message(chat_id=order.chat_id_client, text=text)
     else:
         params = {
             "recipient": order.phone_number[1:],

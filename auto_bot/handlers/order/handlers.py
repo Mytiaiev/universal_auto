@@ -317,7 +317,7 @@ def handle_callback_order(update, context):
                     r.start()
                 except:
                     pass
-                text_to_client(context, order, report_for_client)
+                text_to_client(order, report_for_client)
             else:
                 query.edit_message_text(text=select_car_error)
         else:
@@ -328,7 +328,7 @@ def handle_callback_order(update, context):
             order.status_order = Order.WAITING
             order.save()
             # remove inline keyboard markup from the message
-            text_to_client(context, order, driver_cancel)
+            text_to_client(order, driver_cancel)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
     elif data[0] == "Сlient_on_site":
@@ -390,7 +390,7 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
-        text_to_client(context, order, complete_order_text)
+        text_to_client(order, complete_order_text)
         context.user_data.clear()
         order.status_order = Order.COMPLETED
         order.save()
@@ -462,7 +462,7 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
             distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
             if context.user_data['flag']:
                 if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
-                    text_to_client(context, order, driver_arrived)
+                    text_to_client(order, driver_arrived)
                     bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                                   message_id=query_id,
                                                   reply_markup=inline_client_spot(pk=order.id))
