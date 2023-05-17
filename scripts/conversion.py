@@ -113,7 +113,7 @@ def coord_to_link(start_lat, start_lng, end_lat, end_lng):
 
 
 def get_location_from_db(licence_plate):
-    gps = VehicleGPS.objects.filter(vehicle=licence_plate).first()
+    gps = VehicleGPS.objects.filter(vehicle=licence_plate).last()
     latitude, longitude = str(gps.lat), str(gps.lon)
     return latitude, longitude
 
