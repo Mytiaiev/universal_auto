@@ -35,7 +35,7 @@ order_complete = "Ваше замовлення прийняте, очікуйт
 order_inline_buttons = (
     "\u274c Відхилити",
     "\u2705 Прийняти замовлення",
-    "\u2705 Клієнт на місці",
+    "\u2705 Розпочати поїздку",
     "\u2705 Рухались по маршруту",
     "\u274c Відхилялись від маршрута",
     "\u2705 Розрахувати вартість і завершити поїздку",
@@ -61,3 +61,8 @@ def order_info(number, address, to_address, payment, phone, price=None, distance
         message = now_message + message
     return message
 
+
+def driver_complete_text(price):
+    message = f"Поїздку завершено\n" \
+              f"Сума замовлення: {price}грн"
+    return message

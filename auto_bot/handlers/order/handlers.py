@@ -295,7 +295,7 @@ def handle_callback_order(update, context):
                                                      ParkSettings.get_value('GOOGLE_API_KEY'))
                     order.car_delivery_price, order.sum = distance_price[1], distance_price[0],
                     order.distance_google = round(distance_price[2], 2)
-                markup = inline_spot_keyboard(driver_lat, driver_long, order.latitude, order.longitude, order.pk)
+                markup = inline_spot_keyboard(order.latitude, order.longitude)
                 order.status_order, order.driver = Order.IN_PROGRESS, driver
                 order.save()
                 ParkStatus.objects.create(driver=driver,
@@ -338,15 +338,19 @@ def handle_callback_order(update, context):
         message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
                              order.phone_number, order.sum, order.distance_google)
         query.edit_message_text(text=message)
-        reply_markup = inline_route_keyboard(order.latitude, order.longitude,
-                                             order.to_latitude, order.to_longitude, pk=order.id)
+        reply_markup = inline_finish_order(order.to_latitude, order.to_longitude, pk=order.id)
         query.edit_message_reply_markup(reply_markup=reply_markup)
-    elif data[0] in ("Along_the_route", "Off_route"):
-        context.user_data['recheck'] = data[0]
-        reply_markup = inline_repeat_keyboard(order.id)
+    elif data[0] == "End_trip":
+        reply_markup = inline_route_keyboard(order.id)
         message = "Ви вже доїхали до місця призначення?"
         query.edit_message_text(text=message)
         query.edit_message_reply_markup(reply_markup=reply_markup)
+    elif data[0] in ("Along_the_route", "Off_route"):
+        context.user_data['recheck'] = data[0]
+        message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
+                             order.phone_number, order.sum, order.distance_google)
+        query.edit_message_text(text=message)
+        query.edit_message_reply_markup(reply_markup=inline_repeat_keyboard(order.id))
     elif data[0] == "Accept":
         ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
         if context.user_data['recheck'] == "Off_route":
@@ -358,12 +362,10 @@ def handle_callback_order(update, context):
             s, e = timezone.localtime(status_driver.created_at), timezone.localtime(timezone.localtime())
             get_distance_trip.delay(data[1], query.message.message_id, s, e, licence_plate)
         else:
-            message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
-                                 order.phone_number, order.sum, order.distance_google)
+            message = driver_complete_text(order.sum)
             query.edit_message_text(text=message)
-            query.edit_message_reply_markup(reply_markup=inline_finish_order(order.id))
 
-    elif data[0] == "End_trip":
+
         # if order.payment_method == PAYCARD:
         #     payment_id = str(uuid4())
         #     payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
@@ -389,7 +391,6 @@ def handle_callback_order(update, context):
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
         text_to_client(context, order, complete_order_text)
-        query.edit_message_text(text=f"<<Поїздку завершено>>")
         context.user_data.clear()
         order.status_order = Order.COMPLETED
         order.save()
@@ -441,17 +442,12 @@ def change_sum_trip(sender=None, **kwargs):
         else:
             order.sum = int(price_per_minute) + int(order.car_delivery_price)
         order.save()
-        if order.chat_id_client:
-            bot.send_message(chat_id=order.chat_id_client,
-                             text=f'Сума до оплати: {order.sum}грн')
-        else:
-            text_to_client(order=order, text=f'Сума до оплати: {order.sum}грн')
-        message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
-                             order.phone_number, order.sum, order.distance_gps)
+        text_to_client(order=order, text=f'Сума до оплати: {order.sum}грн')
+        message = driver_complete_text(order.sum)
 
         bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
-        bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                      message_id=query_id, reply_markup=inline_finish_order(order.id))
+        # bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+        #                               message_id=query_id, reply_markup=inline_finish_order(order.id))
 
 
 def send_map_to_client(update, context, order, query_id, licence_plate):
@@ -460,19 +456,22 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
     context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
     m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
     context.user_data['flag'] = True
-    while context.user_data['running']:
-        latitude, longitude = get_location_from_db(licence_plate)
-        distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
-        if context.user_data['flag']:
-            if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
-                text_to_client(context, order, driver_arrived)
-                bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                              message_id=query_id,
-                                              reply_markup=inline_client_spot(pk=order.id))
-                context.user_data['flag'] = False
-        try:
-            m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
-            time.sleep(10)
-        except Exception as e:
-            logger.error(msg=e.message)
-            time.sleep(30)
+    while True:
+        if context.user_data.get('running'):
+            latitude, longitude = get_location_from_db(licence_plate)
+            distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
+            if context.user_data['flag']:
+                if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
+                    text_to_client(context, order, driver_arrived)
+                    bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+                                                  message_id=query_id,
+                                                  reply_markup=inline_client_spot(pk=order.id))
+                    context.user_data['flag'] = False
+            try:
+                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
+                time.sleep(10)
+            except Exception as e:
+                logger.error(msg=e.message)
+                time.sleep(30)
+        else:
+            break
