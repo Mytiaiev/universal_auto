@@ -201,6 +201,7 @@ function orderUpdate(id_order) {
             ],
             destination: destinationMarker.position,
             travelMode: google.maps.TravelMode.DRIVING,
+            language: userLanguage,
           };
 
           // Call the directions service to get the route
@@ -724,7 +725,7 @@ function initAutocomplete(inputID) {
   });
 }
 
-loadGoogleMaps( 3, apiGoogle, "uk",'','geometry,places').then(function() {
+loadGoogleMaps( 3, apiGoogle, userLanguage,'','geometry,places').then(function() {
  initAutocomplete('address');
  initAutocomplete('to_address');
  checkCookies()
