@@ -309,7 +309,7 @@ def handle_callback_order(update, context):
                                     f'Назва: {vehicle.name}\n' \
                                     f'Номер машини: {licence_plate}\n' \
                                     f'Номер телефону: {driver.phone_number}\n' \
-                                    f'Сума замовлення: {order.sum}грн'
+                                    f'Сума замовлення: {order.sum} грн'
                 try:
                     context.user_data['running'] = True
                     r = threading.Thread(target=send_map_to_client,
@@ -364,6 +364,7 @@ def handle_callback_order(update, context):
         else:
             message = driver_complete_text(order.sum)
             query.edit_message_text(text=message)
+            text_to_client(order, complete_order_text)
 
 
         # if order.payment_method == PAYCARD:
@@ -390,7 +391,6 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
-        text_to_client(order, complete_order_text)
         context.user_data.clear()
         order.status_order = Order.COMPLETED
         order.save()
@@ -442,12 +442,10 @@ def change_sum_trip(sender=None, **kwargs):
         else:
             order.sum = int(price_per_minute) + int(order.car_delivery_price)
         order.save()
-        text_to_client(order=order, text=f'Сума до оплати: {order.sum}грн')
+        text_to_client(order=order, text=f'Сума до оплати: {order.sum} грн')
+        text_to_client(order, complete_order_text)
         message = driver_complete_text(order.sum)
-
         bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
-        # bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-        #                               message_id=query_id, reply_markup=inline_finish_order(order.id))
 
 
 def send_map_to_client(update, context, order, query_id, licence_plate):

@@ -16,8 +16,8 @@ PAYCARD = "Картка"
 CASH = "Готівка"
 
 already_ordered = "У вас вже є активне замовлення, бажаєте замовити ще одне авто?"
-price_info = f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY', 15)}грн/км\n" + \
-             f"За містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY', 30)}грн/км"
+price_info = f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY', 15)} грн/км\n" + \
+             f"За містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY', 30)} грн/км"
 AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR', 25)}"), int(
     f"{ParkSettings.get_value('COST_PER_KM', 20)}")
 complete_order_text = "Гарного дня. Дякуємо, що скористались нашими послугами"
@@ -54,7 +54,7 @@ def order_info(number, address, to_address, payment, phone, price=None, distance
               f"Спосіб оплати: {payment}\n" \
               f"Номер телефону: {phone}\n"
     if price is not None:
-        message += f"Загальна вартість: {price}грн\n" + f"Довжина маршруту: {distance}км"
+        message += f"Загальна вартість: {price} грн\n" + f"Довжина маршруту: {distance}км"
     elif time is not None:
         message = time_message + message
     else:
@@ -64,5 +64,5 @@ def order_info(number, address, to_address, payment, phone, price=None, distance
 
 def driver_complete_text(price):
     message = f"Поїздку завершено\n" \
-              f"Сума замовлення: {price}грн"
+              f"Сума замовлення: {price} грн"
     return message
