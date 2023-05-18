@@ -84,3 +84,10 @@ def inline_comment_for_client():
         InlineKeyboardButton(order_inline_buttons[9], callback_data="Comment client")
     ]]
     return InlineKeyboardMarkup(keyboard)
+
+
+def inline_reject_order(pk=None):
+    keyboard = [[
+        InlineKeyboardButton(f"\u274c {CANCEL}", callback_data=f"Client_reject {pk}")
+    ]]
+    return InlineKeyboardMarkup(keyboard)

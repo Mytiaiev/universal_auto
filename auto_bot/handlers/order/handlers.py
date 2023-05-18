@@ -10,12 +10,12 @@ from django.dispatch import receiver
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, KeyboardButton, LabeledPrice
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip, check_time_order
+from auto.tasks import logger, get_distance_trip, check_time_order, delete_button
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
-    inline_finish_order, inline_repeat_keyboard, share_location
+    inline_finish_order, inline_repeat_keyboard, share_location, inline_reject_order
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
@@ -278,6 +278,24 @@ def send_time_orders(sender=None, **kwargs):
                             pass
 
 
+@task_postrun.connect
+def delete_button_client(sender=None, **kwargs):
+    if sender == delete_button:
+        data = kwargs.get("retval")
+        order_id, message_id, text = data
+        time.sleep(120)
+        order = Order.objects.filter(pk=order_id).first()
+        try:
+            bot.edit_message_text(
+                chat_id=order.chat_id_client,
+                message_id=message_id,
+                text=text,
+                reply_markup=None
+            )
+        except Exception:
+            return
+
+
 def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
@@ -319,7 +337,9 @@ def handle_callback_order(update, context):
                     r.start()
                 except:
                     pass
-                text_to_client(context, order, report_for_client)
+                text_to_client(context=context, order=order, text=report_for_client, button=inline_reject_order(order.pk))
+                order.driver_message_id = query.message.message_id
+                order.save()
             else:
                 query.edit_message_text(text=select_car_error)
         else:
@@ -330,9 +350,19 @@ def handle_callback_order(update, context):
             order.status_order = Order.WAITING
             order.save()
             # remove inline keyboard markup from the message
-            text_to_client(context, order, driver_cancel)
+            text_to_client(context=context, order=order, text=driver_cancel)
         else:
             query.edit_message_text(text="Це замовлення вже виконано.")
+
+    elif data[0] == "Client_reject":
+        order.status_order = Order.CANCELED
+        order.save()
+        client_message_id = order.client_message_id
+        client_chat_id = order.chat_id_client
+        for i in range(3):
+            bot.delete_message(chat_id=client_chat_id, message_id=int(client_message_id) + i)
+        text_to_client(context=context, order=order, text="<<Ви відмовились від замовлення...>>")
+
     elif data[0] == "Сlient_on_site":
         if not context.user_data.get('recheck'):
             context.user_data['running'] = False
@@ -364,6 +394,7 @@ def handle_callback_order(update, context):
                                  order.phone_number, order.sum, order.distance_google)
             query.edit_message_text(text=message)
             query.edit_message_reply_markup(reply_markup=inline_finish_order(order.id))
+
     elif data[0] == "End_trip":
         # if order.payment_method == PAYCARD:
         #     payment_id = str(uuid4())
@@ -389,7 +420,7 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
-        text_to_client(context, order, complete_order_text, comment=True)
+        text_to_client(context=context, order=order, text=complete_order_text)
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         context.user_data.clear()
         order.status_order = Order.COMPLETED
@@ -457,9 +488,10 @@ def change_sum_trip(sender=None, **kwargs):
 
 def send_map_to_client(update, context, order, query_id, licence_plate):
     # client_chat_id, car_gps_imei = context.args[0], context.args[1]
-    lat, long = get_location_from_db(licence_plate)
-    context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
-    m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
+    if order.chat_id_client:
+        lat, long = get_location_from_db(licence_plate)
+        context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
+        m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
     context.user_data['flag'] = True
     while context.user_data['running']:
         latitude, longitude = get_location_from_db(licence_plate)
@@ -472,8 +504,15 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
                                               reply_markup=inline_client_spot(pk=order.id))
                 context.user_data['flag'] = False
         try:
-            m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
+            order_ = Order.objects.filter(pk=order.id).first()
+            if order_.status_order == Order.CANCELED:
+                context.user_data['running'] = False
+                return
+
+            if order.chat_id_client:
+                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude, longitude=longitude)
             time.sleep(10)
+
         except Exception as e:
-            logger.error(msg=e.message)
+            logger.error(msg=str(e))
             time.sleep(30)

@@ -1,0 +1,111 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-05-16 16:54+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: static/app/js/custom.js:251
+msgid "Ціна поїздки:"
+msgstr "Trip price:"
+
+#: static/app/js/custom.js:251
+msgid " грн. Приблизний час прибуття авто: "
+msgstr " UAH Approximate time of arrival of the car: "
+
+#: static/app/js/custom.js:253
+msgid "Погодитись"
+msgstr "To agree"
+
+#: static/app/js/custom.js:322
+msgid "Коментар про відмову від поїздки"
+msgstr "Comment about the cancellation of the trip"
+
+#: static/app/js/custom.js:323
+msgid "Відправити"
+msgstr "Send"
+
+#: static/app/js/custom.js:331
+msgid "Залишіть, будь ласка, відгук"
+msgstr "Please leave a review"
+
+#: static/app/js/custom.js:389
+msgid "Ваша заявка прийнята. Очікуйте на автомобіль!"
+msgstr "Your application has been accepted. Wait for the car!"
+
+#: static/app/js/custom.js:459
+msgid "Оберіть метод оплати."
+msgstr "Choose a payment method."
+
+#: static/app/js/custom.js:466
+msgid "Готівка"
+msgstr "Cash"
+
+#: static/app/js/custom.js:467
+msgid "Картка"
+msgstr "Card"
+
+#: static/app/js/custom.js:468
+msgid "Відмовитись"
+msgstr "Refuse"
+
+#: static/app/js/custom.js:481
+msgid "Заждіть поки ми підберемо вам автомобіль."
+msgstr "Wait until we pick up a car for you."
+
+#: static/app/js/custom.js:521
+msgid "00:00 (Вкажіть час)"
+msgstr "00:00 (Indicate the time)"
+
+#: static/app/js/custom.js:559
+msgid "Номер телефону обов'язковий"
+msgstr "Phone number is required"
+
+#: static/app/js/custom.js:560 static/app/js/custom.js:561
+msgid "Адреса обов'язкова"
+msgstr "Address is required"
+
+#: static/app/js/custom.js:562
+msgid "Час замовлення обов'язково"
+msgstr "Order time is required"
+
+#: static/app/js/custom.js:583
+msgid "Виберіть час не менше ніж через "
+msgstr "Choose a time not less than after "
+
+#: static/app/js/custom.js:584
+msgid " хвилин"
+msgstr " minutes"
+
+#: static/app/js/custom.js:597 static/app/js/custom.js:602
+msgid "Некоректна адреса"
+msgstr "Incorrect address"
+
+#: static/app/js/custom.js:617
+msgid "Дякую за замовлення. Очікуйте на автомобіль!"
+msgstr "Thank you for the order. Wait for the car!"
+
+#: static/app/js/custom.js:647
+msgid ""
+"Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою "
+"замовлення на інший час!"
+msgstr ""
+"Sorry, but unfortunately there are no free drivers. Use our service "
+"order for another time!"
+
+#: static/app/js/custom.js:722
+msgid "Будь ласка, введіть коректну адресу"
+msgstr "Please enter a valid address"

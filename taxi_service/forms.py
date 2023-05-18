@@ -53,27 +53,6 @@ class MainOrderForm(ModelForm):
         order.save()
         return order
 
-    def clean_phone_number(self):
-        phone_number = self.cleaned_data.get('phone_number')
-        if User.phone_number_validator(phone_number) is None:
-            raise forms.ValidationError(_("Номер телефону невірний"))
-        else:
-            return User.phone_number_validator(phone_number)
-
-    def clean_from_address(self):
-        from_address = self.cleaned_data.get('from_address')
-        if not len(from_address):
-            raise forms.ValidationError(_("Неправильна адреса"))
-        else:
-            return from_address
-
-    def clean_to_the_address(self):
-        to_the_address = self.cleaned_data.get('to_the_address')
-        if not len(to_the_address):
-            raise forms.ValidationError(_("Неправильна адреса"))
-        else:
-            return to_the_address
-
 
 class SubscriberForm(ModelForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={

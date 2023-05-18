@@ -31,6 +31,7 @@ settings = {
     'UAGPS_LOGIN': ('Enter username for Uagps', 'Ім\'я користувача Uagps'),
     'UAGPS_PASSWORD': ('Enter password for Uagps', 'Пароль Uagps'),
     'MOBIZON_DOMAIN': ('https://api.mobizon.ua/service/message/sendsmsmessage', 'Домен для смс розсилки'),
+    'MOBIZON_API_KEY': ('Enter api key', 'API KEY для розсидки смс'),
     'Залишок Uklon': ('150', 'Залишок грн на карті водія Uklon'),
     'DRIVERS_CHAT': ('-863882769', 'Чат водіїв'),
     'SEND_DISPATCH_MESSAGE': ('0.3', 'Повідомити про подачу (км)')
