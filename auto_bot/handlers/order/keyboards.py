@@ -28,6 +28,11 @@ payment_keyboard = [
     # KeyboardButton(text=f"\U0001f4b8 {PAYCARD}")
 ]
 
+keyboard_comment_for_client = [
+    KeyboardButton(text=f"\u2705 {LOCATION_CORRECT}"),
+    KeyboardButton(text=f"\u274c {LOCATION_WRONG}")
+]
+
 
 def inline_spot_keyboard(end_lat, end_lng):
     keyboard = [
@@ -72,4 +77,18 @@ def inline_route_keyboard(pk=None):
         [InlineKeyboardButton(order_inline_buttons[3], callback_data=f"Along_the_route {pk}")],
         [InlineKeyboardButton(order_inline_buttons[4], callback_data=f"Off_route {pk}")]
     ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_comment_for_client():
+    keyboard = [[
+        InlineKeyboardButton(order_inline_buttons[9], callback_data="Comment client")
+    ]]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_reject_order(pk=None):
+    keyboard = [[
+        InlineKeyboardButton(f"\u274c {CANCEL}", callback_data=f"Client_reject {pk}")
+    ]]
     return InlineKeyboardMarkup(keyboard)

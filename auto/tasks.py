@@ -14,7 +14,7 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
     NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
 
 from scripts.conversion import convertion
@@ -238,6 +238,11 @@ def send_daily_into_group(self):
 @app.task(bind=True, queue='non_priority')
 def check_time_order(self):
     print("check orders on time")
+
+
+@app.task(bind=True, queue='non_priority')
+def delete_button(self, order_id, query, text):
+    return order_id, query, text
 
 
 @app.task(bind=True, queue='non_priority')

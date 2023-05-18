@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-05-08 10:22+0300\n"
+"POT-Creation-Date: 2023-05-16 17:05+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,39 +34,31 @@ msgstr "Phone"
 msgid "На яку годину? формат HH:MM(напр. 18:45)"
 msgstr "At which hour? format HH:MM (eg 18:45)"
 
-#: taxi_service/forms.py:59
-msgid "Номер телефону невірний"
-msgstr "Wrong phone number"
-
-#: taxi_service/forms.py:66 taxi_service/forms.py:73
-msgid "Неправильна адреса"
-msgstr "Wrong address"
-
-#: taxi_service/forms.py:81
+#: taxi_service/forms.py:60
 msgid "Введіть пошту"
 msgstr "Enter your email"
 
-#: taxi_service/forms.py:85
+#: taxi_service/forms.py:64
 msgid "Введіть ел.пошту, будь ласка"
 msgstr "Enter your email please"
 
-#: taxi_service/forms.py:86
+#: taxi_service/forms.py:65
 msgid "Введіть коректну ел.пошту"
 msgstr "Enter correct email"
 
-#: taxi_service/forms.py:96
+#: taxi_service/forms.py:75
 msgid "Невірний формат ел.пошти"
 msgstr "Wrong email format"
 
-#: taxi_service/forms.py:98
+#: taxi_service/forms.py:77
 msgid "Ви вже підписались"
 msgstr "You are subscriber already"
 
-#: taxi_service/templates/about.html:18 taxi_service/templates/index.html:187
+#: taxi_service/templates/about.html:18 taxi_service/templates/index.html:192
 msgid "Про нас"
 msgstr "About us"
 
-#: taxi_service/templates/about.html:22 taxi_service/templates/index.html:191
+#: taxi_service/templates/about.html:22 taxi_service/templates/index.html:196
 msgid ""
 "Наша місія – надати пасажирам швидкий, зручний та безпечний транспорт, який "
 "буде відповідати найвищим стандартам."
@@ -74,7 +66,7 @@ msgstr ""
 "Our mission is to provide passengers with fast, convenient and safe "
 "transportation that will meet the highest standards."
 
-#: taxi_service/templates/about.html:23 taxi_service/templates/index.html:192
+#: taxi_service/templates/about.html:23 taxi_service/templates/index.html:197
 msgid ""
 "Наші електротаксі оснащені новітніми безпековими технологіями, що забезпечує "
 "максимальний захист пасажирів на дорозі."
@@ -82,7 +74,7 @@ msgstr ""
 "Our electric taxis are equipped with the latest safety technologies, which "
 "ensures maximum passenger protection on the road."
 
-#: taxi_service/templates/about.html:24 taxi_service/templates/index.html:193
+#: taxi_service/templates/about.html:24 taxi_service/templates/index.html:198
 msgid ""
 "Крім того, ми гарантуємо швидкий та комфортний трансфер у будь-який час дня "
 "та ночі."
@@ -90,7 +82,7 @@ msgstr ""
 "In addition, we guarantee a fast and comfortable transfer at any time of the "
 "day or night."
 
-#: taxi_service/templates/about.html:25 taxi_service/templates/index.html:194
+#: taxi_service/templates/about.html:25 taxi_service/templates/index.html:199
 msgid ""
 "Наші водії - це професіонали своєї справи, які мають високий рівень досвіду "
 "та знань про місто, що забезпечує швидку та безпечну поїздку для наших "
@@ -101,7 +93,7 @@ msgstr ""
 
 #: taxi_service/templates/about.html:28 taxi_service/templates/index.html:25
 #: taxi_service/templates/index.html:49 taxi_service/templates/index.html:73
-#: taxi_service/templates/index.html:197
+#: taxi_service/templates/index.html:202
 msgid "Дізнатися більше"
 msgstr "Read more"
 
@@ -133,7 +125,7 @@ msgstr "Email"
 msgid "Підписатись на розсилку"
 msgstr "Sign up to our newsletter"
 
-#: taxi_service/templates/footer.html:52 taxi_service/templates/header.html:55
+#: taxi_service/templates/footer.html:52 taxi_service/templates/header.html:56
 msgid "Підписатись"
 msgstr "Subscribe"
 
@@ -141,7 +133,7 @@ msgstr "Subscribe"
 msgid "Ninja Taxi"
 msgstr "Ninja Taxi"
 
-#: taxi_service/templates/header.html:68 taxi_service/templates/index.html:158
+#: taxi_service/templates/header.html:69 taxi_service/templates/index.html:115
 msgid "Замовити зараз"
 msgstr "Order now"
 
@@ -181,21 +173,23 @@ msgstr ""
 "An electric taxi is an innovative approach that can increase your level of "
 "satisfaction during your travels."
 
-#: taxi_service/templates/index.html:161
-#, fuzzy
-#| msgid "Замовити таксі"
-msgid "Замовити на потім"
-msgstr "Order taxi"
+#: taxi_service/templates/index.html:119
+msgid "Замовити на інший час"
+msgstr "Order for another time"
 
-#: taxi_service/templates/index.html:213 taxi_service/templates/why.html:10
+#: taxi_service/templates/index.html:166
+msgid "Замовити"
+msgstr "Order now"
+
+#: taxi_service/templates/index.html:218 taxi_service/templates/why.html:10
 msgid "Чому вибрати саме нас"
 msgstr "Why choose us"
 
-#: taxi_service/templates/index.html:225 taxi_service/templates/why.html:22
+#: taxi_service/templates/index.html:230 taxi_service/templates/why.html:22
 msgid "Швидке та легке замовлення"
 msgstr "Fast & Easy Booking"
 
-#: taxi_service/templates/index.html:228 taxi_service/templates/why.html:25
+#: taxi_service/templates/index.html:233 taxi_service/templates/why.html:25
 msgid ""
 "Швидке та інтуїтивне замовлення авто в месенджері Телеграм - що дає змогу "
 "легко зателефонувати водію через месенджер або телефон"
@@ -203,11 +197,11 @@ msgstr ""
 "Quick and intuitive ordering of a car in the Telegram messenger - which "
 "makes it easy to call the driver via messenger or phone"
 
-#: taxi_service/templates/index.html:240 taxi_service/templates/why.html:37
+#: taxi_service/templates/index.html:245 taxi_service/templates/why.html:37
 msgid "Безпека водіння"
 msgstr "Driving safety"
 
-#: taxi_service/templates/index.html:243 taxi_service/templates/why.html:40
+#: taxi_service/templates/index.html:248 taxi_service/templates/why.html:40
 msgid ""
 "Всі машини обладнані системою трекінгу стилю водіння, яка історично гарантує "
 "що водій їздить безпечно."
@@ -215,11 +209,11 @@ msgstr ""
 "All cars are equipped with a driving style tracking system, which "
 "historically guarantees that the driver is driving safely."
 
-#: taxi_service/templates/index.html:255 taxi_service/templates/why.html:52
+#: taxi_service/templates/index.html:260 taxi_service/templates/why.html:52
 msgid "Повне задоволення"
 msgstr "Full Satisfaction"
 
-#: taxi_service/templates/index.html:258 taxi_service/templates/why.html:55
+#: taxi_service/templates/index.html:263 taxi_service/templates/why.html:55
 msgid ""
 "Ми відвеземо вас куди скажете та почекаємо на проміжних точках вашого "
 "маршруту"
@@ -227,15 +221,15 @@ msgstr ""
 "We'll take you wherever you want to go and wait for you at the intermediate "
 "points of your route"
 
-#: taxi_service/templates/index.html:279
+#: taxi_service/templates/index.html:284
 msgid "Будь На Зв'язку"
 msgstr "Stay in touch"
 
-#: taxi_service/templates/index.html:281
+#: taxi_service/templates/index.html:286
 msgid "Завантажуй наш додаток"
 msgstr "Download our app"
 
-#: taxi_service/templates/index.html:282
+#: taxi_service/templates/index.html:287
 msgid ""
 "Мобільний застосунок постійно вдосконалюються та додаються нові функції, які "
 "дозволяють замовляти таксі ще більш зручно та ефективно."
@@ -244,20 +238,20 @@ msgstr ""
 "being added that allow you to order a taxi even more conveniently and "
 "efficiently."
 
-#: taxi_service/templates/index.html:314
+#: taxi_service/templates/index.html:319
 msgid "Наші клієнти кажуть"
 msgstr "Our customers say"
 
-#: taxi_service/templates/index.html:336
+#: taxi_service/templates/index.html:341
 msgid "Юлія"
 msgstr "Julia"
 
-#: taxi_service/templates/index.html:339 taxi_service/templates/index.html:354
-#: taxi_service/templates/index.html:369
+#: taxi_service/templates/index.html:344 taxi_service/templates/index.html:359
+#: taxi_service/templates/index.html:374
 msgid "поїздок"
 msgstr "trips"
 
-#: taxi_service/templates/index.html:343
+#: taxi_service/templates/index.html:348
 msgid ""
 "Я була приємно здивована електротаксі - комфорт, тиша та екологічність "
 "відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але "
@@ -268,11 +262,11 @@ msgstr ""
 "ride. It is more expensive than traditional taxis, but I advise you to try "
 "it at least once if you can afford it."
 
-#: taxi_service/templates/index.html:351
+#: taxi_service/templates/index.html:356
 msgid "Євгеній"
 msgstr "Yevhen"
 
-#: taxi_service/templates/index.html:358
+#: taxi_service/templates/index.html:363
 msgid ""
 "Я був приємно здивований, коли вперше використав електротаксі - це було так "
 "комфортно та тихо. Я відчував себе більш екологічно свідомими, "
@@ -282,11 +276,11 @@ msgstr ""
 "comfortable and quiet. I felt more environmentally conscious, using a taxi "
 "that doesn't emit emissions."
 
-#: taxi_service/templates/index.html:366
+#: taxi_service/templates/index.html:371
 msgid "Ліза"
 msgstr "Liza"
 
-#: taxi_service/templates/index.html:373
+#: taxi_service/templates/index.html:378
 msgid ""
 "Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно "
 "приємним додатком до мого досвіду використання таксі. Я би, безперечно, "

@@ -1080,6 +1080,9 @@ class Comment(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
+    def __str__(self):
+        return self.comment
+
     class Meta:
         verbose_name = 'Відгук'
         verbose_name_plural = 'Відгуки'
@@ -1101,6 +1104,8 @@ class Order(models.Model):
     to_longitude = models.CharField(max_length=10, null=True)
     phone_number = models.CharField(max_length=13)
     chat_id_client = models.CharField(max_length=10)
+    driver_message_id = models.CharField(max_length=10, null=True)
+    client_message_id = models.CharField(max_length=10, null=True)
     car_delivery_price = models.CharField(max_length=30, null=True, blank=True)
     sum = models.CharField(max_length=30)
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
