@@ -17,8 +17,8 @@ from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, sa
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
 from auto_bot.handlers.reports.handlers import report, download_report
-from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, get_vehicle_licence_plate, \
-    get_imei, finish_job_main
+from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
+    get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
     cancel_order, order_create, location, time_for_order, handle_callback_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
@@ -153,8 +153,7 @@ def setup_dispatcher(dp):
         take_a_day_off_or_sick_leave))
 
     # Сar registration for today
-    dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_licence_plate))
-    dp.add_handler(CommandHandler("car_change", get_vehicle_licence_plate))
+    dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_of_driver))
     # Get correct auto
     dp.add_handler(MessageHandler(
         Filters.regex(fr'^{CORRECT_AUTO}$') |

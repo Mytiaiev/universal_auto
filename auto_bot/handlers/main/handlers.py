@@ -120,7 +120,6 @@ def menu(update, context):
     if driver is not None:
         standart_commands.extend([
             BotCommand("/status", "Змінити статус водія"),
-            BotCommand("/car_change", "Реєстрація робочого автомобіля на сьогодні"),
             BotCommand("/status_car", "Змінити статус автомобіля"),
             BotCommand("/sending_report", "Відправити звіт про оплату заборгованості"),
             BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])
