@@ -112,15 +112,15 @@ def menu(update, context):
     manager = ServiceStationManager.get_by_chat_id(chat_id)
     owner = Owner.get_by_chat_id(chat_id)
     standart_commands = [
-        BotCommand("/start", "Щоб зареєструватись та замовити таксі"),
+        BotCommand("/start", "Замовити таксі"),
         BotCommand("/help", "Допомога"),
+        BotCommand("/cancel", "Завершити активні діалоги"),
         BotCommand("/id", "Дізнатись id"),
-        BotCommand("/cancel", "Завершити активні діалоги")
+        BotCommand("/comment", "Залишити відгук"),
     ]
     if driver is not None:
         standart_commands.extend([
             BotCommand("/status", "Змінити статус водія"),
-            BotCommand("/car_change", "Реєстрація робочого автомобіля на сьогодні"),
             BotCommand("/status_car", "Змінити статус автомобіля"),
             BotCommand("/sending_report", "Відправити звіт про оплату заборгованості"),
             BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])

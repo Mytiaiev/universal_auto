@@ -14,7 +14,7 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
     NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
 
 from scripts.conversion import convertion
@@ -115,17 +115,24 @@ def update_driver_status(self):
                 uklon_status = UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
                 logger.info(f'Uklon {uklon_status}')
 
+                # uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
+                # logger.info(f'Uber {uber_status}')
+
                 status_online = set()
                 status_width_client = set()
                 if bolt_status is not None:
                     status_online = status_online.union(set(bolt_status['wait']))
                     status_width_client = status_width_client.union(set(bolt_status['width_client']))
                 if uklon_status is not None:
-                    status_online = status_online.union(set(uklon_status['online']))
+                    status_online = status_online.union(set(uklon_status['wait']))
                     status_width_client = status_width_client.union(set(uklon_status['width_client']))
+                # if uber_status is not None:
+                #     status_online = status_online.union(set(uber_status['online']))
+                #     status_width_client = status_width_client.union(set(uber_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
-                    park_status = ParkStatus.objects.filter(driver=driver).first()
+                    last_hour = timezone.localtime() - timezone.timedelta(hours=1)
+                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_hour).first()
                     current_status = Driver.OFFLINE
                     if park_status:
                         current_status = park_status.status
@@ -234,6 +241,11 @@ def check_time_order(self):
 
 
 @app.task(bind=True, queue='non_priority')
+def delete_button(self, order_id, query, text):
+    return order_id, query, text
+
+
+@app.task(bind=True, queue='non_priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
@@ -262,7 +274,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='non_priority')
 
@@ -272,7 +284,7 @@ def init_chrome_driver():
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
     global UAGPS_CHROME_DRIVER
-    BOLT_CHROME_DRIVER = Bolt(week_number=None, driver=True, sleep=3, headless=True, profile='Bolt_CeleryTasks')
+    BOLT_CHROME_DRIVER = Bolt(week_number=None, driver=True, sleep=5, headless=True, profile='Bolt_CeleryTasks')
     UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=5, headless=True, profile='Uklon_CeleryTasks')
     UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=5, headless=True, profile='Uber_CeleryTasks')
     UAGPS_CHROME_DRIVER = UaGps(headless=True, profile='Uagps_CeleryTasks')

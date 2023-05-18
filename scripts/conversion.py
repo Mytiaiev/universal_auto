@@ -107,9 +107,8 @@ def get_route_price(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, 
         return int(price), int(sending_price), route
 
 
-def coord_to_link(start_lat, start_lng, end_lat, end_lng):
-    return f"https://www.google.com/maps/dir/?api=1&origin={start_lat},{start_lng}" \
-           f"&destination={end_lat},{end_lng}&travelmode=driving&dir_action=navigate"
+def coord_to_link(end_lat, end_lng):
+    return f"https://www.waze.com/ul?ll={end_lat},{end_lng}&navigate=yes"
 
 
 def get_location_from_db(licence_plate):

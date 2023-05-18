@@ -110,6 +110,14 @@
 	    <div class="book_form">
 		  <form method="post" id="order-form" action="" novalidate>
 		    {% csrf_token %}
+		    <div class="form_radio_btn">
+			  <input id="radio-1" type="radio" name="radio" value="1" checked>
+			  <label for="radio-1">{% trans "Замовити зараз" %}</label>
+			</div>
+			<div class="form_radio_btn">
+			  <input id="radio-2" type="radio" name="radio" value="2">
+			  <label for="radio-2">{% trans "Замовити на інший час" %}</label>
+			</div>
 		    <div class="form-group col-md-11">
 			  <div class="input-group">
 			    <div class="input-group-prepend">
@@ -155,10 +163,7 @@
 			  <div class="input-group text-danger pl-3" id="order_time-error"></div>
 		    </div>
 		    <div class="btn-box">
-		      <button type="submit">{% trans "Замовити зараз" %}</button>
-		      <button type="submit" id="later-order">
-				  <i class="fa fa-clock-o" aria-hidden="true"></i>
-				  {% trans "Замовити на потім" %}</button>
+		      <button type="submit">{% trans "Замовити" %}</button>
 		    </div>
 		  </form>
 	    </div>

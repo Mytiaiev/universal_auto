@@ -3,7 +3,6 @@ from auto_bot.handlers.main.static_text import main_buttons
 
 start_keyboard = [
     KeyboardButton(text=main_buttons[0]),
-    # KeyboardButton(text=main_buttons[1]),
     # KeyboardButton(text=main_buttons[2]),
     KeyboardButton(text=main_buttons[3], request_contact=True)
 ]

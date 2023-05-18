@@ -17,8 +17,8 @@ from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, sa
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
 from auto_bot.handlers.reports.handlers import report, download_report
-from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, get_vehicle_licence_plate, \
-    get_imei, finish_job_main
+from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
+    get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
     cancel_order, order_create, location, time_for_order, handle_callback_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
@@ -30,7 +30,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
 from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE, \
-    TODAY, NOW, INCREASE_PRICE
+    TODAY, NOW, LOCATION, complete_order_text, INCREASE_PRICE
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -103,7 +103,7 @@ def setup_dispatcher(dp):
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
-    dp.add_handler(MessageHandler(Filters.location, location))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001F4CD {LOCATION}$"), location))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[0]}$"), continue_order))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_address))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
@@ -117,12 +117,15 @@ def setup_dispatcher(dp):
         order_create))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f4b7 {INCREASE_PRICE}$"), increase_search_radius))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile(
-                                            "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip) [0-9]+$")))
+                    pattern=re.compile(
+                    "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip|Client_reject) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(comment, pattern=re.compile("^Comment client$")))
     # sending comment
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[1]}$") |
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$") |
                                   Filters.regex(fr"^Відмовитись від замовлення$"),
                                   comment))
+    dp.add_handler(CommandHandler("comment", comment))
+
     # Add job application
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[2]}$"), job_application))
     # Commands for Drivers
@@ -154,8 +157,7 @@ def setup_dispatcher(dp):
         take_a_day_off_or_sick_leave))
 
     # Сar registration for today
-    dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_licence_plate))
-    dp.add_handler(CommandHandler("car_change", get_vehicle_licence_plate))
+    dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_of_driver))
     # Get correct auto
     dp.add_handler(MessageHandler(
         Filters.regex(fr'^{CORRECT_AUTO}$') |
