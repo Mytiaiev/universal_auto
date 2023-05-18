@@ -20,7 +20,8 @@ from auto_bot.handlers.reports.handlers import report, download_report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
-    cancel_order, order_create, location, time_for_order, handle_callback_order
+    cancel_order, order_create, location, time_for_order, handle_callback_order, increase_search_radius, \
+    increase_order_price
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
@@ -116,10 +117,15 @@ def setup_dispatcher(dp):
         Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
         order_create))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f4b7 {INCREASE_PRICE}$"), increase_search_radius))
+    dp.add_handler(MessageHandler(
+        Filters.regex(fr"^\U0001f4b7 50 грн$") |
+        Filters.regex(fr"^\U0001f4b7 100 грн$") |
+        Filters.regex(fr"^\U0001f4b7 150 грн$"),
+        increase_order_price))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                    pattern=re.compile(
-                    "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip|Client_reject) [0-9]+$")))
-    dp.add_handler(CallbackQueryHandler(comment, pattern=re.compile("^Comment client$")))
+                                        pattern=re.compile(
+                                            "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip|Client_reject) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(comment, pattern="Comment client"))
     # sending comment
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$") |
                                   Filters.regex(fr"^Відмовитись від замовлення$"),

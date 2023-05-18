@@ -14,7 +14,7 @@ from auto.tasks import logger, get_distance_trip, check_time_order, delete_butto
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
-    inline_finish_order, inline_repeat_keyboard, share_location, inline_reject_order
+    inline_finish_order, inline_repeat_keyboard, share_location, inline_reject_order, increase_price_keyboard
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
@@ -212,6 +212,7 @@ def send_order_to_driver(sender, instance, **kwargs):
                                              float(instance.latitude), float(instance.longitude))
                         radius = round(ParkSettings.get_value("FREE RADIUS", 3), 1) + \
                                  round(instance.sending_price/10, 1)
+                        print(radius)
                         if distance <= radius:
                             accept_message = bot.send_message(chat_id=driver, text=message, reply_markup=markup)
                             end_time = time.time() + ParkSettings.get_value("MESSAGE_APPEAR", 30)
@@ -230,11 +231,23 @@ def send_order_to_driver(sender, instance, **kwargs):
                                 bot.delete_message(chat_id=driver, message_id=accept_message.message_id)
                     else:
                         continue
-            time.sleep(60)
+            print('sleep')
+            time.sleep(20)
             count += 1
         bot.send_message(chat_id=instance.chat_id_client,
                          text=no_driver_in_radius,
                          reply_markup=markup_keyboard([order_keyboard]))
+
+def increase_search_radius(update, context):
+    update.message.reply_text(increase_radius_text, reply_markup=markup_keyboard([increase_price_keyboard]))
+
+
+def increase_order_price(update, context):
+    chat_id = update.message.chat.id
+    price = update.message.text
+    order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
+    order.sending_price += int(price.split(' ')[1])
+    order.save()
 
 
 def time_order(update, context):

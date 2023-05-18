@@ -34,6 +34,12 @@ keyboard_comment_for_client = [
     KeyboardButton(text=f"\u274c {LOCATION_WRONG}")
 ]
 
+increase_price_keyboard = [
+    KeyboardButton(text=f"\U0001f4b7 50 грн"),
+    KeyboardButton(text=f"\U0001f4b7 100 грн"),
+    KeyboardButton(text=f"\U0001f4b7 150 грн")
+]
+
 
 def inline_spot_keyboard(end_lat, end_lng):
     keyboard = [
