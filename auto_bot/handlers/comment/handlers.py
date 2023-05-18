@@ -16,7 +16,7 @@ def comment(update, context):
     except:
         chat_id = update.message.chat.id
     user = User.get_by_chat_id(chat_id)
-    if user:
+    if user.phone_number:
         order = Order.get_order(chat_id_client=chat_id,
                                 phone=user.phone_number,
                                 status_order=Order.WAITING)
@@ -28,8 +28,7 @@ def comment(update, context):
             if order:
                 order.status_order = Order.CANCELED
                 order.save()
-                update.message.reply_text('Поставте оцінку або напишіть відгук',
-                                          reply_markup=markup_keyboard_onetime(comment_keyboard))
+                update.message.reply_text('Напишіть відгук')
             else:
                 context.bot.send_message(chat_id=chat_id, text='Поставте оцінку або напишіть відгук',
                                          reply_markup=markup_keyboard_onetime(comment_keyboard))
