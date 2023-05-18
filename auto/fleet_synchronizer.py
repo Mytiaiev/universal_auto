@@ -16,6 +16,7 @@ from translators.server import tss
 from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange,\
     ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber,\
     SeleniumTools, UaGps, clickandclear
+from auto_bot.main import bot
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -300,7 +301,6 @@ class BoltSynchronizer(Synchronizer, Bolt):
                 xpath = f'{el}{i}{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_3.1")}'
                 driver_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-
             except TimeoutException:
                 break
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
@@ -478,35 +478,22 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             })
         return drivers
 
-    def get_driver_status_from_table(self):
-        online = []
-        width_client = []
+    def get_driver_status_from_map(self, search_text):
+        raw_data = []
         try:
-            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_1')
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_2')
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-            time.sleep(self.sleep)
-        except TimeoutException as err:
-            print(err.msg)
-            return {
-                'online': online,
-                'width_client': width_client,
-            }
+            xpath = f"{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1')}[{search_text}]"
+            WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
+        except TimeoutException:
+            return raw_data
         i = 0
-        while i < 10:
+        while True:
             i += 1
             try:
-                _ = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3')
-                xpath = f'{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.1")}'
+                el = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.1')
+                xpath = f"{el}{i}{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.2')}"
                 driver_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.2")}'
-                last_action_date = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = f'{_}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVER_STATUS_FROM_TABLE_3.3")}'
-                status = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).get_attribute('class')
+
             except TimeoutException:
                 break
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
@@ -515,27 +502,11 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 name, second_name = name_list[0], name_list[1]
             except IndexError:
                 pass
-
-            match = re.findall(r'(\d{1,2}).(\d{2}).(\d{4}).*(\d{2}):(\d{2})', last_action_date)
-            date_time_delta = 1000000
-            if len(match) > 0:
-                date_time = datetime.datetime.strptime(
-                    f'{match[0][0]}.{match[0][1]}.{match[0][2]}-{match[0][3]}:{match[0][4]}', '%d.%m.%Y-%H:%M'
-                )
-                date_time_delta = (datetime.datetime.now() - date_time).total_seconds()
-
-            if ('blue' in status or date_time_delta < 60 * 30) and (name, second_name) not in online:
-                online.append((name, second_name))
-                online.append((second_name, name))
-
-            if ('blue' in status or status == 'i-circle') and (name, second_name) not in width_client:
-                width_client.append((name, second_name))
-                width_client.append((second_name, name))
-
-        return {
-            'online': online,
-            'width_client': width_client,
-        }
+            raw_data.append((name, second_name))
+            raw_data.append((second_name, name))
+        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_3')
+        WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
+        return raw_data
 
     def get_driver_status(self):
         try:
@@ -543,11 +514,15 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_2')
 
             self.get_target_element_of_page(url, xpath)
-            return self.get_driver_status_from_table()
+            return {
+                'width_client': self.get_driver_status_from_map('1'),
+                'wait': self.get_driver_status_from_map('2')
+            }
         except WebDriverException as err:
             print(err.msg)
 
     def withdraw_money(self):
+        bot.send_message(chat_id='515224934', text='withdraw started')
         url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')
         xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
         self.get_target_page_or_login(url, xpath, self.login)
@@ -565,7 +540,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_5')))).click()
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_6')))).click()
-        print('withdraw finished')
+        bot.send_message(chat_id='515224934', text='withdraw finished')
 
     def add_driver(self, jobapplication):
         url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
@@ -773,14 +748,13 @@ class UberSynchronizer(Synchronizer, Uber):
                 raw_data.append((second_name, name))
         return raw_data
 
-        return []
-        # Need to implement
-
     def get_driver_status(self):
 
         try:
+
             url = UberService.get_value('UBERS_GET_DRIVER_STATUS_1')
             # url = f"https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/livemap"
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             xpath = UberService.get_value('UBERS_GET_DRIVER_STATUS_2')
             self.get_target_element_of_page(url, xpath)
             return {
