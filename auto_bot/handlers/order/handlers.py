@@ -62,13 +62,13 @@ def location(update, context):
         update.message.reply_text(f'Ваша адреса: {address}')
         the_confirmation_of_location(update, context)
     else:
-        update.message.reply_text('Нам не вдалось обробити ваше місце знаходження')
+        update.message.reply_text(no_location_text)
         from_address(update, context)
 
 
 def the_confirmation_of_location(update, context):
     reply_markup = markup_keyboard([location_keyboard])
-    update.message.reply_text('Оберіть статус посадки', reply_markup=reply_markup)
+    update.message.reply_text(ask_spot_text, reply_markup=reply_markup)
 
 
 def from_address(update, context):
@@ -77,7 +77,7 @@ def from_address(update, context):
         reply_markup = markup_keyboard(share_location)
     else:
         reply_markup = ReplyKeyboardRemove()
-    update.message.reply_text('Введіть адресу місця посадки:', reply_markup=reply_markup)
+    update.message.reply_text(from_address_text, reply_markup=reply_markup)
 
 
 def to_the_address(update, context):
@@ -96,7 +96,7 @@ def to_the_address(update, context):
             update.message.reply_text(wrong_address_request)
             from_address(update, context)
     else:
-        update.message.reply_text('Введіть адресу місця призначення:', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(arrival_text, reply_markup=ReplyKeyboardRemove())
         context.user_data['state'] = TO_THE_ADDRESS
 
 
@@ -120,7 +120,7 @@ def payment_method(update, context):
     else:
         context.user_data['state'] = None
         markup = markup_keyboard_onetime([payment_keyboard])
-        update.message.reply_text('Виберіть спосіб оплати:', reply_markup=markup)
+        update.message.reply_text(payment_text, reply_markup=markup)
 
 
 def second_address_check(update, context):
@@ -196,7 +196,7 @@ def send_order_to_driver(sender, instance, **kwargs):
         # drivers = Driver.objects.filter(driver_status=Driver.ACTIVE).order_by('Fleets_drivers_vehicles_rate__rate')
         if drivers:
             try:
-                bot.send_message(chat_id=instance.chat_id_client, text='Замовлення прийнято.Шукаємо водія')
+                bot.send_message(chat_id=instance.chat_id_client, text=driver_accept_text)
             except:
                 #     send sms
                 pass
@@ -216,8 +216,7 @@ def time_order(update, context):
         answer = update.message.text
         context.user_data['time_order'] = ' '.join(answer.split()[1:])
     context.user_data['state'] = TIME_ORDER
-    update.message.reply_text('Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)',
-                              reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text(ask_time_text, reply_markup=ReplyKeyboardRemove())
 
 
 def order_on_time(update, context):
@@ -246,10 +245,10 @@ def order_on_time(update, context):
                 order.save()
                 update.message.reply_text(order_complete)
         else:
-            update.message.reply_text('Вкажіть, будь ласка, більш пізній час')
+            update.message.reply_text(small_time_delta)
             context.user_data['state'] = TIME_ORDER
     else:
-        update.message.reply_text('Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)')
+        update.message.reply_text(wrong_time_format)
         context.user_data['state'] = TIME_ORDER
 
 
@@ -323,12 +322,8 @@ def handle_callback_order(update, context):
                                      order.phone_number, order.sum, order.distance_google)
                 query.edit_message_text(text=message)
                 query.edit_message_reply_markup(reply_markup=markup)
-                report_for_client = f'Вас вітає Ninja-Taxi!\n' \
-                                    f'Ваш водій: {driver}\n' \
-                                    f'Назва: {vehicle.name}\n' \
-                                    f'Номер машини: {licence_plate}\n' \
-                                    f'Номер телефону: {driver.phone_number}\n' \
-                                    f'Сума замовлення: {order.sum} грн'
+                report_for_client = client_order_text(driver, vehicle.name, licence_plate,
+                                                      driver.phone_number, order.sum)
                 try:
                     context.user_data['running'] = True
                     r = threading.Thread(target=send_map_to_client,
@@ -342,7 +337,7 @@ def handle_callback_order(update, context):
             else:
                 query.edit_message_text(text=select_car_error)
         else:
-            query.edit_message_text(text="Це замовлення вже виконується.")
+            query.edit_message_text(text=already_accepted)
     elif data[0] == 'Reject_order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
         if order:
@@ -374,8 +369,7 @@ def handle_callback_order(update, context):
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] == "End_trip":
         reply_markup = inline_route_keyboard(order.id)
-        message = "Поїздка була згідно маршруту?"
-        query.edit_message_text(text=message)
+        query.edit_message_text(text=route_trip_text)
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] in ("Along_the_route", "Off_route"):
         context.user_data['recheck'] = data[0]
@@ -386,8 +380,7 @@ def handle_callback_order(update, context):
     elif data[0] == "Accept":
         ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
         if context.user_data['recheck'] == "Off_route":
-            message = 'Проводимо розрахунок вартості...'
-            query.edit_message_text(text=message)
+            query.edit_message_text(text=calc_price_text)
             record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
             licence_plate = (list(record))[-1].licence_plate
             status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
@@ -474,7 +467,7 @@ def change_sum_trip(sender=None, **kwargs):
         else:
             order.sum = int(price_per_minute) + int(order.car_delivery_price)
         order.save()
-        text_to_client(order=order, text=f'Сума до cплати: {order.sum} грн\n + {complete_order_text}')
+        text_to_client(order=order, text=f'Сума до cплати: {order.sum} грн\n {complete_order_text}')
         message = driver_complete_text(order.sum)
         bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
 
@@ -502,7 +495,8 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
                     context.user_data['running'] = False
                     return
                 if order.chat_id_client:
-                    m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,                                            longitude=longitude)
+                    m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
+                                                            longitude=longitude)
                 time.sleep(10)
             except Exception as e:
                 logger.error(msg=str(e))
