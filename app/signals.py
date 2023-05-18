@@ -61,13 +61,7 @@ def reject_order_client(sender, instance, **kwargs):
             bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
             bot.send_message(
                 chat_id=driver_chat_id,
-                text=f"КЛІЄНТ ВІДМОВИВСЯ ВІД ЗАМОВЛЕННЯ!!!\n"
-                     f"Адреса посадки: {instance.from_address}\n"
-                     f"Місце прибуття: {instance.to_the_address}\n"
-                     f"Спосіб оплати: {instance.payment_method}\n"
-                     f"Номер телефону: {instance.phone_number}\n"
-                     f"Загальна вартість: {instance.sum}грн\n"
-                     f"Ваш статус : Готовий прийняти заказ"
+                text=f'Вибачте, замовлення {instance.from_address} відхилено клієнтом.\nСлужба підтримки.'
             )
             ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         except Exception:
