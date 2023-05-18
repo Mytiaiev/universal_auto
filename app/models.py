@@ -1080,6 +1080,9 @@ class Comment(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
+    def __str__(self):
+        return self.comment
+
     class Meta:
         verbose_name = 'Відгук'
         verbose_name_plural = 'Відгуки'

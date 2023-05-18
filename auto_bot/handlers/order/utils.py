@@ -1,9 +1,13 @@
 import os
+import time
 
 import requests
+from telegram import TelegramError, ReplyKeyboardRemove
 
 from app.models import ParkSettings
+from auto_bot.handlers.main.keyboards import markup_keyboard
 from scripts.conversion import get_addresses_by_radius
+from auto_bot.handlers.order.keyboards import inline_comment_for_client
 
 
 def buttons_addresses(address):
@@ -17,9 +21,13 @@ def buttons_addresses(address):
         return None
 
 
-def text_to_client(context=None, order=None, text=None):
+def text_to_client(context=None, order=None, text=None, comment=None):
     if order.chat_id_client:
-        context.bot.send_message(chat_id=order.chat_id_client, text=text)
+        if comment is None:
+            context.bot.send_message(chat_id=order.chat_id_client, text=text)
+        else:
+            context.bot.send_message(chat_id=order.chat_id_client, text=text,
+                                     reply_markup=inline_comment_for_client())
     else:
         params = {
             "recipient": order.phone_number[1:],
