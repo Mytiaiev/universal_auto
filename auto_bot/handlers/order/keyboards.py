@@ -34,9 +34,9 @@ keyboard_comment_for_client = [
 ]
 
 
-def inline_spot_keyboard(start_lat, start_lng, end_lat, end_lng, pk=None):
+def inline_spot_keyboard(end_lat, end_lng):
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[8], url=coord_to_link(start_lat, start_lng, end_lat, end_lng))]
+        [InlineKeyboardButton(order_inline_buttons[8], url=coord_to_link(end_lat, end_lng))]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -55,11 +55,11 @@ def inline_client_spot(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_route_keyboard(start_lat, start_lng, end_lat, end_lng, pk=None):
+def inline_finish_order(end_lat, end_lng, pk=None):
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[8], url=coord_to_link(start_lat, start_lng, end_lat, end_lng))],
-        [InlineKeyboardButton(order_inline_buttons[3], callback_data=f"Along_the_route {pk}")],
-        [InlineKeyboardButton(order_inline_buttons[4], callback_data=f"Off_route {pk}")]
+        [InlineKeyboardButton(order_inline_buttons[8], url=coord_to_link(end_lat, end_lng))],
+        [InlineKeyboardButton(order_inline_buttons[7], callback_data=f"End_trip {pk}")],
+
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -67,15 +67,16 @@ def inline_route_keyboard(start_lat, start_lng, end_lat, end_lng, pk=None):
 def inline_repeat_keyboard(pk=None):
     keyboard = [
         [InlineKeyboardButton(order_inline_buttons[5], callback_data=f"Accept {pk}")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data=f"Сlient_on_site {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data=f"End_trip {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_finish_order(pk=None):
-    keyboard = [[
-        InlineKeyboardButton(order_inline_buttons[7], callback_data=f"End_trip {pk}")
-    ]]
+def inline_route_keyboard(pk=None):
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[3], callback_data=f"Along_the_route {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[4], callback_data=f"Off_route {pk}")]
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 

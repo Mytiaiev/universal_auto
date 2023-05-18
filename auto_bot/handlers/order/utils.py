@@ -5,6 +5,7 @@ import requests
 from telegram import TelegramError, ReplyKeyboardRemove
 
 from app.models import ParkSettings
+from auto_bot.main import bot
 from auto_bot.handlers.main.keyboards import markup_keyboard
 from scripts.conversion import get_addresses_by_radius
 from auto_bot.handlers.order.keyboards import inline_comment_for_client
@@ -22,18 +23,18 @@ def buttons_addresses(address):
         return None
 
 
-def text_to_client(context=None, order=None, text=None, button=None, comment=None):
+def text_to_client(order=None, text=None, button=None, comment=None):
     if order.chat_id_client:
         if comment is None:
 
-            message = context.bot.send_message(chat_id=order.chat_id_client, text=text, reply_markup=button)
+            message = bot.send_message(chat_id=order.chat_id_client, text=text, reply_markup=button)
             message_id = message.message_id
             if button is not None:
                 order.client_message_id = message_id
                 order.save()
                 delete_button.delay(order.id, message_id, text)
         else:
-            context.bot.send_message(chat_id=order.chat_id_client, text=text,
+            bot.send_message(chat_id=order.chat_id_client, text=text,
                                      reply_markup=inline_comment_for_client())
     else:
         params = {

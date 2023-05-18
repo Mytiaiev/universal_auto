@@ -30,7 +30,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
 from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE, \
-    TODAY, NOW, complete_order_text
+    TODAY, NOW, LOCATION, complete_order_text
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -103,7 +103,7 @@ def setup_dispatcher(dp):
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
-    dp.add_handler(MessageHandler(Filters.location, location))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001F4CD {LOCATION}$"), location))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[0]}$"), continue_order))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_address))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
