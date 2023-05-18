@@ -118,6 +118,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
                     pattern=re.compile(
                     "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip|Client_reject) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(comment, pattern=re.compile("^Comment client$")))
     # sending comment
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$") |
                                   Filters.regex(fr"^Відмовитись від замовлення$"),

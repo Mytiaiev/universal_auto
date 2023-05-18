@@ -10,8 +10,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, KeyboardButton, LabeledPrice
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip, check_time_order, \
-    delete_button
+from auto.tasks import logger, get_distance_trip, check_time_order, delete_button
 from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
@@ -395,6 +394,7 @@ def handle_callback_order(update, context):
                                  order.phone_number, order.sum, order.distance_google)
             query.edit_message_text(text=message)
             query.edit_message_reply_markup(reply_markup=inline_finish_order(order.id))
+
     elif data[0] == "End_trip":
         # if order.payment_method == PAYCARD:
         #     payment_id = str(uuid4())
@@ -420,7 +420,7 @@ def handle_callback_order(update, context):
         #
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
-        text_to_client(context=context, order=order, text=complete_order_text, comment=True)
+        text_to_client(context=context, order=order, text=complete_order_text)
         query.edit_message_text(text=f"<<Поїздку завершено>>")
         context.user_data.clear()
         order.status_order = Order.COMPLETED
