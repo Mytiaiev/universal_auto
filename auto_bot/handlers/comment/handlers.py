@@ -11,6 +11,7 @@ def comment(update, context):
     context.user_data['state'] = COMMENT
     try:
         query = update.callback_query
+        query.edit_message_reply_markup(reply_markup=None)
         chat_id = query.message.chat.id
     except:
         chat_id = update.message.chat.id
