@@ -11,7 +11,6 @@ from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, KeyboardButton, LabeledPrice
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
 from auto.tasks import logger, get_distance_trip, check_time_order, delete_button
-from auto_bot.handlers.main.handlers import cancel
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
@@ -358,10 +357,12 @@ def handle_callback_order(update, context):
         order.status_order = Order.CANCELED
         order.save()
         client_message_id = order.client_message_id
-        client_chat_id = order.chat_id_client
         for i in range(3):
-            bot.delete_message(chat_id=client_chat_id, message_id=int(client_message_id) + i)
-        text_to_client(order=order, text="<<Ви відмовились від замовлення...>>")
+            context.bot.delete_message(chat_id=order.chat_id_client, message_id=int(client_message_id) + i)
+        try:
+            context.bot.send_message(chat_id=order.chat_id_client, text=client_cancel)
+        except:
+            pass
     elif data[0] == "Сlient_on_site":
         if not context.user_data.get('recheck'):
             context.user_data['running'] = False
@@ -473,8 +474,7 @@ def change_sum_trip(sender=None, **kwargs):
         else:
             order.sum = int(price_per_minute) + int(order.car_delivery_price)
         order.save()
-        text_to_client(order=order, text=f'Сума до оплати: {order.sum} грн')
-        text_to_client(order, complete_order_text)
+        text_to_client(order=order, text=f'Сума до cплати: {order.sum} грн\n + {complete_order_text}')
         message = driver_complete_text(order.sum)
         bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
 
