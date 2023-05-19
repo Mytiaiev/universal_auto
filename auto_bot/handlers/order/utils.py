@@ -35,7 +35,7 @@ def text_to_client(order=None, text=None, button=None, comment=None):
                 delete_button.delay(order.id, message_id, text)
         else:
             bot.send_message(chat_id=order.chat_id_client, text=text,
-                                     reply_markup=inline_comment_for_client())
+                             reply_markup=inline_comment_for_client())
     else:
         params = {
             "recipient": order.phone_number[1:],
