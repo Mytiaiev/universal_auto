@@ -210,6 +210,9 @@ def send_order_to_driver(sender=None, **kwargs):
             while count < 3:
                 instance.checked = True
                 instance.save()
+                order = Order.objects.get(id=instance.id)
+                if order.status_order == Order.IN_PROGRESS:
+                    break
                 drivers = Driver.objects.filter(chat_id__isnull=False)
                 if not count:
                     text_to_client(instance, client_msg)
@@ -237,14 +240,13 @@ def send_order_to_driver(sender=None, **kwargs):
                                 end_time = time.time() + ParkSettings.get_value("MESSAGE_APPEAR", 30)
                                 while time.time() < end_time:
                                     time.sleep(5)
-                                    print('sleep')
-                                upd_driver = Driver.objects.get(driver.id)
+                                upd_driver = Driver.objects.get(id=driver.id)
                                 if upd_driver.driver_status == Driver.ACTIVE:
                                     bot.delete_message(chat_id=driver.chat_id, message_id=accept_message.message_id)
 
                         else:
                             continue
-                time.sleep(60)
+                time.sleep(20)
                 count += 1
             bot.send_message(chat_id=instance.chat_id_client,
                              text=no_driver_in_radius,
@@ -355,7 +357,7 @@ def handle_callback_order(update, context):
                                           end_at=None).last()
         if record:
             vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-            markup = inline_spot_keyboard(order.latitude, order.longitude)
+            markup = inline_spot_keyboard(order.latitude, order.longitude, pk=order.id)
             order.status_order, order.driver = Order.IN_PROGRESS, driver
             order.driver_message_id = query.message.message_id
             order.save()
@@ -391,9 +393,9 @@ def handle_callback_order(update, context):
         order.status_order = Order.CANCELED
         order.save()
         client_message_id = order.client_message_id
-        for i in range(3):
-            context.bot.delete_message(chat_id=order.chat_id_client, message_id=int(client_message_id) + i)
         try:
+            for i in range(3):
+                context.bot.delete_message(chat_id=order.chat_id_client, message_id=int(client_message_id) + i)
             context.bot.send_message(chat_id=order.chat_id_client, text=client_cancel)
         except:
             pass

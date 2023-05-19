@@ -41,17 +41,17 @@ increase_price_keyboard = [
 ]
 
 
-def inline_spot_keyboard(end_lat, end_lng):
+def inline_spot_keyboard(end_lat, end_lng, pk=None):
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[8], url=coord_to_link(end_lat, end_lng))]
+        [InlineKeyboardButton(order_inline_buttons[8], url=coord_to_link(end_lat, end_lng))],
+        [InlineKeyboardButton(order_inline_buttons[0], callback_data=f"Reject_order {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def inline_markup_accept(pk=None):
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[1], callback_data=f"Accept_order {pk}")],
-        [InlineKeyboardButton(order_inline_buttons[0], callback_data=f"Reject_order {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[1], callback_data=f"Accept_order {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
