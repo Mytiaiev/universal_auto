@@ -270,7 +270,6 @@ def setup_periodic_tasks(sender, **kwargs):
     global UKLON_CHROME_DRIVER
     global UBER_CHROME_DRIVER
     global UAGPS_CHROME_DRIVER
-    sender.add_periodic_task(6, check_order.s(), queue='non_priority')
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              check_time_order.s(), queue='non_priority')

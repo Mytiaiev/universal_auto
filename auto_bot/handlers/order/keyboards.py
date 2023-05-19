@@ -4,9 +4,11 @@ from auto_bot.handlers.order.static_text import *
 from scripts.conversion import coord_to_link
 
 order_keyboard = [
-    KeyboardButton(text=f"\U0001f4b7 {INCREASE_PRICE}"),
-    KeyboardButton(text=f"\u23F0 {TODAY}"),
-    KeyboardButton(text=f"\u274c {CANCEL}")
+    [KeyboardButton(text=f"\U0001f4b7 {INCREASE_PRICE}"),
+     KeyboardButton(text=f"\U0001F50D {NOT_INCREASE_PRICE}")],
+    [KeyboardButton(text=f"\u23F0 {TODAY}"),
+     KeyboardButton(text=f"\u274c {CANCEL}")],
+
 ]
 
 timeorder_keyboard = [

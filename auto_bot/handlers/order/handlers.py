@@ -194,6 +194,7 @@ def order_create(update, context):
             sum=price,
             distance_google=distance_google,
             status_order=Order.WAITING)
+    check_order.delay()
 
 
 @task_postrun.connect
@@ -212,7 +213,7 @@ def send_order_to_driver(sender=None, **kwargs):
                 instance.save()
                 order = Order.objects.get(id=instance.id)
                 if order.status_order == Order.IN_PROGRESS:
-                    break
+                    return
                 drivers = Driver.objects.filter(chat_id__isnull=False)
                 if not count:
                     text_to_client(instance, client_msg)
@@ -243,14 +244,14 @@ def send_order_to_driver(sender=None, **kwargs):
                                 upd_driver = Driver.objects.get(id=driver.id)
                                 if upd_driver.driver_status == Driver.ACTIVE:
                                     bot.delete_message(chat_id=driver.chat_id, message_id=accept_message.message_id)
-
+                                    bot.send_message(chat_id=driver.chat_id, text=decline_order)
                         else:
                             continue
                 time.sleep(20)
                 count += 1
             bot.send_message(chat_id=instance.chat_id_client,
                              text=no_driver_in_radius,
-                             reply_markup=markup_keyboard([order_keyboard]))
+                             reply_markup=markup_keyboard(order_keyboard))
 
 
 def increase_search_radius(update, context):
@@ -265,7 +266,15 @@ def increase_order_price(update, context):
     order.sum += order.car_delivery_price
     order.checked = False
     order.save()
+    check_order.delay()
 
+
+def continue_search(update, context):
+    chat_id = update.message.chat.id
+    order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
+    order.checked = False
+    order.save()
+    check_order.delay()
 
 
 def time_order(update, context):
@@ -384,6 +393,7 @@ def handle_callback_order(update, context):
             order.status_order = Order.WAITING
             order.checked = False
             order.save()
+            check_order.delay()
             # remove inline keyboard markup from the message
             text_to_client(order, driver_cancel)
         else:
