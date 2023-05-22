@@ -1,5 +1,5 @@
 from django.utils import timezone
-from auto.tasks import send_on_job_application_on_driver
+from auto.tasks import send_on_job_application_on_driver, check_order
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from app.models import Driver, Order, StatusChange, JobApplication, \
@@ -48,6 +48,12 @@ def send_day_rent(sender, instance, **kwargs):
         #     bot.send_message(chat_id=chat_id, text=message)
     except:
         pass
+
+
+@receiver(post_save, sender=Order)
+def take_order_from_client(sender, instance, **kwargs):
+    if instance.status_order == Order.WAITING and not instance.checked:
+        check_order.delay(instance.id)
 
 
 @receiver(pre_save, sender=Order)

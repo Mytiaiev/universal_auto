@@ -194,64 +194,64 @@ def order_create(update, context):
             sum=price,
             distance_google=distance_google,
             status_order=Order.WAITING)
-    check_order.delay()
 
 
 @task_postrun.connect
 def send_order_to_driver(sender=None, **kwargs):
     if sender == check_order:
-        orders = Order.objects.filter(status_order=Order.WAITING,
-                                      checked=False)
 
-        for instance in orders:
-            client_msg = client_order_info(instance.from_address, instance.to_the_address,
-                                           instance.payment_method, instance.phone_number, instance.sum,
-                                           increase=instance.car_delivery_price)
-            count = 0
-            while count < 3:
-                instance.checked = True
-                instance.save()
-                order = Order.objects.get(id=instance.id)
-                if order.status_order == Order.IN_PROGRESS:
-                    return
-                drivers = Driver.objects.filter(chat_id__isnull=False)
-                if not count:
-                    text_to_client(instance, client_msg)
-                elif count == 1:
-                    text_to_client(instance, search_driver_1)
-                elif count == 2:
-                    text_to_client(instance, search_driver_2)
-                for driver in drivers:
-                    record = UseOfCars.objects.filter(user_vehicle=driver,
-                                                      created_at__date=timezone.now().date(),
-                                                      end_at=None).last()
-                    if record:
-                        if driver.driver_status == Driver.ACTIVE:
-                            vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-                            driver_lat, driver_long = get_location_from_db(vehicle)
-                            distance = haversine(float(driver_lat), float(driver_long),
-                                                 float(instance.latitude), float(instance.longitude))
-                            radius = round(ParkSettings.get_value("FREE RADIUS", 3), 1) + \
-                                     round(instance.car_delivery_price/10, 1)
-                            if distance <= radius:
-                                message = order_info(instance.pk, instance.from_address, instance.to_the_address,
-                                                     instance.payment_method, instance.phone_number)
-                                markup = inline_markup_accept(instance.pk)
-                                accept_message = bot.send_message(chat_id=driver.chat_id, text=message, reply_markup=markup)
-                                end_time = time.time() + ParkSettings.get_value("MESSAGE_APPEAR", 30)
-                                while time.time() < end_time:
-                                    time.sleep(5)
-                                upd_driver = Driver.objects.get(id=driver.id)
-                                if upd_driver.driver_status == Driver.ACTIVE:
-                                    bot.delete_message(chat_id=driver.chat_id, message_id=accept_message.message_id)
-                                    bot.send_message(chat_id=driver.chat_id, text=decline_order)
-                        else:
-                            continue
-                time.sleep(20)
-                count += 1
-            bot.send_message(chat_id=instance.chat_id_client,
-                             text=no_driver_in_radius,
-                             reply_markup=markup_keyboard(order_keyboard))
+        order = Order.objects.get(id=kwargs.get('retval'))
+
+        client_msg = client_order_info(order.from_address, order.to_the_address,
+                                       order.payment_method, order.phone_number, order.sum,
+                                       increase=order.car_delivery_price)
+        count = 0
+        order.checked = True
+        order.save()
+        while count < 3:
+            if not count:
+                text_to_client(order, client_msg)
+            elif count == 1:
+                text_to_client(order, search_driver_1)
+            elif count == 2:
+                text_to_client(order, search_driver_2)
+            drivers = Driver.objects.filter(chat_id__isnull=False)
+            for driver in drivers:
+                record = UseOfCars.objects.filter(user_vehicle=driver,
+                                                  created_at__date=timezone.now().date(),
+                                                  end_at=None).last()
+                if record:
+                    if driver.driver_status == Driver.ACTIVE:
+                        vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
+                        driver_lat, driver_long = get_location_from_db(vehicle)
+                        distance = haversine(float(driver_lat), float(driver_long),
+                                             float(order.latitude), float(order.longitude))
+                        radius = round(ParkSettings.get_value("FREE RADIUS", 3), 1) + \
+                                 round(order.car_delivery_price/10, 1)
+                        if distance <= radius:
+                            message = order_info(order.pk, order.from_address, order.to_the_address,
+                                                 order.payment_method, order.phone_number)
+                            markup = inline_markup_accept(order.pk)
+                            accept_message = bot.send_message(chat_id=driver.chat_id, text=message, reply_markup=markup)
+                            end_time = time.time() + ParkSettings.get_value("MESSAGE_APPEAR", 30)
+                            while time.time() < end_time:
+                                time.sleep(5)
+                            upd_driver = Driver.objects.get(id=driver.id)
+                            instance = Order.objects.get(id=order.id)
+                            if instance.driver == upd_driver:
+                                print('driver founded')
+                                return
+                            else:
+                                bot.delete_message(chat_id=driver.chat_id, message_id=accept_message.message_id)
+                                bot.send_message(chat_id=driver.chat_id, text=decline_order)
+                    else:
+                        continue
+            time.sleep(20)
+            count += 1
+            if count == 3:
+                bot.send_message(chat_id=order.chat_id_client,
+                                 text=no_driver_in_radius,
+                                 reply_markup=markup_keyboard(order_keyboard))
 
 
 def increase_search_radius(update, context):
@@ -266,7 +266,6 @@ def increase_order_price(update, context):
     order.sum += order.car_delivery_price
     order.checked = False
     order.save()
-    check_order.delay()
 
 
 def continue_search(update, context):
@@ -274,7 +273,6 @@ def continue_search(update, context):
     order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
     order.checked = False
     order.save()
-    check_order.delay()
 
 
 def time_order(update, context):
@@ -359,8 +357,6 @@ def handle_callback_order(update, context):
     driver = Driver.get_by_chat_id(chat_id=query.message.chat_id)
     order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] == "Accept_order":
-        driver.driver_status = Driver.WAIT_FOR_CLIENT
-        driver.save()
         record = UseOfCars.objects.filter(user_vehicle=driver,
                                           created_at__date=timezone.now().date(),
                                           end_at=None).last()
@@ -393,7 +389,6 @@ def handle_callback_order(update, context):
             order.status_order = Order.WAITING
             order.checked = False
             order.save()
-            check_order.delay()
             # remove inline keyboard markup from the message
             text_to_client(order, driver_cancel)
         else:

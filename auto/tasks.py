@@ -240,8 +240,8 @@ def check_time_order(self):
     print("check orders on time")
 
 @app.task(bind=True, queue='non_priority')
-def check_order(self):
-    print("check orders")
+def check_order(self, order_id):
+    return order_id
 
 
 @app.task(bind=True, queue='non_priority')
