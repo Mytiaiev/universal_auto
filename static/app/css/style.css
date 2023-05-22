@@ -1002,22 +1002,6 @@ label {
   color: #E96F24;
 }
 
-
-/*body {*/
-/*  font: 400 16px sans-serif;*/
-/*}*/
-
-/*img {*/
-/*  max-width: 100%;*/
-/*  height: auto;*/
-/*}*/
-
-/** {*/
-/*  box-sizing: border-box;*/
-/*  margin: 0;*/
-/*  padding: 0;*/
-/*}*/
-
 .cover {
   -webkit-background-size: cover;
   background-size: cover;
@@ -1028,7 +1012,6 @@ label {
 .services {
   padding: 100px 0;
   max-width: 100%;
-  /*background: #f5f5f5;*/
 }
 
 .services-label {
@@ -1119,4 +1102,14 @@ label {
 
 .services-grid__item .btn {
   margin: 0 20px;
+}
+
+.rating {
+    color: gold;
+    font-size: 24px;
+    margin-top: 10px;
+}
+
+.star-half {
+    color: lightgrey;
 }
