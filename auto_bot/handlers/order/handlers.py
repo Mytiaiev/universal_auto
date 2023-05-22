@@ -11,11 +11,12 @@ from django.dispatch import receiver
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, KeyboardButton, LabeledPrice
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
-from auto.tasks import logger, get_distance_trip, check_time_order, delete_button, check_order
+from auto.tasks import logger, get_distance_trip, check_time_order, delete_button, check_order, send_time_order
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto_bot.handlers.order.keyboards import location_keyboard, order_keyboard, timeorder_keyboard, \
     payment_keyboard, inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
-    inline_finish_order, inline_repeat_keyboard, share_location, inline_reject_order, increase_price_keyboard
+    inline_finish_order, inline_repeat_keyboard, share_location, inline_reject_order, increase_price_keyboard, \
+    inline_timeorder_keyboard
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
@@ -318,20 +319,17 @@ def order_on_time(update, context):
 
 @task_postrun.connect
 def send_time_orders(sender=None, **kwargs):
-    if sender == check_order:
-        orders = Order.objects.filter(status_order=Order.ON_TIME,
-                                      order_time__gte=timezone.localtime(),
-                                      checked=False)
-        if orders:
-            for timeorder in orders:
-                timeorder.checked = True
-                timeorder.save()
-                message = order_info(timeorder.pk, timeorder.from_address, timeorder.to_the_address,
-                                     timeorder.payment_method, timeorder.phone_number,
-                                     time=timezone.localtime(timeorder.order_time).time())
-                bot.send_message(chat_id=515224934, text=message,
-                                 reply_markup=inline_markup_accept(timeorder.pk),
-                                 parse_mode=ParseMode.HTML)
+    if sender == check_time_order:
+        timeorder = Order.objects.get(id=kwargs.get('retval'))
+        message = order_info(timeorder.pk, timeorder.from_address, timeorder.to_the_address,
+                             timeorder.payment_method, timeorder.phone_number,
+                             time=timezone.localtime(timeorder.order_time).time())
+        group_msg = bot.send_message(chat_id=-863882769, text=message,
+                         reply_markup=inline_markup_accept(timeorder.pk),
+                         parse_mode=ParseMode.HTML)
+        timeorder.driver_message_id = group_msg.message_id
+        timeorder.checked = True
+        timeorder.save()
 
 
 @task_postrun.connect
@@ -354,39 +352,48 @@ def delete_button_client(sender=None, **kwargs):
 def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
-    driver = Driver.get_by_chat_id(chat_id=query.message.chat_id)
+    driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
     order = Order.objects.filter(pk=int(data[1])).first()
-    if data[0] == "Accept_order":
+    if data[0] in ("Accept_order", "Start_route"):
+        if data[0] == "Start_route":
+            order.status_order = Order.IN_PROGRESS
+            order.save()
         record = UseOfCars.objects.filter(user_vehicle=driver,
                                           created_at__date=timezone.now().date(),
                                           end_at=None).last()
         if record:
             vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
             markup = inline_spot_keyboard(order.latitude, order.longitude, pk=order.id)
-            order.status_order, order.driver = Order.IN_PROGRESS, driver
-            order.driver_message_id = query.message.message_id
+            order.driver = driver
             order.save()
-            ParkStatus.objects.create(driver=driver,
-                                      status=Driver.WAIT_FOR_CLIENT)
-            message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
-                                 order.phone_number, order.sum, order.distance_google)
-            query.edit_message_text(text=message)
-            query.edit_message_reply_markup(reply_markup=markup)
-            report_for_client = client_order_text(driver, vehicle.name, record.licence_plate, driver.phone_number, order.sum)
-            try:
-                context.user_data['running'] = True
-                r = threading.Thread(target=send_map_to_client,
-                                     args=(update, context, order, query.message.message_id, vehicle), daemon=True)
-                r.start()
-            except:
-                pass
-            text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
+            if order.status_order == Order.ON_TIME:
+                context.bot.delete_message(chat_id=-863882769, message_id=int(order.driver_message_id))
+                context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
+            else:
+                order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
+                order.save()
+                ParkStatus.objects.create(driver=driver,
+                                          status=Driver.WAIT_FOR_CLIENT)
+                message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
+                                     order.phone_number, order.sum, order.distance_google)
+                query.edit_message_text(text=message)
+                query.edit_message_reply_markup(reply_markup=markup)
+                report_for_client = client_order_text(driver, vehicle.name, record.licence_plate, driver.phone_number, order.sum)
+                try:
+                    context.user_data['running'] = True
+                    r = threading.Thread(target=send_map_to_client,
+                                         args=(update, context, order, query.message.message_id, vehicle), daemon=True)
+                    r.start()
+                except:
+                    pass
+                text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
         else:
-            query.edit_message_text(text=select_car_error)
+            context.bot.send_message(chat_id=driver.chat_id, text=select_car_error)
     elif data[0] == 'Reject_order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
         if order:
             order.status_order = Order.WAITING
+            order.driver = None
             order.checked = False
             order.save()
             # remove inline keyboard markup from the message
@@ -397,10 +404,9 @@ def handle_callback_order(update, context):
     elif data[0] == "Client_reject":
         order.status_order = Order.CANCELED
         order.save()
-        client_message_id = order.client_message_id
         try:
             for i in range(3):
-                context.bot.delete_message(chat_id=order.chat_id_client, message_id=int(client_message_id) + i)
+                context.bot.delete_message(chat_id=order.chat_id_client, message_id=int(order.client_message_id) + i)
             context.bot.send_message(chat_id=order.chat_id_client, text=client_cancel)
         except:
             pass
@@ -467,6 +473,16 @@ def handle_callback_order(update, context):
         order.save()
 
 
+def callback_time_order(update, context):
+    query = update.callback_query
+    data = query.data.split(' ')
+    driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
+    order = Order.objects.filter(pk=int(data[1])).first()
+
+
+
+
+
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
     title = 'Послуга особистого водія'
     description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
@@ -495,6 +511,20 @@ def check_payment_status(sender=None, **kwargs):
             order.status_order = Order.COMPLETED
             order.save()
             ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)'''
+
+
+@task_postrun.connect
+def notify_driver(sender=None, **kwargs):
+    if sender == send_time_order:
+        accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
+        for order in accepted_orders:
+            if timezone.localtime() < order.order_time + datetime.timedelta(minutes=int(
+                    ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10))):
+                markup = inline_timeorder_keyboard(order.id)
+                text = order_info(order.pk, order.from_address, order.to_the_address,
+                                  order.payment_method, order.phone_number,
+                                  time=timezone.localtime(order.order_time).time())
+                bot.send_message(chat_id=order.driver.chat_id, text=text, reply_markup=markup)
 
 
 @task_postrun.connect

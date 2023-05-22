@@ -1,12 +1,10 @@
 import re
 
-from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher, CallbackQueryHandler, ConversationHandler, \
-    RegexHandler
+from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
 
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
-    get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, driver_status, \
-    broken_car
-from auto_bot.main import bot
+    get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add,\
+    driver_status, broken_car
 from app.models import Driver
 from auto_bot.states import text
 # handlers
@@ -19,7 +17,7 @@ from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers
 from auto_bot.handlers.reports.handlers import report, download_report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
     get_imei, finish_job_main, get_vehicle_of_driver
-from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
+from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, location, time_for_order, handle_callback_order, increase_search_radius, \
     increase_order_price, continue_search
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
@@ -31,7 +29,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
 from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE, \
-    TODAY, NOW, LOCATION, complete_order_text, INCREASE_PRICE, NOT_INCREASE_PRICE
+    TODAY, NOW, complete_order_text, INCREASE_PRICE, NOT_INCREASE_PRICE
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -124,8 +122,9 @@ def setup_dispatcher(dp):
         Filters.regex(fr"^\U0001f4b7 150 грн$"),
         increase_order_price))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile(
-                                            "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip|Client_reject) [0-9]+$")))
+                                        pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
+                                                           "Сlient_on_site|Along_the_route|Off_route|"
+                                                           "Accept|End_trip|Client_reject) [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(comment, pattern="Comment client"))
     # sending comment
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$") |

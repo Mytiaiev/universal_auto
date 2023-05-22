@@ -236,8 +236,14 @@ def send_daily_into_group(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def check_time_order(self):
-    print("check orders on time")
+def check_time_order(self, order_id):
+    return order_id
+
+
+@app.task(bind=True, queue='non_priority')
+def send_time_order(self):
+    return logger.info('sending_time_orders')
+
 
 @app.task(bind=True, queue='non_priority')
 def check_order(self, order_id):
@@ -272,7 +278,7 @@ def setup_periodic_tasks(sender, **kwargs):
     global UAGPS_CHROME_DRIVER
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             check_time_order.s(), queue='non_priority')
+                             send_time_order.s(), queue='non_priority')
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=15, hour='*/2'), update_driver_data.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')

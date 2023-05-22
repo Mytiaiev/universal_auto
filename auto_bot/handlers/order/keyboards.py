@@ -101,3 +101,10 @@ def inline_reject_order(pk=None):
         InlineKeyboardButton(f"\u274c {CANCEL}", callback_data=f"Client_reject {pk}")
     ]]
     return InlineKeyboardMarkup(keyboard)
+
+
+def inline_timeorder_keyboard(pk=None):
+    keyboard = [
+        [InlineKeyboardButton(timeorder_inline_buttons[0], callback_data=f"Start_route {pk}")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
