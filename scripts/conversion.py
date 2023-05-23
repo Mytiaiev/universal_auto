@@ -92,7 +92,7 @@ def get_route_price(from_lat, from_lng, to_lat, to_lng, api_key):
         price = distance_within_city * int(ParkSettings.get_value("TARIFF_IN_THE_CITY")) + distance_outside_city * int(
             ParkSettings.get_value("TARIFF_OUTSIDE_THE_CITY"))
         route = distance_within_city + distance_outside_city
-        return price, route
+        return int(price), route
 
 
 def coord_to_link(end_lat, end_lng):

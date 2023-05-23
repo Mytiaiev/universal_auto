@@ -4,23 +4,22 @@ from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus
 from auto_bot.handlers.driver.static_text import not_driver_text, V_ID
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
 from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard, correct_keyboard
-from auto_bot.handlers.status.static_text import CORRECT_AUTO, already_in_use_text, add_auto_to_driver_text, \
-    wrong_number_auto_text, choose_car_text, bad_value
+from auto_bot.handlers.status.static_text import *
 
 
 def status(update, context):
-    chat_id = update.message.chat.id
-    context.user_data['u_driver'] = Driver.get_by_chat_id(chat_id)
-    if context.user_data['u_driver'] is not None:
-        record = UseOfCars.objects.filter(user_vehicle=context.user_data['u_driver'],
-                                          created_at__date=timezone.now().date(),
-                                          end_at=None)
-        if record:
-            send_set_status(update, context)
-        else:
-            get_vehicle_of_driver(update, context)
+    query = update.callback_query
+    chat_id = update.effective_chat.id
+    driver = Driver.get_by_chat_id(chat_id)
+    if driver is not None:
+        vehicle = Vehicle.objects.filter(driver=driver).first()
+        UseOfCars.objects.create(
+            user_vehicle=driver,
+            chat_id=chat_id,
+            licence_plate=vehicle.licence_plate)
+        query.edit_message_text(text=add_auto_to_driver_text)
     else:
-        update.message.reply_text(not_driver_text)
+        query.edit_message_text(text=not_driver_text)
 
 
 def send_set_status(update, context):
@@ -72,7 +71,8 @@ def get_vehicle_of_driver(update, context):
 
 
 def finish_job_main(update, context):
-    driver = Driver.get_by_chat_id(update.message.chat.id)
+    query = update.callback_query
+    driver = Driver.get_by_chat_id(update.effective_chat.id)
     record = UseOfCars.objects.get(user_vehicle=driver,
                                    created_at__date=timezone.now().date(), end_at=None)
     record.end_at = timezone.now()
@@ -80,7 +80,7 @@ def finish_job_main(update, context):
     driver.save()
     record.save()
     ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
-    update.message.reply_text(f'Ви закінчили працювати, до зустрічі', reply_markup=ReplyKeyboardRemove())
+    query.edit_message_text(finish_job)
     context.user_data.clear()
 
 

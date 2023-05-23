@@ -8,7 +8,7 @@ from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fle
 from app.models import Driver
 from auto_bot.states import text
 # handlers
-from auto_bot.handlers.comment.handlers import comment
+from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
     take_a_day_off_or_sick_leave, option, numberplate, status_car
@@ -28,7 +28,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 # text
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
-from auto_bot.handlers.order.static_text import CASH, PAYCARD, TODAY, complete_order_text, search_inline_buttons
+from auto_bot.handlers.order.static_text import CASH, PAYCARD, search_inline_buttons
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -101,7 +101,7 @@ def setup_dispatcher(dp):
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[0]}$"), continue_order))
+    dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
     dp.add_handler(MessageHandler(Filters.location, get_location))
     dp.add_handler(MessageHandler(Filters.regex(fr"^{search_inline_buttons[6]}$"), from_address))
     dp.add_handler(MessageHandler(Filters.regex(fr"^{search_inline_buttons[7]}$"), to_the_address))
@@ -113,7 +113,6 @@ def setup_dispatcher(dp):
         order_create))
     dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
     dp.add_handler(CallbackQueryHandler(continue_search, pattern="Continue_search"))
-    dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))
     dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order"))
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
@@ -121,16 +120,15 @@ def setup_dispatcher(dp):
                                                            "Сlient_on_site|Along_the_route|Off_route|"
                                                            "Accept|End_trip|Client_reject) [0-9]+$")))
     # sending comment
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$"), comment))
-    dp.add_handler(CommandHandler("comment", comment))
+    dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))
+    dp.add_handler(CallbackQueryHandler(save_comment, pattern="5_Star|4_Star|3_Star|2_Star|1_Star"))
 
     # Add job application
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[2]}$"), job_application))
     # Commands for Drivers
     # Changing status of driver
-    dp.add_handler(CommandHandler("status", status))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[4]}$"), status))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[5]}$"), finish_job_main))
+    dp.add_handler(CallbackQueryHandler(status, pattern="Start_work"))
+    dp.add_handler(CallbackQueryHandler(finish_job_main, pattern="Finish_work"))
     dp.add_handler(MessageHandler(
         Filters.regex(fr"^{Driver.ACTIVE}$") |
         Filters.regex(fr"^{Driver.OFFLINE}$") |

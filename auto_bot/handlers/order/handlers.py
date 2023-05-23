@@ -22,14 +22,17 @@ from auto_bot.handlers.order.static_text import *
 
 
 def continue_order(update, context):
-    order = Order.objects.filter(chat_id_client=update.message.chat.id, status_order__in=[Order.ON_TIME, Order.WAITING])
+    query = update.callback_query
+    order = Order.objects.filter(chat_id_client=update.effective_chat.id,
+                                 status_order__in=[Order.ON_TIME, Order.WAITING])
     reply_markup = inline_start_order_kb()
     if order:
-        update.message.reply_text(already_ordered, reply_markup=reply_markup)
+        query.edit_message_text(text=already_ordered)
     else:
         context.user_data['state'] = START_TIME_ORDER
         context.user_data['location_button'] = False
-        update.message.reply_text(price_info, reply_markup=reply_markup)
+        query.edit_message_text(text=price_info)
+    query.edit_message_reply_markup(reply_markup=reply_markup)
 
 
 def cancel_order(update, context):
@@ -153,7 +156,7 @@ def order_create(update, context):
                                      ParkSettings.get_value('GOOGLE_API_KEY'))
     price = distance_price[0]
     distance_google = round(distance_price[1], 2)
-    order = Order.objects.filter(chat_id_client=update.message.chat.id, payment_method="",
+    order = Order.objects.filter(chat_id_client=update.message.chat.id, payment_method__isnull=True,
                                  status_order=Order.ON_TIME).first()
     if order:
         order.from_address = context.user_data['from_address']
@@ -168,7 +171,7 @@ def order_create(update, context):
         order.distance_google = distance_google
         order.save()
         update.message.reply_text(
-            f'Замовлення прийняте, сума замовлення {order.sum} грн\n '
+            f'Замовлення прийняте, сума замовлення {price} грн\n '
             f'Очікуйте водія о {timezone.localtime(order.order_time).time()}')
     else:
         Order.objects.create(
@@ -250,8 +253,8 @@ def increase_order_price(update, context):
     chat_id = query.from_user.id
     context.bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
     order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
-    order.car_delivery_price += int(query.data[0])
-    order.sum += order.car_delivery_price
+    order.car_delivery_price += int(query.data)
+    order.sum += int(query.data)
     order.checked = False
     order.save()
 
