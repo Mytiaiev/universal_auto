@@ -6,8 +6,6 @@ import requests
 import os
 
 from celery.signals import task_postrun
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, KeyboardButton, LabeledPrice
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
@@ -200,9 +198,7 @@ def order_create(update, context):
 @task_postrun.connect
 def send_order_to_driver(sender=None, **kwargs):
     if sender == check_order:
-
         order = Order.objects.get(id=kwargs.get('retval'))
-
         client_msg = client_order_info(order.from_address, order.to_the_address,
                                        order.payment_method, order.phone_number, order.sum,
                                        increase=order.car_delivery_price)
@@ -211,7 +207,7 @@ def send_order_to_driver(sender=None, **kwargs):
         order.save()
         while count < 3:
             if not count:
-                text_to_client(order, client_msg)
+                text_to_client(order, client_msg, ReplyKeyboardRemove())
             elif count == 1:
                 text_to_client(order, search_driver_1)
             elif count == 2:
@@ -234,13 +230,10 @@ def send_order_to_driver(sender=None, **kwargs):
                                                  order.payment_method, order.phone_number)
                             markup = inline_markup_accept(order.pk)
                             accept_message = bot.send_message(chat_id=driver.chat_id, text=message, reply_markup=markup)
-                            end_time = time.time() + ParkSettings.get_value("MESSAGE_APPEAR", 30)
-                            while time.time() < end_time:
-                                time.sleep(5)
+                            time.sleep(ParkSettings.get_value("MESSAGE_APPEAR", 30))
                             upd_driver = Driver.objects.get(id=driver.id)
                             instance = Order.objects.get(id=order.id)
                             if instance.driver == upd_driver:
-                                print('driver founded')
                                 return
                             else:
                                 bot.delete_message(chat_id=driver.chat_id, message_id=accept_message.message_id)
@@ -256,7 +249,7 @@ def send_order_to_driver(sender=None, **kwargs):
 
 
 def increase_search_radius(update, context):
-    update.message.reply_text(increase_radius_text, reply_markup=markup_keyboard_onetime([increase_price_keyboard]))
+    update.message.reply_text(increase_radius_text, reply_markup=markup_keyboard([increase_price_keyboard]))
 
 
 def increase_order_price(update, context):
@@ -307,6 +300,7 @@ def order_on_time(update, context):
                                         status_order=Order.WAITING)
                 order.status_order = Order.ON_TIME
                 order.order_time = conv_time
+                order.checked = False
                 order.save()
                 update.message.reply_text(order_complete)
         else:
@@ -325,8 +319,8 @@ def send_time_orders(sender=None, **kwargs):
                              timeorder.payment_method, timeorder.phone_number,
                              time=timezone.localtime(timeorder.order_time).time())
         group_msg = bot.send_message(chat_id=-863882769, text=message,
-                         reply_markup=inline_markup_accept(timeorder.pk),
-                         parse_mode=ParseMode.HTML)
+                                     reply_markup=inline_markup_accept(timeorder.pk),
+                                     parse_mode=ParseMode.HTML)
         timeorder.driver_message_id = group_msg.message_id
         timeorder.checked = True
         timeorder.save()
@@ -473,16 +467,6 @@ def handle_callback_order(update, context):
         order.save()
 
 
-def callback_time_order(update, context):
-    query = update.callback_query
-    data = query.data.split(' ')
-    driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
-    order = Order.objects.filter(pk=int(data[1])).first()
-
-
-
-
-
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
     title = 'Послуга особистого водія'
     description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
@@ -524,7 +508,8 @@ def notify_driver(sender=None, **kwargs):
                 text = order_info(order.pk, order.from_address, order.to_the_address,
                                   order.payment_method, order.phone_number,
                                   time=timezone.localtime(order.order_time).time())
-                bot.send_message(chat_id=order.driver.chat_id, text=text, reply_markup=markup)
+                bot.send_message(chat_id=order.driver.chat_id, text=text,
+                                 reply_markup=markup, parse_mode=ParseMode.HTML)
 
 
 @task_postrun.connect

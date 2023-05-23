@@ -29,7 +29,7 @@ def text_to_client(order=None, text=None, button=None, comment=None):
 
             message = bot.send_message(chat_id=order.chat_id_client, text=text, reply_markup=button)
             message_id = message.message_id
-            if button is not None:
+            if button not in (None, ReplyKeyboardRemove()):
                 order.client_message_id = message_id
                 order.save()
                 delete_button.delay(order.id, message_id, text)
