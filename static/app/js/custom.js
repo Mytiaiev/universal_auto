@@ -730,3 +730,27 @@ loadGoogleMaps( 3, apiGoogle, userLanguage,'','geometry,places').then(function()
  initAutocomplete('to_address');
  checkCookies()
 });
+
+$(document).ready(function() {
+    var item = $('.services-grid__item');
+
+    item.each(function() {
+      var text = $(this).find('.service-text');
+      var button = $(this).find('.btn');
+      var isExpanded = false;
+
+      text.addClass('limited-lines');
+      button.text('Читати далі >');
+
+      button.on('click', function() {
+        if (isExpanded) {
+          text.addClass('limited-lines');
+          button.text('Читати далі >');
+        } else {
+          text.removeClass('limited-lines');
+          button.text('Читайте менше <');
+        }
+        isExpanded = !isExpanded;
+      });
+    });
+  });
