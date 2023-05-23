@@ -489,6 +489,14 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
                     bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                                   message_id=query_id,
                                                   reply_markup=inline_client_spot(pk=order.id))
+                    if order.chat_id_client:
+                        vehicle = Vehicle.objects.filter(driver=order.driver).first()
+                        message = client_order_text(order.driver, vehicle.name, vehicle.licence_plate, order.driver.phone_number, order.sum)
+                        bot.edit_message_text(chat_id=order.chat_id_client,
+                                              message_id=order.client_message_id,
+                                              text=message,
+                                              reply_markup=None)
+                        context.user_data['running'] = False
                     context.user_data['flag'] = False
             try:
                 if order.status_order == Order.CANCELED:
