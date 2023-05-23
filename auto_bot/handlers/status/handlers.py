@@ -12,6 +12,9 @@ def status(update, context):
     chat_id = update.effective_chat.id
     driver = Driver.get_by_chat_id(chat_id)
     if driver is not None:
+        driver.driver_status = Driver.ACTIVE
+        driver.save()
+        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         vehicle = Vehicle.objects.filter(driver=driver).first()
         UseOfCars.objects.create(
             user_vehicle=driver,

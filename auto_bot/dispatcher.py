@@ -117,7 +117,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
                                         pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
-                                                           "Сlient_on_site|Along_the_route|Off_route|"
+                                                           "Client_on_site|Along_the_route|Off_route|"
                                                            "Accept|End_trip|Client_reject) [0-9]+$")))
     # sending comment
     dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))

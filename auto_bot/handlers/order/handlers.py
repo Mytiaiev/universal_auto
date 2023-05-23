@@ -403,7 +403,7 @@ def handle_callback_order(update, context):
             context.bot.send_message(chat_id=order.chat_id_client, text=client_cancel)
         except:
             pass
-    elif data[0] == "Сlient_on_site":
+    elif data[0] == "Client_on_site":
         if not context.user_data.get('recheck'):
             context.user_data['running'] = False
             ParkStatus.objects.create(driver=driver, status=Driver.WITH_CLIENT)
