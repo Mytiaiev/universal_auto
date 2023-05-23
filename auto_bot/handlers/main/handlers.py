@@ -31,7 +31,7 @@ def start(update, context):
                 if UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None):
                     reply_markup = markup_keyboard_onetime([driver_keyboard[2:]])
                 else:
-                    reply_markup = markup_keyboard([driver_keyboard[:2]])
+                    reply_markup = markup_keyboard_onetime([driver_keyboard[:2]])
             else:
                 reply_markup = markup_keyboard([start_keyboard[:1]])
                 user.chat_id = chat_id

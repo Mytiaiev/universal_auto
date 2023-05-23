@@ -2,10 +2,7 @@ from app.models import ParkSettings
 
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
 U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(6, 11)
-LOCATION_WRONG = "Місце посадки - невірне"
-LOCATION_CORRECT = "Місце посадки - вірне"
 NOT_CORRECT_ADDRESS = "Немає вірної адреси"
-CONTINUE = "Продовжити замовлення"
 CANCEL = "Скасувати замовлення"
 TOMORROW = "Замовити на завтра"
 TODAY = "Замовити на інший час"
@@ -17,10 +14,10 @@ PAYCARD = "Картка"
 CASH = "Готівка"
 
 already_ordered = "У вас вже є активне замовлення, бажаєте замовити ще одне авто?"
-price_info = f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY', 15)} грн/км\n" + \
-             f"За містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY', 30)} грн/км"
-AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR', 25)}"), int(
-    f"{ParkSettings.get_value('COST_PER_KM', 20)}")
+price_info = f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')} грн/км\n" + \
+             f"За містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')} грн/км"
+AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')}"), int(
+    f"{ParkSettings.get_value('COST_PER_KM')}")
 complete_order_text = "Гарного дня. Дякуємо, що скористались нашими послугами"
 choose_address_text = "Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси'" \
                       " та вкажіть більш детально вашу адресу"
@@ -71,6 +68,24 @@ timeorder_inline_buttons = (
 )
 
 
+search_inline_buttons = (
+    "\U0001f4b7 Збільшити вартість",
+    "\U0001F50D Продовжити пошук",
+    "\u274c Скасувати замовлення",
+    "\u23F0 Замовити на інший час",
+    "\u2705 Замовити на зараз",
+    "\U0001F4CD Поділитися місцезнаходженням",
+    "\u274c Місце посадки - невірне",
+    "\u2705 Місце посадки - вірне"
+
+)
+
+price_inline_buttons = (
+    "30 \U000020B4",
+    "50 \U000020B4",
+    "100 \U000020B4",
+    "150 \U000020B4"
+)
 
 
 def order_info(number, address, to_address, payment, phone, price=None, distance=None, time=None):
@@ -82,7 +97,7 @@ def order_info(number, address, to_address, payment, phone, price=None, distance
               f"Спосіб оплати: {payment}\n" \
               f"Номер телефону: {phone}\n"
     if price is not None:
-        message += f"Загальна вартість: {price} грн\n" + f"Довжина маршруту: {distance}км"
+        message += f"Загальна вартість: {price} грн\n" + f"Довжина маршруту: {distance} км"
     elif time is not None:
         message = time_message + message
     else:
@@ -92,7 +107,7 @@ def order_info(number, address, to_address, payment, phone, price=None, distance
 
 def driver_complete_text(price):
     message = f"Поїздку завершено\n" \
-              f"Сума замовлення: {price} грн"
+              f"Сума замовлення: {int(price)} грн"
     return message
 
 
@@ -102,7 +117,7 @@ def client_order_text(driver, vehicle, plate, phone, price):
               f'Назва: {vehicle}\n' \
               f'Номер машини: {plate}\n' \
               f'Номер телефону: {phone}\n' \
-              f'Сума замовлення: {price} грн\n'
+              f'Сума замовлення: {int(price)} грн\n'
     return message
 
 
@@ -112,9 +127,9 @@ def client_order_info(address, to_address, payment, phone, price, increase=None)
               f"Місце прибуття: {to_address}\n" \
               f"Спосіб оплати: {payment}\n" \
               f"Номер телефону: {phone}\n" \
-              f"Сума замовлення: {price} грн\n" \
+              f"Сума замовлення: {int(price)} грн\n" \
               f'Шукаємо водія...'
     if increase:
-        message = f"Замовлення оновлено\nНова сума замовлення: {price} грн\n" \
+        message = f"Замовлення оновлено\nНова сума замовлення: {int(price)} грн\n" \
                   f"Шукаємо водія..."
     return message

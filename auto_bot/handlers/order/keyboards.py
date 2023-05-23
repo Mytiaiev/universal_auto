@@ -3,27 +3,13 @@ from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from auto_bot.handlers.order.static_text import *
 from scripts.conversion import coord_to_link
 
-order_keyboard = [
-    [KeyboardButton(text=f"\U0001f4b7 {INCREASE_PRICE}"),
-     KeyboardButton(text=f"\U0001F50D {NOT_INCREASE_PRICE}")],
-    [KeyboardButton(text=f"\u23F0 {TODAY}"),
-     KeyboardButton(text=f"\u274c {CANCEL}")],
-
-]
-
-timeorder_keyboard = [
-    [KeyboardButton(text=f"\u2705 {NOW}"),
-     KeyboardButton(text=f"\u23F0 {TODAY}")],
-    [KeyboardButton(text=f"\u274c {CANCEL}")]
-]
-
 share_location = [
-    [KeyboardButton(text=f"\U0001F4CD {LOCATION}", request_location=True)]
+    [KeyboardButton(text=search_inline_buttons[5], request_location=True)]
 ]
 
 location_keyboard = [
-    KeyboardButton(text=f"\u2705 {LOCATION_CORRECT}"),
-    KeyboardButton(text=f"\u274c {LOCATION_WRONG}")
+    KeyboardButton(text=search_inline_buttons[7]),
+    KeyboardButton(text=search_inline_buttons[6])
 ]
 
 payment_keyboard = [
@@ -31,16 +17,34 @@ payment_keyboard = [
     # KeyboardButton(text=f"\U0001f4b8 {PAYCARD}")
 ]
 
-keyboard_comment_for_client = [
-    KeyboardButton(text=f"\u2705 {LOCATION_CORRECT}"),
-    KeyboardButton(text=f"\u274c {LOCATION_WRONG}")
-]
 
-increase_price_keyboard = [
-    KeyboardButton(text=f"\U0001f4b7 50 грн"),
-    KeyboardButton(text=f"\U0001f4b7 100 грн"),
-    KeyboardButton(text=f"\U0001f4b7 150 грн")
-]
+def inline_start_order_kb():
+    keyboard = [
+        [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
+        [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")],
+        [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_no_comment")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_search_kb():
+    keyboard = [
+        [InlineKeyboardButton(search_inline_buttons[0], callback_data="Increase_price")],
+        [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
+        [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_order")],
+        [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_increase_price_kb():
+    keyboard = [
+        [InlineKeyboardButton(price_inline_buttons[0], callback_data="30"),
+         InlineKeyboardButton(price_inline_buttons[1], callback_data="50")],
+        [InlineKeyboardButton(price_inline_buttons[2], callback_data="100"),
+         InlineKeyboardButton(price_inline_buttons[3], callback_data="150")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 
 def inline_spot_keyboard(end_lat, end_lng, pk=None):
@@ -60,7 +64,7 @@ def inline_markup_accept(pk=None):
 
 def inline_client_spot(pk=None):
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Сlient_on_site {pk}")]]
+        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Client_on_site {pk}")]]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -103,7 +107,7 @@ def inline_reject_order(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_timeorder_keyboard(pk=None):
+def inline_time_order_kb(pk=None):
     keyboard = [
         [InlineKeyboardButton(timeorder_inline_buttons[0], callback_data=f"Start_route {pk}")],
     ]

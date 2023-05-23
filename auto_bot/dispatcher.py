@@ -18,7 +18,7 @@ from auto_bot.handlers.reports.handlers import report, download_report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
-    cancel_order, order_create, location, time_for_order, handle_callback_order, increase_search_radius, \
+    cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, continue_search
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
@@ -28,8 +28,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 # text
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
-from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE, \
-    TODAY, NOW, complete_order_text, INCREASE_PRICE, NOT_INCREASE_PRICE
+from auto_bot.handlers.order.static_text import CASH, PAYCARD, TODAY, complete_order_text, search_inline_buttons
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -102,34 +101,27 @@ def setup_dispatcher(dp):
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
-    dp.add_handler(MessageHandler(Filters.location, location))
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[0]}$"), continue_order))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {NOW}$"), from_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u23F0 {TODAY}$"), time_order))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {CONTINUE}$"), time_for_order))
+    dp.add_handler(MessageHandler(Filters.location, get_location))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{search_inline_buttons[6]}$"), from_address))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^{search_inline_buttons[7]}$"), to_the_address))
+    dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order"))
+    dp.add_handler(CallbackQueryHandler(cancel_order, pattern="Cancel_no_comment"))
     dp.add_handler(MessageHandler(
         Filters.regex(fr"^\U0001f4b7 {CASH}$") |
         Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
         order_create))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001f4b7 {INCREASE_PRICE}$"), increase_search_radius))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\U0001F50D {NOT_INCREASE_PRICE}$"), continue_search))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr"^\U0001f4b7 50 грн$") |
-        Filters.regex(fr"^\U0001f4b7 100 грн$") |
-        Filters.regex(fr"^\U0001f4b7 150 грн$"),
-        increase_order_price))
+    dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
+    dp.add_handler(CallbackQueryHandler(continue_search, pattern="Continue_search"))
+    dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))
+    dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order"))
+    dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
                                         pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
                                                            "Сlient_on_site|Along_the_route|Off_route|"
                                                            "Accept|End_trip|Client_reject) [0-9]+$")))
-    dp.add_handler(CallbackQueryHandler(comment, pattern="Comment client"))
     # sending comment
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$") |
-                                  Filters.regex(fr"^Відмовитись від замовлення$"),
-                                  comment))
+    dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$"), comment))
     dp.add_handler(CommandHandler("comment", comment))
 
     # Add job application

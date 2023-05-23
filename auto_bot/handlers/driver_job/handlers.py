@@ -161,7 +161,7 @@ def check_auto(update, context):
     if query.data == 'have_auto':
         query.answer()
         query.edit_message_text('Дякуємо! Будь ласка, надішліть фото посвідчення про реєстрацію авто.',
-                                reply_markup=empty_inline_keyboard)
+                                reply_markup=None)
         context.bot.send_photo(query.message.chat_id,
                                'https://protocol.ua/userfiles/tehpasport-na-avto.jpg')
         return 'WAIT_FOR_AUTO_YES_OPTION'
