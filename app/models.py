@@ -2549,7 +2549,6 @@ def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, hea
     totals = {}
     salary = {}
     fleets = Fleet.objects.filter(deleted_at=None)
-    print(fleets)
     for fleet in fleets:
         if week:
             all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep,
