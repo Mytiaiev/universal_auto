@@ -92,7 +92,10 @@ def to_the_address(update, context):
             context.bot.send_message(chat_id=chat_id, text=wrong_address_request)
             from_address(update, context)
     else:
-        query.edit_message_text(text=arrival_text)
+        if query:
+            query.edit_message_text(text=arrival_text)
+        else:
+            context.bot.send_message(chat_id=chat_id, text=arrival_text)
         context.user_data['state'] = TO_THE_ADDRESS
 
 
@@ -163,7 +166,7 @@ def order_create(update, context):
     distance_google = round(distance_price[1], 2)
     order = Order.objects.filter(chat_id_client=user.chat_id, payment_method="",
                                  status_order=Order.ON_TIME).last()
-    if order:
+    if order and context.user_data.get('time_order'):
         order.from_address = context.user_data['from_address']
         order.latitude = context.user_data['latitude']
         order.longitude = context.user_data['longitude']
@@ -192,7 +195,8 @@ def order_create(update, context):
             sum=price,
             distance_google=distance_google,
             status_order=Order.WAITING)
-        bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id)
+        bot.delete_message(chat_id=user.chat_id, message_id=query.message.message_id)
+
 
 @task_postrun.connect
 def send_order_to_driver(sender=None, **kwargs):
@@ -558,7 +562,7 @@ def send_map_to_client(update, context, order, query_id, licence_plate):
                                                   reply_markup=inline_client_spot(pk=order.id))
                     context.user_data['flag'] = False
             try:
-                if order.status_order == Order.CANCELED:
+                if order.status_order in[Order.CANCELED, Order.WAITING]:
                     context.user_data['running'] = False
                     return
                 if order.chat_id_client:
