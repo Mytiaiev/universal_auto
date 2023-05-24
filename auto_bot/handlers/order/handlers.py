@@ -323,7 +323,7 @@ def order_on_time(update, context):
 @task_postrun.connect
 def send_time_orders(sender=None, **kwargs):
     if sender == check_time_order:
-        timeorder = Order.objects.filter(id=kwargs.get('retval'), checked=False, order_status=Order.ON_TIME).first()
+        timeorder = Order.objects.filter(id=kwargs.get('retval'), checked=False, status_order=Order.ON_TIME).first()
         message = order_info(timeorder.pk, timeorder.from_address, timeorder.to_the_address,
                              timeorder.payment_method, timeorder.phone_number,
                              time=timezone.localtime(timeorder.order_time).time())
@@ -367,7 +367,7 @@ def handle_callback_order(update, context):
                 context.bot.delete_message(chat_id=-863882769, message_id=int(order.driver_message_id))
                 context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
             else:
-                order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
+                order.status_order = Order.IN_PROGRESS
                 order.save()
                 ParkStatus.objects.create(driver=driver,
                                           status=Driver.WAIT_FOR_CLIENT)
@@ -375,12 +375,14 @@ def handle_callback_order(update, context):
                                      order.phone_number, order.sum, order.distance_google)
                 query.edit_message_text(text=message)
                 query.edit_message_reply_markup(reply_markup=markup)
-                report_for_client = client_order_text(driver, vehicle.name, record.licence_plate, driver.phone_number, order.sum)
+                report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
+                                                      driver.phone_number, order.sum)
                 client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
                 try:
                     context.user_data['running'] = True
                     r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order, query.message.message_id, vehicle, client_msg), daemon=True)
+                                         args=(update, context, order, query.message.message_id, vehicle, client_msg),
+                                         daemon=True)
                     r.start()
                 except:
                     pass
