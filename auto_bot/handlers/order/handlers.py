@@ -63,7 +63,11 @@ def from_address(update, context):
     context.user_data['state'] = FROM_ADDRESS
     if not context.user_data.get('location_button'):
         reply_markup = markup_keyboard(share_location)
-        query.edit_message_text(text=info_address_text)
+        if query:
+            query.edit_message_text(text=info_address_text)
+        else:
+            context.bot.send_message(chat_id=chat_id,
+                                     text=info_address_text)
         context.bot.send_message(chat_id=chat_id,
                                  text=from_address_text,
                                  reply_markup=reply_markup)
@@ -110,7 +114,6 @@ def payment_method(update, context):
             to_the_address(update, context)
     else:
         context.user_data['state'] = None
-        context.user_data['client_msg'] = query.message.message_id
         query.edit_message_text(payment_text)
         query.edit_message_reply_markup(reply_markup=inline_payment_kb())
 
@@ -168,12 +171,11 @@ def order_create(update, context):
         order.to_latitude = destination_lat
         order.to_longitude = destination_long
         order.phone_number = user.phone_number
-        order.client_message_id = context.user_data['client_msg']
         order.payment_method = payment
         order.sum = price
         order.distance_google = distance_google
         order.save()
-        update.message.reply_text(
+        query.edit_message_text(
             f'Замовлення прийняте, сума замовлення {price} грн\n '
             f'Очікуйте водія о {timezone.localtime(order.order_time).time()}')
     else:
@@ -185,22 +187,17 @@ def order_create(update, context):
             to_latitude=destination_lat,
             to_longitude=destination_long,
             phone_number=user.phone_number,
-            client_message_id=context.user_data['client_msg'],
             chat_id_client=user.chat_id,
             payment_method=payment,
             sum=price,
             distance_google=distance_google,
             status_order=Order.WAITING)
-
+        bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id)
 
 @task_postrun.connect
 def send_order_to_driver(sender=None, **kwargs):
     if sender == check_order:
         order = Order.objects.get(id=kwargs.get('retval'))
-        try:
-            bot.delete_message(chat_id=order.chat_id_client, message_id=order.client_message_id)
-        except:
-            pass
         client_msg = client_order_info(order.from_address, order.to_the_address,
                                        order.payment_method, order.phone_number, order.sum,
                                        increase=order.car_delivery_price)
@@ -392,6 +389,9 @@ def handle_callback_order(update, context):
             context.bot.send_message(chat_id=driver.chat_id, text=select_car_error)
     elif data[0] == 'Reject_order':
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
+        driver.driver_status = Driver.ACTIVE
+        driver.save()
+        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         if order:
             order.status_order = Order.WAITING
             order.driver = None

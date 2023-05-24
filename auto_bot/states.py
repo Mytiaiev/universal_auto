@@ -108,4 +108,3 @@ def code(update, context):
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
     else:
         update.message.reply_text('Боту не вдалось опрацювати ваше повідомлення.')
-        start(update, context)
