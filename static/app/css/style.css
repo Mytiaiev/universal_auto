@@ -770,11 +770,16 @@ header button start
 }
 
 .location{
-  margin-left: 35px;
+  margin-left: 10px;
 }
 
 .phone{
-  margin-left: 30px;
+  margin-left: 05px;
+}
+
+.email-icon::before {
+  content: "@";
+  font-family: Arial, sans-serif;
 }
 
 .info_section h4 {
@@ -938,7 +943,7 @@ header button start
   border: 1px solid #888;
   width: 80%;
   max-width: 600px;
-  color: darkcyan;
+  color: #829F3D;
   font-size: 18px;
   line-height: 1.5;
 }
@@ -1122,6 +1127,10 @@ label {
   color: #ffffff;
   border-radius: 25px;
   margin-left: 10px;
+}
+
+.btn-primary {
+  color: #ffffff !important; /* Бажаний колір тексту з використанням !important */
 }
 
 .services-grid__item .btn {
