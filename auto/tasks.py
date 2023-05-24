@@ -251,11 +251,6 @@ def check_order(self, order_id):
 
 
 @app.task(bind=True, queue='non_priority')
-def delete_button(self, order_id, query, text):
-    return order_id, query, text
-
-
-@app.task(bind=True, queue='non_priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
     start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
     start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')

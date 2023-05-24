@@ -19,7 +19,7 @@ from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_s
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
-    increase_order_price, continue_search, first_address_check, second_address_check
+    increase_order_price, continue_search, first_address_check, second_address_check, client_reject_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
@@ -115,7 +115,8 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
                                         pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
                                                            "Client_on_site|Along_the_route|Off_route|"
-                                                           "Accept|End_trip|Client_reject) [0-9]+$")))
+                                                           "Accept|End_trip) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
     # sending comment
     dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))
     dp.add_handler(CallbackQueryHandler(save_comment, pattern="5_Star|4_Star|3_Star|2_Star|1_Star"))

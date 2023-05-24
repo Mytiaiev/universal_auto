@@ -12,8 +12,9 @@ price_info = f"Наші тарифи:\nВ місті {ParkSettings.get_value('TA
 AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')}"), int(
     f"{ParkSettings.get_value('COST_PER_KM')}")
 complete_order_text = "Гарного дня. Дякуємо, що скористались нашими послугами"
-choose_address_text = "Оберіть вашу адресу. Інакше натисніть - 'Немає вірної адреси'" \
-                      " та вкажіть більш детально вашу адресу"
+from_address_search = "Знайшов можливі варіанти."
+choose_from_address_text = "Оберіть вашу адресу."
+choose_to_address_text = "Оберіть адресу призначення."
 wrong_address_request = "Нам не вдалось обробити вашу адресу, спробуйте ще раз"
 no_location_text = 'Нам не вдалось обробити ваше місце знаходження'
 info_address_text = "Ви можете скористатись кнопкою або ввести адресу вручну"
@@ -102,7 +103,7 @@ def order_info(number, address, to_address, payment, phone, price=None, distance
 
 def driver_complete_text(price):
     message = f"Поїздку завершено\n" \
-              f"Сума замовлення: {int(price)} грн"
+              f"Сума замовлення: {price} грн"
     return message
 
 
@@ -112,7 +113,7 @@ def client_order_text(driver, vehicle, plate, phone, price):
               f'Назва: {vehicle}\n' \
               f'Номер машини: {plate}\n' \
               f'Номер телефону: {phone}\n' \
-              f'Сума замовлення: {int(price)} грн\n'
+              f'Сума замовлення: {price} грн\n'
     return message
 
 
@@ -122,9 +123,9 @@ def client_order_info(address, to_address, payment, phone, price, increase=None)
               f"Місце прибуття: {to_address}\n" \
               f"Спосіб оплати: {payment}\n" \
               f"Номер телефону: {phone}\n" \
-              f"Сума замовлення: {int(price)} грн\n" \
+              f"Сума замовлення: {price} грн\n" \
               f'Шукаємо водія...'
     if increase:
-        message = f"Замовлення оновлено\nНова сума замовлення: {int(price)} грн\n" \
+        message = f"Замовлення оновлено\nНова сума замовлення: {price} грн\n" \
                   f"Шукаємо водія..."
     return message
