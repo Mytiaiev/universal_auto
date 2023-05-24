@@ -19,7 +19,7 @@ from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_s
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
-    increase_order_price, continue_search
+    increase_order_price, continue_search, first_address_check, second_address_check
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
@@ -28,7 +28,6 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 # text
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
-from auto_bot.handlers.order.static_text import CASH, PAYCARD, search_inline_buttons
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -103,14 +102,12 @@ def setup_dispatcher(dp):
     # ordering taxi
     dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
     dp.add_handler(MessageHandler(Filters.location, get_location))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^{search_inline_buttons[6]}$"), from_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^{search_inline_buttons[7]}$"), to_the_address))
-    dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order"))
+    dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order|Wrong_place"))
+    dp.add_handler(CallbackQueryHandler(to_the_address, pattern="Right_place"))
+    dp.add_handler(CallbackQueryHandler(first_address_check, pattern="^From_address [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(second_address_check, pattern="^To_the_address [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(cancel_order, pattern="Cancel_no_comment"))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr"^\U0001f4b7 {CASH}$") |
-        Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
-        order_create))
+    dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))
     dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
     dp.add_handler(CallbackQueryHandler(continue_search, pattern="Continue_search"))
     dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order"))

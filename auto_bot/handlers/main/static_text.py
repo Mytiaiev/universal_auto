@@ -3,7 +3,7 @@ import os
 DEVELOPER_CHAT_ID = int(os.environ.get('DEVELOPER_CHAT_ID', '803129892'))
 
 share_phone_text = "Будь ласка розшарьте номер телефону для роботи з нашим ботом"
-user_greetings_text = "Тебе вітає Ninja Taxi"
+user_greetings_text = "Тебе вітає Ninja Taxi. Для замовлення натискай кнопку"
 help_text = "Для першого кроку зробіть реєстрацію або авторизуйтеся командою /start"
 
 main_buttons = (

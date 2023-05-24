@@ -9,6 +9,7 @@ from auto_bot.handlers.driver_manager.handlers import get_gps_imea, get_n_vehicl
     get_vin_code_vehicle, get_licence_plate_vehicle, get_model_vehicle, get_name_vehicle, add_information_to_driver, \
     get_fleet, viewing_status_driver, second_name, email, phone_number, create_user, get_list_vehicle
 from auto_bot.handlers.driver_manager.static_text import *
+from auto_bot.handlers.main.handlers import start
 from auto_bot.handlers.order.handlers import to_the_address, payment_method, first_address_check, second_address_check, \
     order_on_time
 from auto_bot.handlers.owner.handlers import get_sum, generate_link_v1, get_sum_for_portmone, transfer, generate_link_v2
@@ -106,4 +107,5 @@ def code(update, context):
         update.message.reply_text('Формування звіту...')
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
     else:
-        update.message.reply_text('Боту не вдалось опрацювати ваше повідомлення. Спробуйте ще раз')
+        update.message.reply_text('Боту не вдалось опрацювати ваше повідомлення.')
+        start(update, context)

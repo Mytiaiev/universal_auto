@@ -7,15 +7,21 @@ share_location = [
     [KeyboardButton(text=search_inline_buttons[5], request_location=True)]
 ]
 
-location_keyboard = [
-    KeyboardButton(text=search_inline_buttons[7]),
-    KeyboardButton(text=search_inline_buttons[6])
-]
 
-payment_keyboard = [
-    KeyboardButton(text=f"\U0001f4b7 {CASH}"),
-    # KeyboardButton(text=f"\U0001f4b8 {PAYCARD}")
-]
+def inline_payment_kb():
+    keyboard = [
+        [InlineKeyboardButton(price_inline_buttons[4], callback_data="Cash_payment")]
+        # [InlineKeyboardButton(price_inline_buttons[5], callback_data="Card_payment")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_location_kb():
+    keyboard = [
+        [InlineKeyboardButton(search_inline_buttons[7], callback_data="Right_place"),
+         InlineKeyboardButton(search_inline_buttons[6], callback_data="Wrong_place")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 
 def inline_start_order_kb():

@@ -3,19 +3,12 @@ from app.models import ParkSettings
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
 U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(6, 11)
 NOT_CORRECT_ADDRESS = "Немає вірної адреси"
-CANCEL = "Скасувати замовлення"
-TOMORROW = "Замовити на завтра"
-TODAY = "Замовити на інший час"
-NOW = "Замовити на зараз"
 LOCATION = "Поділитися місцезнаходженням"
-INCREASE_PRICE = "Збільшити вартість"
-NOT_INCREASE_PRICE = "Продовжити пошук"
-PAYCARD = "Картка"
-CASH = "Готівка"
+CANCEL = "Скасувати замовлення"
 
 already_ordered = "У вас вже є активне замовлення, бажаєте замовити ще одне авто?"
-price_info = f"Ціна поїздки в місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')} грн/км\n" + \
-             f"За містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')} грн/км"
+price_info = f"Наші тарифи:\nВ місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')} грн/км, " + \
+             f"за містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')} грн/км"
 AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')}"), int(
     f"{ParkSettings.get_value('COST_PER_KM')}")
 complete_order_text = "Гарного дня. Дякуємо, що скористались нашими послугами"
@@ -23,7 +16,8 @@ choose_address_text = "Оберіть вашу адресу. Інакше нат
                       " та вкажіть більш детально вашу адресу"
 wrong_address_request = "Нам не вдалось обробити вашу адресу, спробуйте ще раз"
 no_location_text = 'Нам не вдалось обробити ваше місце знаходження'
-ask_spot_text = 'Оберіть статус посадки'
+info_address_text = "Ви можете скористатись кнопкою або ввести адресу вручну"
+ask_spot_text = 'Чи правильна ця адреса?'
 from_address_text = 'Введіть адресу місця посадки:'
 arrival_text = 'Введіть адресу місця призначення:'
 payment_text = 'Виберіть спосіб оплати:'
@@ -31,8 +25,7 @@ order_customer_text = "Коли водій буде на місці, ви отр
                       "На карті нижче ви можете спостерігати, де зараз ваш водій"
 driver_accept_text = 'Замовлення прийнято.Шукаємо водія'
 driver_arrived = "Машину подано. Водій вас очікує"
-select_car_error = "Щоб приймати замовлення, скористайтесь спочатку командой /status," \
-                   "щоб позначити на якому ви сьогодні авто"
+select_car_error = "Для прийняття замовлень потрібно розпочати роботу."
 driver_cancel = "Водій відхилив замовлення. Пошук іншого водія..."
 client_cancel = "Ви відмовились від замовлення"
 order_complete = "Ваше замовлення прийняте, очікуйте водія"
@@ -75,8 +68,8 @@ search_inline_buttons = (
     "\u23F0 Замовити на інший час",
     "\u2705 Замовити на зараз",
     "\U0001F4CD Поділитися місцезнаходженням",
-    "\u274c Місце посадки - невірне",
-    "\u2705 Місце посадки - вірне"
+    "\u274c Місце - невірне",
+    "\u2705 Місце - вірне"
 
 )
 
@@ -84,7 +77,9 @@ price_inline_buttons = (
     "30 \U000020B4",
     "50 \U000020B4",
     "100 \U000020B4",
-    "150 \U000020B4"
+    "150 \U000020B4",
+    "\U0001f4b7 Готівка",
+    "\U0001f4b8 Картка"
 )
 
 

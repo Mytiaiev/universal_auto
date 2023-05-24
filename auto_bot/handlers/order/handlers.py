@@ -7,14 +7,14 @@ import os
 
 from celery.signals import task_postrun
 from django.utils import timezone
-from telegram import ReplyKeyboardRemove, ParseMode, KeyboardButton, LabeledPrice
+from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
 from auto.tasks import logger, get_distance_trip, check_time_order, delete_button, check_order, send_time_order
-from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
-from auto_bot.handlers.order.keyboards import payment_keyboard, \
-    inline_markup_accept, inline_spot_keyboard, inline_client_spot, inline_route_keyboard, \
-    inline_finish_order, inline_repeat_keyboard, inline_reject_order, inline_time_order_kb, \
-    inline_increase_price_kb, inline_search_kb, inline_start_order_kb, share_location, location_keyboard
+from auto_bot.handlers.main.keyboards import markup_keyboard
+from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
+    inline_route_keyboard, inline_finish_order, inline_repeat_keyboard, inline_reject_order, inline_time_order_kb, \
+    inline_increase_price_kb, inline_search_kb, inline_start_order_kb, share_location, inline_location_kb,\
+    inline_payment_kb
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
@@ -50,7 +50,8 @@ def get_location(update, context):
                           ParkSettings.get_value('GOOGLE_API_KEY'))
     if address is not None:
         context.user_data['location_address'] = address
-        update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=markup_keyboard([location_keyboard]))
+        update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(text=ask_spot_text, reply_markup=inline_location_kb())
     else:
         update.message.reply_text(text=no_location_text)
         from_address(update, context)
@@ -62,85 +63,86 @@ def from_address(update, context):
     context.user_data['state'] = FROM_ADDRESS
     if not context.user_data.get('location_button'):
         reply_markup = markup_keyboard(share_location)
+        query.edit_message_text(text=info_address_text)
+        context.bot.send_message(chat_id=chat_id,
+                                 text=from_address_text,
+                                 reply_markup=reply_markup)
     else:
-        reply_markup = ReplyKeyboardRemove()
-    try:
-        context.bot.delete_message(chat_id=chat_id,
-                                   message_id=query.message.message_id)
-    except:
-        pass
-    context.bot.send_message(chat_id=chat_id,
-                             text=from_address_text,
-                             reply_markup=reply_markup)
+        query.edit_message_text(text=from_address_text)
 
 
 def to_the_address(update, context):
+    query = update.callback_query
+    chat_id = update.effective_chat.id
     if context.user_data['state'] == FROM_ADDRESS:
-        buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
+        buttons = [[InlineKeyboardButton(f'{NOT_CORRECT_ADDRESS}', callback_data='From_address 0')], ]
         address = update.message.text
         addresses = buttons_addresses(address)
         if addresses is not None:
-            for key in addresses.keys():
-                buttons.append([KeyboardButton(key)])
-            reply_markup = markup_keyboard(buttons)
+            for no, key in enumerate(addresses.keys(), 1):
+                buttons.append([InlineKeyboardButton(key, callback_data=f'From_address {no}')])
+            reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_first'] = addresses
-            update.message.reply_text(choose_address_text, reply_markup=reply_markup)
-            context.user_data['state'] = FIRST_ADDRESS_CHECK
+            context.bot.send_message(chat_id=chat_id, text=choose_address_text, reply_markup=reply_markup)
         else:
-            update.message.reply_text(wrong_address_request)
+            context.bot.send_message(chat_id=chat_id, text=wrong_address_request)
             from_address(update, context)
     else:
-        update.message.reply_text(arrival_text, reply_markup=ReplyKeyboardRemove())
+        query.edit_message_text(text=arrival_text)
         context.user_data['state'] = TO_THE_ADDRESS
 
 
 def payment_method(update, context):
+    query = update.callback_query
+    chat_id = update.effective_chat.id
     if context.user_data['state'] == TO_THE_ADDRESS:
         address = update.message.text
-        buttons = [[KeyboardButton(f'{NOT_CORRECT_ADDRESS}')], ]
+        buttons = [[InlineKeyboardButton(f'{NOT_CORRECT_ADDRESS}', callback_data='To_the_address 0')], ]
         addresses = buttons_addresses(address)
         if addresses is not None:
-            for key in addresses.keys():
-                buttons.append([KeyboardButton(key)])
-            reply_markup = markup_keyboard(buttons)
+            for no, key in enumerate(addresses.keys(), 1):
+                buttons.append([InlineKeyboardButton(key, callback_data=f'To_the_address {no}')])
+            reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_second'] = addresses
-            update.message.reply_text(
-                choose_address_text,
-                reply_markup=reply_markup)
-            context.user_data['state'] = SECOND_ADDRESS_CHECK
+            context.bot.send_message(chat_id=chat_id, text=choose_address_text, reply_markup=reply_markup)
         else:
-            update.message.reply_text(wrong_address_request)
+            context.bot.send_message(chat_id=chat_id, text=wrong_address_request)
             to_the_address(update, context)
     else:
         context.user_data['state'] = None
-        markup = markup_keyboard_onetime([payment_keyboard])
-        update.message.reply_text(payment_text, reply_markup=markup)
+        context.user_data['client_msg'] = query.message.message_id
+        query.edit_message_text(payment_text)
+        query.edit_message_reply_markup(reply_markup=inline_payment_kb())
 
 
 def second_address_check(update, context):
-    response = update.message.text
-    lst = context.user_data['addresses_second']
-    if response not in lst.keys() or response == NOT_CORRECT_ADDRESS:
-        to_the_address(update, context)
-    else:
+    query = update.callback_query
+    data = int(query.data.split(' ')[1])
+    response = query.message.reply_markup.inline_keyboard[data][0].text
+    if data:
         context.user_data['to_the_address'] = response
+        context.user_data['state'] = None
         payment_method(update, context)
+    else:
+        to_the_address(update, context)
 
 
 def first_address_check(update, context):
-    response = update.message.text
-    lst = context.user_data['addresses_first']
-    if response not in lst.keys() or response == NOT_CORRECT_ADDRESS:
-        from_address(update, context)
-    else:
+    query = update.callback_query
+    data = int(query.data.split(' ')[1])
+    response = query.message.reply_markup.inline_keyboard[data][0].text
+    if data:
         context.user_data['from_address'] = response
+        context.user_data['state'] = None
         to_the_address(update, context)
+    else:
+        from_address(update, context)
 
 
 def order_create(update, context):
-    payment = update.message.text
-    context.user_data['client_chat_id'] = update.message.chat.id
-    user = User.get_by_chat_id(update.message.chat.id)
+    query = update.callback_query
+    payment = query.data.split('_')[0]
+    user = User.get_by_chat_id(update.effective_chat.id)
     context.user_data['phone_number'] = user.phone_number
     destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
     destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
@@ -156,8 +158,8 @@ def order_create(update, context):
                                      ParkSettings.get_value('GOOGLE_API_KEY'))
     price = distance_price[0]
     distance_google = round(distance_price[1], 2)
-    order = Order.objects.filter(chat_id_client=update.message.chat.id, payment_method__isnull=True,
-                                 status_order=Order.ON_TIME).first()
+    order = Order.objects.filter(chat_id_client=user.chat_id, payment_method="",
+                                 status_order=Order.ON_TIME).last()
     if order:
         order.from_address = context.user_data['from_address']
         order.latitude = context.user_data['latitude']
@@ -166,7 +168,8 @@ def order_create(update, context):
         order.to_latitude = destination_lat
         order.to_longitude = destination_long
         order.phone_number = user.phone_number
-        order.payment_method = payment.split()[1]
+        order.client_message_id = context.user_data['client_msg']
+        order.payment_method = payment
         order.sum = price
         order.distance_google = distance_google
         order.save()
@@ -182,8 +185,9 @@ def order_create(update, context):
             to_latitude=destination_lat,
             to_longitude=destination_long,
             phone_number=user.phone_number,
-            chat_id_client=context.user_data['client_chat_id'],
-            payment_method=payment.split()[1],
+            client_message_id=context.user_data['client_msg'],
+            chat_id_client=user.chat_id,
+            payment_method=payment,
             sum=price,
             distance_google=distance_google,
             status_order=Order.WAITING)
@@ -193,6 +197,10 @@ def order_create(update, context):
 def send_order_to_driver(sender=None, **kwargs):
     if sender == check_order:
         order = Order.objects.get(id=kwargs.get('retval'))
+        try:
+            bot.delete_message(chat_id=order.chat_id_client, message_id=order.client_message_id)
+        except:
+            pass
         client_msg = client_order_info(order.from_address, order.to_the_address,
                                        order.payment_method, order.phone_number, order.sum,
                                        increase=order.car_delivery_price)
@@ -294,7 +302,7 @@ def order_on_time(update, context):
                                      order_time=conv_time)
                 from_address(update, context)
             else:
-                order = Order.get_order(chat_id_client=context.user_data['client_chat_id'],
+                order = Order.get_order(chat_id_client=user.chat_id,
                                         phone=context.user_data['phone_number'],
                                         status_order=Order.WAITING)
                 order.status_order = Order.ON_TIME
