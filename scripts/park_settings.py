@@ -10,7 +10,7 @@ settings = {
     'TARIFF_IN_THE_CITY': ('15', 'Тариф в місті (грн)'),
     'TARIFF_OUTSIDE_THE_CITY': ('30', 'Тариф за містом (грн)'),
     'TARIFF_CAR_DISPATCH': ('7', 'Тариф за доставку авто за км (грн)'),
-    'FREE_CAR_SENDING_DISTANCE': ('5', 'Безкоштовна дистація при замовлені (км)'),
+    'FREE_CAR_SENDING_DISTANCE': ('5', 'Безкоштовний радіус подачі (км)'),
     'CENTRE_CITY_LAT': ('50.4501', 'Широта центра міста Києва'),
     'CENTRE_CITY_LNG': ('30.5234', 'Довгота центра міста Києва'),
     'CENTRE_CITY_RADIUS': ('75000', 'Радіус від центра міста Києва (м)'),
@@ -34,7 +34,8 @@ settings = {
     'MOBIZON_API_KEY': ('Enter api key', 'API KEY для розсилки смс'),
     'Залишок Uklon': ('150', 'Залишок грн на карті водія Uklon'),
     'DRIVERS_CHAT': ('-863882769', 'Чат водіїв'),
-    'SEND_DISPATCH_MESSAGE': ('0.3', 'Повідомити про подачу (км)')
+    'SEND_DISPATCH_MESSAGE': ('0.3', 'Повідомити про подачу (км)'),
+    'MESSAGE_APPEAR': ('30', 'Час до зникнення замовлення у водія (с)')
 }
 
 

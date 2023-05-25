@@ -1,7 +1,7 @@
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode
 from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus
-from auto_bot.handlers.driver.static_text import not_driver_text, V_ID
+from auto_bot.handlers.driver.static_text import V_ID
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
 from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard, correct_keyboard
 from auto_bot.handlers.status.static_text import *
@@ -11,18 +11,18 @@ def status(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     driver = Driver.get_by_chat_id(chat_id)
-    if driver is not None:
-        driver.driver_status = Driver.ACTIVE
-        driver.save()
-        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
-        vehicle = Vehicle.objects.filter(driver=driver).first()
+    vehicle = Vehicle.objects.filter(driver=driver)
+    if len(vehicle) == 1:
         UseOfCars.objects.create(
             user_vehicle=driver,
             chat_id=chat_id,
-            licence_plate=vehicle.licence_plate)
+            licence_plate=vehicle[0].licence_plate)
+        driver.driver_status = Driver.ACTIVE
+        driver.save()
+        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         query.edit_message_text(text=add_auto_to_driver_text)
     else:
-        query.edit_message_text(text=not_driver_text)
+        query.edit_message_text(text=add_many_auto_text)
 
 
 def send_set_status(update, context):

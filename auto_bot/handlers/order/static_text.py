@@ -59,6 +59,7 @@ order_inline_buttons = (
 
 timeorder_inline_buttons = (
     "\u2705 Розпочати замовлення",
+    "\U0001F519 Назад"
 )
 
 

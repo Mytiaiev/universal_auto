@@ -85,6 +85,7 @@ def to_the_address(update, context):
         if addresses is not None:
             for no, key in enumerate(addresses.keys(), 1):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'From_address {no}')])
+            buttons.append([InlineKeyboardButton(timeorder_inline_buttons[1], callback_data="Call_taxi")])
             reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_first'] = addresses
             context.bot.send_message(chat_id=chat_id, text=from_address_search, reply_markup=ReplyKeyboardRemove())
@@ -110,6 +111,7 @@ def payment_method(update, context):
         if addresses is not None:
             for no, key in enumerate(addresses.keys(), 1):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'To_the_address {no}')])
+            buttons.append([InlineKeyboardButton(timeorder_inline_buttons[1], callback_data="Wrong_place")])
             reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_second'] = addresses
             context.bot.send_message(chat_id=chat_id, text=choose_to_address_text, reply_markup=reply_markup)
@@ -150,7 +152,6 @@ def order_create(update, context):
     query = update.callback_query
     payment = query.data.split('_')[0]
     user = User.get_by_chat_id(update.effective_chat.id)
-    context.user_data['phone_number'] = user.phone_number
     destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
     destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
     if not context.user_data.get('from_address'):
@@ -163,27 +164,7 @@ def order_create(update, context):
     distance_price = get_route_price(context.user_data['latitude'], context.user_data['longitude'],
                                      destination_lat, destination_long,
                                      ParkSettings.get_value('GOOGLE_API_KEY'))
-    price = distance_price[0]
-    distance_google = round(distance_price[1], 2)
-    order = Order.objects.filter(chat_id_client=user.chat_id, payment_method="",
-                                 status_order=Order.ON_TIME).last()
-    if order and context.user_data.get('time_order'):
-        order.from_address = context.user_data['from_address']
-        order.latitude = context.user_data['latitude']
-        order.longitude = context.user_data['longitude']
-        order.to_the_address = context.user_data['to_the_address']
-        order.to_latitude = destination_lat
-        order.to_longitude = destination_long
-        order.phone_number = user.phone_number
-        order.payment_method = payment
-        order.sum = price
-        order.distance_google = distance_google
-        order.save()
-        query.edit_message_text(
-            f'Замовлення прийняте, сума замовлення {price} грн\n '
-            f'Очікуйте водія о {timezone.localtime(order.order_time).time()}')
-    else:
-        Order.objects.create(
+    order = Order.objects.create(
             from_address=context.user_data['from_address'],
             latitude=context.user_data['latitude'],
             longitude=context.user_data['longitude'],
@@ -193,9 +174,18 @@ def order_create(update, context):
             phone_number=user.phone_number,
             chat_id_client=user.chat_id,
             payment_method=payment,
-            sum=price,
-            distance_google=distance_google,
-            status_order=Order.WAITING)
+            sum=distance_price[0],
+            distance_google=round(distance_price[1], 2))
+    if context.user_data.get('time_order'):
+        order.status_order = Order.ON_TIME
+        order.order_time = context.user_data['time_order']
+        order.save()
+        query.edit_message_text(
+            f'Замовлення прийняте, сума замовлення {order.sum} грн\n '
+            f'Очікуйте водія о {order.order_time.time()}')
+    else:
+        order.status_order = Order.WAITING
+        order.save()
         bot.delete_message(chat_id=user.chat_id, message_id=query.message.message_id)
 
 
@@ -209,10 +199,9 @@ def send_order_to_driver(sender=None, **kwargs):
         count = 0
         order.checked = True
         order.save()
+        msg = text_to_client(order, client_msg)
         while count < 3:
-            if not count:
-                text_to_client(order, client_msg)
-            elif count == 1:
+            if count == 1:
                 text_to_client(order, search_driver_1)
             elif count == 2:
                 text_to_client(order, search_driver_2)
@@ -227,14 +216,13 @@ def send_order_to_driver(sender=None, **kwargs):
                         driver_lat, driver_long = get_location_from_db(vehicle)
                         distance = haversine(float(driver_lat), float(driver_long),
                                              float(order.latitude), float(order.longitude))
-                        radius = round(ParkSettings.get_value("FREE RADIUS", 3), 1) + \
-                                 round(order.car_delivery_price/10, 1)
+                        radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + order.car_delivery_price/10
                         if distance <= radius:
                             message = order_info(order.pk, order.from_address, order.to_the_address,
                                                  order.payment_method, order.phone_number)
                             markup = inline_markup_accept(order.pk)
                             accept_message = bot.send_message(chat_id=driver.chat_id, text=message, reply_markup=markup)
-                            end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR", 30))
+                            end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
                             while time.time() < end_time:
                                 upd_driver = Driver.objects.get(id=driver.id)
                                 instance = Order.objects.get(id=order.id)
@@ -247,8 +235,9 @@ def send_order_to_driver(sender=None, **kwargs):
             time.sleep(5)
             count += 1
             if count == 3:
-                bot.send_message(chat_id=order.chat_id_client,
-                                 text=no_driver_in_radius,
+                for i in range(3):
+                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg + i)
+                bot.send_message(chat_id=order.chat_id_client, text=no_driver_in_radius,
                                  reply_markup=inline_search_kb())
 
 
@@ -280,7 +269,7 @@ def continue_search(update, context):
 
 def time_order(update, context):
     query = update.callback_query
-    if not context.user_data.get('to_the_address'):
+    if query.data == "On_time_order":
         context.user_data['time_order'] = query.data
     context.user_data['state'] = TIME_ORDER
     query.edit_message_text(text=ask_time_text)
@@ -298,14 +287,11 @@ def order_on_time(update, context):
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
             if context.user_data.get('time_order') is not None:
-                Order.objects.create(chat_id_client=update.message.chat.id,
-                                     status_order=Order.ON_TIME,
-                                     phone_number=user.phone_number,
-                                     order_time=conv_time)
+                context.user_data['time_order'] = conv_time
                 from_address(update, context)
             else:
                 order = Order.get_order(chat_id_client=user.chat_id,
-                                        phone=context.user_data['phone_number'],
+                                        phone=user.phone_number,
                                         status_order=Order.WAITING)
                 order.status_order = Order.ON_TIME
                 order.order_time = conv_time
@@ -326,7 +312,7 @@ def send_time_orders(sender=None, **kwargs):
         timeorder = Order.objects.filter(id=kwargs.get('retval'), checked=False, status_order=Order.ON_TIME).first()
         message = order_info(timeorder.pk, timeorder.from_address, timeorder.to_the_address,
                              timeorder.payment_method, timeorder.phone_number,
-                             time=timezone.localtime(timeorder.order_time).time())
+                             time=timeorder.order_time.time())
         group_msg = bot.send_message(chat_id=-863882769, text=message,
                                      reply_markup=inline_markup_accept(timeorder.pk),
                                      parse_mode=ParseMode.HTML)
@@ -343,7 +329,7 @@ def client_reject_order(update, context):
     order.save()
     for i in range(3):
         context.bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id + i)
-    context.bot.send_message(chat_id=order.chat_id_client, text=client_cancel)
+    context.bot.send_message(chat_id=order.chat_id_client, text=client_cancel, reply_markup=inline_comment_for_client())
 
 
 def handle_callback_order(update, context):
@@ -367,7 +353,7 @@ def handle_callback_order(update, context):
                 context.bot.delete_message(chat_id=-863882769, message_id=int(order.driver_message_id))
                 context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
             else:
-                order.status_order = Order.IN_PROGRESS
+                order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
                 order.save()
                 ParkStatus.objects.create(driver=driver,
                                           status=Driver.WAIT_FOR_CLIENT)
@@ -541,26 +527,16 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
     while True:
         if context.user_data.get('running'):
             latitude, longitude = get_location_from_db(licence_plate)
-            distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
             if context.user_data['flag']:
+                distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
                 if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
                     text_to_client(order, driver_arrived, delete_id=client_msg)
                     bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                                   message_id=query_id,
                                                   reply_markup=inline_client_spot(pk=order.id))
-                    if order.chat_id_client:
-                        vehicle = Vehicle.objects.filter(driver=order.driver).first()
-                        message = client_order_text(order.driver, vehicle.name, vehicle.licence_plate, order.driver.phone_number, order.sum)
-                        bot.edit_message_text(chat_id=order.chat_id_client,
-                                              message_id=order.client_message_id,
-                                              text=message,
-                                              reply_markup=None)
-                        context.user_data['running'] = False
-                    context.user_data['flag'] = False
             try:
                 if order.status_order in [Order.CANCELED, Order.WAITING]:
                     context.user_data['running'] = False
-                    return
                 if order.chat_id_client:
                     m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
                                                             longitude=longitude)

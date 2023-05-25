@@ -110,7 +110,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))
     dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
     dp.add_handler(CallbackQueryHandler(continue_search, pattern="Continue_search"))
-    dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order"))
+    dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order|No_driver_time_order"))
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
                                         pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
