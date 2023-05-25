@@ -1,10 +1,8 @@
 from app.models import ParkSettings
 
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
-U_NAME, U_SECOND_NAME, U_EMAIL, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK = range(6, 11)
 NOT_CORRECT_ADDRESS = "Немає вірної адреси"
 LOCATION = "Поділитися місцезнаходженням"
-CANCEL = "Скасувати замовлення"
 
 already_ordered = "У вас вже є активне замовлення, бажаєте замовити ще одне авто?"
 price_info = f"Наші тарифи:\nВ місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')} грн/км, " + \
@@ -37,7 +35,6 @@ small_time_delta = 'Вкажіть, будь ласка, більш пізній
 ask_time_text = 'Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)'
 already_accepted = "Це замовлення вже виконується."
 decline_order = "Ви не прийняли замовлення, ваш рейтинг понизився на 1"
-search_driver = "Замовлення прийняте, шукаємо водія для вас..."
 search_driver_1 = "Будь ласка, зачекайте, ми працюємо над вашим питанням."
 search_driver_2 = "Ми все ще шукаємо водія для вас. Зачекайте, будь ласка."
 no_driver_in_radius = "Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?"

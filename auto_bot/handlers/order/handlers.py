@@ -2,8 +2,6 @@ import re
 import datetime
 import threading
 import time
-import requests
-import os
 
 from celery.signals import task_postrun
 from django.utils import timezone
@@ -36,8 +34,7 @@ def continue_order(update, context):
 
 
 def cancel_order(update, context):
-    query = update.callback_query
-    query.edit_message_text(text=complete_order_text)
+    update.callback_query.edit_message_text(text=complete_order_text)
     context.user_data.clear()
 
 
@@ -293,9 +290,7 @@ def order_on_time(update, context):
                 order = Order.get_order(chat_id_client=user.chat_id,
                                         phone=user.phone_number,
                                         status_order=Order.WAITING)
-                order.status_order = Order.ON_TIME
-                order.order_time = conv_time
-                order.checked = False
+                order.status_order, order.order_time, order.checked = Order.ON_TIME, conv_time, False
                 order.save()
                 update.message.reply_text(order_complete)
         else:
@@ -316,8 +311,7 @@ def send_time_orders(sender=None, **kwargs):
         group_msg = bot.send_message(chat_id=-863882769, text=message,
                                      reply_markup=inline_markup_accept(timeorder.pk),
                                      parse_mode=ParseMode.HTML)
-        timeorder.driver_message_id = group_msg.message_id
-        timeorder.checked = True
+        timeorder.driver_message_id, timeorder.checked = group_msg.message_id, True
         timeorder.save()
 
 
@@ -329,7 +323,9 @@ def client_reject_order(update, context):
     order.save()
     for i in range(3):
         context.bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id + i)
-    context.bot.send_message(chat_id=order.chat_id_client, text=client_cancel, reply_markup=inline_comment_for_client())
+    msg_id = text_to_client(order=order, text=client_cancel, button=inline_comment_for_client())
+    time.sleep(10)
+    context.bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=msg_id, reply_markup=None)
 
 
 def handle_callback_order(update, context):
@@ -344,51 +340,42 @@ def handle_callback_order(update, context):
         record = UseOfCars.objects.filter(user_vehicle=driver,
                                           created_at__date=timezone.now().date(),
                                           end_at=None).last()
-        if record:
-            vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-            markup = inline_spot_keyboard(order.latitude, order.longitude, pk=order.id)
-            order.driver = driver
-            order.save()
-            if order.status_order == Order.ON_TIME:
-                context.bot.delete_message(chat_id=-863882769, message_id=int(order.driver_message_id))
-                context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
-            else:
-                order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
-                order.save()
-                ParkStatus.objects.create(driver=driver,
-                                          status=Driver.WAIT_FOR_CLIENT)
-                message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
-                                     order.phone_number, order.sum, order.distance_google)
-                query.edit_message_text(text=message)
-                query.edit_message_reply_markup(reply_markup=markup)
-                report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
-                                                      driver.phone_number, order.sum)
-                client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
-                try:
-                    context.user_data['running'] = True
-                    r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order, query.message.message_id, vehicle, client_msg),
-                                         daemon=True)
-                    r.start()
-                except:
-                    pass
+
+        vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
+        markup = inline_spot_keyboard(order.latitude, order.longitude, pk=order.id)
+        order.driver = driver
+        order.save()
+        if order.status_order == Order.ON_TIME:
+            context.bot.delete_message(chat_id=-863882769, message_id=int(order.driver_message_id))
+            context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
         else:
-            context.bot.send_message(chat_id=driver.chat_id, text=select_car_error)
+            order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
+            order.save()
+            ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
+            message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
+                                 order.phone_number, order.sum, order.distance_google)
+            query.edit_message_text(text=message)
+            query.edit_message_reply_markup(reply_markup=markup)
+            report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
+                                                  driver.phone_number, order.sum)
+            client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
+            try:
+                context.user_data['running'] = True
+                r = threading.Thread(target=send_map_to_client,
+                                     args=(update, context, order, query.message.message_id, vehicle, client_msg),
+                                     daemon=True)
+                r.start()
+            except:
+                pass
     elif data[0] == 'Reject_order':
         context.user_data['running'] = False
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")
         driver.driver_status = Driver.ACTIVE
         driver.save()
         ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
-        if order:
-            order.status_order = Order.WAITING
-            order.driver = None
-            order.checked = False
-            order.save()
-            # remove inline keyboard markup from the message
-            text_to_client(order, driver_cancel)
-        else:
-            query.edit_message_text(text="Це замовлення вже виконано.")
+        order.status_order, order.driver, order.checked = Order.WAITING, None, False
+        order.save()
+        text_to_client(order, driver_cancel)
     elif data[0] == "Client_on_site":
         if not context.user_data.get('recheck'):
             context.user_data['running'] = False
@@ -420,7 +407,9 @@ def handle_callback_order(update, context):
         else:
             message = driver_complete_text(order.sum)
             query.edit_message_text(text=message)
-            text_to_client(order, complete_order_text, button=inline_comment_for_client())
+            msg_id = text_to_client(order, complete_order_text, button=inline_comment_for_client())
+            time.sleep(10)
+            context.bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=msg_id, reply_markup=None)
 
 
         # if order.payment_method == PAYCARD:
@@ -518,7 +507,6 @@ def change_sum_trip(sender=None, **kwargs):
 
 
 def send_map_to_client(update, context, order, query_id, licence_plate, client_msg):
-    # client_chat_id, car_gps_imei = context.args[0], context.args[1]
     if order.chat_id_client:
         lat, long = get_location_from_db(licence_plate)
         context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
@@ -529,14 +517,15 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
             latitude, longitude = get_location_from_db(licence_plate)
             if context.user_data['flag']:
                 distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
-                if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE', 0.3)):
+                if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
                     text_to_client(order, driver_arrived, delete_id=client_msg)
                     bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                                   message_id=query_id,
                                                   reply_markup=inline_client_spot(pk=order.id))
+                    context.user_data['flag'] = False
+            if order.status_order in [Order.CANCELED, Order.WAITING]:
+                context.user_data['running'] = False
             try:
-                if order.status_order in [Order.CANCELED, Order.WAITING]:
-                    context.user_data['running'] = False
                 if order.chat_id_client:
                     m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
                                                             longitude=longitude)
@@ -545,6 +534,6 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
                 logger.error(msg=str(e))
                 time.sleep(30)
         else:
+            context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
+            context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
             break
-
-

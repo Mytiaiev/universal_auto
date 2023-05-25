@@ -38,8 +38,8 @@ def inline_search_kb():
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[0], callback_data="Increase_price")],
         [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
-        [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_order")],
-        [InlineKeyboardButton(search_inline_buttons[3], callback_data="No_driver_time_order")]
+        [InlineKeyboardButton(search_inline_buttons[3], callback_data="No_driver_time_order")],
+        [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_order")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -50,7 +50,6 @@ def inline_increase_price_kb():
          InlineKeyboardButton(price_inline_buttons[1], callback_data="50")],
         [InlineKeyboardButton(price_inline_buttons[2], callback_data="100"),
          InlineKeyboardButton(price_inline_buttons[3], callback_data="150")]
-
     ]
     return InlineKeyboardMarkup(keyboard)
 

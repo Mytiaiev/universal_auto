@@ -8,20 +8,17 @@ from auto_bot.handlers.driver.handlers import change_status_car
 from auto_bot.handlers.driver_manager.handlers import get_gps_imea, get_n_vehicle, get_fleet_for_job_application, \
     get_vin_code_vehicle, get_licence_plate_vehicle, get_model_vehicle, get_name_vehicle, add_information_to_driver, \
     get_fleet, viewing_status_driver, second_name, email, phone_number, create_user, get_list_vehicle
-from auto_bot.handlers.driver_manager.static_text import *
-from auto_bot.handlers.main.handlers import start
-from auto_bot.handlers.order.handlers import to_the_address, payment_method, first_address_check, second_address_check, \
-    order_on_time
+from auto_bot.handlers.order.handlers import to_the_address, payment_method, order_on_time
 from auto_bot.handlers.owner.handlers import get_sum, generate_link_v1, get_sum_for_portmone, transfer, generate_link_v2
-from auto_bot.handlers.owner.static_text import CARD, SUM, PORTMONE_SUM, PORTMONE_COMMISSION, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.service_manager.handlers import send_report_to_db_and_driver, end_of_repair, start_of_repair, \
     photo
-from auto_bot.handlers.service_manager.static_text import LICENCE_PLATE, PHOTO, START_OF_REPAIR, END_OF_REPAIR
 from auto_bot.handlers.status.handlers import correct_choice
 
+from auto_bot.handlers.driver_manager.static_text import *
+from auto_bot.handlers.owner.static_text import CARD, SUM, PORTMONE_SUM, PORTMONE_COMMISSION, GENERATE_LINK_PORTMONE
+from auto_bot.handlers.service_manager.static_text import LICENCE_PLATE, PHOTO, START_OF_REPAIR, END_OF_REPAIR
 from auto_bot.handlers.driver.static_text import V_ID, NUMBERPLATE
-from auto_bot.handlers.order.static_text import FROM_ADDRESS, TO_THE_ADDRESS, FIRST_ADDRESS_CHECK, SECOND_ADDRESS_CHECK, \
-    TIME_ORDER, COMMENT
+from auto_bot.handlers.order.static_text import FROM_ADDRESS, TO_THE_ADDRESS, TIME_ORDER, COMMENT
 
 
 def text(update, context):
@@ -32,10 +29,6 @@ def text(update, context):
             return payment_method(update, context)
         elif context.user_data['state'] == COMMENT:
             return save_comment(update, context)
-        elif context.user_data['state'] == FIRST_ADDRESS_CHECK:
-            return first_address_check(update, context)
-        elif context.user_data['state'] == SECOND_ADDRESS_CHECK:
-            return second_address_check(update, context)
         elif context.user_data['state'] == TIME_ORDER:
             return order_on_time(update, context)
     elif context.user_data.get('driver_state') is not None:
