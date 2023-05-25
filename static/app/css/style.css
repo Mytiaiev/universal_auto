@@ -720,7 +720,8 @@ header button start
   outline: none;
   color: #101010;
   padding: 0px;
-  padding-left: 5px;
+  padding-left: 25px;
+  border-radius: 25px;
 }
 
 .info_section_header .info_form button {

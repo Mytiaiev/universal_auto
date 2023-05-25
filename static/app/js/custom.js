@@ -740,15 +740,15 @@ $(document).ready(function() {
       var isExpanded = false;
 
       text.addClass('limited-lines');
-      button.text('Читати далі >');
+      button.text(gettext('Читати далі >'));
 
       button.on('click', function() {
         if (isExpanded) {
           text.addClass('limited-lines');
-          button.text('Читати далі >');
+          button.text(gettext('Читати далі >'));
         } else {
           text.removeClass('limited-lines');
-          button.text('Читайте менше <');
+          button.text(gettext('Читайте менше <'));
         }
         isExpanded = !isExpanded;
       });
