@@ -1190,7 +1190,7 @@ class JobApplication(models.Model):
                                             verbose_name='Тильна сторона посвідчення')
     photo = models.ImageField(blank=True, upload_to='job/photo', verbose_name='Фото водія')
     car_documents = models.ImageField(blank=True, upload_to='job/car', default="docs/default_car.jpg",
-                                      verbose_name='Фото техпаспорту')
+                                      verbose_name='Фото техпаспорту',)
     insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png",
                                   verbose_name='Автоцивілка')
     insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')

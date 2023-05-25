@@ -1,13 +1,16 @@
 import datetime
+import io
 import os
 import threading
 import time
 
 import redis
+from google.cloud import storage
 from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ConversationHandler
 
 from app.models import User, JobApplication
+from auto import settings
 from auto_bot.handlers.driver_job.keyboards import job_name_buttons
 from auto_bot.handlers.driver_job.static_text import JOB_DRIVER
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
@@ -93,12 +96,11 @@ def get_job_photo(update, context):
 
 
 def upload_photo(update, context):
-    os.makedirs('data/mediafiles/job/photo/', exist_ok=True)
     if update.message.photo:
         image = update.message.photo[-1].get_file()
-        filename = f'data/mediafiles/job/photo/{image["file_unique_id"]}.jpg'
+        filename = f'gs://{settings.GS_BUCKET_NAME}/job/photo/{image["file_unique_id"]}.jpg'
         context.user_data['photo_job'] = f'job/photo/{image["file_unique_id"]}.jpg'
-        image.download(filename)
+        save_storage_photo(image, filename)
         update.message.reply_text('Ваше фото збережено.Надішліть лицьову сторону посвідчення')
         context.bot.send_photo(update.effective_chat.id,
                                'https://kourier.in.ua/uploads/posts/2016-12/1480604684_1702.jpg')
@@ -110,12 +112,11 @@ def upload_photo(update, context):
 
 
 def upload_license_front_photo(update, context):
-    os.makedirs('data/mediafiles/job/licenses/front/', exist_ok=True)
     if update.message.photo:
         image = update.message.photo[-1].get_file()
-        filename = f'data/mediafiles/job/licenses/front/{image["file_unique_id"]}.jpg'
+        filename = f'gs://{settings.GS_BUCKET_NAME}/job/licenses/front/{image["file_unique_id"]}.jpg'
         context.user_data['front_license'] = f'job/licenses/front/{image["file_unique_id"]}.jpg'
-        image.download(filename)
+        save_storage_photo(image, filename)
         update.message.reply_text('Лицьова сторона посвідчення збережена.Надішліть тильну сторону')
         context.bot.send_photo(update.effective_chat.id,
                                'https://www.autoconsulting.com.ua/pictures/_upload/1582561870fbTo_h.jpg')
@@ -126,12 +127,11 @@ def upload_license_front_photo(update, context):
 
 
 def upload_license_back_photo(update, context):
-    os.makedirs('data/mediafiles/job/licenses/back/', exist_ok=True)
     if update.message.photo:
         image = update.message.photo[-1].get_file()
-        filename = f'data/mediafiles/job/licenses/back/{image["file_unique_id"]}.jpg'
+        filename = f'gs://{settings.GS_BUCKET_NAME}/job/licenses/back/{image["file_unique_id"]}.jpg'
         context.user_data['back_license'] = f'job/licenses/back/{image["file_unique_id"]}.jpg'
-        image.download(filename)
+        save_storage_photo(image, filename)
         update.message.reply_text(
             'Тильна сторона посвідчення збережена.Надішліть срок дії посвідчення у форматі рік-місяць-день (наприклад: 1999-05-25).')
         update.message.reply_text(
@@ -299,3 +299,13 @@ def code_timer(update, context, timer, sleep):
                 break
         except KeyError:
             break
+
+
+def save_storage_photo(image, filename):
+    image_data = io.BytesIO()
+    image.download(out=image_data)
+    image_data.seek(0)
+    storage_client = storage.Client(credentials=settings.GS_CREDENTIALS)
+    bucket = storage_client.bucket(settings.GS_BUCKET_NAME)
+    blob = bucket.blob(filename)
+    blob.upload_from_file(image_data, content_type='image/jpeg')
