@@ -47,6 +47,14 @@ class Synchronizer:
             pass
         return getattr(self, func_name)(*args, **kwargs)
 
+    @staticmethod
+    def download_from_bucket(path, filename):
+        response = requests.get(path)
+        local_path = os.path.join(os.getcwd(), f"LastDownloads/{filename}.jpg")
+        with open(local_path, "wb") as file:
+            file.write(response.content)
+        return local_path
+
     def get_target_element_of_page(self, url, xpath):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
@@ -390,10 +398,7 @@ class BoltSynchronizer(Synchronizer, Bolt):
                 f"{settings.MEDIA_URL}{jobapplication.insurance}",  # insurance
             ]
             for i, file_path in enumerate(file_paths):
-                response = requests.get(file_path)
-                local_path = os.path.join(os.getcwd(), f"LastDownloads/{i}.jpg")
-                with open(local_path, "wb") as file:
-                    file.write(response.content)
+                local_path = self.download_from_bucket(file_path, i)
                 upload_element = upload_elements[i]
                 upload_element.click()
                 upload_input = upload_element.find_element(By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_12'))
@@ -557,26 +562,24 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_2')))).click()
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_3')))).click()
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+        button = WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4'))))
+        button.click()
         form_phone_number = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_5'))
         clickandclear(form_phone_number)
         form_phone_number.send_keys(jobapplication.phone_number[4:])
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_6')))).click()
+        button.click()
 
         # 2FA
         code = self.wait_otp_code(jobapplication)
-        digits = self.driver.find_elements(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_7'))
+        digits = self.driver.find_elements(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_6'))
         for i, element in enumerate(digits):
             element.send_keys(code[i])
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_8')))).click()
+        button.click()
         if self.sleep:
             time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_9')).click()
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_10')))).click()
+        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_7')).click()
+        button.click()
         if self.sleep:
             time.sleep(self.sleep)
         registration_fields = {"firstName": jobapplication.first_name,
@@ -587,8 +590,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             element = self.driver.find_element(By.ID, field)
             clickandclear(element)
             element.send_keys(value)
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_11')))).click()
+        button.click()
 
         file_paths = [
             f"{settings.MEDIA_URL}{jobapplication.photo}",
@@ -596,24 +598,23 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             f"{settings.MEDIA_URL}{jobapplication.driver_license_back}",
 
         ]
-        for i in range(3):
+        for i, file_path in enumerate(file_paths):
             if self.sleep:
                 time.sleep(self.sleep)
-            photo_input = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_12'))
-            photo_input.send_keys(file_paths[i])
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_13')))).click()
+            local_path = self.download_from_bucket(file_path, i)
+            photo_input = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_8'))
+            photo_input.send_keys(local_path)
+            button_2 = WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_9'))))
+            button_2.click()
             time.sleep(1)
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_14')))).click()
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_15')))).click()
+            button_2.click()
+            button.click()
         fleet_code = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_16'))))
+            EC.presence_of_element_located((By.ID, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_10'))))
         clickandclear(fleet_code)
         fleet_code.send_keys(ParkSettings.get_value("UKLON_TOKEN", NewUklonFleet.token))
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_17')))).click()
+        button.click()
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
 

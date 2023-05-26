@@ -160,8 +160,3 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int,
 
     return addresses
 
-def run():
-    file_path = "https://storage.googleapis.com/jobdriver-bucket/job/licenses/front/AQADe8wxGzYbgUt-.jpg"
-    response = requests.get(file_path)
-    with open(f"LastDownloads/test.jpg", "wb") as file:
-        file.write(response.content)
