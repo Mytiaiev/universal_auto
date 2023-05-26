@@ -460,7 +460,8 @@
 	var parkSettings = '{{ parkSettings }}';
 	var apiGoogle = '{{ google_api }}';
 	var csrfToken = '{% csrf_token %}';
-	var ajaxPostUrl = "{% url 'index' %}";
+	var ajaxPostUrl = "{% url 'post_request' %}";
+	var ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 
   <script src="{% static 'app/js/jquery-3.4.1.min.js' %}"></script>

@@ -138,7 +138,7 @@ function getMarkerIcon(type) {
 function orderUpdate(id_order) {
   var intervalId = setInterval(function() {
     $.ajax({
-      url: ajaxPostUrl,
+      url: ajaxGetUrl,
       method: 'GET',
       data: {
         "action": "order_confirm",
@@ -634,7 +634,7 @@ $(document).ready(function(){
             })
           } else {
             $.ajax({
-              url: ajaxPostUrl,
+              url: ajaxGetUrl,
               method: 'GET',
               data: {
                 "action": "active_vehicles_locations"

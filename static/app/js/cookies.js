@@ -27,7 +27,7 @@ function checkCookies() {
 
   if (idOrder) {
      $.ajax({
-        url: ajaxPostUrl,
+        url: ajaxGetUrl,
         method: 'GET',
         data: {
           "action": "active_vehicles_locations"
@@ -41,12 +41,13 @@ function checkCookies() {
   } else {
     if (address && to_address && phone) {
       $.ajax({
-        url: ajaxPostUrl,
+        url: ajaxGetUrl,
         method: 'GET',
         data: {
           "action": "active_vehicles_locations"
         },
         success: function(response) {
+          console.log(response.data)
           var taxiArr = JSON.parse(response.data);
           createMap(address, to_address, taxiArr);
         }
