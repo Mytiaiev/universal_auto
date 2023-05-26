@@ -132,6 +132,7 @@ GS_BUCKET_NAME = 'jobdriver-bucket'
 MEDIA_ROOT = "media/"
 UPLOAD_ROOT = 'media/uploads/'
 MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
+
 LOCALE_PATHS = (
     os.path.join(BASE_DIR, 'locale/'),
 )
