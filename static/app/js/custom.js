@@ -763,3 +763,15 @@ $(document).ready(function() {
       }, 1000); // Час прокрутки в мілісекундах (1000 мс = 1 с)
     });
   });
+
+
+$(document).ready(function() {
+
+  if (userLanguage === "uk") {
+    $(".img-box-en").addClass("hidden");
+    $(".img-box-uk").removeClass("hidden");
+  } else {
+    $(".img-box-en").removeClass("hidden");
+    $(".img-box-uk").addClass("hidden");
+  }
+});
