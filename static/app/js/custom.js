@@ -1,10 +1,3 @@
-// to get current year
-(function() {
-  var currentDate = new Date();
-  var currentYear = currentDate.getFullYear();
-  document.querySelector("#displayYear").innerHTML = currentYear;
-})();
-
 function toRadians(degrees) {
   return degrees * Math.PI / 180;
 }
@@ -732,40 +725,28 @@ loadGoogleMaps( 3, apiGoogle, userLanguage,'','geometry,places').then(function()
 });
 
 $(document).ready(function() {
-    var item = $('.services-grid__item');
+  $(this).on('click', '.services-grid__item .btn', function(){
+    var t = $(this);
+    content = t.prev();
 
-    item.each(function() {
-      var text = $(this).find('.service-text');
-      var button = $(this).find('.btn');
-      var isExpanded = false;
+    if(content.hasClass('limited-lines')){
+      content.removeClass('limited-lines');
+      t.text(gettext('Читати менше <'));
+    } else {
+      content.addClass('limited-lines');
+      t.text(gettext('Читати далі >'));
+    }
 
-      text.addClass('limited-lines');
-      button.text(gettext('Читати далі >'));
+    $('html, body').animate({ scrollTop: $('.services-grid').offset().top }, 100);
 
-      button.on('click', function() {
-        if (isExpanded) {
-          text.addClass('limited-lines');
-          button.text(gettext('Читати далі >'));
-        } else {
-          text.removeClass('limited-lines');
-          button.text(gettext('Читайте менше <'));
-        }
-        isExpanded = !isExpanded;
-      });
-    });
+    return false;
   });
 
-
-$(document).ready(function() {
     $("a[href='#order-now']").click(function() {
       $('html, body').animate({
         scrollTop: $("#order-now").offset().top
       }, 1000); // Час прокрутки в мілісекундах (1000 мс = 1 с)
     });
-  });
-
-
-$(document).ready(function() {
 
   if (userLanguage === "uk") {
     $(".img-box-en").addClass("hidden");
