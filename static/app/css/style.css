@@ -1156,3 +1156,9 @@ label {
 .star-half {
     color: lightgrey;
 }
+
+#order-now {
+  margin-top: -300px;
+  padding-top: 300px;
+  box-sizing: border-box;
+}

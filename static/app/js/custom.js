@@ -754,3 +754,12 @@ $(document).ready(function() {
       });
     });
   });
+
+
+$(document).ready(function() {
+    $("a[href='#order-now']").click(function() {
+      $('html, body').animate({
+        scrollTop: $("#order-now").offset().top
+      }, 1000); // Час прокрутки в мілісекундах (1000 мс = 1 с)
+    });
+  });
