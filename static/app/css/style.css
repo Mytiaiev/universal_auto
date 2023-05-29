@@ -433,7 +433,11 @@ header button start
   color: #E96F24;
 }
 
-.about_section .img-box img {
+.about_section .img-box-uk img {
+  width: 100%;
+  border-radius: 75px;
+}
+.about_section .img-box-en img {
   width: 100%;
   border-radius: 75px;
 }
@@ -1155,4 +1159,10 @@ label {
 
 .star-half {
     color: lightgrey;
+}
+
+#order-now {
+  margin-top: -300px;
+  padding-top: 300px;
+  box-sizing: border-box;
 }

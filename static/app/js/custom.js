@@ -138,7 +138,7 @@ function getMarkerIcon(type) {
 function orderUpdate(id_order) {
   var intervalId = setInterval(function() {
     $.ajax({
-      url: ajaxPostUrl,
+      url: ajaxGetUrl,
       method: 'GET',
       data: {
         "action": "order_confirm",
@@ -634,7 +634,7 @@ $(document).ready(function(){
             })
           } else {
             $.ajax({
-              url: ajaxPostUrl,
+              url: ajaxGetUrl,
               method: 'GET',
               data: {
                 "action": "active_vehicles_locations"
@@ -754,3 +754,24 @@ $(document).ready(function() {
       });
     });
   });
+
+
+$(document).ready(function() {
+    $("a[href='#order-now']").click(function() {
+      $('html, body').animate({
+        scrollTop: $("#order-now").offset().top
+      }, 1000); // Час прокрутки в мілісекундах (1000 мс = 1 с)
+    });
+  });
+
+
+$(document).ready(function() {
+
+  if (userLanguage === "uk") {
+    $(".img-box-en").addClass("hidden");
+    $(".img-box-uk").removeClass("hidden");
+  } else {
+    $(".img-box-en").removeClass("hidden");
+    $(".img-box-uk").addClass("hidden");
+  }
+});
