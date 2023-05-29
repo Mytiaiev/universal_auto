@@ -1,30 +1,22 @@
 import datetime
-import io
 import os
 import threading
 import time
-
 import redis
-from google.cloud import storage
-from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ConversationHandler
-
 from app.models import User, JobApplication
-from auto import settings
-from auto_bot.handlers.driver_job.keyboards import job_name_buttons, inline_ask_auto_kb
+from auto_bot.handlers.driver_job.keyboards import inline_ask_auto_kb, inline_job_name_kb, inline_ask_docs_kb
 from auto_bot.handlers.driver_job.static_text import *
-from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
+from auto_bot.handlers.driver_job.utils import save_storage_photo
 
 
 def job_application(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text=choose_job,
-                             reply_markup=markup_keyboard_onetime(job_name_buttons))
-    update.message.reply_text(make_mistake_text)
+    query = update.callback_query
+    query.edit_message_text(text=choose_job)
+    query.edit_message_reply_markup(reply_markup=inline_job_name_kb())
 
 
 def restart_job_application(update, context):
-    context.user_data.clear()
-    context.user_data['role'] = f"{JOB_DRIVER}"
     update.message.reply_text(start_again_text)
     update.message.reply_text(ask_name_text)
     return "JOB_USER_NAME"
@@ -32,23 +24,24 @@ def restart_job_application(update, context):
 
 # Update information for users
 def update_name(update, context):
-    chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
-    context.user_data['role'] = f"{JOB_DRIVER}"
+    query = update.callback_query
+    user = User.get_by_chat_id(update.effective_chat.id)
+    context.user_data['role'] = driver_job_name
     if user:
         try:
             JobApplication.objects.get(phone_number=user.phone_number)
-            update.message.reply_text(already_send_text)
+            query.edit_message_text(already_send_text)
         except JobApplication.DoesNotExist:
-            update.message.reply_text(ask_name_text, reply_markup=ReplyKeyboardRemove())
+            query.edit_message_text(ask_name_text)
             return "JOB_USER_NAME"
     else:
-        update.message.reply_text(no_phone_text)
+        query.edit_message_text(no_phone_text)
 
 
 def update_second_name(update, context):
     name = update.message.text
     clear_name = User.name_and_second_name_validator(name=name)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=make_mistake_text)
     if clear_name is not None:
         context.user_data['u_name'] = clear_name
         update.message.reply_text(ask_lastname_text)
@@ -81,8 +74,7 @@ def update_user_information(update, context):
         user.second_name = context.user_data['u_second_name']
         user.email = clear_email
         user.save()
-        buttons = [[InlineKeyboardButton(text='Завантажити документи', callback_data='job_photo')]]
-        update.message.reply_text(updated_text, reply_markup=InlineKeyboardMarkup(buttons))
+        update.message.reply_text(updated_text, reply_markup=inline_ask_docs_kb())
         return "WAIT_FOR_JOB_OPTION"
     else:
         update.message.reply_text(no_valid_email_text)
@@ -258,13 +250,3 @@ def code_timer(update, context, timer, sleep):
                 break
         except KeyError:
             break
-
-
-def save_storage_photo(image, filename):
-    image_data = io.BytesIO()
-    image.download(out=image_data)
-    image_data.seek(0)
-    storage_client = storage.Client(credentials=settings.GS_CREDENTIALS)
-    bucket = storage_client.bucket(settings.GS_BUCKET_NAME)
-    blob = bucket.blob(filename)
-    blob.upload_from_file(image_data, content_type='image/jpeg')
