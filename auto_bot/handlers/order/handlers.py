@@ -297,7 +297,6 @@ def order_on_time(update, context):
                 from_address(update, context)
             else:
                 order = Order.objects.filter(chat_id_client=user.chat_id,
-                                             phone=user.phone_number,
                                              status_order=Order.WAITING).last()
                 order.status_order, order.order_time, order.checked = Order.ON_TIME, conv_time, False
                 order.save()
@@ -330,8 +329,11 @@ def client_reject_order(update, context):
     order = Order.objects.filter(pk=int(data[1])).first()
     order.status_order = Order.CANCELED
     order.save()
-    for i in range(3):
-        context.bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id + i)
+    try:
+        for i in range(3):
+            context.bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id + i)
+    except:
+        pass
     msg_id = text_to_client(order=order, text=client_cancel, button=inline_comment_for_client())
     time.sleep(10)
     context.bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=msg_id, reply_markup=None)
