@@ -368,7 +368,7 @@ def handle_callback_order(update, context):
                                                   driver.phone_number, order.sum)
             client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
             order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
-            order.client_message_id = client_msg.message_id
+            order.client_message_id = client_msg
             order.save()
             try:
                 context.user_data['running'] = True
