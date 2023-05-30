@@ -138,7 +138,7 @@ function getMarkerIcon(type) {
 function orderUpdate(id_order) {
   var intervalId = setInterval(function() {
     $.ajax({
-      url: ajaxPostUrl,
+      url: ajaxGetUrl,
       method: 'GET',
       data: {
         "action": "order_confirm",
@@ -634,7 +634,7 @@ $(document).ready(function(){
             })
           } else {
             $.ajax({
-              url: ajaxPostUrl,
+              url: ajaxGetUrl,
               method: 'GET',
               data: {
                 "action": "active_vehicles_locations"
@@ -729,4 +729,49 @@ loadGoogleMaps( 3, apiGoogle, userLanguage,'','geometry,places').then(function()
  initAutocomplete('address');
  initAutocomplete('to_address');
  checkCookies()
+});
+
+$(document).ready(function() {
+    var item = $('.services-grid__item');
+
+    item.each(function() {
+      var text = $(this).find('.service-text');
+      var button = $(this).find('.btn');
+      var isExpanded = false;
+
+      text.addClass('limited-lines');
+      button.text(gettext('Читати далі >'));
+
+      button.on('click', function() {
+        if (isExpanded) {
+          text.addClass('limited-lines');
+          button.text(gettext('Читати далі >'));
+        } else {
+          text.removeClass('limited-lines');
+          button.text(gettext('Читайте менше <'));
+        }
+        isExpanded = !isExpanded;
+      });
+    });
+  });
+
+
+$(document).ready(function() {
+    $("a[href='#order-now']").click(function() {
+      $('html, body').animate({
+        scrollTop: $("#order-now").offset().top
+      }, 1000); // Час прокрутки в мілісекундах (1000 мс = 1 с)
+    });
+  });
+
+
+$(document).ready(function() {
+
+  if (userLanguage === "uk") {
+    $(".img-box-en").addClass("hidden");
+    $(".img-box-uk").removeClass("hidden");
+  } else {
+    $(".img-box-en").removeClass("hidden");
+    $(".img-box-uk").addClass("hidden");
+  }
 });
