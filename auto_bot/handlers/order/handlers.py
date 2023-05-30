@@ -8,7 +8,7 @@ from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
 from auto.tasks import logger, get_distance_trip, check_time_order, check_order, send_time_order
-from auto_bot.handlers.main.keyboards import markup_keyboard
+from auto_bot.handlers.main.keyboards import markup_keyboard, inline_start_driver_kb, inline_user_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
     inline_route_keyboard, inline_finish_order, inline_repeat_keyboard, inline_reject_order, inline_time_order_kb, \
     inline_increase_price_kb, inline_search_kb, inline_start_order_kb, share_location, inline_location_kb, \
@@ -23,18 +23,23 @@ def continue_order(update, context):
     query = update.callback_query
     order = Order.objects.filter(chat_id_client=update.effective_chat.id,
                                  status_order__in=[Order.ON_TIME, Order.WAITING])
-    reply_markup = inline_start_order_kb()
     if order:
         query.edit_message_text(text=already_ordered)
     else:
         context.user_data['state'] = START_TIME_ORDER
         context.user_data['location_button'] = False
         query.edit_message_text(text=price_info)
-    query.edit_message_reply_markup(reply_markup=reply_markup)
+    query.edit_message_reply_markup(reply_markup=inline_start_order_kb())
 
 
 def cancel_order(update, context):
-    update.callback_query.edit_message_text(text=complete_order_text)
+    query = update.callback_query
+    query.edit_message_text(text=complete_order_text)
+    driver = Driver.get_by_chat_id(query.message.chat_id)
+    if driver:
+        query.edit_message_reply_markup(reply_markup=inline_start_driver_kb())
+    else:
+        query.edit_message_reply_markup(reply_markup=inline_user_kb())
     context.user_data.clear()
 
 
@@ -199,9 +204,9 @@ def send_order_to_driver(sender=None, **kwargs):
         msg = text_to_client(order, client_msg)
         while count < 3:
             if count == 1:
-                text_to_client(order, search_driver_1)
+                msg_1 = text_to_client(order, search_driver_1)
             elif count == 2:
-                text_to_client(order, search_driver_2)
+                 msg_2 = text_to_client(order, search_driver_2)
             drivers = Driver.objects.filter(chat_id__isnull=False)
             for driver in drivers:
                 record = UseOfCars.objects.filter(user_vehicle=driver,
@@ -232,8 +237,12 @@ def send_order_to_driver(sender=None, **kwargs):
             time.sleep(5)
             count += 1
             if count == 3:
-                for i in range(3):
-                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg + i)
+                try:
+                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg)
+                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg_1)
+                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg_2)
+                except:
+                    pass
                 bot.send_message(chat_id=order.chat_id_client, text=no_driver_in_radius,
                                  reply_markup=inline_search_kb())
 
@@ -287,9 +296,9 @@ def order_on_time(update, context):
                 context.user_data['time_order'] = conv_time
                 from_address(update, context)
             else:
-                order = Order.get_order(chat_id_client=user.chat_id,
-                                        phone=user.phone_number,
-                                        status_order=Order.WAITING)
+                order = Order.objects.filter(chat_id_client=user.chat_id,
+                                             phone=user.phone_number,
+                                             status_order=Order.WAITING).last()
                 order.status_order, order.order_time, order.checked = Order.ON_TIME, conv_time, False
                 order.save()
                 update.message.reply_text(order_complete)
