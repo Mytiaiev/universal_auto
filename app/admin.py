@@ -2,6 +2,90 @@ from django.contrib import admin
 from .models import *
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from django.utils.safestring import mark_safe
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+from functools import wraps
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+# def model_permission(model_name, group, model_permissions):
+#     """
+#     model_permissions: dictionary with permission types as keys and boolean values
+#                        indicating whether the permission should be granted or not.
+#                        Example: {'view': True, 'add': False, 'change': True, 'delete': False}
+#     """
+#     content_type = ContentType.objects.get(app_label='app', model__iexact=model_name)
+#
+#     for permission_type, permission_value in model_permissions.items():
+#         codename = f'{permission_type}_{content_type.model}'
+#         permission = Permission.objects.get(codename=codename, content_type=content_type)
+#
+#         if permission_value:
+#             group.permissions.add(permission)
+#         else:
+#             group.permissions.remove(permission)
+
+
+group1, created = Group.objects.get_or_create(name='Partner')
+
+for user in group1.user_set.all():
+    for permission in group1.permissions.all():
+        user.user_permissions.add(permission)
+
+
+def assign_model_permissions(group):
+    models = {
+        'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
+        'NewUklonPaymentsOrder':        {'view': True, 'add': False, 'change': False, 'delete': False},
+        'BoltPaymentsOrder':            {'view': True, 'add': False, 'change': False, 'delete': False},
+        'UberPaymentsOrder':            {'view': True, 'add': False, 'change': False, 'delete': False},
+        'NinjaPaymentsOrder':           {'view': True, 'add': False, 'change': False, 'delete': False},
+        'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
+        'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
+        'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
+        'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+        'Fleets_drivers_vehicles_rate': {'view': True, 'add': True, 'change': True, 'delete': True},
+    }
+
+    for model, permissions in models.items():
+        content_type = ContentType.objects.get(app_label='app', model__iexact=model)
+        model_permissions = Permission.objects.filter(content_type=content_type)
+
+        for permission, value in permissions.items():
+            codename = f'{permission}_{model.lower()}'
+            permission_obj = model_permissions.get(codename=codename)
+
+            if value and permission_obj not in group.permissions.all():
+                group.permissions.add(permission_obj)
+
+
+assign_model_permissions(group1)
+
+
+@receiver(post_save, sender=Group)
+def add_partner_permissions(sender, instance, created, **kwargs):
+    if created and instance.name == 'partner':
+        assign_model_permissions(instance)
+        for user in instance.user_set.all():
+            assign_model_permissions(user)
+
+
+def filter_queryset_by_group(*groups):
+    def decorator(model_admin_class):
+        class FilteredModelAdmin(model_admin_class):
+            def get_queryset(self, request):
+                queryset = super().get_queryset(request)
+
+                if not request.user.is_superuser and request.user.groups.filter(name__in=groups).exists():
+                    queryset = queryset.filter(partner__user=request.user)
+
+                return queryset
+
+        return FilteredModelAdmin
+
+    return decorator
+
 
 
 # class FleetChildAdmin(PolymorphicChildModelAdmin):
@@ -43,6 +127,7 @@ from django.utils.safestring import mark_safe
 # class NinjaFleetAdmin(FleetChildAdmin):
 #     base_model = NinjaFleet
 #     show_in_index = False
+
 
 class DriverManagerInline(admin.TabularInline):
     model = DriverManager.driver_id.through
@@ -140,7 +225,7 @@ class FleetAdmin(admin.ModelAdmin):
 
 
 @admin.register(Driver)
-class DriverAdmin(admin.ModelAdmin):
+class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = ('name', 'second_name', 'email', 'phone_number', 'driver_status', 'created_at')
     list_display_links = ('name', 'second_name')
     list_filter = ['created_at']
@@ -158,6 +243,15 @@ class DriverAdmin(admin.ModelAdmin):
         SupportManagerDriverInline,
     ]
 
+    def save_model(self, request, obj, form, change):
+        if not change and not obj.partner:
+            if request.user.is_superuser:
+                pass
+            else:
+                partner = Partner.objects.get(user=request.user.pk)
+                obj.partner = partner
+            super().save_model(request, obj, form, change)
+
 
 @admin.register(DriverRateLevels)
 class DriverRateLevelsAdmin(admin.ModelAdmin):
@@ -170,7 +264,7 @@ class DriverRateLevelsAdmin(admin.ModelAdmin):
 
 
 @admin.register(DriverManager)
-class DriverManagerAdmin(admin.ModelAdmin):
+class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = ('name', 'second_name', 'email', 'phone_number', 'created_at')
     list_display_links = ('name', 'second_name')
     search_fields = ('name', 'second_name')
@@ -187,7 +281,7 @@ class DriverManagerAdmin(admin.ModelAdmin):
 
 
 @admin.register(Vehicle)
-class VehicleAdmin(admin.ModelAdmin):
+class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = ('name', 'model', 'licence_plate', 'vin_code', 'type', 'gps_imei', 'car_status', 'created_at')
     list_display_links = ('name', 'model', 'licence_plate', 'vin_code')
     search_fields = ('name', 'model', 'licence_plate', 'vin_code', 'gps_imei',)
@@ -224,7 +318,7 @@ class VehicleGPSAdmin(admin.ModelAdmin):
 
 
 @admin.register(RentInformation)
-class RentInformationAdmin(admin.ModelAdmin):
+class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = ('driver_name', 'rent_time', 'rent_distance', 'created_at')
     list_display_links = ('driver_name',)
 
@@ -246,13 +340,13 @@ class UklonPaymentsOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(NinjaPaymentsOrder)
-class NinjaPaymentsOrderAdmin(admin.ModelAdmin):
+class NinjaPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = [f.name for f in NinjaPaymentsOrder._meta.fields]
     ordering = ('-report_from', 'chat_id')
     list_per_page = 25
 
 @admin.register(NewUklonPaymentsOrder)
-class NewUklonPaymentsOrderAdmin(admin.ModelAdmin):
+class NewUklonPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = [f.name for f in NewUklonPaymentsOrder._meta.fields]
     search_fields = ('signal', 'full_name')
     ordering = ('-report_from', 'signal')
@@ -260,7 +354,7 @@ class NewUklonPaymentsOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(BoltPaymentsOrder)
-class BoltPaymentsOrderAdmin(admin.ModelAdmin):
+class BoltPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = [f.name for f in BoltPaymentsOrder._meta.fields]
     search_fields = ('mobile_number', 'driver_full_name')
     ordering = ('-report_from', 'mobile_number')
@@ -268,7 +362,7 @@ class BoltPaymentsOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(UberPaymentsOrder)
-class UberPaymentsOrderAdmin(admin.ModelAdmin):
+class UberPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = [f.name for f in UberPaymentsOrder._meta.fields]
     search_fields = ('driver_uuid', 'first_name', 'last_name')
     ordering = ('-report_from', 'driver_uuid')
@@ -410,7 +504,7 @@ class OwnerAdmin(admin.ModelAdmin):
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = [f.name for f in Order._meta.fields]
     # fieldsets = [
     #     (None, {'fields': ['from_address', 'to_the_address',
@@ -425,7 +519,7 @@ class UseofCarsAdmin(admin.ModelAdmin):
 
 
 @admin.register(Fleets_drivers_vehicles_rate)
-class Fleets_drivers_vehicles_rateAdmin(admin.ModelAdmin):
+class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = [f.name for f in Fleets_drivers_vehicles_rate._meta.fields]
 
 

@@ -26,6 +26,34 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver import ActionChains
 from selenium.webdriver import DesiredCapabilities
+from django.contrib.auth.models import User as AuUser
+from django.dispatch import receiver
+from django.db.models.signals import post_save, pre_save
+
+
+class Partner(models.Model):
+    user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f'{self.user.first_name} {self.user.last_name}'
+
+
+@receiver(post_save, sender=AuUser)
+def create_partner(sender, instance, created, **kwargs):
+    if created:
+        Partner.objects.create(user=instance)
+
+
+class Park(models.Model):
+    name = models.CharField(max_length=255, verbose_name='Імя автопарка')
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        verbose_name = 'Автопарк'
+        verbose_name_plural = 'Автопарки'
+
+    def __str__(self):
+        return self.name
 
 
 class PaymentsOrder(models.Model):
@@ -163,6 +191,7 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     fares = models.DecimalField(decimal_places=2, max_digits=10)  # "Штрафи, грн"
     comission = models.DecimalField(decimal_places=2, max_digits=10)  # "Комісія Уклон, грн"
     total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10)  # " Разом, грн"
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -220,6 +249,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     refunds = models.DecimalField(decimal_places=2, max_digits=10)
     tips = models.DecimalField(decimal_places=2, max_digits=10)
     weekly_balance = models.DecimalField(decimal_places=2, max_digits=10)
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -271,6 +301,7 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10)
     returns = models.DecimalField(decimal_places=2, max_digits=10)
     tips = models.DecimalField(decimal_places=2, max_digits=10)
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -314,9 +345,10 @@ class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     total_amount_cash = models.PositiveIntegerField(null=True, blank=True)
     total_amount_on_card = models.PositiveIntegerField(null=True, blank=True)
     total_amount = models.PositiveIntegerField(null=True, blank=True)
-
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
 
     vendor_name = 'Ninja'
 
@@ -366,7 +398,6 @@ class FileNameProcessed(models.Model):
 class User(models.Model):
     class Role(models.TextChoices):
         CLIENT = 'CLIENT', 'Client'
-        PARTNER = 'PARTNER', 'Partner'
         DRIVER = 'DRIVER', 'Driver'
         DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
         SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
@@ -463,8 +494,7 @@ class Driver(User):
     RENT = 'Орендую авто'
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
-    # partner = models.ManyToManyField('Partner', blank=True)
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
 
     class Meta:
@@ -556,6 +586,7 @@ class StatusChange(models.Model):
 
 class RentInformation(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True)
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
     driver_name = models.CharField(max_length=50, blank=True)
     rent_time = models.DurationField(null=True, blank=True, verbose_name='Час оренди')
     rent_distance = models.DecimalField(null=True, blank=True, max_digits=6,
@@ -601,15 +632,10 @@ class Client(User):
             return None
 
 
-# class Partner(User):
-#     fleet = models.OneToOneField(Fleet,  blank=True, null=True, on_delete=models.SET_NULL)
-#     driver = models.ManyToManyField(Driver,  blank=True)
-#     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.PARTNER)
-
-
 class DriverManager(User):
     driver_id = models.ManyToManyField(Driver, blank=True, verbose_name='Driver')
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         verbose_name = 'Менеджер водія'
@@ -757,6 +783,7 @@ class Vehicle(models.Model):
     gps_imei = models.CharField(max_length=100, default='')
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Водій')
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
@@ -816,6 +843,7 @@ class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE)
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True)
     driver_external_id = models.CharField(max_length=255)
     rate = models.DecimalField(decimal_places=2, max_digits=3, default=0)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
@@ -917,7 +945,6 @@ class WeeklyReportFile(models.Model):
         return converted_list
 
     def save_weekly_reports_to_db(self):
-
         for file in csv_list:
             rows = []
             try:
@@ -1171,6 +1198,7 @@ class Order(models.Model):
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
     comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL)
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
 
     @staticmethod
     def get_order(chat_id_client, phone, status_order):
@@ -1337,6 +1365,7 @@ class ParkSettings(models.Model):
     key = models.CharField(max_length=255, verbose_name='Ключ')
     value = models.CharField(max_length=255, verbose_name='Значення')
     description = models.CharField(max_length=255, null=True, verbose_name='Опиc')
+    park = models.ForeignKey(Park, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автопарк')
 
     class Meta:
         verbose_name = 'Налаштування автопарка'
@@ -2585,3 +2614,5 @@ def download_and_save_daily_report(day=None, driver=False, sleep=5, headless=Tru
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
         fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+
+
