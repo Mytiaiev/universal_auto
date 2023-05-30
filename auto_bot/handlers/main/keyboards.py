@@ -12,9 +12,18 @@ driver_keyboard = [
 ]
 
 
+def inline_more_func_kb():
+    keyboard = [
+        [InlineKeyboardButton(main_buttons[1], callback_data="Comment client")],
+        [InlineKeyboardButton(main_buttons[2], callback_data="Job_application")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
 def inline_user_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data=f"Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[6], callback_data="Other")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

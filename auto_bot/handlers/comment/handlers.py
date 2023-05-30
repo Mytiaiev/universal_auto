@@ -1,25 +1,25 @@
 from django.utils import timezone
-from telegram import ReplyKeyboardRemove
 
-from app.models import Order, Comment, User
+from app.models import Order, Comment
 from auto_bot.handlers.comment.keyboards import inline_comment_kb, STAR
-from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 from auto_bot.handlers.order.static_text import COMMENT
 
 
 def comment(update, context):
-    context.user_data['state'] = COMMENT
     query = update.callback_query
-    query.edit_message_text(text='Поставте оцінку або напишіть відгук')
-    query.edit_message_reply_markup(reply_markup=inline_comment_kb())
-    chat_id = query.message.chat.id
-    context.user_data['message_comment'] = query.message.message_id
-    order = Order.objects.filter(chat_id_client=chat_id,
-                                 status_order__in=[Order.IN_PROGRESS, Order.WAITING, Order.COMPLETED]).last()
+    order = Order.objects.filter(chat_id_client=query.message.chat_id,
+                                 status_order__in=[Order.IN_PROGRESS, Order.WAITING, Order.COMPLETED],
+                                 created_at__date=timezone.now().date()).last()
     if order:
+        query.edit_message_text(text='Поставте оцінку або напишіть відгук')
+        query.edit_message_reply_markup(reply_markup=inline_comment_kb())
         if order.status_order == Order.WAITING:
             order.status_order = Order.CANCELED
             order.save()
+    else:
+        query.edit_message_text(text='Напишіть відгук або пропозицію, будь ласка')
+    context.user_data['state'] = COMMENT
+    context.user_data['message_comment'] = query.message.message_id
 
 
 def save_comment(update, context):
