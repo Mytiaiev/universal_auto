@@ -1,0 +1,39 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load i18n %}
+  <!-- investment section -->
+{% block content %}
+  <section class="about_section">
+    <div class="hero-banner-one">
+				<div class="bg-wrapper">
+					<div class="container">
+						<div class="row">
+							<div class="col-lg-6 col-md-7">
+								<h1 class="hero-heading fw-bold tx-dark">We’r Help <br> to Achive your
+									<span class="position-relative d-inline-block">Success.</span>
+								</h1>
+								<p class="text-lg mb-60 pt-50 pe-xl-5 lg-pt-30 lg-mb-40">Agency work with top rated talented people provide qulaity services.</p>
+								<form action="#" class="bg-white">
+									<input type="email" placeholder="Enter your email address">
+									<button class="tran3s">SUBSCRIBE</button>
+								</form>
+								<div class="pr-info fw-500 fs-20 tx-dark mt-35">Over <span class="fw-bold text-decoration-underline">150,000+ client</span> all over the world.</div>
+							</div>
+						</div>
+						<div class="illustration-holder">
+							<img src="{% static 'app/images/assets/ils_01.png' %}" alt="" class="lazy-img main-illustration w-100" style="">
+							<img src="{% static 'app/images/assets/shape_01.svg' %}" alt="" class="lazy-img shapes shape-one" style="">
+							<img src="{% static 'app/images/assets/shape_02.svg' %}" alt="" class="lazy-img shapes shape-two" style="">
+							<img src="{% static 'app/images/assets/shape_03.svg' %}" alt="" class="lazy-img shapes shape-three" style="">
+							<img src="{% static 'app/images/assets/shape_04.svg' %}" alt="" class="lazy-img shapes shape-four" style="">
+							<img src="{% static 'app/images/assets/shape_05.svg' %}" alt="" class="lazy-img shapes shape-five" style="">
+							<img src="{% static 'app/images/assets/shape_06.svg' %}" alt="" class="lazy-img shapes shape-six" style="">
+							<img src="{% static 'app/images/assets/shape_07.svg' %}" alt="" class="lazy-img shapes shape-seven" style="">
+						</div>
+					</div>
+					<img src="{% static 'app/images/assets/shape_08.svg' %}" alt="" class="lazy-img shapes shape-eight" style="">
+				</div>
+			</div>
+  </section>
+  <!-- end investment section -->
+{% endblock %}

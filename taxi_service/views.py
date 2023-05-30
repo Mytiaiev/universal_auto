@@ -63,7 +63,7 @@ class GetRequestView(View):
 
 
 def about(request):
-    return render(request, 'about.html', {'subscribe_form': SubscriberForm()})
+    return render(request, 'investment.html', {'subscribe_form': SubscriberForm()})
 
 
 def blog(request):
