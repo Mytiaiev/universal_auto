@@ -234,7 +234,7 @@ def send_order_to_driver(sender=None, **kwargs):
                             bot.send_message(chat_id=driver.chat_id, text=decline_order)
                     else:
                         continue
-            time.sleep(5)
+            time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180))/3)
             count += 1
             if count == 3:
                 try:
