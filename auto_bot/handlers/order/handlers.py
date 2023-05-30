@@ -334,9 +334,8 @@ def client_reject_order(update, context):
             context.bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id + i)
     except:
         pass
-    msg_id = text_to_client(order=order, text=client_cancel, button=inline_comment_for_client())
-    time.sleep(10)
-    context.bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=msg_id, reply_markup=None)
+    text_to_client(order=order, text=client_cancel, button=inline_comment_for_client())
+
 
 
 def handle_callback_order(update, context):
@@ -360,8 +359,6 @@ def handle_callback_order(update, context):
             context.bot.delete_message(chat_id=-863882769, message_id=int(order.driver_message_id))
             context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
         else:
-            order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
-            order.save()
             ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
             message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
                                  order.phone_number, order.sum, order.distance_google)
@@ -370,6 +367,9 @@ def handle_callback_order(update, context):
             report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
                                                   driver.phone_number, order.sum)
             client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
+            order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
+            order.client_message_id = client_msg.message_id
+            order.save()
             try:
                 context.user_data['running'] = True
                 r = threading.Thread(target=send_map_to_client,
@@ -384,9 +384,11 @@ def handle_callback_order(update, context):
         driver.driver_status = Driver.ACTIVE
         driver.save()
         ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
+        context.bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=order.client_message_id,
+                                              reply_markup=None)
+        text_to_client(order, driver_cancel)
         order.status_order, order.driver, order.checked = Order.WAITING, None, False
         order.save()
-        text_to_client(order, driver_cancel)
     elif data[0] == "Client_on_site":
         if not context.user_data.get('recheck'):
             context.user_data['running'] = False
@@ -418,9 +420,7 @@ def handle_callback_order(update, context):
         else:
             message = driver_complete_text(order.sum)
             query.edit_message_text(text=message)
-            msg_id = text_to_client(order, complete_order_text, button=inline_comment_for_client())
-            time.sleep(10)
-            context.bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=msg_id, reply_markup=None)
+            text_to_client(order, complete_order_text, button=inline_comment_for_client())
 
 
         # if order.payment_method == PAYCARD:
