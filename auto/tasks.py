@@ -89,7 +89,7 @@ def download_daily_report(self):
         day = pendulum.now().start_of('day').subtract(days=1)  # yesterday
         download_and_save_daily_report(driver=True, sleep=5, headless=True, day=day)
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @contextmanager
@@ -151,7 +151,7 @@ def update_driver_status(self):
                 logger.info('passed')
 
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -165,7 +165,7 @@ def update_driver_data(self):
             else:
                 logger.info('passed')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -175,7 +175,16 @@ def download_weekly_report_force(self):
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
         UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def download_uber_trips(self):
+    try:
+        day = pendulum.now().start_of('day').subtract(days=1)
+        Uber.download_trips(day=day, driver=True, sleep=5, headless=True)
+    except Exception as e:
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -184,18 +193,18 @@ def send_on_job_application_on_driver(self, job_id):
         candidate = JobApplication.objects.get(id=job_id)
         BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
-        print('The job application has been sent')
+        logger.info('The job application has been sent')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
 def get_rent_information(self):
     try:
         UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('get_rent_distance')
-        print('write rent report in uagps')
+        logger.info('write rent report in uagps')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -204,7 +213,7 @@ def get_report_for_tg(self):
         report = get_report(week=True, week_number=None, driver=True, sleep=5, headless=True)
         return report
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -212,7 +221,7 @@ def withdraw_uklon(self):
     try:
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('withdraw_money')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -232,12 +241,12 @@ def send_daily_into_group(self):
         message = [f'{k}: %.2f' % v for k, v in sort_report.items()]
         return message
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
 def check_time_order(self):
-    print("check orders on time")
+    logger.info("check orders on time")
 
 
 @app.task(bind=True, queue='non_priority')

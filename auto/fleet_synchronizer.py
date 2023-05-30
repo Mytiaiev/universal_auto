@@ -323,15 +323,15 @@ class BoltSynchronizer(Synchronizer, Bolt):
                 'wait': self.get_driver_status_from_map('3')
             }
         except (TimeoutException, WebDriverException) as err:
-            print(err.msg)
+            self.logger.error(err)
 
     def download_weekly_report(self):
         if self.payments_order_file_name() not in os.listdir(os.curdir):
             try:
                 self.download_payments_order()
-                print(f'Bolt weekly report has been downloaded')
+                self.logger.info('Bolt weekly report has been downloaded')
             except Exception as err:
-                print(err.msg)
+                self.logger.error(err)
 
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:
@@ -519,7 +519,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 'wait': self.get_driver_status_from_map('2')
             }
         except WebDriverException as err:
-            print(err.msg)
+            self.logger.error(err)
 
     def withdraw_money(self):
         bot.send_message(chat_id='515224934', text='withdraw started')
@@ -613,9 +613,9 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         if self.payments_order_file_name() not in os.listdir(os.curdir):
             try:
                 self.download_payments_order()
-                print(f'Uklon weekly report has been downloaded')
+                self.logger.info('Uklon weekly report has been downloaded')
             except Exception as err:
-                print(err.msg)
+                self.logger.error(err)
 
 
 class UberSynchronizer(Synchronizer, Uber):
@@ -763,15 +763,17 @@ class UberSynchronizer(Synchronizer, Uber):
                 'wait': self.get_driver_status_from_map('ACCEPTED')
             }
         except WebDriverException as err:
-            print(err.msg)
+            self.logger.error(err)
 
     def download_weekly_report(self):
-        if self.payments_order_file_name() not in os.listdir(os.curdir):
+        if self.payments_order_file_name("payments_driver") not in os.listdir(os.curdir):
             try:
-                self.download_payments_order()
-                print(f'Uber weekly report has been downloaded')
+                self.download_payments_order(UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_3"),
+                                             UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_4"),
+                                             "payments_driver")
+                self.logger.info('Uber weekly report has been downloaded')
             except Exception as err:
-                print(err.msg)
+                self.logger.error(err)
 
 
 class UaGpsSynchronizer(Synchronizer, UaGps):
