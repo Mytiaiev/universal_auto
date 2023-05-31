@@ -152,7 +152,9 @@ def first_address_check(update, context):
 
 def order_create(update, context):
     query = update.callback_query
-    payment = query.data.split('_')[0]
+    data = int(query.data.split(' ')[1])
+    button_text = query.message.reply_markup.inline_keyboard[data][0].text
+    payment = button_text.split(' ')[1]
     user = User.get_by_chat_id(update.effective_chat.id)
     destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
     destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
