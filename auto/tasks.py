@@ -15,12 +15,12 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
-    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report, NinjaPaymentsOrder
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
+    Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report, NinjaPaymentsOrder, UseOfCars
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
+
 from scripts.conversion import convertion
-from auto_bot.handlers.order.static_text import PAYCARD, CASH
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
 
@@ -134,13 +134,16 @@ def update_driver_status(self):
                 #     status_width_client = status_width_client.union(set(uber_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
-                    last_hour = timezone.localtime() - timezone.timedelta(hours=1)
-                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_hour).first()
-                    current_status = Driver.OFFLINE
-                    if park_status:
-                        current_status = park_status.status
-                    if (driver.name, driver.second_name) in status_online:
+                    last_status = timezone.localtime() - timezone.timedelta(minutes=2)
+                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
+                    work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
+                                                          created_at__date=timezone.now().date(), end_at=None)
+                    if work_ninja or (driver.name, driver.second_name) in status_online:
                         current_status = Driver.ACTIVE
+                    else:
+                        current_status = Driver.OFFLINE
+                    if park_status and park_status.status != Driver.ACTIVE:
+                        current_status = park_status.status
                     if (driver.name, driver.second_name) in status_width_client:
                         current_status = Driver.WITH_CLIENT
                     # if (driver.name, driver.second_name) in status['wait']:
@@ -185,8 +188,8 @@ def download_weekly_report_force(self):
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
+        BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
         print('The job application has been sent')
     except Exception as e:
         logger.info(e)
@@ -239,13 +242,18 @@ def send_daily_into_group(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def check_time_order(self):
-    print("check orders on time")
+def check_time_order(self, order_id):
+    return order_id
 
 
 @app.task(bind=True, queue='non_priority')
-def delete_button(self, order_id, query, text):
-    return order_id, query, text
+def send_time_order(self):
+    return logger.info('sending_time_orders')
+
+
+@app.task(bind=True, queue='non_priority')
+def check_order(self, order_id):
+    return order_id
 
 
 @app.task(bind=True, queue='non_priority')
@@ -278,26 +286,33 @@ def save_report_to_ninja_payment(day=None):
     # Pulling notes for the rest of the week and grouping behind the chat_id field
     records = Order.objects.filter(driver__chat_id__isnull=False,
                                    created_at__date__range=(start_date.split()[0], end_date.split()[0])).values(
-                                  'driver__chat_id')
+        'driver__chat_id')
     if records:
         for record in records:
             chat_id = record['driver__chat_id']
-            total_rides = Order.objects.filter(driver__chat_id=chat_id).count()
+            total_rides = Order.objects.filter(driver__chat_id=chat_id,
+                                               created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                                               status_order=Order.COMPLETED).count()
 
-            total_distance = Order.objects.filter(driver__chat_id=chat_id).aggregate(
-                total=Sum(Coalesce(Cast('distance_gps', FloatField()), Cast('distance_google', FloatField()),
+            total_distance = Order.objects.filter(driver__chat_id=chat_id,
+                                                  created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                                                  status_order=Order.COMPLETED).aggregate(
+                total=Sum(Coalesce(Cast('distance_gps', FloatField()),
+                                   Cast('distance_google', FloatField()),
                                    output_field=FloatField()))).get('total', 0)
 
             total_amount_cash = Order.objects.filter(
                 driver__chat_id=chat_id,
-                payment_method=CASH,
+                payment_method='Готівка',
+                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
                 status_order=Order.COMPLETED
             ).aggregate(
                 total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
 
             total_amount_card = Order.objects.filter(
                 driver__chat_id=chat_id,
-                payment_method=PAYCARD,
+                payment_method='Картка',
+                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
                 status_order=Order.COMPLETED
             ).aggregate(
                 total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
@@ -343,7 +358,7 @@ def setup_periodic_tasks(sender, **kwargs):
     global UAGPS_CHROME_DRIVER
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             check_time_order.s(), queue='non_priority')
+                             send_time_order.s(), queue='non_priority')
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=15, hour='*/2'), update_driver_data.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
@@ -352,7 +367,8 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
+                             queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
 
 
