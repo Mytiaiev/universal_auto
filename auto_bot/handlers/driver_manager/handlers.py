@@ -4,7 +4,7 @@ from telegram import ReplyKeyboardRemove
 from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, NewUklonPaymentsOrder, \
     BoltPaymentsOrder, UberPaymentsOrder, JobApplication
 from auto_bot.handlers.driver.static_text import BROKEN
-from auto_bot.handlers.driver_job.static_text import JOB_DRIVER
+from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
     fleet_job_keyboard, drivers_status_buttons
 from auto_bot.handlers.driver_manager.static_text import *
@@ -281,7 +281,7 @@ def get_list_job_application(update, context):
     chat_id = update.message.chat.id
     driver_manager = DriverManager.get_by_chat_id(chat_id)
     if driver_manager is not None:
-        applications = {i.id: f'{i}' for i in JobApplication.objects.all() if (i.role == f'{JOB_DRIVER}' and i.status_bolt == False)}
+        applications = {i.id: f'{i}' for i in JobApplication.objects.all() if (i.role == driver_job_name and i.status_bolt == False)}
         if len(applications) == 0:
             update.message.reply_text('Заявок на роботу водія поки немає')
         else:
@@ -407,6 +407,6 @@ def get_gps_imea(update, context):
         context.user_data['vehicle'].gps_imei = gps_imei
         context.user_data['vehicle'].save()
         update.message.reply_text('Ми встановили GPS imei до авто, яке ви вказали')
-        context.user_data['manager_state'] =  None
+        context.user_data['manager_state'] = None
     else:
         update.message.reply_text("Задовге значення. Спробуйте ще раз")

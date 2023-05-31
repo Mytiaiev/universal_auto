@@ -1,9 +1,11 @@
-from django.urls import path, re_path
-from taxi_service.views import index, about, why, agreement, blog
+from django.urls import path
+from taxi_service.views import IndexView, PostRequestView, GetRequestView, about, why, agreement, blog
 from django.views.i18n import JavaScriptCatalog
 
 urlpatterns = [
-    path('', index, name='index'),
+    path('', IndexView.as_view(), name='index'),
+    path('post-request/', PostRequestView.as_view(), name='post_request'),
+    path('get-request/', GetRequestView.as_view(), name='get_request'),
     path('about/', about, name='about'),
     path('why/', why, name='why'),
     path('user-agreement/', agreement, name='user_agreement'),

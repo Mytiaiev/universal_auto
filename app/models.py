@@ -1161,8 +1161,8 @@ class Order(models.Model):
     chat_id_client = models.CharField(max_length=10, blank=True, null=True)
     driver_message_id = models.CharField(max_length=10, blank=True, null=True)
     client_message_id = models.CharField(max_length=10, blank=True, null=True)
-    car_delivery_price = models.CharField(max_length=30, blank=True, null=True)
-    sum = models.CharField(max_length=30)
+    car_delivery_price = models.IntegerField(default=0)
+    sum = models.IntegerField(default=0)
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
     payment_method = models.CharField(max_length=70)
     status_order = models.CharField(max_length=70)
@@ -1171,6 +1171,7 @@ class Order(models.Model):
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
     comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL)
+    checked = models.BooleanField(default=False)
 
     @staticmethod
     def get_order(chat_id_client, phone, status_order):
@@ -1245,7 +1246,7 @@ class JobApplication(models.Model):
                                             verbose_name='Тильна сторона посвідчення')
     photo = models.ImageField(blank=True, upload_to='job/photo', verbose_name='Фото водія')
     car_documents = models.ImageField(blank=True, upload_to='job/car', default="docs/default_car.jpg",
-                                      verbose_name='Фото техпаспорту')
+                                      verbose_name='Фото техпаспорту',)
     insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png",
                                   verbose_name='Автоцивілка')
     insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')

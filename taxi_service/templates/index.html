@@ -19,7 +19,7 @@
                         {% trans "Екологічно чисті" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        {% trans "Електротаксі не викидають вихлопні гази, що допомагає знизити забруднення навколишнього середовища і покращити якість повітря в містах."  %}
+                        {% trans "Кожен наш електромобіль працює на «чистій» енергії, що знижує викиди шкідливих вуглецевих газів і мінімізує негативний вплив на довкілля. Ми віримо, що збереження нашої планети починається з наших дій, і ви можете бути впевнені, що кожна поїздка з Ninja Taxi допомагає зменшити екологічне навантаження."  %}
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -28,7 +28,7 @@
                   </div>
                   <div class="col-md-6">
                     <div class="img-box">
-                      <img src="{% static 'app/images/slider-img.png' %}" alt="">
+                      <img src="{% static 'app/images/slider-img-1.png' %}" alt="">
                     </div>
                   </div>
                 </div>
@@ -40,10 +40,10 @@
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Покращений комфорт" %}
+                        {% trans "Комфорт" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        {% trans "Електротаксі можуть бути більш тихими, ніж традиційні таксі, що створює більш комфортні умови для пасажирів." %}
+                        {% trans "Завдяки електрокарам, Ваша поїздка буде тиха, приємна та м'яка. Ви заслуговуєте на найкраще, тому наші електрокари готові забезпечити Вам незабутній досвід комфорту під час кожної поїздки." %}
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -64,10 +64,10 @@
                   <div class="col-md-6">
                     <div class="detail-box">
                       <h1>
-                        {% trans "Інноваційність" %}
+                        {% trans "Швидкість" %}
                       </h1>
                       <p class="col-lg-11 px-0">
-                        {% trans "Електротаксі – це інноваційний підхід, який може підвищити Ваш рівень задоволеності під час поїздок." %}
+                        {% trans "Наші таксі мають особливу ліцензію, що дозволяє нам використовувати смуги громадського транспорту, забезпечуючи вам неперевершену швидкість руху по місту, оскільки нам не треба стояти в заторах." %}
                       </p>
                       <a href="">
                         {% trans "Дізнатися більше" %}
@@ -105,6 +105,7 @@
   <!-- book section -->
 
   <section class="book_section" id="order">
+		<div class="container" id="order-now"></div>
     <div class="container">
 	  <div class="col-md-11 col-lg-9 mx-auto px-0">
 	    <div class="book_form">
@@ -181,22 +182,26 @@
     <div class="container">
       <div class="row">
         <div class="col-md-6">
-          <div class="img-box">
-            <img src="{% static 'app/images/about-img.svg' %}" alt="">
+          <div class="img-box-uk">
+            <img src="{% static 'app/images/about-img-uk.png' %}" alt="">
+          </div>
+					<div class="img-box-en hidden">
+            <img src="{% static 'app/images/about-img-en.png' %}" alt="">
           </div>
         </div>
         <div class="col-md-6">
           <div class="detail-box">
             <div class="heading_container">
               <h2>
-                {% trans "Про нас" %}
+                {% trans "ПРО НАС" %}
               </h2>
             </div>
-            <p>
-              {% trans "Наша місія – надати пасажирам швидкий, зручний та безпечний транспорт, який буде відповідати найвищим стандартам." %}
-              {% trans "Наші електротаксі оснащені новітніми безпековими технологіями, що забезпечує максимальний захист пасажирів на дорозі." %}
-              {% trans "Крім того, ми гарантуємо швидкий та комфортний трансфер у будь-який час дня та ночі." %}
-              {% trans "Наші водії - це професіонали своєї справи, які мають високий рівень досвіду та знань про місто, що забезпечує швидку та безпечну поїздку для наших пасажирів." %}
+            <p class="about-section">
+              {% trans "Ninja Taxi – преміальна служба таксі в Києві!" %}
+              {% trans "Ми пишаємося можливістю надавати найкращий сервіс, використовуючи сучасні електрокари." %}
+              {% trans "Наша мета - забезпечити зручність, швидкість і комфорт кожному клієнту." %}
+              {% trans "Ми зосереджені на екологічній стороні таксі, тому використовуємо електрокари, що дозволять нам зменшити викиди шкідливих речовин та допомогти зберегти наше середовище." %}
+              {% trans "Таким чином Ви можете насолоджуватися комфортом і тишею під час поїздки, знаючи, що це не забруднює повітря довкола." %}
             </p>
             <a href="">
               {% trans "Дізнатися більше" %}
@@ -211,180 +216,244 @@
 
   <!-- why section -->
 
-  <section class="why_section layout_padding-bottom">
-    <div class="container">
-      <div class="heading_container heading_center">
-        <h2>
-          {% trans "Чому вибрати саме нас" %}
-        </h2>
-      </div>
-      <div class="why_container">
-        <div class="row">
-          <div class="col-md-4">
-            <div class="box b1">
-              <div class="img-box">
-                <img src="{% static 'app/images/w1.png' %}" alt="" class="" />
-              </div>
-              <div class="detail-box">
-                <h5>
-                  {% trans "Швидке та легке замовлення" %}
-                </h5>
-                <p>
-                  {% trans "Швидке та інтуїтивне замовлення авто в месенджері Телеграм - що дає змогу легко зателефонувати водію через месенджер або телефон" %}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="box b2">
-              <div class="img-box">
-                <img src="{% static 'app/images/w2.png' %}" alt="" class="" />
-              </div>
-              <div class="detail-box">
-                <h5>
-                  {% trans "Безпека водіння" %}
-                </h5>
-                <p>
-                  {% trans "Всі машини обладнані системою трекінгу стилю водіння, яка історично гарантує що водій їздить безпечно." %}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="box b3">
-              <div class="img-box">
-                <img src="{% static 'app/images/w3.png' %}" alt="" class="" />
-              </div>
-              <div class="detail-box">
-                <h5>
-                  {% trans "Повне задоволення" %}
-                </h5>
-                <p>
-                  {% trans "Ми відвеземо вас куди скажете та почекаємо на проміжних точках вашого маршруту" %}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+	<section class="services">
+  <h2 class="services-title">{% trans "НАШІ ПОСЛУГИ" %}</h2>
+  <div class="services-grid">
+    <div class="services-grid__item">
+      <figure style="background-image: url({% static 'app/images/vod-ruk.jpg' %})" class="cover">
+        <i>
+          <img src="https://live.themewild.com/taxica/assets/img/icon/taxi-booking-1.svg" alt="icon">
+        </i>
+      </figure>
+      <h4>{% trans "Ваш персональний водій" %}</h4>
+			<h4></h4>
+      <p class="service-text">
+        {% trans "Наші персональні водії - експерти своєї справи, які володіють високим рівнем навичок і досвідом водіння." %}
+				{% trans "Вони дбайливо оберігатимуть ваш час і забезпечать швидке пересування містом, дозволяючи вам розслабитись і сконцентруватись на своїх основних справах." %}
+				{% trans "Наша послуга персонального водія пропонує гнучкий графік, що відповідає вашим потребам." %}
+				{% trans "Незалежно від того, чи потрібно відвезти Вас на зустріч, забрати з аеропорту чи просто покататись містом, наш водій буде готовий забезпечити Вам комфорт і конфіденційність." %}
+				{% trans "Зосередьтеся на своїх справах, відпочинку або важливих зустрічах, знімаючи будь-які турботи про дорогу." %}
+				{% trans "Наші персональні водії забезпечать вам приємну і безпечну поїздку, де ви будете мати повний контроль над своїм часом." %}
+      </p>
+  		<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
     </div>
-  </section>
+    <div class="services-grid__item">
+      <figure style="background-image: url({% static 'app/images/deti-voditel.jpg' %})" class="cover">
+        <i>
+          <img src="https://live.themewild.com/taxica/assets/img/icon/business.svg" alt="icon">
+        </i>
+      </figure>
+      <h4>{% trans "Персональний водій для Вашої дитини" %}</h4>
+      <p class="service-text">
+        {% trans "В школу, в садочок, в басейн, на тренування або малювання - ми довеземо Вашу дитину безпечно та вчасно!" %}
+				{% trans "Ми створили цю унікальну послугу, щоб забезпечити Вашу дитину найвищим рівнем безпеки та захисту." %}
+				{% trans "Наші ninja водії проходять ретельний відбір, професійну підготовку та мають багаторічний досвід водіння." %}
+				{% trans "Вони володіють усіма необхідними навичками, щоб безпечно перевозити вашу дитину в будь-якій ситуації." %}
+				{% trans "Всі наші машини оснащені дитячим автокріслом, для безпечних перевезень." %}
+				{% trans "Одна з головних переваг нашої послуги - особистий підхід до кожного клієнта." %}
+				{% trans "Ви особисто можете обрати водія для своєї дитини! Ми розуміємо, що кожна дитина унікальна і має свої потреби та розклад." %}
+				{% trans "Тому наші ninja-водії гнучкі і готові адаптуватись до вашого графіку і вимог." %}
+				{% trans "Ви можете бути впевнені, що наш водій буде на місці вчасно, а дитина доставлена у пункт призначення без зайвих затримок." %}
+      </p>
+      <a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+    </div>
+    <div class="services-grid__item">
+      <figure style="background-image: url({% static 'app/images/thumb.jpeg' %})" class="cover">
+        <i>
+          <img src="https://live.themewild.com/taxica/assets/img/icon/city-taxi.svg" alt="icon">
+        </i>
+      </figure>
+      <h4>{% trans "Доставка цінних речей в сейфі машини" %}</h4>
+      <p class="service-text">
+        {% trans "Ми розуміємо, що ваші цінні та особисті речі важливі для вас, і Ви хочете мати спокій, знаючи, що вони зберігаються в безпеці під час перевезення." %}
+				{% trans "Наша послуга сейфа в машині надає вам зручну та надійну можливість зберігати цінні речі, такі як гроші, коштовності, документи або електронні пристрої, в спеціально обладнаному безпечному сейфі всередині автомобіля." %}
+				{% trans "Наші сейфи мають сучасні технологічні системи безпеки, які гарантують захист ваших цінностей від втрати, крадіжки або несанкціонованого доступу." %}
+				{% trans "Ми пильно доглядаємо за нашими сейфами, щоб забезпечити їх надійність і безпеку." %}
+				{% trans "Вони виготовлені з міцних матеріалів і оснащені електронними замками або біометричними системами ідентифікації, що забезпечують тільки вам доступ до ваших цінностей." %}
+				{% trans "Ваші речі будуть зберігатися в сейфі з найвищим рівнем захисту, навіть під час поїздки." %}
+				{% trans "Наші водії - професіонали з високою свідомістю про конфіденційність та приватність." %}
+				{% trans "Вони поважатимуть ваші особисті речі та надаватимуть максимальну увагу до їх безпеки." %}
+				{% trans "Ви можете мати повну впевненість, що ваші цінності будуть під надійним наглядом під час усієї поїздки." %}
+      </p>
+      <a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+    </div>
+    <div class="services-grid__item">
+      <figure style="background-image: url({% static 'app/images/slider-img.png' %})" class="cover">
+        <i>
+          <img src="https://live.themewild.com/taxica/assets/img/icon/taxi-2.svg" alt="icon">
+        </i>
+      </figure>
+      <h4>{% trans "Передзамовлення машини на певний час" %}</h4>
+      <p class="service-text">
+        {% trans "Хочете бути впевненими, що у вас завжди буде автомобіль у потрібний час?" %}
+				{% trans "Наш сервіс передзамовлення таксі дозволяє забронювати автомобіль на певний час заздалегідь." %}
+				{% trans "Це означає, що ви можете спланувати свій маршрут та мати впевненість, що автомобіль буде чекати вас в потрібний момент." %}
+				{% trans "Наші водії завжди дотримуються зазначеного часу та місця зустрічі, щоб забезпечити максимальний комфорт та зручність для наших клієнтів." %}
+				{% trans "Наш автопарк складається з широкого вибору автомобілів, що відповідають вашим персональним вимогам і стилю." %}
+				{% trans "Ми пильно доглядаємо за нашими автомобілями, щоб вони завжди були у чудовому стані та готові до виїзду." %}
+				{% trans "Ви можете бути впевнені в своєму комфорті та безпеці, користуючись нашими послугами." %}
+				{% trans "Наші водії - досвідчені професіонали з бездоганною репутацією." %}
+				{% trans "Вони орієнтовані на ваші потреби, добре знайомі з місцевими дорогами та забезпечують безпечну та зручну поїздку." %}
+				{% trans "Ви можете спокійно розраховувати на їх професіоналізм та доброзичливий сервіс." %}
+      </p>
+      <a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+    </div>
+  </div>
+	</section>
 
   <!-- end why section -->
 
   <!-- app section -->
 
-  <section class="app_section layout_padding">
+{#  <section class="app_section layout_padding">#}
+{#    <div class="container">#}
+{#      <div class="row">#}
+{#        <div class="col-md-6">#}
+{#          <div class="detail-box">#}
+{#            <div class="heading_container">#}
+{#              <h5>#}
+{#                {% trans "Будь На Зв'язку" %}#}
+{#              </h5>#}
+{#              <h2>{% trans "Завантажуй наш додаток" %}</h2>#}
+{#              <p>{% trans "Мобільний застосунок постійно вдосконалюються та додаються нові функції, які дозволяють замовляти таксі ще більш зручно та ефективно." %}</p>#}
+{#            </div>#}
+{#            <p>#}
+{#              #}
+{#            </p>#}
+{#            <div class="btn-box">#}
+{#              <a href="">#}
+{#                <img src="{% static 'app/images/app_store.png' %}" alt="">#}
+{#              </a>#}
+{#              <a href="">#}
+{#                <img src="{% static 'app/images/google_play.png' %}" alt="">#}
+{#              </a>#}
+{#            </div>#}
+{#          </div>#}
+{#        </div>#}
+{#        <div class="col-md-6">#}
+{#          <div class="img-box">#}
+{#            <img src="{% static 'app/images/app-img.png' %}" alt="">#}
+{#          </div>#}
+{#        </div>#}
+{#      </div>#}
+{#    </div>#}
+{#  </section>#}
+
+	  <!-- end app section -->
+
+	 <!-- investment section -->
+
+	<section class="app_section layout_padding">
     <div class="container">
       <div class="row">
         <div class="col-md-6">
           <div class="detail-box">
             <div class="heading_container">
-              <h5>
-                {% trans "Будь На Зв'язку" %}
-              </h5>
-              <h2>{% trans "Завантажуй наш додаток" %}</h2>
-              <p>{% trans "Мобільний застосунок постійно вдосконалюються та додаються нові функції, які дозволяють замовляти таксі ще більш зручно та ефективно." %}</p>
+              <h2>{% trans "ІНВЕСТУЙ В ЕКОЛОГІЧНЕ МАЙБУТНЄ" %}</h2>
+              <p class="investment">
+								{% trans "Ми маємо захопливу новину для всіх, хто бажає зробити інвестицію у сферу електромобілів." %}
+								{% trans "Тепер у вас є унікальна можливість стати частиною нашої революційної послуги і заробити на екологічному та майбутньому орієнтованому бізнесі!" %}
+								{% trans "Якщо ви хочете зайнятися активним інвестуванням, спрямованим на розвиток стійкої транспортної системи, Ninja Taxi - ідеальний варіант." %}
+								{% trans "Завдяки зростаючому попиту на екологічно чисті послуги таксі та нашій репутації надійного партнера, ваші інвестиції матимуть потенціал для прибутковості та стабільного росту." %}
+								{% trans "Які переваги ви можете отримати, інвестуючи в Ninja Taxi? По-перше, ви стаєте співвласником екологічного бізнесу, спрямованого на зміну майбутнього." %}
+								{% trans "Ваш вклад допоможе нам розширити нашу мережу електромобілів та покриття послуг по всьому місту." %}
+								{% trans "Не пропустіть шанс стати інвестором у Ninja Taxi!" %}
+							</p>
             </div>
             <p>
-              
+
             </p>
-            <div class="btn-box">
-              <a href="">
-                <img src="{% static 'app/images/app_store.png' %}" alt="">
-              </a>
-              <a href="">
-                <img src="{% static 'app/images/google_play.png' %}" alt="">
-              </a>
-            </div>
           </div>
         </div>
         <div class="col-md-6">
-          <div class="img-box">
-            <img src="{% static 'app/images/app-img.png' %}" alt="">
-          </div>
-        </div>
+					<div class="video-box">
+						<video src="{% static 'app/video/investor-1-horizon.mov' %}" controls width="500" height="300"></video>
+						<video src="{% static 'app/video/investor-2-horizon.mov' %}" controls width="500" height="300"></video>
+					</div>
+				</div>
       </div>
     </div>
   </section>
 
-  <!-- end app section -->
+  <!-- end investment section -->
 
   <!-- client section -->
 
   <section class="client_section layout_padding-bottom">
     <div class="container">
-      <!-- <div class="heading_container heading_center">
-        <h2>
-          {% trans "Наші клієнти кажуть" %}
-        </h2>
-      </div> -->
+			<div class="col-md-9 mx-auto px-0">
+				<div id="carouselExample2Controls" class="carousel slide" data-ride="carousel">
+					<ol class="carousel-indicators">
+						<li data-target="#carouselExample2Controls" data-slide-to="0" class="active">
+							<img src="{% static 'app/images/c1.jpg' %}" alt="">
+						</li>
+						<li data-target="#carouselExample2Controls" data-slide-to="1">
+							<img src="{% static 'app/images/c2.jpg' %}" alt="">
+						</li>
+						<li data-target="#carouselExample2Controls" data-slide-to="2">
+							<img src="{% static 'app/images/c3.jpg' %}" alt="">
+						</li>
+					</ol>
+					<div class="carousel-inner">
+						<div class="carousel-item active">
+							<div class="detail-box">
+								<h5>{% trans "Юлія" %}</h5>
+								<h6>46 {% trans "поїздок" %}</h6>
+								<p>
+									<i class="fa fa-quote-left" aria-hidden="true"></i>
+									{% trans "Я була приємно здивована електротаксі - комфорт, тиша та екологічність відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити." %}
+									<i class="fa fa-quote-right" aria-hidden="true"></i>
+								</p>
+								<div class="rating star-container">
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star-half">&#9733;</span>
+								</div>
+							</div>
+						</div>
+						<div class="carousel-item">
+							<div class="detail-box">
+								<h5>{% trans "Євгеній" %}</h5>
+								<h6>127 {% trans "поїздок" %}</h6>
+								<p>
+									<i class="fa fa-quote-left" aria-hidden="true"></i>
+									{% trans "Я був приємно здивований, коли вперше використав електротаксі - це було так комфортно та тихо. Я відчував себе більш екологічно свідомими, використовуючи таксі, що не виділяє викидів." %}
+									<i class="fa fa-quote-right" aria-hidden="true"></i>
+								</p>
+								<div class="rating star-container">
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star-half">&#9733;</span>
+								</div>
+							</div>
+						</div>
+						<div class="carousel-item">
+							<div class="detail-box">
+								<h5>{% trans "Ліза" %}</h5>
+								<h6>8 {% trans "поїздок" %}</h6>
+								<p>
+									<i class="fa fa-quote-left" aria-hidden="true"></i>
+									{% trans "Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно приємним додатком до мого досвіду використання таксі. Я би, безперечно, рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних альтернатив." %}
+									<i class="fa fa-quote-right" aria-hidden="true"></i>
+								</p>
+								<div class="rating star-container">
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+									<span class="star">&#9733;</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
     </div>
-    <div class="container">
-      <div class="col-md-9 mx-auto px-0">
-        <div id="carouselExample2Controls" class="carousel slide" data-ride="carousel">
-          <ol class="carousel-indicators">
-            <li data-target="#carouselExample2Controls" data-slide-to="0" class="active">
-              <img src="{% static 'app/images/c1.jpg' %}" alt="">
-            </li>
-            <li data-target="#carouselExample2Controls" data-slide-to="1">
-              <img src="{% static 'app/images/c2.jpg' %}" alt="">
-            </li>
-            <li data-target="#carouselExample2Controls" data-slide-to="2">
-              <img src="{% static 'app/images/c3.jpg' %}" alt="">
-            </li>
-          </ol>
-          <div class="carousel-inner">
-            <div class="carousel-item active">
-              <div class="detail-box">
-                <h5>
-                  {% trans "Юлія" %}
-                </h5>
-                <h6>
-                  46 {% trans "поїздок" %}
-                </h6>
-                <p>
-                  <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  {% trans "Я була приємно здивована електротаксі - комфорт, тиша та екологічність відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити." %}
-                  <i class="fa fa-quote-right" aria-hidden="true"></i>
-                </p>
-              </div>
-            </div>
-            <div class="carousel-item">
-              <div class="detail-box">
-                <h5>
-                  {% trans "Євгеній" %}
-                </h5>
-                <h6>
-                  127 {% trans "поїздок" %}
-                </h6>
-                <p>
-                  <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  {% trans "Я був приємно здивований, коли вперше використав електротаксі - це було так комфортно та тихо. Я відчував себе більш екологічно свідомими, використовуючи таксі, що не виділяє викидів." %}
-                  <i class="fa fa-quote-right" aria-hidden="true"></i>
-                </p>
-              </div>
-            </div>
-            <div class="carousel-item">
-              <div class="detail-box">
-                <h5>
-                  {% trans "Ліза" %}
-                </h5>
-                <h6>
-                  8 {% trans "поїздок" %}
-                </h6>
-                <p>
-                  <i class="fa fa-quote-left" aria-hidden="true"></i>
-                  {% trans "Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно приємним додатком до мого досвіду використання таксі. Я би, безперечно, рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних альтернатив." %}
-                  <i class="fa fa-quote-right" aria-hidden="true"></i>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+	</section>
 
   <!-- end client section -->
 {% endblock %}
@@ -395,7 +464,8 @@
 	var parkSettings = '{{ parkSettings }}';
 	var apiGoogle = '{{ google_api }}';
 	var csrfToken = '{% csrf_token %}';
-	var ajaxPostUrl = "{% url 'index' %}";
+	var ajaxPostUrl = "{% url 'post_request' %}";
+	var ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 
   <script src="{% static 'app/js/jquery-3.4.1.min.js' %}"></script>
