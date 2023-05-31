@@ -1178,27 +1178,31 @@ class Order(models.Model):
     CANCELED = 'Скасовано клієнтом'
     ON_TIME = 'На певний час'
 
-    from_address = models.CharField(max_length=255)
-    latitude = models.CharField(max_length=10)
-    longitude = models.CharField(max_length=10)
-    to_the_address = models.CharField(max_length=255, blank=True, null=True)
-    to_latitude = models.CharField(max_length=10, null=True)
-    to_longitude = models.CharField(max_length=10, null=True)
-    phone_number = models.CharField(max_length=13)
-    chat_id_client = models.CharField(max_length=10, blank=True, null=True)
-    driver_message_id = models.CharField(max_length=10, blank=True, null=True)
-    client_message_id = models.CharField(max_length=10, blank=True, null=True)
-    car_delivery_price = models.CharField(max_length=30, blank=True, null=True)
-    sum = models.CharField(max_length=30)
+    from_address = models.CharField(max_length=255, verbose_name='Місце посадки')
+    latitude = models.CharField(max_length=10, verbose_name='Широта місця посадки')
+    longitude = models.CharField(max_length=10, verbose_name='Довгота місця посадки')
+    to_the_address = models.CharField(max_length=255, blank=True, null=True, verbose_name='Місце висадки')
+    to_latitude = models.CharField(max_length=10, null=True, verbose_name='Широта місця висадки')
+    to_longitude = models.CharField(max_length=10, null=True, verbose_name='Довгота місця висадки')
+    phone_number = models.CharField(max_length=13, verbose_name='Номер телефона клієнта')
+    chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор чату клієнта')
+    driver_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення водія')
+    client_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення клієнта')
+    car_delivery_price = models.CharField(max_length=30, blank=True, null=True, verbose_name='Сума за доставку автомобіля')
+    sum = models.CharField(max_length=30, verbose_name='Загальна сума')
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
-    payment_method = models.CharField(max_length=70)
-    status_order = models.CharField(max_length=70)
-    distance_gps = models.CharField(max_length=10, blank=True, null=True)
-    distance_google = models.CharField(max_length=10)
-    driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT)
-    created_at = models.DateTimeField(editable=False, auto_now_add=True)
-    comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL)
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True)
+    payment_method = models.CharField(max_length=70, verbose_name='Спосіб оплати')
+    status_order = models.CharField(max_length=70, verbose_name='Статус замовлення')
+    distance_gps = models.CharField(max_length=10, blank=True, null=True, verbose_name='Дистанція по GPS')
+    distance_google = models.CharField(max_length=10, verbose_name='Дистанція Google')
+    driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Виконувач')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
+    comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL, verbose_name='Відгук')
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    class Meta:
+        verbose_name = 'Замовлення'
+        verbose_name_plural = 'Замовлення'
 
     @staticmethod
     def get_order(chat_id_client, phone, status_order):
@@ -1212,7 +1216,6 @@ class Order(models.Model):
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
     image = models.ImageField(upload_to='.', verbose_name='Фото')
-
     created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')

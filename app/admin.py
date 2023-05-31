@@ -324,6 +324,12 @@ class ServiceStationAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
+@admin.register(Fleets_drivers_vehicles_rate)
+@add_partner_on_save_model(Fleets_drivers_vehicles_rate)
+class Fleets_drivers_vehicles_rateAdmin(admin.ModelAdmin)):
+    list_display = [f.name for f in Fleets_drivers_vehicles_rate._meta.fields]\
+
+
 @admin.register(ServiceStationManager)
 class ServiceStationManagerAdmin(admin.ModelAdmin):
     list_display = ('name', 'second_name', 'service_station', 'email', 'phone_number', 'created_at')
@@ -387,16 +393,6 @@ class OwnerAdmin(admin.ModelAdmin):
     fieldsets = [
         (None, {'fields': ['name', 'second_name', 'email', 'phone_number', 'chat_id']}),
     ]
-
-
-@admin.register(Order)
-class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_display = [f.name for f in Order._meta.fields]
-    # fieldsets = [
-    #     (None, {'fields': ['from_address', 'to_the_address',
-    #                        'phone_number', 'chat_id_client',
-    #                        'status_order', 'payment_method']}),
-    # ]
 
 
 @admin.register(UseOfCars)
@@ -505,6 +501,7 @@ class UberServiceAdmin(admin.ModelAdmin):
         ordering = ('-report_from', 'driver_uuid')
         list_per_page = 25
 
+
 @admin.register(DriverManager)
 @add_partner_on_save_model(DriverManager)
 class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
@@ -521,22 +518,6 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     inlines = [
         DriverManagerInline,
     ]
-
-
-@admin.register(Vehicle)
-@add_partner_on_save_model(Vehicle)
-class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_display = ('name', 'model', 'licence_plate', 'vin_code', 'type', 'gps_imei', 'car_status', 'created_at')
-    list_display_links = ('name', 'model', 'licence_plate', 'vin_code')
-    search_fields = ('name', 'model', 'licence_plate', 'vin_code', 'gps_imei',)
-    ordering = ('name',)
-    exclude = ('deleted_at',)
-    list_per_page = 25
-
-    inlines = [
-        Fleets_drivers_vehicles_rateInline,
-    ]
-
 
 @admin.register(Driver)
 @add_partner_on_save_model(Driver)
@@ -558,8 +539,39 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         SupportManagerDriverInline,
     ]
 
-    
-@admin.register(Fleets_drivers_vehicles_rate)
-@add_partner_on_save_model(Fleets_drivers_vehicles_rate)
-class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_display = [f.name for f in Fleets_drivers_vehicles_rate._meta.fields]
+
+@admin.register(Vehicle)
+@add_partner_on_save_model(Vehicle)
+class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    list_display = ('name', 'model', 'licence_plate', 'vin_code', 'type', 'gps_imei', 'car_status', 'created_at')
+    list_display_links = ('name', 'model', 'licence_plate', 'vin_code')
+    search_fields = ('name', 'model', 'licence_plate', 'vin_code', 'gps_imei',)
+    ordering = ('name',)
+    exclude = ('deleted_at',)
+    list_per_page = 25
+
+    inlines = [
+        Fleets_drivers_vehicles_rateInline,
+    ]
+
+
+@admin.register(Order)
+class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['id', 'from_address', 'to_the_address', 'phone_number', 'car_delivery_price',
+                    'sum', 'payment_method', 'order_time', 'status_order', 'distance_gps',
+                    'distance_google', 'driver', 'comment', 'created_at',
+                    ]
+
+    # def get_fieldsets(self, request, obj=None):
+    #     if request.user.is_superuser:
+    #         return [f.name for f in self.model._meta.fields]
+    #
+    #     else:
+    #         return ['from_address', 'to_the_address', 'phone_number', 'car_delivery_price',
+    #                 'sum', 'payment_method', 'order_time', 'status_order', 'distance_gps',
+    #                 'distance_google', 'driver', 'comment', 'created_at',
+    #                 ]
