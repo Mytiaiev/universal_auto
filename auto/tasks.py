@@ -131,8 +131,8 @@ def update_driver_status(self):
                 #     status_width_client = status_width_client.union(set(uber_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
-                    last_hour = timezone.localtime() - timezone.timedelta(hours=1)
-                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_hour).first()
+                    last_status = timezone.localtime() - timezone.timedelta(minutes=2)
+                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
                     current_status = Driver.OFFLINE
                     if park_status:
                         current_status = park_status.status

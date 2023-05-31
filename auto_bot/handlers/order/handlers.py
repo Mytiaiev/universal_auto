@@ -315,7 +315,7 @@ def send_time_orders(sender=None, **kwargs):
         timeorder = Order.objects.filter(id=kwargs.get('retval'), checked=False, status_order=Order.ON_TIME).first()
         message = order_info(timeorder.pk, timeorder.from_address, timeorder.to_the_address,
                              timeorder.payment_method, timeorder.phone_number,
-                             time=timeorder.order_time.time())
+                             time=timezone.localtime(timeorder.order_time.time()))
         group_msg = bot.send_message(chat_id=-863882769, text=message,
                                      reply_markup=inline_markup_accept(timeorder.pk),
                                      parse_mode=ParseMode.HTML)
@@ -335,7 +335,6 @@ def client_reject_order(update, context):
     except:
         pass
     text_to_client(order=order, text=client_cancel, button=inline_comment_for_client())
-
 
 
 def handle_callback_order(update, context):
