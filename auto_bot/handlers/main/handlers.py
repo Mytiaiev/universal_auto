@@ -3,14 +3,16 @@ import traceback
 import html
 
 from django.utils import timezone
-from telegram import BotCommand, ReplyKeyboardMarkup, Update, ParseMode
+from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 
 from app.models import User, Driver, DriverManager, Owner, ServiceStationManager, UseOfCars
-from auto_bot.handlers.main.keyboards import driver_keyboard, start_keyboard, markup_keyboard, markup_keyboard_onetime
+from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard,\
+    inline_start_driver_kb, inline_finish_driver_kb, inline_more_func_kb
 import logging
 
-from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID
+from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
+    more_func_text
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -29,25 +31,30 @@ def start(update, context):
             driver = Driver.get_by_chat_id(chat_id)
             if driver:
                 if UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None):
-                    reply_markup = markup_keyboard_onetime([driver_keyboard[2:]])
+                    reply_markup = inline_finish_driver_kb()
                 else:
-                    reply_markup = markup_keyboard([driver_keyboard[:2]])
+                    reply_markup = inline_start_driver_kb()
             else:
-                reply_markup = markup_keyboard([start_keyboard[:1]])
+                reply_markup = inline_user_kb()
                 user.chat_id = chat_id
                 user.save()
             update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
         else:
             update.message.reply_text(share_phone_text,
-                                      reply_markup=markup_keyboard([start_keyboard[1:]]))
+                                      reply_markup=markup_keyboard([contact_keyboard]))
     else:
-        User.objects.create(
-            chat_id=chat_id,
-            name=update.message.from_user.first_name,
-            second_name=update.message.from_user.last_name
-        )
+        User.objects.create(chat_id=chat_id,
+                            name=update.message.from_user.first_name,
+                            second_name=update.message.from_user.last_name
+                            )
         update.message.reply_text(share_phone_text,
-                                  reply_markup=markup_keyboard([start_keyboard[1:]]))
+                                  reply_markup=markup_keyboard([contact_keyboard]))
+
+
+def more_function_user(update, context):
+    query = update.callback_query
+    query.edit_message_text(text=more_func_text)
+    query.edit_message_reply_markup(reply_markup=inline_more_func_kb())
 
 
 def update_phone_number(update, context):
@@ -61,7 +68,8 @@ def update_phone_number(update, context):
         user.chat_id = chat_id
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
-                                  reply_markup=markup_keyboard([start_keyboard[:1]]))
+                                  reply_markup=ReplyKeyboardRemove())
+    context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=inline_user_kb())
 
 
 def helptext(update, context) -> str:
@@ -106,41 +114,37 @@ def error_handler(update, context) -> None:
 
 
 def menu(update, context):
-    chat_id = update.effective_chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
-    driver = Driver.get_by_chat_id(chat_id)
-    manager = ServiceStationManager.get_by_chat_id(chat_id)
-    owner = Owner.get_by_chat_id(chat_id)
+    # chat_id = update.effective_chat.id
+    # driver_manager = DriverManager.get_by_chat_id(chat_id)
+    # driver = Driver.get_by_chat_id(chat_id)
+    # manager = ServiceStationManager.get_by_chat_id(chat_id)
+    # owner = Owner.get_by_chat_id(chat_id)
     standart_commands = [
-        BotCommand("/start", "Замовити таксі"),
-        BotCommand("/help", "Допомога"),
-        BotCommand("/cancel", "Завершити активні діалоги"),
-        BotCommand("/id", "Дізнатись id"),
-        BotCommand("/comment", "Залишити відгук"),
+        BotCommand("/start", "Запустити бот"),
     ]
-    if driver is not None:
-        standart_commands.extend([
-            BotCommand("/status", "Змінити статус водія"),
-            BotCommand("/status_car", "Змінити статус автомобіля"),
-            BotCommand("/sending_report", "Відправити звіт про оплату заборгованості"),
-            BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])
-    elif driver_manager is not None:
-        standart_commands.extend([
-            BotCommand("/car_status", "Показати всі зломлені машини"),
-            BotCommand("/driver_status", "Показати водіїв за їх статусом"),
-            BotCommand("/add", "Створити користувачів та автомобілі"),
-            BotCommand("/add_imei_gps_to_driver", "Додати авто gps_imei"),
-            BotCommand("/add_vehicle_to_driver", "Додати водію автомобіль"),
-            BotCommand("/add_job_application_to_fleets", "Додати водія в автопарк")])
-    elif manager is not None:
-        standart_commands.extend([
-            BotCommand("/send_report", "Відправити звіт про ремонт")])
-    elif owner is not None:
-        standart_commands.extend([
-            BotCommand("/report", "Загрузити та побачити недільні звіти"),
-            BotCommand("/rating", "Побачити рейтинг водіїв по автопарках за тиждень"),
-            BotCommand("/total_weekly_rating", "Побачити рейтинг водіїв загальну за тиждень"),
-            BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
-            BotCommand("/download_report", "Загрузити тижневі звіти")])
+    # if driver is not None:
+    #     standart_commands.extend([
+    #         BotCommand("/status", "Змінити статус водія"),
+    #         BotCommand("/status_car", "Змінити статус автомобіля"),
+    #         BotCommand("/sending_report", "Відправити звіт про оплату заборгованості"),
+    #         BotCommand("/option", "Взяти вихідний/лікарняний/Сповістити про пошкодження/Записатись до СТО")])
+    # elif driver_manager is not None:
+    #     standart_commands.extend([
+    #         BotCommand("/car_status", "Показати всі зломлені машини"),
+    #         BotCommand("/driver_status", "Показати водіїв за їх статусом"),
+    #         BotCommand("/add", "Створити користувачів та автомобілі"),
+    #         BotCommand("/add_imei_gps_to_driver", "Додати авто gps_imei"),
+    #         BotCommand("/add_vehicle_to_driver", "Додати водію автомобіль"),
+    #         BotCommand("/add_job_application_to_fleets", "Додати водія в автопарк")])
+    # elif manager is not None:
+    #     standart_commands.extend([
+    #         BotCommand("/send_report", "Відправити звіт про ремонт")])
+    # elif owner is not None:
+    #     standart_commands.extend([
+    #         BotCommand("/report", "Загрузити та побачити недільні звіти"),
+    #         BotCommand("/rating", "Побачити рейтинг водіїв по автопарках за тиждень"),
+    #         BotCommand("/total_weekly_rating", "Побачити рейтинг водіїв загальну за тиждень"),
+    #         BotCommand("/payment", "Перевести кошти або сгенерити лінк на оплату"),
+    #         BotCommand("/download_report", "Загрузити тижневі звіти")])
 
     context.bot.set_my_commands(standart_commands)

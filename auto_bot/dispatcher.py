@@ -1,16 +1,13 @@
 import re
 
-from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher, CallbackQueryHandler, ConversationHandler, \
-    RegexHandler
-
-from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
-    get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, driver_status, \
-    broken_car
-from auto_bot.main import bot
+from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
 from app.models import Driver
 from auto_bot.states import text
 # handlers
-from auto_bot.handlers.comment.handlers import comment
+from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
+    get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add,\
+    driver_status, broken_car
+from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
     take_a_day_off_or_sick_leave, option, numberplate, status_car
@@ -19,9 +16,11 @@ from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers
 from auto_bot.handlers.reports.handlers import report, download_report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
     get_imei, finish_job_main, get_vehicle_of_driver
-from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, send_time_orders, \
-    cancel_order, order_create, location, time_for_order, handle_callback_order
-from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler
+from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
+    cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
+    increase_order_price, continue_search, first_address_check, second_address_check, client_reject_order
+from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
+    more_function_user
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -29,8 +28,6 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
 # text
 from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
-from auto_bot.handlers.order.static_text import LOCATION_CORRECT, LOCATION_WRONG, CANCEL, CASH, PAYCARD, CONTINUE, \
-    TODAY, NOW, LOCATION, complete_order_text
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
@@ -52,7 +49,7 @@ debt_conversation = ConversationHandler(
 )
 
 job_docs_conversation = ConversationHandler(
-    entry_points=[MessageHandler(Filters.regex(r'^Водій$'), update_name),
+    entry_points=[CallbackQueryHandler(update_name, pattern='Job_driver'),
                   CommandHandler("restart", restart_job_application),
                   MessageHandler(Filters.regex(r'^\/.*'), cancel)
                   ],
@@ -60,12 +57,13 @@ job_docs_conversation = ConversationHandler(
         "JOB_USER_NAME": [MessageHandler(Filters.text, update_second_name, pass_user_data=True)],
         "JOB_LAST_NAME": [MessageHandler(Filters.text, update_email, pass_user_data=True)],
         "JOB_EMAIL": [MessageHandler(Filters.text, update_user_information, pass_user_data=True)],
-        'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern='job_photo', pass_user_data=True)],
+        'WAIT_FOR_JOB_OPTION': [CallbackQueryHandler(get_job_photo, pattern="job_photo", pass_user_data=True)],
         'WAIT_FOR_JOB_PHOTO': [MessageHandler(Filters.photo, upload_photo, pass_user_data=True)],
         'WAIT_FOR_FRONT_PHOTO': [MessageHandler(Filters.photo, upload_license_front_photo, pass_user_data=True)],
         'WAIT_FOR_BACK_PHOTO': [MessageHandler(Filters.photo, upload_license_back_photo, pass_user_data=True)],
         'WAIT_FOR_EXPIRED': [MessageHandler(Filters.text, upload_expired_date, pass_user_data=True)],
-        'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pass_user_data=True)],
+        'WAIT_ANSWER': [CallbackQueryHandler(check_auto, pattern="have_auto", pass_user_data=True),
+                        CallbackQueryHandler(upload_expired_insurance, pattern="no_auto", pass_user_data=True)],
         'WAIT_FOR_AUTO_YES_OPTION': [MessageHandler(Filters.photo, upload_auto_doc, pass_user_data=True)],
         'WAIT_FOR_INSURANCE': [MessageHandler(Filters.photo, upload_insurance, pass_user_data=True)],
         'WAIT_FOR_INSURANCE_EXPIRED': [MessageHandler(Filters.text, upload_expired_insurance, pass_user_data=True)],
@@ -103,35 +101,34 @@ def setup_dispatcher(dp):
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
-    dp.add_handler(MessageHandler(Filters.location, location))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[0]}$"), continue_order))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {LOCATION_CORRECT}$"), to_the_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {LOCATION_WRONG}$"), from_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {NOW}$"), from_address))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u23F0 {TODAY}$"), time_order))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u274c {CANCEL}$"), cancel_order))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\u2705 {CONTINUE}$"), time_for_order))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr"^\U0001f4b7 {CASH}$") |
-        Filters.regex(fr"^\U0001f4b8 {PAYCARD}$"),
-        order_create))
+    dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
+    dp.add_handler(CallbackQueryHandler(more_function_user, pattern="Other"))
+    dp.add_handler(MessageHandler(Filters.location, get_location))
+    dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order|Wrong_place"))
+    dp.add_handler(CallbackQueryHandler(to_the_address, pattern="Right_place"))
+    dp.add_handler(CallbackQueryHandler(first_address_check, pattern="^From_address [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(second_address_check, pattern="^To_the_address [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(cancel_order, pattern="Cancel_no_comment"))
+    dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))
+    dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
+    dp.add_handler(CallbackQueryHandler(continue_search, pattern="Continue_search"))
+    dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order|No_driver_time_order"))
+    dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                    pattern=re.compile(
-                    "^(Accept_order|Reject_order|Сlient_on_site|Along_the_route|Off_route|Accept|End_trip|Client_reject) [0-9]+$")))
-    dp.add_handler(CallbackQueryHandler(comment, pattern=re.compile("^Comment client$")))
+                                        pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
+                                                           "Client_on_site|Along_the_route|Off_route|"
+                                                           "Accept|End_trip) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
     # sending comment
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{complete_order_text}$") |
-                                  Filters.regex(fr"^Відмовитись від замовлення$"),
-                                  comment))
-    dp.add_handler(CommandHandler("comment", comment))
+    dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))
+    dp.add_handler(CallbackQueryHandler(save_comment, pattern="5_Star|4_Star|3_Star|2_Star|1_Star"))
 
     # Add job application
     dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[2]}$"), job_application))
     # Commands for Drivers
     # Changing status of driver
-    dp.add_handler(CommandHandler("status", status))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[4]}$"), status))
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[5]}$"), finish_job_main))
+    dp.add_handler(CallbackQueryHandler(status, pattern="Start_work"))
+    dp.add_handler(CallbackQueryHandler(finish_job_main, pattern="Finish_work"))
     dp.add_handler(MessageHandler(
         Filters.regex(fr"^{Driver.ACTIVE}$") |
         Filters.regex(fr"^{Driver.OFFLINE}$") |
@@ -205,6 +202,7 @@ def setup_dispatcher(dp):
 
     #
     # # System commands
+    dp.add_handler(CallbackQueryHandler(job_application, pattern='Job_application'))
     dp.add_handler(job_docs_conversation)
     dp.add_handler(CommandHandler("cancel", cancel))
     dp.add_handler(MessageHandler(Filters.text, text))

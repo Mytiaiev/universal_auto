@@ -1,5 +1,5 @@
 from django.utils import timezone
-from auto.tasks import send_on_job_application_on_driver
+from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from app.models import Driver, Order, StatusChange, JobApplication, \
@@ -50,6 +50,14 @@ def send_day_rent(sender, instance, **kwargs):
         pass
 
 
+@receiver(post_save, sender=Order)
+def take_order_from_client(sender, instance, **kwargs):
+    if instance.status_order == Order.WAITING and not instance.checked:
+        check_order.delay(instance.id)
+    elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
+        check_time_order.delay(instance.id)
+
+
 @receiver(pre_save, sender=Order)
 def reject_order_client(sender, instance, **kwargs):
 
@@ -61,7 +69,7 @@ def reject_order_client(sender, instance, **kwargs):
             bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
             bot.send_message(
                 chat_id=driver_chat_id,
-                text=f'Вибачте, замовлення {instance.from_address} відхилено клієнтом.\nСлужба підтримки.'
+                text=f'Вибачте, замовлення за адресою {instance.from_address} відхилено клієнтом.'
             )
             ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         except Exception:
