@@ -3,7 +3,7 @@
 {% load i18n %}
   <!-- investment section -->
 {% block content %}
-  <section class="about_section">
+  <section class="investment_section">
     <div class="hero-banner-one">
 				<div class="bg-wrapper">
 					<div class="container">
@@ -36,4 +36,59 @@
 			</div>
   </section>
   <!-- end investment section -->
+
+	<!-- Services section -->
+	<section class="services_section">
+	<div class="fancy-feature-one">
+		<div class="container">
+			<div class="row">
+				<div class="fadeInLeft">
+					<div class="title-style-one text-center text-lg-start">
+						<h2 class="services-title">Provide Quality<br>Services.</h2>
+					</div>
+				</div>
+				<div class="fadeInRight">
+					<p class="services-text">Jano provides alternative asset management solutions to a global client base and manages a significant.</p>
+				</div>
+			</div>
+		</div>
+		<div class="content">
+			<div class="row">
+				<div class="fadeInUp">
+					<div class="card-style">
+						<div class="icon" style="background-color: rgba(255, 171, 51, 0.18);"><img src="{% static 'app/images/assets/icon_01.svg' %}" alt="" class="lazy-img" style=""></div>
+						<h5 class="inner-title">Quality Design <br> Maker.</h5>
+						<p class="inner-text">The core of our service is based on the objective investment advice we seek to provide supported.</p>
+						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+					</div> <!-- /.card-style-one -->
+				</div>
+				<div class="fadeInUp">
+					<div class="card-style">
+						<div class="icon" style="background-color: rgba(100, 219, 226, 0.18);"><img src="{% static 'app/images/assets/icon_02.svg' %}" alt="" class="lazy-img" style=""></div>
+						<h5 class="inner-title">Professional Support <br> by expert.</h5>
+						<p class="inner-text">Through our Family Office Services, we are able to provide the expertise derived from our beginnings.</p>
+						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+					</div> <!-- /.card-style-one -->
+				</div>
+				<div class="fadeInUp">
+					<div class="card-style">
+						<div class="icon" style="background-color: rgba(255, 160, 194, 0.18);"><img src="{% static 'app/images/assets/icon_03.svg' %}" alt="" class="lazy-img" style=""></div>
+						<h5 class="inner-title">Marketing &amp; Affiliate <br> Services.</h5>
+						<p class="inner-text">Capco’s response is proven by our superb record of driving change through effective portfolio.</p>
+						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+					</div> <!-- /.card-style-one -->
+				</div>
+				<div class="fadeInUp">
+					<div class="card-style">
+						<div class="icon" style="background-color: rgba(246, 243, 255, 1);"><img src="{% static 'app/images/assets/icon_04.svg' %}" alt="" class="lazy-img" style=""></div>
+						<h5 class="inner-title">Cross Browser <br> Optimized.</h5>
+						<p class="inner-text">The core of our service is based on the objective investment advice we seek to provide supported.</p>
+						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+					</div> <!-- /.card-style-one -->
+				</div>
+			</div>
+		</div> <!-- /.inner-content -->
+	</div> <!-- /.fancy-feature-one -->
+	</section>
+	<!-- end Services section -->
 {% endblock %}
