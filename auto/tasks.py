@@ -14,8 +14,9 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
-    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
+    Bolt, \
+    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report, UseOfCars
 
 from scripts.conversion import convertion
 from auto.celery import app
@@ -131,13 +132,16 @@ def update_driver_status(self):
                 #     status_width_client = status_width_client.union(set(uber_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
-                    last_hour = timezone.localtime() - timezone.timedelta(hours=1)
-                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_hour).first()
-                    current_status = Driver.OFFLINE
-                    if park_status:
-                        current_status = park_status.status
-                    if (driver.name, driver.second_name) in status_online:
+                    last_status = timezone.localtime() - timezone.timedelta(minutes=2)
+                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
+                    work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
+                                                          created_at__date=timezone.now().date(), end_at=None)
+                    if work_ninja or (driver.name, driver.second_name) in status_online:
                         current_status = Driver.ACTIVE
+                    else:
+                        current_status = Driver.OFFLINE
+                    if park_status and park_status.status != Driver.ACTIVE:
+                        current_status = park_status.status
                     if (driver.name, driver.second_name) in status_width_client:
                         current_status = Driver.WITH_CLIENT
                     # if (driver.name, driver.second_name) in status['wait']:
@@ -182,8 +186,8 @@ def download_weekly_report_force(self):
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
+        BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
         print('The job application has been sent')
     except Exception as e:
         logger.info(e)
@@ -236,13 +240,18 @@ def send_daily_into_group(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def check_time_order(self):
-    print("check orders on time")
+def check_time_order(self, order_id):
+    return order_id
 
 
 @app.task(bind=True, queue='non_priority')
-def delete_button(self, order_id, query, text):
-    return order_id, query, text
+def send_time_order(self):
+    return logger.info('sending_time_orders')
+
+
+@app.task(bind=True, queue='non_priority')
+def check_order(self, order_id):
+    return order_id
 
 
 @app.task(bind=True, queue='non_priority')
@@ -268,7 +277,7 @@ def setup_periodic_tasks(sender, **kwargs):
     global UAGPS_CHROME_DRIVER
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             check_time_order.s(), queue='non_priority')
+                             send_time_order.s(), queue='non_priority')
     sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=15, hour='*/2'), update_driver_data.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')

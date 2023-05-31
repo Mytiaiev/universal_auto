@@ -1,11 +1,14 @@
-from telegram import KeyboardButton
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 STAR = '\U00002b50'
 
-comment_keyboard = [
-    [KeyboardButton(text=f"{STAR * 5}")],
-    [KeyboardButton(text=f"{STAR * 4}")],
-    [KeyboardButton(text=f"{STAR * 3}")],
-    [KeyboardButton(text=f"{STAR * 2}")],
-    [KeyboardButton(text=f"{STAR}")],
-]
+
+def inline_comment_kb():
+    keyboard = [
+        [InlineKeyboardButton(STAR * 5, callback_data="5_Star")],
+        [InlineKeyboardButton(STAR * 4, callback_data="4_Star")],
+        [InlineKeyboardButton(STAR * 3, callback_data="3_Star")],
+        [InlineKeyboardButton(STAR * 2, callback_data="2_Star")],
+        [InlineKeyboardButton(STAR * 1, callback_data="1_Star")]
+    ]
+    return InlineKeyboardMarkup(keyboard)

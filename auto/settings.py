@@ -120,10 +120,18 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'data/staticfiles'
 
+from google.oauth2 import service_account
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'data/mediafiles'
+GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+    os.path.join(BASE_DIR, "credentials.json"))
 
+ ###configuration for media file storing and reriving media file from gcloud
+DEFAULT_FILE_STORAGE = "auto.gcloud.GoogleCloudMediaFileStorage"
+GS_PROJECT_ID = "ninja-taxi-9aa7d"
+GS_BUCKET_NAME = 'jobdriver-bucket'
+MEDIA_ROOT = "media/"
+UPLOAD_ROOT = 'media/uploads/'
+MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
 
 LOCALE_PATHS = (
     os.path.join(BASE_DIR, 'locale/'),

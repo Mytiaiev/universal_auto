@@ -56,55 +56,43 @@ city_boundaries = Polygon([(50.482433, 30.758250), (50.491685, 30.742045), (50.5
                            (50.458385, 30.742751), (50.481657, 30.748158), (50.482454, 30.758345)])
 
 
-def get_route_price(from_lat, from_lng, to_lat, to_lng, driver_lat, driver_lng, api_key):
-    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={driver_lat},{driver_lng}&" \
-          f"destination={to_lat},{to_lng}&waypoints={from_lat},{from_lng}|{to_lat},{to_lng}&mode=driving&key={api_key}"
+def get_route_price(from_lat, from_lng, to_lat, to_lng, api_key):
+    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={from_lat},{from_lng}&destination=" \
+          f"{to_lat},{to_lng}&mode=driving&key={api_key}"
     response = requests.get(url)
     data = response.json()
     if data['status'] == 'OK':
-        legs = []  # Ride to client(within,outside) and with client(within,outside)
-        points = data["routes"][0]["legs"]
-        ride_to_client = points[0]["distance"]["value"] / 1000
-        for route in data["routes"]:
-            for leg in route["legs"]:
-                distance_within_city = 0
-                distance_outside_city = 0
-                for step in leg["steps"]:
-                    start_location = Point(step["start_location"]["lat"], step["start_location"]["lng"])
-                    end_location = Point(step["end_location"]["lat"], step["end_location"]["lng"])
-                    step_distance = step["distance"]["value"] / 1000
-                    # Check if the step intersects the city boundaries
-                    if city_boundaries.intersects(start_location.buffer(0.000001)) or city_boundaries.intersects(
-                            end_location.buffer(0.000001)):
-                        line = LineString([start_location, end_location])
-                        intersection = split(line, city_boundaries)
-                        lines = [i for i in intersection.geoms]
-                        start = lines[0].coords[:][0]
-                        bound = lines[0].coords[:][1]
-                        # Check if step intersect boundary of city and calc distance
-                        if not city_boundaries.intersects(start_location.buffer(0.000001)):
-                            distance_outside_city += haversine(*start, *bound)
-                            distance_within_city += step_distance - haversine(*start, *bound)
-                        elif not city_boundaries.intersects(end_location.buffer(0.000001)):
-                            distance_within_city += haversine(*start, *bound)
-                            distance_outside_city += step_distance - haversine(*start, *bound)
-                        else:
-                            distance_within_city += step_distance
+        distance_within_city = 0
+        distance_outside_city = 0
+        for leg in data["routes"][0]["legs"]:
+            for step in leg["steps"]:
+                start_location = Point(step["start_location"]["lat"], step["start_location"]["lng"])
+                end_location = Point(step["end_location"]["lat"], step["end_location"]["lng"])
+                step_distance = step["distance"]["value"] / 1000
+                # Check if the step intersects the city boundaries
+                if city_boundaries.intersects(start_location.buffer(0.000001)) or city_boundaries.intersects(
+                        end_location.buffer(0.000001)):
+                    line = LineString([start_location, end_location])
+                    intersection = split(line, city_boundaries)
+                    lines = [i for i in intersection.geoms]
+                    start = lines[0].coords[:][0]
+                    bound = lines[0].coords[:][1]
+                    # Check if step intersect boundary of city and calc distance
+                    if not city_boundaries.intersects(start_location.buffer(0.000001)):
+                        distance_outside_city += haversine(*start, *bound)
+                        distance_within_city += step_distance - haversine(*start, *bound)
+                    elif not city_boundaries.intersects(end_location.buffer(0.000001)):
+                        distance_within_city += haversine(*start, *bound)
+                        distance_outside_city += step_distance - haversine(*start, *bound)
                     else:
-                        # Calculate the distance outside the city
-                        distance_outside_city += step_distance
-                legs.append((distance_within_city, distance_outside_city))
-        if ride_to_client > int(ParkSettings.get_value("FREE_CAR_SENDING_DISTANCE")):
-            sending_price = (legs[0][0] - int(ParkSettings.get_value("FREE_CAR_SENDING_DISTANCE"))) * \
-                            int(ParkSettings.get_value("TARIFF_CAR_DISPATCH")) + \
-                            legs[0][1] * int(ParkSettings.get_value("TARIFF_CAR_OUTSIDE_DISPATCH", 15))
-        else:
-            sending_price = 0
-        price = sending_price + legs[1][0] * int(ParkSettings.get_value("TARIFF_IN_THE_CITY")) + legs[1][1] * int(
+                        distance_within_city += step_distance
+                else:
+                    # Calculate the distance outside the city
+                    distance_outside_city += step_distance
+        price = distance_within_city * int(ParkSettings.get_value("TARIFF_IN_THE_CITY")) + distance_outside_city * int(
             ParkSettings.get_value("TARIFF_OUTSIDE_THE_CITY"))
-        route = legs[1][0] + legs[1][1]
-
-        return int(price), int(sending_price), route
+        route = distance_within_city + distance_outside_city
+        return int(price), route
 
 
 def coord_to_link(end_lat, end_lng):
@@ -171,3 +159,4 @@ def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int,
         return None
 
     return addresses
+
