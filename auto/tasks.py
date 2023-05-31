@@ -14,8 +14,9 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order,  Driver,  JobApplication, ParkStatus, ParkSettings, Bolt,\
-    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report
+from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
+    Bolt, \
+    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report, UseOfCars
 
 from scripts.conversion import convertion
 from auto.celery import app
@@ -133,11 +134,14 @@ def update_driver_status(self):
                 for driver in drivers:
                     last_status = timezone.localtime() - timezone.timedelta(minutes=2)
                     park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
-                    current_status = Driver.OFFLINE
-                    if park_status:
-                        current_status = park_status.status
-                    if (driver.name, driver.second_name) in status_online:
+                    work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
+                                                          created_at__date=timezone.now().date(), end_at=None)
+                    if work_ninja or (driver.name, driver.second_name) in status_online:
                         current_status = Driver.ACTIVE
+                    else:
+                        current_status = Driver.OFFLINE
+                    if park_status and park_status.status != Driver.ACTIVE:
+                        current_status = park_status.status
                     if (driver.name, driver.second_name) in status_width_client:
                         current_status = Driver.WITH_CLIENT
                     # if (driver.name, driver.second_name) in status['wait']:
