@@ -27,7 +27,6 @@ def assign_model_permissions(group):
         'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
         'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
         'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
-        'Fleets_drivers_vehicles_rate': {'view': True, 'add': True, 'change': True, 'delete': True},
     }
 
     for model, permissions in models.items():
