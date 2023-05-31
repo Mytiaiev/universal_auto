@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('app', '0023_order_client_message_id_order_driver_message_id'),
+        ('app', '0025_remove_ninjapaymentsorder_total_amount_cach_and_more'),
     ]
 
     operations = [
