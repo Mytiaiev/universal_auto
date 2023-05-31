@@ -21,7 +21,6 @@ from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
-from auto_bot.handlers.order.static_text import PAYCARD, CASH
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
 
@@ -304,7 +303,7 @@ def save_report_to_ninja_payment(day=None):
 
             total_amount_cash = Order.objects.filter(
                 driver__chat_id=chat_id,
-                payment_method=CASH,
+                payment_method='Готівка',
                 created_at__date__range=(start_date.split()[0], end_date.split()[0]),
                 status_order=Order.COMPLETED
             ).aggregate(
@@ -312,7 +311,7 @@ def save_report_to_ninja_payment(day=None):
 
             total_amount_card = Order.objects.filter(
                 driver__chat_id=chat_id,
-                payment_method=PAYCARD,
+                payment_method='Картка',
                 created_at__date__range=(start_date.split()[0], end_date.split()[0]),
                 status_order=Order.COMPLETED
             ).aggregate(
