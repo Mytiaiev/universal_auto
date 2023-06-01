@@ -40,9 +40,9 @@ body {
     margin-top: 100px;
 }
 
-.client_section, .info_section {
-    margin-top: 50px;
-}
+/*.client_section, .info_section {*/
+/*    margin-top: 50px;*/
+/*}*/
 
 .heading_container.heading_center {
     -webkit-box-align: center;
@@ -290,7 +290,7 @@ header button start
 */
 
 .book_header_section .book_form {
-    margin-top: 15px;
+    margin-top: 10px;
 }
 
 
@@ -301,19 +301,6 @@ header button start
     -webkit-box-pack: center;
     -ms-flex-pack: center;
     justify-content: center;
-}
-
-.book_header_section .book_form .btn-box button {
-    display: inline-block;
-    background-color: #E96F24;
-    border: 1px solid #E96F24;
-    color: #ffffff;
-    border-radius: 25px;
-}
-
-.book_header_section .book_form .btn-box button:hover {
-    background-color: transparent;
-    color: #E96F24;
 }
 
 /* END*/
@@ -725,18 +712,14 @@ header button start
     border-radius: 25px;
 }
 
-.info_section_header .info_form button {
+.info_section_header .info_form button,
+.book_header_section .book_form .btn-box button{
+    padding: 5px 15px;
     background-color: #E96F24;
     border: 1px solid #E96F24;
     color: #ffffff;
     border-radius: 25px;
-    margin: 0px;
-    margin-left: 10px;
 }
-
-/**
- * 
- * */
 
 .info_section {
     background-color: #829F3D;
@@ -799,7 +782,7 @@ header button start
     display: -webkit-box;
     display: -ms-flexbox;
     display: flex;
-    margin-top: 25px;
+    margin-left: 50px;
 }
 
 .info_section .social_box a {
@@ -1165,8 +1148,8 @@ label {
 }
 
 .hero-banner-one .bg-wrapper {
-    background-color: #f5fff5;
-    background-image: url(../images/assets/bg-1.png);
+    background-color: #a8c465;
+    /*background-image: url(../images/assets/bg-1.png);*/
     background-repeat: no-repeat;
     background-size: cover;
     padding: 200px 0 80px;
@@ -1499,7 +1482,7 @@ label {
 }
 
 .blog-section-one .bg-wrapper {
-    background-color: #e8faf3;
+    background-color: #a8c465;
     z-index: 1;
 }
 
@@ -1638,7 +1621,7 @@ body .btn-one {
     padding-left: 15px;
 }
 
-.button-style, .blog_section .post-data a {
+.blog_section .post-data a {
     display: inline-block;
     padding: 6px 25px;
     background-color: #E96F24;
@@ -1648,6 +1631,23 @@ body .btn-one {
     text-transform: uppercase;
     font-size: 12px;
     margin-right: 50px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.button-style {
+    display: inline-block;
+    padding: 6px 25px;
+    background-color: #E96F24;
+    border: 1px solid #E96F24;
+    color: #ffffff;
+    border-radius: 25px;
+    text-transform: uppercase;
+    font-size: 12px;
 }
 
 @keyframes rotated {

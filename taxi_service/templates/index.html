@@ -343,7 +343,7 @@
 	<section class="investment_section layout_padding">
     <div class="container">
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-6 text-center">
           <div class="detail-box">
             <div class="heading_container">
               <h2>{% trans "ІНВЕСТУЙ В ЕКОЛОГІЧНЕ МАЙБУТНЄ" %}</h2>
@@ -356,7 +356,9 @@
 								{% trans "Ваш вклад допоможе нам розширити нашу мережу електромобілів та покриття послуг по всьому місту." %}
 								{% trans "Не пропустіть шанс стати інвестором у Ninja Taxi!" %}
 							</p>
-							<a href="{% url 'investment' %}" class="button-style">{% trans "Дізнатися більше" %}</a>
+							<div class="button-container">
+								<a href="{% url 'investment' %}" class="button-style">{% trans "Дізнатися більше" %}</a>
+							</div>
             </div>
             <p></p>
           </div>
