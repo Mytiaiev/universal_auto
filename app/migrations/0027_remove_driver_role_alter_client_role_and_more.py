@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('app', '0025_remove_ninjapaymentsorder_total_amount_cach_and_more'),
+        ('app', '0026_order_checked_alter_order_car_delivery_price_and_more'),
     ]
 
     operations = [
