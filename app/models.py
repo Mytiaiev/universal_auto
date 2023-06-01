@@ -318,6 +318,7 @@ class UberTrips(models.Model):
     license_plate = models.CharField(max_length=10)
     start_trip = models.DateTimeField(null=True, blank=True)
     end_trip = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class FileNameProcessed(models.Model):

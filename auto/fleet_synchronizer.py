@@ -4,6 +4,7 @@ import os
 import re
 import time
 import datetime
+from decimal import Decimal
 
 import requests
 from django.utils import timezone
@@ -14,9 +15,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import TimeoutException, WebDriverException, InvalidSessionIdException
 from translators.server import tss
-from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange,\
-    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber,\
-    SeleniumTools, UaGps, clickandclear
+from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange, \
+    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber, \
+    SeleniumTools, UaGps, clickandclear, UberTrips
 from auto import settings
 from auto_bot.main import bot
 
@@ -566,7 +567,6 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
         form_phone_number = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_5'))
         clickandclear(form_phone_number)
-        print(jobapplication.phone_number[4:])
         form_phone_number.send_keys(jobapplication.phone_number[4:])
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
@@ -905,14 +905,15 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
     #                                            rent_distance=rent_distance)
 
     def get_rent_distance(self):
-        now = timezone.localtime()
-        start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
+        yesterday = timezone.localtime() - datetime.timedelta(days=1)
+        start = timezone.datetime.combine(yesterday, datetime.datetime.min.time()).astimezone()
+        end = timezone.datetime.combine(yesterday, datetime.datetime.max.time()).astimezone()
         for _driver in Driver.objects.all():
             rent_distance = 0
             rent_time = datetime.timedelta()
             # car that have worked at that day
             working_cars = UseOfCars.objects.filter(created_at__gte=start,
-                                                    created_at__lte=now)
+                                                    created_at__lte=end)
             vehicles = Vehicle.objects.filter(driver=_driver)
             if vehicles:
                 for vehicle in vehicles:
@@ -928,7 +929,7 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                         last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
                         if last_use.end_at:
                             rent_after = self.generate_report(timezone.localtime(last_use.end_at),
-                                                              now,
+                                                              end,
                                                               vehicle.licence_plate)
                             rent_distance += rent_after[0]
                             rent_time += rent_after[1]
@@ -939,27 +940,38 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                                                                     name__in=[Driver.ACTIVE, Driver.OFFLINE,
                                                                               Driver.RENT],
                                                                     start_time__gte=timezone.localtime(start),
-                                                                    start_time__lte=timezone.localtime(now))
+                                                                    start_time__lte=timezone.localtime(end))
                         for status in rent_statuses:
                             if status.end_time:
                                 end = status.end_time
-                            else:
-                                end = now
                             status_report = self.generate_report(timezone.localtime(status.start_time),
                                                                  timezone.localtime(end),
                                                                  vehicle.licence_plate)
                             rent_distance += status_report[0]
                             rent_time += status_report[1]
-            #             update today rent in db
-            rent_today = RentInformation.objects.filter(driver_name=_driver,
-                                                        created_at__date=timezone.localtime().date()).first()
-            if rent_today:
-                rent_today.rent_time = rent_time
-                rent_today.rent_distance = rent_distance
-                rent_today.save()
-            else:
-                #  create rent file for today
-                RentInformation.objects.create(driver_name=_driver,
-                                               driver=_driver,
-                                               rent_time=rent_time,
-                                               rent_distance=rent_distance)
+            RentInformation.objects.create(driver_name=_driver,
+                                           driver=_driver,
+                                           rent_time=rent_time,
+                                           rent_distance=rent_distance)
+
+    def no_uber_rent_distance(self):
+        drivers = Driver.objects.all()
+        for driver in drivers:
+            rent = RentInformation.objects.filter(driver_name=driver,
+                                                  created_at__date=timezone.localtime().date()).first()
+            driver_id = driver.get_driver_external_id('Uber')
+            distance_in_trips = 0
+            if driver_id:
+                trips = UberTrips.objects.filter(driver_external_id=driver_id,
+                                                 created_at__date=timezone.localtime().date())
+                for trip in trips:
+                    trip_distance = self.generate_report(timezone.localtime(trip.start_trip),
+                                                         timezone.localtime(trip.end_trip),
+                                                         trip.license_plate)
+                    distance_in_trips += trip_distance[0]
+            rent.rent_distance -= Decimal(distance_in_trips)
+            rent.save()
+
+
+
+

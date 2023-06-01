@@ -1,14 +1,8 @@
-from app.models import ParkSettings
-
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
 NOT_CORRECT_ADDRESS = "Немає вірної адреси"
 LOCATION = "Поділитися місцезнаходженням"
 
 already_ordered = "У вас вже є активне замовлення, бажаєте замовити ще одне авто?"
-price_info = f"Наші тарифи:\nВ місті {ParkSettings.get_value('TARIFF_IN_THE_CITY')} грн/км, " + \
-             f"за містом - {ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')} грн/км"
-AVERAGE_DISTANCE_PER_HOUR, COST_PER_KM = int(f"{ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')}"), int(
-    f"{ParkSettings.get_value('COST_PER_KM')}")
 complete_order_text = "Гарного дня. Дякуємо, що скористались нашими послугами"
 from_address_search = "Знайшов можливі варіанти."
 choose_from_address_text = "Оберіть вашу адресу."
@@ -80,6 +74,12 @@ price_inline_buttons = (
     "\U0001f4b7 Готівка",
     "\U0001f4b8 Картка"
 )
+
+
+def price_info(in_city, out_city):
+    message = f"Наші тарифи:\nВ місті {in_city} грн/км, " + \
+                 f"за містом - {out_city} грн/км"
+    return message
 
 
 def order_info(number, address, to_address, payment, phone, price=None, distance=None, time=None):

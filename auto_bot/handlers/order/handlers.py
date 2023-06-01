@@ -6,7 +6,7 @@ import time
 from celery.signals import task_postrun
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
+from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings
 from auto.tasks import logger, get_distance_trip, check_time_order, check_order, send_time_order
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_start_driver_kb, inline_user_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
@@ -28,7 +28,8 @@ def continue_order(update, context):
     else:
         context.user_data['state'] = START_TIME_ORDER
         context.user_data['location_button'] = False
-        query.edit_message_text(text=price_info)
+        query.edit_message_text(text=price_info(ParkSettings.get_value('TARIFF_IN_THE_CITY'),
+                                                ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')))
     query.edit_message_reply_markup(reply_markup=inline_start_order_kb())
 
 
@@ -503,9 +504,10 @@ def change_sum_trip(sender=None, **kwargs):
         order_id, query_id, minutes_of_trip, distance = rep
         order = Order.objects.filter(pk=order_id).first()
         order.distance_gps = distance
-        price_per_minute = (AVERAGE_DISTANCE_PER_HOUR * COST_PER_KM) / 60
+        price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
+                            int(ParkSettings.get_value('COST_PER_KM'))) / 60
         price_per_minute = price_per_minute * minutes_of_trip
-        price_per_distance = round(COST_PER_KM * distance)
+        price_per_distance = round(int(ParkSettings.get_value('COST_PER_KM')) * distance)
         if price_per_distance > price_per_minute:
             order.sum = int(price_per_distance) + int(order.car_delivery_price)
         else:

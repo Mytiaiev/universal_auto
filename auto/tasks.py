@@ -207,6 +207,8 @@ def get_rent_information(self):
     try:
         UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('get_rent_distance')
         logger.info('write rent report in uagps')
+        UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('no_uber_rent_distance')
+        logger.info('uber removed in rent')
     except Exception as e:
         logger.error(e)
 
@@ -294,7 +296,8 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
 
 
 def init_chrome_driver():
