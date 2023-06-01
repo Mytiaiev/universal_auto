@@ -233,8 +233,8 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     report_from = models.DateTimeField(verbose_name='Репорт з')
     report_to = models.DateTimeField(verbose_name='Репорт по')
     report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
-    driver_full_name = models.CharField(max_length=24, verbose_name='ПШ водія')
-    mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор фодія')
+    driver_full_name = models.CharField(max_length=24, verbose_name='ПІ водія')
+    mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор водія')
     range_string = models.CharField(max_length=50, verbose_name='Період')
     total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальний тариф')
     cancels_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
@@ -775,6 +775,7 @@ class NinjaFleet(Fleet):
 
 class Vehicle(models.Model):
     ELECTRO = 'Електро'
+    # Serviceable = 'Справний'
 
     name = models.CharField(max_length=255, verbose_name='Назва')
     model = models.CharField(max_length=50, verbose_name='Модель')
@@ -1189,7 +1190,7 @@ class Order(models.Model):
     chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор чату клієнта')
     driver_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення водія')
     client_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення клієнта')
-    car_delivery_price = models.CharField(max_length=30, blank=True, null=True, verbose_name='Сума за доставку автомобіля')
+    car_delivery_price = models.CharField(max_length=30, blank=True, null=True, verbose_name='Сума за подачу автомобіля')
     sum = models.CharField(max_length=30, verbose_name='Загальна сума')
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
     payment_method = models.CharField(max_length=70, verbose_name='Спосіб оплати')
@@ -1205,6 +1206,9 @@ class Order(models.Model):
     class Meta:
         verbose_name = 'Замовлення'
         verbose_name_plural = 'Замовлення'
+
+    def __str__(self):
+        return f'Замовлення №{self.pk}'
 
     @staticmethod
     def get_order(chat_id_client, phone, status_order):

@@ -1,10 +1,7 @@
 from django.contrib import admin
 from .models import *
-from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
-from django.utils.safestring import mark_safe
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from functools import wraps
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -85,8 +82,6 @@ def add_partner_on_save_model(*models):
         return admin_class
 
     return decorator
-
-
 
 
 # class FleetChildAdmin(PolymorphicChildModelAdmin):
@@ -220,7 +215,6 @@ class FleetAdmin(admin.ModelAdmin):
     ]
 
 
-
 @admin.register(DriverRateLevels)
 class DriverRateLevelsAdmin(admin.ModelAdmin):
     list_display = [f.name for f in DriverRateLevels._meta.fields]
@@ -325,8 +319,9 @@ class ServiceStationAdmin(admin.ModelAdmin):
 
 @admin.register(Fleets_drivers_vehicles_rate)
 @add_partner_on_save_model(Fleets_drivers_vehicles_rate)
-class Fleets_drivers_vehicles_rateAdmin(admin.ModelAdmin)):
+class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = [f.name for f in Fleets_drivers_vehicles_rate._meta.fields]\
+
 
 
 @admin.register(ServiceStationManager)
@@ -470,67 +465,298 @@ class UberServiceAdmin(admin.ModelAdmin):
 
     @admin.register(RentInformation)
     class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-        list_display = ('driver_name', 'rent_time', 'rent_distance', 'created_at')
-        list_display_links = ('driver_name',)
+        def get_list_display(self, request):
+            if request.user.is_superuser:
+                return [f.name for f in self.model._meta.fields]
+            else:
+                return ['id', 'driver_name', 'rent_time',
+                        'rent_distance', 'created_at',
+                        ]
+
+        def get_fieldsets(self, request, obj=None):
+            if request.user.is_superuser:
+                fieldsets = [
+                    ('Водій',                  {'fields': ['driver_name',
+                                                           ]}),
+                    ('Інформація про оренду',  {'fields': ['rent_time', 'rent_distance',
+                                                           ]}),
+                    ('Додатково',              {'fields': ['driver', 'partner',
+                                                           ]}),
+                ]
+
+            else:
+                fieldsets = [
+                    ('Водій',                  {'fields': ['driver_name',
+                                                           ]}),
+                    ('Інформація про оренду',  {'fields': ['rent_time', 'rent_distance',
+                                                           ]}),
+                ]
+
+            return fieldsets
 
     @admin.register(NinjaPaymentsOrder)
     class NinjaPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-        list_display = [f.name for f in NinjaPaymentsOrder._meta.fields]
         ordering = ('-report_from', 'chat_id')
         list_per_page = 25
 
+        def get_list_display(self, request):
+            if request.user.is_superuser:
+                return [f.name for f in self.model._meta.fields]
+            else:
+                return ['id', 'report_from', 'report_to', 'full_name',
+                        'chat_id', 'total_rides',
+                        'total_distance', 'total_amount_cash',
+                        'total_amount_on_card', 'total_amount',
+                        'created_at', 'updated_at',
+                        ]
+
+        def get_fieldsets(self, request, obj=None):
+            if request.user.is_superuser:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['full_name', 'chat_id',
+                                                           ]}),
+                    ('Інформація про поїздки', {'fields': ['total_rides', 'total_distance',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount_cash', 'total_amount_on_card',
+                                                           'total_amount',
+                                                           ]}),
+                    ('Додатково',              {'fields': ['partner',
+                                                           ]}),
+                ]
+
+            else:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['full_name', 'chat_id',
+                                                           ]}),
+                    ('Інформація про поїздки', {'fields': ['total_rides', 'total_distance',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount_cash', 'total_amount_on_card',
+                                                           'total_amount',
+                                                           ]}),
+                ]
+            return fieldsets
+
     @admin.register(NewUklonPaymentsOrder)
     class NewUklonPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-        list_display = [f.name for f in NewUklonPaymentsOrder._meta.fields]
         search_fields = ('signal', 'full_name')
         ordering = ('-report_from', 'signal')
         list_per_page = 25
 
+        def get_list_display(self, request):
+            if request.user.is_superuser:
+                return [f.name for f in self.model._meta.fields]
+            else:
+                return ['id', 'report_from', 'report_to', 'report_file_name',
+                        'signal', 'total_rides',
+                        'total_distance', 'total_amount_cach',
+                        'total_amount_cach_less', 'total_amount_on_card',
+                        'total_amount', 'tips',
+                        'bonuses', 'fares',
+                        'comission', 'total_amount_without_comission',
+                        'created_at', 'updated_at',
+                        ]
+
+        def get_fieldsets(self, request, obj=None):
+            if request.user.is_superuser:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           'report_file_name',
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['full_name', 'signal',
+                                                           ]}),
+                    ('Інформація про поїздки', {'fields': ['total_rides', 'total_distance',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount_cach', 'total_amount_cach_less',
+                                                           'total_amount_on_card', 'total_amount',
+                                                           'tips', 'bonuses', 'fares', 'comission',
+                                                           'total_amount_without_comission',
+                                                           ]}),
+                    ('Додатково',              {'fields': ['partner',
+                                                           ]}),
+                ]
+
+            else:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           'report_file_name',
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['full_name', 'signal',
+                                                           ]}),
+                    ('Інформація про поїздки', {'fields': ['total_rides', 'total_distance',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount_cach', 'total_amount_cach_less',
+                                                           'total_amount_on_card', 'total_amount',
+                                                           'tips', 'bonuses', 'fares', 'comission',
+                                                           'total_amount_without_comission',
+                                                           ]}),
+                ]
+
+            return fieldsets
+
     @admin.register(BoltPaymentsOrder)
     class BoltPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-        list_display = [f.name for f in BoltPaymentsOrder._meta.fields]
         search_fields = ('mobile_number', 'driver_full_name')
         ordering = ('-report_from', 'mobile_number')
         list_per_page = 25
 
+        def get_list_display(self, request):
+            if request.user.is_superuser:
+                return [f.name for f in self.model._meta.fields]
+            else:
+                return ['id', 'report_from', 'report_to', 'report_file_name',
+                        'mobile_number', 'driver_full_name',
+                        'range_string', 'total_amount',
+                        'cancels_amount', 'autorization_payment',
+                        'autorization_deduction', 'additional_fee',
+                        'fee', 'total_amount_cach',
+                        'discount_cash_trips', 'driver_bonus',
+                        'compensation', 'refunds',
+                        'tips', 'weekly_balance',
+                        'created_at', 'updated_at',
+                        ]
+
+        def get_fieldsets(self, request, obj=None):
+            if request.user.is_superuser:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           'report_file_name', 'range_string'
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['driver_full_name', 'mobile_number',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount', 'cancels_amount',
+                                                           'autorization_payment', 'tips',
+                                                           'total_amount', 'autorization_deduction',
+                                                           'additional_fee', 'fee',
+                                                           'total_amount_cach', 'discount_cash_trips',
+                                                           'driver_bonus', 'compensation',
+                                                           'refunds', 'tips', 'weekly_balance',
+                                                           ]}),
+
+                    ('Додатково',              {'fields': ['partner',
+                                                           ]}),
+                ]
+
+            else:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           'report_file_name', 'range_string'
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['driver_full_name', 'mobile_number',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount', 'cancels_amount',
+                                                           'autorization_payment', 'tips',
+                                                           'total_amount', 'autorization_deduction',
+                                                           'additional_fee', 'fee',
+                                                           'total_amount_cach', 'discount_cash_trips',
+                                                           'driver_bonus', 'compensation',
+                                                           'refunds', 'tips', 'weekly_balance',
+                                                           ]}),
+                ]
+
+            return fieldsets
+
     @admin.register(UberPaymentsOrder)
     class UberPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-        list_display = [f.name for f in UberPaymentsOrder._meta.fields]
         search_fields = ('driver_uuid', 'first_name', 'last_name')
         ordering = ('-report_from', 'driver_uuid')
         list_per_page = 25
+
+        def get_list_display(self, request):
+            if request.user.is_superuser:
+                return [f.name for f in self.model._meta.fields]
+            else:
+                return ['id', 'report_from', 'report_to', 'report_file_name',
+                        'driver_uuid', 'first_name',
+                        'last_name', 'total_amount',
+                        'total_clean_amout', 'total_amount_cach',
+                        'transfered_to_bank', 'returns',
+                        'tips', 'partner',
+                        'created_at', 'updated_at',
+                        ]
+
+        def get_fieldsets(self, request, obj=None):
+            if request.user.is_superuser:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           'report_file_name',
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['driver_uuid', 'first_name',
+                                                           'last_name',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount', 'total_clean_amout',
+                                                           'total_amount_cach', 'tips',
+                                                           'transfered_to_bank', 'returns',
+                                                           ]}),
+                    ('Додатково',              {'fields': ['partner',
+                                                           ]}),
+                ]
+
+            else:
+                fieldsets = [
+                    ('Інформація про звіт',    {'fields': ['report_from', 'report_to',
+                                                           'report_file_name',
+                                                           ]}),
+                    ('Інформація про водія',   {'fields': ['driver_uuid', 'first_name',
+                                                           'last_name',
+                                                           ]}),
+                    ('Інформація про кошти',   {'fields': ['total_amount', 'total_clean_amout',
+                                                           'total_amount_cach', 'tips',
+                                                           'transfered_to_bank', 'returns',
+                                                           ]}),
+                ]
+
+            return fieldsets
 
 
 @admin.register(DriverManager)
 @add_partner_on_save_model(DriverManager)
 class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_display = ('name', 'second_name', 'email', 'phone_number', 'created_at')
-    list_display_links = ('name', 'second_name')
     search_fields = ('name', 'second_name')
     ordering = ('name', 'second_name')
     list_per_page = 25
-
-    fieldsets = [
-        (None, {'fields': ['name', 'second_name', 'email', 'phone_number', 'chat_id']}),
-    ]
 
     inlines = [
         DriverManagerInline,
     ]
 
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['id', 'name', 'second_name', 'email',
+                    'phone_number', 'created_at',
+                    ]
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Інформація про менеджера',   {'fields': ['name', 'second_name', 'email',
+                                                           'phone_number',  'chat_id',
+                                                           ]}),
+                ('Додатково',                  {'fields': ['partner',
+                                                           ]}),
+            ]
+
+        else:
+            fieldsets = [
+                ('Інформація про менеджера',   {'fields': ['name', 'second_name', 'email',
+                                                           'phone_number',
+                                                           ]}),
+            ]
+
+        return fieldsets
+
+
 @admin.register(Driver)
 @add_partner_on_save_model(Driver)
 class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_display = ('name', 'second_name', 'email', 'phone_number', 'driver_status', 'created_at')
-    list_display_links = ('name', 'second_name')
-    list_filter = ['created_at']
     search_fields = ('name', 'second_name')
     ordering = ('name', 'second_name')
     list_per_page = 25
-
-    fieldsets = [
-        (None, {'fields': ['name', 'second_name', 'email', 'phone_number', 'driver_status', 'chat_id']}),
-    ]
 
     inlines = [
         Fleets_drivers_vehicles_rateInline,
@@ -538,12 +764,40 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         SupportManagerDriverInline,
     ]
 
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['id', 'name', 'second_name',
+                    'email', 'phone_number',
+                    'driver_status', 'partner',
+                    'created_at',
+                    ]
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Інформація про водія',      {'fields': ['name', 'second_name', 'email', 'phone_number',
+                                                          'driver_status', 'chat_id',
+                                                          ]}),
+                ('Додатково',                  {'fields': ['partner',
+                                                           ]}),
+            ]
+
+        else:
+            fieldsets = [
+                ('Інформація про водія',       {'fields': ['name', 'second_name', 'email', 'phone_number',
+                                                           ]}),
+                ('Статус водія',               {'fields': ['driver_status',
+                                                           ]}),
+            ]
+
+        return fieldsets
+
 
 @admin.register(Vehicle)
 @add_partner_on_save_model(Vehicle)
 class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_display = ('name', 'model', 'licence_plate', 'vin_code', 'type', 'gps_imei', 'car_status', 'created_at')
-    list_display_links = ('name', 'model', 'licence_plate', 'vin_code')
     search_fields = ('name', 'model', 'licence_plate', 'vin_code', 'gps_imei',)
     ordering = ('name',)
     exclude = ('deleted_at',)
@@ -553,6 +807,43 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         Fleets_drivers_vehicles_rateInline,
     ]
 
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['id', 'name', 'model',
+                    'licence_plate', 'type',  'vin_code',
+                    'gps_imei', 'car_status', 'created_at',
+                    ]
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Номер автомобіля',           {'fields': ['licence_plate',
+                                                           ]}),
+                ('Інформація про машину',      {'fields': ['name', 'model', 'type',
+                                                           ]}),
+                ('Особисті дані авто',         {'fields': ['vin_code', 'gps_imei',
+                                                           'car_status',
+                                                           ]}),
+                ('Додатково',                  {'fields': ['driver', 'partner',
+                                                           ]}),
+            ]
+
+        else:
+            fieldsets = [
+                ('Номер автомобіля',           {'fields': ['licence_plate',
+                                                           ]}),
+                ('Інформація про машину',      {'fields': ['name', 'model', 'type',
+                                                           ]}),
+                ('Особисті дані авто',         {'fields': ['vin_code', 'gps_imei',
+                                                           'car_status',
+                                                           ]}),
+            ]
+
+        return fieldsets
+
+
 
 @admin.register(Order)
 class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
@@ -560,17 +851,49 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['id', 'from_address', 'to_the_address', 'phone_number', 'car_delivery_price',
-                    'sum', 'payment_method', 'order_time', 'status_order', 'distance_gps',
-                    'distance_google', 'driver', 'comment', 'created_at',
+            return ['id', 'from_address', 'to_the_address',
+                    'phone_number', 'car_delivery_price',
+                    'sum', 'payment_method', 'order_time',
+                    'status_order', 'distance_gps',
+                    'distance_google', 'driver', 'comment',
+                    'created_at',
                     ]
 
-    # def get_fieldsets(self, request, obj=None):
-    #     if request.user.is_superuser:
-    #         return [f.name for f in self.model._meta.fields]
-    #
-    #     else:
-    #         return ['from_address', 'to_the_address', 'phone_number', 'car_delivery_price',
-    #                 'sum', 'payment_method', 'order_time', 'status_order', 'distance_gps',
-    #                 'distance_google', 'driver', 'comment', 'created_at',
-    #                 ]
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Номер замовлення',           {'fields': ['id',
+                                                           ]}),
+                ('Адреси',                     {'fields': ['from_address', 'to_the_address',
+                                                           ]}),
+                ('Контакти',                   {'fields': ['phone_number', 'chat_id_client',
+                                                           ]}),
+                ('Ціни',                       {'fields': ['car_delivery_price', 'sum',
+                                                           ]}),
+                ('Деталі',                     {'fields': ['payment_method', 'order_time',
+                                                           'status_order', 'distance_gps',
+                                                           'distance_google', 'driver',
+                                                           ]}),
+                ('Додатково',                  {'fields': ['comment',
+                                                           ]}),
+            ]
+        else:
+            fieldsets = [
+                ('Номер замовлення',           {'fields': ['id',
+                                                           ]}),
+                ('Адреси',                     {'fields': ['from_address', 'to_the_address',
+                                                           ]}),
+                ('Контакти',                   {'fields': ['phone_number',
+                                                           ]}),
+                ('Ціни',                       {'fields': ['car_delivery_price', 'sum',
+                                                           ]}),
+                ('Деталі',                     {'fields': ['payment_method', 'order_time',
+                                                           'status_order', 'distance_gps',
+                                                           'distance_google', 'driver',
+                                                           ]}),
+                ('Додатково',                  {'fields': ['comment',
+                                                           ]}),
+            ]
+
+        return fieldsets
+
