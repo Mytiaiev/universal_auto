@@ -89,17 +89,15 @@ function setAutoCenter(map) {
 
 var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi = [];
 
-const decodedData = parkSettings.replace(/&#x(\w+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
-const parsedData = JSON.parse(decodedData.replace(/'/g, '"'));
-const FREE_DISPATCH = parseInt(parsedData["FREE_CAR_SENDING_DISTANCE"]);
-const TARIFF_DISPATCH = parseInt(parsedData["TARIFF_CAR_DISPATCH"]);
-const TARIFF_OUTSIDE_DISPATCH = parseInt(parsedData["TARIFF_CAR_OUTSIDE_DISPATCH"]);
-const TARIFF_IN_THE_CITY = parseInt(parsedData["TARIFF_IN_THE_CITY"]);
-const TARIFF_OUTSIDE_THE_CITY = parseInt(parsedData["TARIFF_OUTSIDE_THE_CITY"]);
-const CENTRE_CITY_LAT = parseFloat(parsedData["CENTRE_CITY_LAT"]);
-const CENTRE_CITY_LNG = parseFloat(parsedData["CENTRE_CITY_LNG"]);
-const CENTRE_CITY_RADIUS = parseInt(parsedData["CENTRE_CITY_RADIUS"]);
-const SEND_TIME_ORDER_MIN = parseInt(parsedData["SEND_TIME_ORDER_MIN"]);
+const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
+const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH|| 0);
+const TARIFF_OUTSIDE_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_OUTSIDE_DISPATCH|| 0);
+const TARIFF_IN_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_IN_THE_CITY|| 0);
+const TARIFF_OUTSIDE_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_OUTSIDE_THE_CITY|| 0);
+const CENTRE_CITY_LAT = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LAT || 0);
+const CENTRE_CITY_LNG = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LNG|| 0);
+const CENTRE_CITY_RADIUS = parseInt(parkSettings && parkSettings.CENTRE_CITY_RADIUS|| 0);
+const SEND_TIME_ORDER_MIN = parseInt(parkSettings && parkSettings.SEND_TIME_ORDER_MIN|| 0);
 const userLanguage = navigator.language || navigator.userLanguage;
 
 const city_boundaries = function () {
@@ -510,7 +508,7 @@ function intlTelInit(phoneEl) {
 }
 
 $(document).ready(function(){
-  setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
+  if(csrfToken) setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
 
   $('#delivery_time').mask("dd:dd", {placeholder: gettext("00:00 (Вкажіть час)")});
   intlTelInit('#phone');
@@ -718,13 +716,16 @@ function initAutocomplete(inputID) {
   });
 }
 
-loadGoogleMaps( 3, apiGoogle, userLanguage,'','geometry,places').then(function() {
- initAutocomplete('address');
- initAutocomplete('to_address');
- checkCookies()
-});
-
 $(document).ready(function() {
+
+  if($('#address').length || $('#to_address').length) {
+    loadGoogleMaps(3, apiGoogle, userLanguage, '', 'geometry,places').then(function () {
+      initAutocomplete('address');
+      initAutocomplete('to_address');
+      checkCookies()
+    });
+  }
+
   $(this).on('click', '.services-grid__item .btn', function(){
     var t = $(this);
     content = t.prev();
@@ -755,4 +756,18 @@ $(document).ready(function() {
     $(".img-box-en").removeClass("hidden");
     $(".img-box-uk").addClass("hidden");
   }
+
+  const $blocks = $('[data-block]');
+
+  $blocks.on('mouseenter', function() {
+      const $currentBlock = $(this);
+      const initialHeight = $currentBlock.height();
+
+      $currentBlock.animate({ marginTop: -20 }, 300);
+  });
+
+  $blocks.on('mouseleave', function() {
+      const $currentBlock = $(this);
+      $currentBlock.animate({ marginTop: 0 }, 300);
+  });
 });

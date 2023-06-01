@@ -1,3 +1,4 @@
+import json
 import os
 
 from django.shortcuts import render
@@ -25,7 +26,7 @@ class IndexView(TemplateView):
         park_setting_objects = ParkSettings.objects.all()
         for park_setting in park_setting_objects:
             park_settings[park_setting.key] = park_setting.value
-        return park_settings
+        return json.dumps(park_settings)
 
     def get_google_api_key(self):
         return ParkSettings.get_value("GOOGLE_API_KEY", os.environ["GOOGLE_API_KEY"])

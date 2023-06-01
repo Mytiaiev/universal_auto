@@ -45,9 +45,7 @@
                       <p class="col-lg-11 px-0">
                         {% trans "Завдяки електрокарам, Ваша поїздка буде тиха, приємна та м'яка. Ви заслуговуєте на найкраще, тому наші електрокари готові забезпечити Вам незабутній досвід комфорту під час кожної поїздки." %}
                       </p>
-                      <a href="">
-                        {% trans "Дізнатися більше" %}
-                      </a>
+                      <a href="">{% trans "Дізнатися більше" %}</a>
                     </div>
                   </div>
                   <div class="col-md-6">
@@ -226,7 +224,6 @@
         </i>
       </figure>
       <h4>{% trans "Ваш персональний водій" %}</h4>
-			<h4></h4>
       <p class="service-text limited-lines">
         {% trans "Наші персональні водії - експерти своєї справи, які володіють високим рівнем навичок і досвідом водіння." %}
 				{% trans "Вони дбайливо оберігатимуть ваш час і забезпечать швидке пересування містом, дозволяючи вам розслабитись і сконцентруватись на своїх основних справах." %}
@@ -343,7 +340,7 @@
 
 	 <!-- investment section -->
 
-	<section class="app_section layout_padding">
+	<section class="investment_section layout_padding">
     <div class="container">
       <div class="row">
         <div class="col-md-6">
@@ -359,10 +356,9 @@
 								{% trans "Ваш вклад допоможе нам розширити нашу мережу електромобілів та покриття послуг по всьому місту." %}
 								{% trans "Не пропустіть шанс стати інвестором у Ninja Taxi!" %}
 							</p>
+							<a href="{% url 'investment' %}" class="button-style">{% trans "Дізнатися більше" %}</a>
             </div>
-            <p>
-
-            </p>
+            <p></p>
           </div>
         </div>
         <div class="col-md-6">
@@ -461,7 +457,10 @@
 {% include 'footer.html' %}
 
 <script>
-	var parkSettings = '{{ parkSettings }}';
+	var parkSettings = {};
+	{% if parkSettings %}
+		parkSettings = JSON.parse('{{ parkSettings | safe }}');
+	{% endif %}
 	var apiGoogle = '{{ google_api }}';
 	var csrfToken = '{% csrf_token %}';
 	var ajaxPostUrl = "{% url 'post_request' %}";

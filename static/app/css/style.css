@@ -24,8 +24,8 @@ body {
     font-family: 'Source Sans Pro', sans-serif;
     font-weight: 700;
     font-style: italic;
-    /*font-size: 20px;*/
     color: #E96F24;
+    margin-top: 10px;
 }
 
 .investment {
@@ -34,6 +34,14 @@ body {
 
 .about-section {
     font-size: 20px;
+}
+
+.about_section {
+    margin-top: 100px;
+}
+
+.client_section, .info_section {
+    margin-top: 50px;
 }
 
 .heading_container.heading_center {
@@ -477,29 +485,29 @@ header button start
     margin: 0;
 }
 
-.app_section {
+.investment_section {
     background-color: #829F3D;
 }
 
-.app_section .row {
+.investment_section .row {
     -webkit-box-align: center;
     -ms-flex-align: center;
     align-items: center;
 }
 
-.app_section .detail-box h5 {
+.investment_section .detail-box h5 {
     color: #fff;
 }
 
-.app_section .detail-box .heading_container h2 {
+.investment_section .detail-box .heading_container h2 {
     color: #fff;
 }
 
-.app_section .detail-box .heading_container p {
+.investment_section .detail-box .heading_container p {
     color: #fff;
 }
 
-.app_section .detail-box .btn-box {
+.investment_section .detail-box .btn-box {
     display: -webkit-box;
     display: -ms-flexbox;
     display: flex;
@@ -508,17 +516,17 @@ header button start
     margin: 0 -5px;
 }
 
-.app_section .detail-box a {
+.investment_section .detail-box a {
     width: 175px;
     margin: 5px;
 }
 
-.app_section .detail-box a img {
+.investment_section .detail-box a img {
     width: 100%;
     border-radius: 5px;
 }
 
-.app_section .img-box img {
+.investment_section .img-box img {
     width: 100%;
 }
 
@@ -1496,8 +1504,8 @@ label {
 }
 
 .position-relative {
-    padding-bottom: 100px;
-    padding-top: 100px;
+    padding-bottom: 20px;
+    padding-top: 20px;
     position: relative;
 }
 
@@ -1630,3 +1638,35 @@ body .btn-one {
     padding-left: 15px;
 }
 
+.button-style, .blog_section .post-data a {
+    display: inline-block;
+    padding: 6px 25px;
+    background-color: #E96F24;
+    border: 1px solid #E96F24;
+    color: #ffffff;
+    border-radius: 25px;
+    text-transform: uppercase;
+    font-size: 12px;
+    margin-right: 50px;
+}
+
+@keyframes rotated {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes jumpTwo {
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-15px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
