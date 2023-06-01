@@ -4,6 +4,7 @@ import pendulum
 from contextlib import contextmanager
 import datetime
 
+from django.db import IntegrityError
 from django.utils import timezone
 
 try:
@@ -15,8 +16,9 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    Bolt, \
-    NewUklon, Uber, UaGps, get_report, download_and_save_daily_report, UseOfCars
+    Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report, NinjaPaymentsOrder, UseOfCars
+from django.db.models import Sum, IntegerField, FloatField
+from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
 from auto.celery import app
@@ -280,6 +282,85 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, licence_p
         logger.info(e)
 
 
+@app.task(queue='non_priority')
+def save_report_to_ninja_payment(day=None):
+    if day:
+        day = pendulum.now().start_of('day').subtract(days=1)
+        start_date = day.start_of("day")
+        end_date = day.end_of("day")
+    else:
+        week = pendulum.now().start_of('week').subtract(days=3)
+        start_date = week.start_of('week')
+        end_date = week.end_of('week')
+
+    start_date, end_date = str(start_date).replace('T', ' '), str(end_date).replace('T', ' ')
+    # Pulling notes for the rest of the week and grouping behind the chat_id field
+    records = Order.objects.filter(driver__chat_id__isnull=False,
+                                   created_at__date__range=(start_date.split()[0], end_date.split()[0])).values(
+        'driver__chat_id')
+    if records:
+        for record in records:
+            chat_id = record['driver__chat_id']
+            total_rides = Order.objects.filter(driver__chat_id=chat_id,
+                                               created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                                               status_order=Order.COMPLETED).count()
+
+            total_distance = Order.objects.filter(driver__chat_id=chat_id,
+                                                  created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                                                  status_order=Order.COMPLETED).aggregate(
+                total=Sum(Coalesce(Cast('distance_gps', FloatField()),
+                                   Cast('distance_google', FloatField()),
+                                   output_field=FloatField()))).get('total', 0)
+
+            total_amount_cash = Order.objects.filter(
+                driver__chat_id=chat_id,
+                payment_method='Готівка',
+                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                status_order=Order.COMPLETED
+            ).aggregate(
+                total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
+
+            total_amount_card = Order.objects.filter(
+                driver__chat_id=chat_id,
+                payment_method='Картка',
+                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                status_order=Order.COMPLETED
+            ).aggregate(
+                total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
+
+            total_amount = total_amount_cash + total_amount_card
+            driver = Driver.get_by_chat_id(chat_id)
+            report = NinjaPaymentsOrder(
+                report_from=start_date,
+                report_to=end_date,
+                full_name=str(driver),
+                chat_id=chat_id,
+                total_rides=total_rides,
+                total_distance=total_distance,
+                total_amount_cash=total_amount_cash,
+                total_amount_on_card=total_amount_card,
+                total_amount=total_amount)
+            try:
+                report.save()
+            except IntegrityError:
+                pass
+    else:
+        report = NinjaPaymentsOrder(
+            report_from=start_date,
+            report_to=end_date,
+            full_name='',
+            chat_id='',
+            total_rides=0,
+            total_distance=0.0,
+            total_amount_cash=0,
+            total_amount_on_card=0,
+            total_amount=0)
+        try:
+            report.save()
+        except IntegrityError:
+            pass
+
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global BOLT_CHROME_DRIVER
@@ -296,6 +377,9 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
+                             queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
     sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
 

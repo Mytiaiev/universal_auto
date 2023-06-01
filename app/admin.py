@@ -35,9 +35,14 @@ from django.utils.safestring import mark_safe
 # @admin.register(Fleet)
 # class FleetParentAdmin(PolymorphicParentModelAdmin):
 #     base_model = Fleet
-#     child_models = (UberFleet, BoltFleet, UklonFleet, NewUklonFleet)
-#     list_filter = (PolymorphicChildModelFilter,)
-
+#     child_models = (UberFleet, BoltFleet, UklonFleet, NewUklonFleet, NinjaFleet)
+#     list_filter = PolymorphicChildModelFilter
+#
+#
+#  @admin.register(NinjaFleet)
+# class NinjaFleetAdmin(FleetChildAdmin):
+#     base_model = NinjaFleet
+#     show_in_index = False
 
 class DriverManagerInline(admin.TabularInline):
     model = DriverManager.driver_id.through
@@ -127,11 +132,11 @@ class FleetAdmin(admin.ModelAdmin):
         ServiceStationManagerFleetInline
     ]
 
-    def has_add_permission(self, request, obj=None):
-        return False
+    # def has_add_permission(self, request, obj=None):
+    #     return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+    # def has_delete_permission(self, request, obj=None):
+    #     return False
 
 
 @admin.register(Driver)
@@ -239,6 +244,12 @@ class UklonPaymentsOrderAdmin(admin.ModelAdmin):
     ordering = ('-report_from', 'signal')
     list_per_page = 25
 
+
+@admin.register(NinjaPaymentsOrder)
+class NinjaPaymentsOrderAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in NinjaPaymentsOrder._meta.fields]
+    ordering = ('-report_from', 'chat_id')
+    list_per_page = 25
 
 @admin.register(NewUklonPaymentsOrder)
 class NewUklonPaymentsOrderAdmin(admin.ModelAdmin):
@@ -401,12 +412,11 @@ class OwnerAdmin(admin.ModelAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = [f.name for f in Order._meta.fields]
-
-    fieldsets = [
-        (None, {'fields': ['from_address', 'to_the_address',
-                           'phone_number', 'chat_id_client',
-                           'status_order', 'payment_method']}),
-    ]
+    # fieldsets = [
+    #     (None, {'fields': ['from_address', 'to_the_address',
+    #                        'phone_number', 'chat_id_client',
+    #                        'status_order', 'payment_method']}),
+    # ]
 
 
 @admin.register(UseOfCars)

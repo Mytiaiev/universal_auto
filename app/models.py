@@ -29,10 +29,6 @@ from selenium.webdriver import DesiredCapabilities
 
 
 class PaymentsOrder(models.Model):
-    class Meta:
-        verbose_name = 'Payments order'
-        verbose_name_plural = 'Payments order'
-
     transaction_uuid = models.UUIDField()
     driver_uuid = models.UUIDField()
     driver_name = models.CharField(max_length=30)
@@ -55,6 +51,10 @@ class PaymentsOrder(models.Model):
     transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10)
     ajustment_payment = models.DecimalField(decimal_places=2, max_digits=10)
     cancel_payment = models.DecimalField(decimal_places=2, max_digits=10)
+
+    class Meta:
+        verbose_name = 'Payments order'
+        verbose_name_plural = 'Payments order'
 
 
 class GenericPaymentsOrder(ModelBase):
@@ -101,10 +101,6 @@ class GenericPaymentsOrder(ModelBase):
 
 
 class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    class Meta:
-        verbose_name = 'Payments order: Uklon'
-        verbose_name_plural = 'Payments order: Uklon'
-
     report_from = models.DateTimeField()
     report_to = models.DateTimeField()
     report_file_name = models.CharField(max_length=255)
@@ -127,6 +123,8 @@ class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(signal=driver_external_id)
 
     class Meta:
+        verbose_name = 'Payments order: Uklon'
+        verbose_name_plural = 'Payments order: Uklon'
         unique_together = (('report_from', 'report_to', 'licence_plate', 'signal'))
 
     def driver_id(self):
@@ -149,10 +147,6 @@ class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    class Meta:
-        verbose_name = 'Payments order: NewUklon'
-        verbose_name_plural = 'Payments order: NewUklon'
-
     report_from = models.DateTimeField()
     report_to = models.DateTimeField()
     report_file_name = models.CharField(max_length=255)
@@ -180,6 +174,8 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(signal=driver_external_id)
 
     class Meta:
+        verbose_name = 'Payments order: NewUklon'
+        verbose_name_plural = 'Payments order: NewUklon'
         unique_together = (('report_from', 'report_to', 'full_name', 'signal'))
 
     def driver_id(self):
@@ -205,10 +201,6 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    class Meta:
-        verbose_name = 'Payments order: Bolt'
-        verbose_name_plural = 'Payments order: Bolt'
-
     report_from = models.DateTimeField()
     report_to = models.DateTimeField()
     report_file_name = models.CharField(max_length=255)
@@ -238,6 +230,8 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(mobile_number=driver_external_id)
 
     class Meta:
+        verbose_name = 'Payments order: Bolt'
+        verbose_name_plural = 'Payments order: Bolt'
         unique_together = (('report_from', 'report_to', 'driver_full_name', 'mobile_number'))
 
     def driver_id(self):
@@ -265,10 +259,6 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    class Meta:
-        verbose_name = 'Payments order: Uber'
-        verbose_name_plural = 'Payments order: Uber'
-
     report_from = models.DateTimeField()
     report_to = models.DateTimeField()
     report_file_name = models.CharField(max_length=255)
@@ -291,6 +281,8 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(driver_uuid=driver_external_id)
 
     class Meta:
+        verbose_name = 'Payments order: Uber'
+        verbose_name_plural = 'Payments order: Uber'
         unique_together = (('report_from', 'report_to', 'driver_uuid'))
 
     def driver_id(self):
@@ -307,6 +299,53 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
     def total_owner_amount(self, rate=0.65):
         return float(self.total_amount) * (1 - rate) - self.total_drivers_amount(rate)
+
+    def kassa(self):
+        return float(self.total_amount)
+
+
+class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
+    report_from = models.DateTimeField()
+    report_to = models.DateTimeField()
+    full_name = models.CharField(max_length=255)
+    chat_id = models.CharField(max_length=11)
+    total_rides = models.PositiveIntegerField(null=True, blank=True)
+    total_distance = models.DecimalField(decimal_places=2, max_digits=10)
+    total_amount_cash = models.PositiveIntegerField(null=True, blank=True)
+    total_amount_on_card = models.PositiveIntegerField(null=True, blank=True)
+    total_amount = models.PositiveIntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    vendor_name = 'Ninja'
+
+    class Scopes:
+        def filter_by_driver_external_id(self, driver_external_id):
+            return self.filter(signal=driver_external_id)
+
+    class Meta:
+        verbose_name = 'Payments order: Ninja'
+        verbose_name_plural = 'Payments order: Ninja'
+        unique_together = (('report_from', 'report_to', 'full_name', 'chat_id'))
+
+    def driver_id(self):
+        return self.chat_id
+
+    def report_text(self, name=None, rate=0.5):
+        return f'Ninja: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cash)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+
+    def total_drivers_amount(self, rate=0.5):
+        return -(self.kassa()) * rate
+
+    def total_drivers_amount(self, rate=0.5):
+        return self.kassa() * (1 - rate) - float(self.total_amount_cash)
+
+    def total_owner_amount(self, rate=0.5):
+        return -self.total_drivers_amount(rate)
+
+    def vendor(self):
+        return 'ninja'
 
     def kassa(self):
         return float(self.total_amount)
@@ -698,6 +737,22 @@ class UklonFleet(Fleet):
     def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
         """the same method as weekly report. it gets daily report if day is non None"""
         return Uklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+
+
+class NinjaFleet(Fleet):
+    def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
+        week = pendulum.now().start_of('week').subtract(days=3)
+        start_date = week.start_of('week')
+        end_date = week.end_of('week')
+        report = NinjaPaymentsOrder.objects.filter(report_from=str(start_date).split()[0], report_to=str(end_date).split()[0])
+        return list(report)
+
+    def download_daily_report(self, week_number=None, driver=True, sleep=5, headless=True):
+        day = pendulum.now().start_of('day').subtract(days=1)
+        start_date = day.start_of("day")
+        end_date = day.end_of("day")
+        report = NinjaPaymentsOrder.objects.filter(report_from=str(start_date).split()[0], report_to=str(end_date).split()[0])
+        return list(report)
 
 
 class Vehicle(models.Model):
@@ -1108,19 +1163,19 @@ class Order(models.Model):
     from_address = models.CharField(max_length=255)
     latitude = models.CharField(max_length=10)
     longitude = models.CharField(max_length=10)
-    to_the_address = models.CharField(max_length=255)
+    to_the_address = models.CharField(max_length=255, blank=True, null=True)
     to_latitude = models.CharField(max_length=10, null=True)
     to_longitude = models.CharField(max_length=10, null=True)
     phone_number = models.CharField(max_length=13)
-    chat_id_client = models.CharField(max_length=10)
-    driver_message_id = models.CharField(max_length=10, null=True)
-    client_message_id = models.CharField(max_length=10, null=True)
+    chat_id_client = models.CharField(max_length=10, blank=True, null=True)
+    driver_message_id = models.CharField(max_length=10, blank=True, null=True)
+    client_message_id = models.CharField(max_length=10, blank=True, null=True)
     car_delivery_price = models.IntegerField(default=0)
     sum = models.IntegerField(default=0)
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
     payment_method = models.CharField(max_length=70)
     status_order = models.CharField(max_length=70)
-    distance_gps = models.CharField(max_length=10)
+    distance_gps = models.CharField(max_length=10, blank=True, null=True)
     distance_google = models.CharField(max_length=10)
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
@@ -1134,6 +1189,7 @@ class Order(models.Model):
             return order
         except Order.DoesNotExist:
             return None
+
 
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
