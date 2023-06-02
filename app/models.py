@@ -738,8 +738,9 @@ class NinjaFleet(Fleet):
         report = NinjaPaymentsOrder.objects.filter(report_from=str(start_date).split()[0], report_to=str(end_date).split()[0])
         return list(report)
 
-    def download_daily_report(self, week_number=None, driver=True, sleep=5, headless=True):
-        day = pendulum.now().start_of('day').subtract(days=1)
+    def download_daily_report(self, day=None, week_number=None, driver=True, sleep=5, headless=True):
+        if day is None:
+            day = pendulum.now().start_of('day').subtract(days=1)
         start_date = day.start_of("day")
         end_date = day.end_of("day")
         report = NinjaPaymentsOrder.objects.filter(report_from=str(start_date).split()[0], report_to=str(end_date).split()[0])
