@@ -4,76 +4,103 @@
 <html>
 
 <head>
-  <!-- Basic -->
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <!-- Mobile Metas -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <!-- Site Metas -->
-  <meta name="keywords" content="" />
-  <meta name="description" content="" />
-  <meta name="author" content="" />
-  <link rel="shortcut icon" href="{% static 'app/images/favicon.png' %}"/>
+	<!-- Basic -->
+	<meta charset="utf-8"/>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+	<!-- Mobile Metas -->
+	<meta name="viewport"
+				content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+	<!-- Site Metas -->
+	<meta name="keywords" content=""/>
+	<meta name="description" content=""/>
+	<meta name="author" content=""/>
+	<link rel="shortcut icon" href="{% static 'app/images/favicon.png' %}"/>
 
-  <title>{% trans "Ninja Taxi" %}</title>
+	<title>{% trans "Ninja Taxi" %}</title>
 
-  <!-- slider stylesheet -->
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.1.3/assets/owl.carousel.min.css" />
+	<!-- slider stylesheet -->
+	<link rel="stylesheet" type="text/css"
+				href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.1.3/assets/owl.carousel.min.css"/>
 
-  <!-- bootstrap core css -->
-  <link rel="stylesheet" type="text/css" href="{% static 'app/css/bootstrap.css' %}" />
-  <!-- font awesome style -->
-  <link href="{% static 'app/css/font-awesome.min.css' %}" rel="stylesheet" />
-  <!-- fonts style -->
+	<!-- bootstrap core css -->
+	<link rel="stylesheet" type="text/css"
+				href="{% static 'app/css/bootstrap.css' %}"/>
+	<!-- font awesome style -->
+	<link href="{% static 'app/css/font-awesome.min.css' %}" rel="stylesheet"/>
+	<!-- fonts style -->
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,300;1,700&display=swap" rel="stylesheet">
-  <!-- Custom styles for this template -->
-  <link href="{% static 'app/css/style.css' %}" rel="stylesheet" />
-  <!-- responsive style -->
-  <link href="{% static 'app/css/responsive.css' %}" rel="stylesheet" />
-  <script src="https://code.jquery.com/jquery-3.6.3.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-  <script src="{% url 'javascript-catalog' %}"></script>
+	<link
+			href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,300;1,700&display=swap"
+			rel="stylesheet">
+	<!-- Custom styles for this template -->
+	<link href="{% static 'app/css/style.css' %}" rel="stylesheet"/>
+	<!-- responsive style -->
+	<link href="{% static 'app/css/responsive.css' %}" rel="stylesheet"/>
+	<script src="https://code.jquery.com/jquery-3.6.3.min.js"
+					integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU="
+					crossorigin="anonymous"></script>
+	<script
+			src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+	<script src="{% url 'javascript-catalog' %}"></script>
+	<div class="loader word-spacing">
+		<span>N</span>
+		<span>I</span>
+		<span>N</span>
+		<span>J</span>
+		<span>A </span>
+		<span> T</span>
+		<span>A</span>
+		<span>X</span>
+		<span>I</span>
+		<span>!</span>
+	</div>
 </head>
 
 <body>
-  <header class="header_section navbar navbar-expand-sm sticky-top navbar-light bg-light">
-      <div class="container">
-        <nav class="container navbar navbar-expand-lg custom_nav-container navbar navbar-expand-sm sticky-top navbar-light bg-light">
-          <a class="navbar-brand" href="{% url 'index' %}">
-            <img src="{% static 'app/images/logo.svg' %}" alt=""  width="142" height="50">
-          </a>
+<header
+		class="header_section navbar navbar-expand-sm sticky-top navbar-light bg-light">
+	<div class="container">
+		<nav
+				class="container navbar navbar-expand-lg custom_nav-container navbar navbar-expand-sm sticky-top navbar-light bg-light">
+			<a class="navbar-brand" href="{% url 'index' %}">
+				<img src="{% static 'app/images/logo.svg' %}" alt="" width="142"
+						 height="50">
+			</a>
 
-          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span></span>
-          </button>
-          <div class="collapse navbar-collapse ml-auto  " id="navbarSupportedContent">
-            <ul class="navbar-nav">
-              <li class="nav-item info_section_header">
-                <div class="info_form">
-                  {% include '_subscribe_form.html' with button=_("Підписатись") form='1' %}
-                </div>
-              </li>
-              <li class="nav-item">
-                <div class="social_header">
-                  {% include '_social_box.html' %}
-                </div>
-              </li>
-              <li class="nav-item">
-                <section class="book_header_section">
-                  <div class="book_form">
-                    <div class="btn-box">
-                      <a href="#order-now">
-                        <button >{% trans "Замовити зараз" %}</button>
-                      </a>
-                    </div>
+			<button class="navbar-toggler" type="button" data-toggle="collapse"
+							data-target="#navbarSupportedContent"
+							aria-controls="navbarSupportedContent" aria-expanded="false"
+							aria-label="Toggle navigation">
+				<span></span>
+			</button>
+			<div class="collapse navbar-collapse ml-auto  "
+					 id="navbarSupportedContent">
+				<ul class="navbar-nav">
+					<li class="nav-item info_section_header">
+						<div class="info_form">
+							{% include '_subscribe_form.html' with button=_("Підписатись") form='1' %}
+						</div>
+					</li>
+					<li class="nav-item">
+						<div class="social_header">
+							{% include '_social_box.html' %}
+						</div>
+					</li>
+					<li class="nav-item">
+						<section class="book_header_section">
+							<div class="book_form">
+								<div class="btn-box">
+									<a href="#order-now">
+										<button>{% trans "Замовити зараз" %}</button>
+									</a>
+								</div>
 
-                  </div>
-                </section>
-              </li>
-            </ul>
-          </div>
-        </nav>
-      </div>
-    </header>
+							</div>
+						</section>
+					</li>
+				</ul>
+			</div>
+		</nav>
+	</div>
+</header>

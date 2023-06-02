@@ -718,6 +718,8 @@ function initAutocomplete(inputID) {
 
 $(document).ready(function() {
 
+  $('.loader').show();
+
   if($('#address').length || $('#to_address').length) {
     loadGoogleMaps(3, apiGoogle, userLanguage, '', 'geometry,places').then(function () {
       initAutocomplete('address');
@@ -770,4 +772,12 @@ $(document).ready(function() {
       const $currentBlock = $(this);
       $currentBlock.animate({ marginTop: 0 }, 300);
   });
+});
+
+$(window).on('load', function() {
+  $('.loader').hide();
+  $('.content').show();
+  $('.header_section').show();
+  $('.info_section').show();
+  $('.footer_section').show();
 });
