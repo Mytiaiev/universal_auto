@@ -40,10 +40,6 @@ body {
     margin-top: 100px;
 }
 
-/*.client_section, .info_section {*/
-/*    margin-top: 50px;*/
-/*}*/
-
 .heading_container.heading_center {
     -webkit-box-align: center;
     -ms-flex-align: center;
@@ -253,8 +249,6 @@ a:focus {
 
 .slider_section .img-box img {
     width: 100%;
-
-
 }
 
 .slider_section .carousel-control-prev,
@@ -685,7 +679,6 @@ header button start
     justify-content: center;
     display: flex;
     margin-top: 10px;
-
 }
 
 .info_section_header .text-danger {

@@ -23,9 +23,19 @@ class IndexView(TemplateView):
 
     def get_park_settings(self):
         park_settings = {}
-        park_setting_objects = ParkSettings.objects.all()
+        specific_keys = [
+            "FREE_CAR_SENDING_DISTANCE", "TARIFF_CAR_DISPATCH",
+            "TARIFF_CAR_OUTSIDE_DISPATCH", "TARIFF_IN_THE_CITY",
+            "TARIFF_OUTSIDE_THE_CITY", "CENTRE_CITY_LAT", "CENTRE_CITY_LNG",
+            "CENTRE_CITY_RADIUS", "SEND_TIME_ORDER_MIN"
+        ]
+
+        park_setting_objects = ParkSettings.objects.filter(
+            key__in=specific_keys)
+
         for park_setting in park_setting_objects:
             park_settings[park_setting.key] = park_setting.value
+
         return json.dumps(park_settings)
 
     def get_google_api_key(self):
