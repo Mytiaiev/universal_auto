@@ -201,27 +201,30 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField()
-    report_to = models.DateTimeField()
-    report_file_name = models.CharField(max_length=255)
-    driver_full_name = models.CharField(max_length=24)
-    mobile_number = models.CharField(max_length=24)
-    range_string = models.CharField(max_length=50)
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10)
-    cancels_amount = models.DecimalField(decimal_places=2, max_digits=10)
-    autorization_payment = models.DecimalField(decimal_places=2, max_digits=10)
-    autorization_deduction = models.DecimalField(decimal_places=2, max_digits=10)
-    additional_fee = models.DecimalField(decimal_places=2, max_digits=10)
-    fee = models.DecimalField(decimal_places=2, max_digits=10)
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10)
-    discount_cash_trips = models.DecimalField(decimal_places=2, max_digits=10)
-    driver_bonus = models.DecimalField(decimal_places=2, max_digits=10)
-    compensation = models.DecimalField(decimal_places=2, max_digits=10)
-    refunds = models.DecimalField(decimal_places=2, max_digits=10)
-    tips = models.DecimalField(decimal_places=2, max_digits=10)
-    weekly_balance = models.DecimalField(decimal_places=2, max_digits=10)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
+    driver_full_name = models.CharField(max_length=24, verbose_name='ПІ водія')
+    mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор водія')
+    range_string = models.CharField(max_length=50, verbose_name='Період')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальний тариф')
+    cancels_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
+    autorization_payment = models.DecimalField(decimal_places=2, max_digits=10,
+                                               verbose_name='Авторизаційцний платіж (платіж)')
+    autorization_deduction = models.DecimalField(decimal_places=2, max_digits=10,
+                                                 verbose_name='Авторизаційцний платіж (відрахування)')
+    additional_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Додатковий збір')
+    fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Bolt')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Поїздки за готівку')
+    discount_cash_trips = models.DecimalField(decimal_places=2, max_digits=10,
+                                              verbose_name='Сума знижки Bolt за готівкові поїздки')
+    driver_bonus = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Водійський бонус')
+    compensation = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Компенсації')
+    refunds = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    weekly_balance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Тижневий баланс')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
     vendor_name = 'Bolt'
 
@@ -235,7 +238,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         unique_together = (('report_from', 'report_to', 'driver_full_name', 'mobile_number'))
 
     def driver_id(self):
-        return self.mobile_number
+        return self.driver_full_name
 
     def report_text(self, name=None, rate=0.65):
         return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
@@ -692,7 +695,7 @@ class BoltFleet(Fleet):
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return Bolt.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
-    def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
+    def download_daily_report(self, day=None, interval=None, driver=True, sleep=5, headless=True):
         """the same method as weekly report. it gets daily report if day is non None"""
         if day == pendulum.now().start_of('day'):
             return None  # do if you need to get today report
@@ -700,7 +703,7 @@ class BoltFleet(Fleet):
         if period.in_days() > 30:
             return None  # do if you need to get report elder then 30 days
 
-        return Bolt.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        return Bolt.download_daily_report(day=day, interval=interval, driver=driver, sleep=sleep, headless=headless)
 
 
 class NewUklonFleet(Fleet):
@@ -709,16 +712,16 @@ class NewUklonFleet(Fleet):
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return NewUklon.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
-    def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
-        return NewUklon.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+    def download_daily_report(self, day=None, interval=None, driver=True, sleep=5, headless=True):
+        return NewUklon.download_daily_report(day=day, interval=interval, driver=driver, sleep=sleep, headless=headless)
 
 
 class UberFleet(Fleet):
     def download_weekly_report(self, week_number=None, driver=True, sleep=5, headless=True):
         return Uber.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
 
-    def download_daily_report(self, day=None, driver=True, sleep=5, headless=True):
-        return Uber.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+    def download_daily_report(self, day=None, interval=None, driver=True, sleep=5, headless=True):
+        return Uber.download_daily_report(day=day, interval=interval, driver=driver, sleep=sleep, headless=headless)
 
 
 class UklonFleet(Fleet):
@@ -738,7 +741,7 @@ class NinjaFleet(Fleet):
         report = NinjaPaymentsOrder.objects.filter(report_from=str(start_date).split()[0], report_to=str(end_date).split()[0])
         return list(report)
 
-    def download_daily_report(self, day=None, week_number=None, driver=True, sleep=5, headless=True):
+    def download_daily_report(self, day=None, interval=None, week_number=None, driver=True, sleep=5, headless=True):
         if day is None:
             day = pendulum.now().start_of('day').subtract(days=1)
         start_date = day.start_of("day")
@@ -1420,9 +1423,10 @@ def clickandclear(element):
 
 
 class SeleniumTools:
-    def __init__(self, session, week_number=None, day=None, profile=None):
+    def __init__(self, session, week_number=None, interval=None, day=None, profile=None):
         self.session_file_name = session
         self.day = day  # if not None then we work with daly reports
+        self.interval = interval
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
         if week_number:
@@ -1611,9 +1615,9 @@ class SeleniumTools:
 
 
 class Uber(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
+    def __init__(self, week_number=None, interval=None, day=None, driver=True, sleep=3, headless=False,
                  base_url=f"{UberService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('uber', week_number=week_number, day=day, profile=profile)
+        super().__init__('uber', interval=interval, week_number=week_number, day=day, profile=profile)
         self.sleep = sleep
         if driver:
             if remote:
@@ -1676,7 +1680,6 @@ class Uber(SeleniumTools):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"
         xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')}"
         self.get_target_page_or_login(url, xpath, self.login_v3)
-        self.driver.get_screenshot_as_file('generate_payments_order.png')
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath)))
         self.driver.find_element(By.XPATH, xpath).click()
         try:
@@ -1752,9 +1755,9 @@ class Uber(SeleniumTools):
             WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
             time.sleep(self.sleep)
             if self.remote:
-                self.get_last_downloaded_file_frome_remote(f'Uber {self.file_patern()}.csv')
+                self.get_last_downloaded_file_frome_remote(self.file_patern())
             else:
-                self.get_last_downloaded_file(f'Uber {self.file_patern()}.csv')
+                self.get_last_downloaded_file(self.file_patern())
 
         except Exception as e:
             self.logger.error(str(e))
@@ -1769,14 +1772,14 @@ class Uber(SeleniumTools):
 
         sd, sy, sm = start.strftime("%d"), start.strftime("%Y"), start.strftime("%m")
         ed, ey, em = end.strftime("%d"), end.strftime("%Y"), end.strftime("%m")
-        return f'{sy}{sm}{sd}-{ey}{em}{ed}-payments_driver'
+        return f'Uber {sy}{sm}{sd}-{ey}{em}{ed}-payments_driver.csv'
 
     def save_report(self):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(f'Uber {self.file_patern()}.csv')
+        self.logger.info(self.file_patern())
         start_date = self.start_of_day() if self.day else self.start_of_week()
         end_date = self.end_of_day() if self.day else self.end_of_week()
 
@@ -1901,7 +1904,6 @@ class Uber(SeleniumTools):
             el = self.driver.find_element(By.ID, id)
             el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
             self.driver.find_element(selector, button).click()
-            self.driver.get_screenshot_as_file('UBER_PASSWORD.png')
         except Exception as e:
             self.logger.error(str(e))
 
@@ -1910,7 +1912,6 @@ class Uber(SeleniumTools):
         element.send_keys(ParkSettings.get_value("UBER_NAME"))
         e = self.driver.find_element(selector, button)
         e.click()
-        self.driver.get_screenshot_as_file('UBER_NAME.png')
 
     def add_driver(self, phone_number, email, name, second_name):
         url = UberService.get_value('UBER_ADD_DRIVER_1')
@@ -1934,33 +1935,33 @@ class Uber(SeleniumTools):
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         """Can download and save weekly report"""
         u = Uber(week_number=week_number, driver=False, sleep=sleep, headless=headless)
-        report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+        report = UberPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         if not report:
             u = Uber(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
             u.download_payments_order()
             u.save_report()
             u.quit()
-            report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+            report = UberPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         return list(report)
 
     @staticmethod
-    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
+    def download_daily_report(day=None, interval=None, driver=True, sleep=5, headless=True):
         """Can download and save daily report if day is not None"""
-        u = Uber(day=day, driver=False, sleep=sleep, headless=headless)
-        report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+        u = Uber(day=day, driver=False, interval=interval, sleep=sleep, headless=headless)
+        report = UberPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         if not report:
-            u = Uber(day=day, driver=driver, sleep=sleep, headless=headless)
+            u = Uber(day=day, driver=driver, interval=interval, sleep=sleep, headless=headless)
             u.download_payments_order()
             u.save_report()
             u.quit()
-            report = UberPaymentsOrder.objects.filter(report_file_name=f'Uber {u.file_patern()}.csv')
+            report = UberPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         return list(report)
 
 
 class Bolt(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=3, headless=False,
+    def __init__(self, week_number=None, interval=None, day=None, driver=True, sleep=3, headless=False,
                  base_url=f"{BoltService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('bolt', week_number=week_number, day=day, profile=profile)
+        super().__init__('bolt', week_number=week_number, interval=interval, day=day, profile=profile)
         self.sleep = sleep
         if driver:
             if remote:
@@ -1994,29 +1995,41 @@ class Bolt(SeleniumTools):
         url = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')
         xpath = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')
         self.get_target_page_or_login(url, xpath, self.login)
+        try:
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, BoltService.get_value('BOLTS_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
+        except:
+            pass
         if self.day:
-            self.driver.get(BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_3'))
-            if self.sleep:
-                time.sleep(self.sleep)
-            xpath = f'{BoltService.get_value("BOLT_DOWNLOAD_PAYMENTS_ORDER_4")}"{self.file_patern()}"]'
-            element_date = self.driver.find_element(By.XPATH, xpath)
-            element_date.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_5')).click()
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
+                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
+            xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_4')}[{self.interval}]"
+            date = self.driver.find_element(By.XPATH, xpath)
+            if date.text != 'нд':
+                date.click()
+            else:
+                self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_8')).click()
+                xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_4')}[{self.interval}]"
+                self.driver.find_element(By.XPATH, xpath).click()
+            self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_5')).click()
         else:
-            self.driver.get(f"{url}/{self.file_patern()}")
-
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
+                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')))).click()
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
+                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_6')))).click()
+        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_7')).click()
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
-            self.get_last_downloaded_file_frome_remote(
-                save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            self.get_last_downloaded_file_frome_remote(save_as=self.file_patern())
         else:
-            self.get_last_downloaded_file(
-                save_as=f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            self.get_last_downloaded_file(save_as=self.file_patern())
 
     def file_patern(self):
         if self.day:
-            return self.day.format("DD.MM.YYYY")
-        return f"{self.current_date.strftime('%Y')}W{self.week_number()}"
+            return f'Bolt {self.day.format("DD.MM.YYYY")} – Kyiv Fleet 03_232 park Universal-auto.csv'
+        return f"Bolt {self.current_date.strftime('%Y')}W{self.week_number()} – Kyiv Fleet 03_232 park Universal-auto.csv"
 
     def payments_order_file_name(self):
         return self.report_file_name(self.file_patern())
@@ -2026,7 +2039,7 @@ class Bolt(SeleniumTools):
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(f'Bolt {self.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        self.logger.info(self.file_patern())
 
         if self.payments_order_file_name() is not None:
             with open(self.payments_order_file_name(), encoding="utf-8") as file:
@@ -2044,21 +2057,21 @@ class Bolt(SeleniumTools):
                         report_to=self.end_report_interval(),
                         report_file_name=file.name,
                         driver_full_name=row[0][:24],
-                        mobile_number=row[1],
-                        range_string=row[2],
-                        total_amount=float(row[3].replace(',', '.')),
-                        cancels_amount=float(row[4].replace(',', '.')),
-                        autorization_payment=float(row[5].replace(',', '.')),
-                        autorization_deduction=float(row[6].replace(',', '.')),
-                        additional_fee=float(row[7].replace(',', '.')),
-                        fee=float(row[8].replace(',', '.')),
-                        total_amount_cach=float(row[9].replace(',', '.')),
-                        discount_cash_trips=float(row[10].replace(',', '.')),
-                        driver_bonus=float(row[11].replace(',', '.')),
-                        compensation=float(str(row[12] or 0).replace(',', '.')),
-                        refunds=float(row[13].replace(',', '.')),
-                        tips=float(row[14].replace(',', '.')),
-                        weekly_balance=float(row[15].replace(',', '.')))
+                        mobile_number='',
+                        range_string='',
+                        total_amount=float(row[1].replace(',', '.')),
+                        cancels_amount=float(row[9].replace(',', '.')),
+                        autorization_payment=0,
+                        autorization_deduction=0,
+                        additional_fee=0,
+                        fee=float(row[1].replace(',', '.')) - float(row[4].replace(',', '.')),
+                        total_amount_cach=float(row[5].replace(',', '.')),
+                        discount_cash_trips=0,
+                        driver_bonus=float(row[7].replace(',', '.')),
+                        compensation=float(str(row[8] or 0).replace(',', '.')),
+                        refunds=float(row[14].replace(',', '.')),
+                        tips=float(row[6].replace(',', '.')),
+                        weekly_balance=0)
                     try:
                         order.save()
                     except IntegrityError:
@@ -2096,30 +2109,26 @@ class Bolt(SeleniumTools):
     def download_weekly_report(week_number=None, day=None, driver=True, sleep=5, headless=True):
         """Can download and save weekly report"""
         b = Bolt(week_number=week_number, day=day, driver=False, sleep=sleep, headless=headless)
-        report = BoltPaymentsOrder.objects.filter(
-            report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        report = BoltPaymentsOrder.objects.filter(report_file_name=b.file_patern())
         if not report:
             b = Bolt(week_number=week_number, day=day, driver=driver, sleep=sleep, headless=headless)
             b.download_payments_order()
             b.quit()
             b.save_report()
-            report = BoltPaymentsOrder.objects.filter(
-                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            report = BoltPaymentsOrder.objects.filter(report_file_name=b.file_patern())
         return list(report)
 
     @staticmethod
-    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
+    def download_daily_report(day=None, interval=None, driver=True, sleep=5, headless=True):
         """Can download and save daily report if day is not None"""
-        b = Bolt(day=day, driver=False, sleep=sleep, headless=headless)
-        report = BoltPaymentsOrder.objects.filter(
-            report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+        b = Bolt(day=day, driver=False, interval=interval, sleep=sleep, headless=headless)
+        report = BoltPaymentsOrder.objects.filter(report_file_name=b.file_patern())
         if not report:
-            b = Bolt(day=day, driver=driver, sleep=sleep, headless=headless)
+            b = Bolt(day=day, driver=driver, interval=interval, sleep=sleep, headless=headless)
             b.download_payments_order()
             b.quit()
             b.save_report()
-            report = BoltPaymentsOrder.objects.filter(
-                report_file_name=f'Bolt {b.file_patern()} – Kyiv Fleet 03_232 park Universal-auto.csv')
+            report = BoltPaymentsOrder.objects.filter(report_file_name=b.file_patern())
         return list(report)
 
 
@@ -2251,9 +2260,9 @@ class Uklon(SeleniumTools):
 
 
 class NewUklon(SeleniumTools):
-    def __init__(self, week_number=None, day=None, driver=True, sleep=5, headless=False,
+    def __init__(self, week_number=None, interval=None, day=None, driver=True, sleep=5, headless=False,
                  base_url=f"{NewUklonService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('nuklon', week_number=week_number, day=day, profile=profile)
+        super().__init__('nuklon', week_number=week_number, interval=interval, day=day, profile=profile)
         self.sleep = sleep
         if driver:
             if remote:
@@ -2306,17 +2315,17 @@ class NewUklon(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=f'Uklon {self.file_patern()}.csv')
+            self.get_last_downloaded_file_frome_remote(save_as=self.file_patern())
         else:
-            self.get_last_downloaded_file(save_as=f'Uklon {self.file_patern()}.csv')
+            self.get_last_downloaded_file(save_as=self.file_patern())
 
     def save_report(self):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(f'Uklon {self.file_patern()}.csv')
-        report = open(self.report_file_name(f'Uklon {self.file_patern()}.csv'))
+        self.logger.info(self.file_patern())
+        report = open(self.payments_order_file_name())
 
         start_date = self.start_of_day() if self.day else self.start_of_week()
         end_date = self.end_of_day() if self.day else self.end_of_week()
@@ -2382,7 +2391,7 @@ class NewUklon(SeleniumTools):
 
         sd, sy, sm = start.strftime("%d"), start.strftime("%y"), start.strftime("%m")
         ed, ey, em = end.strftime("%d"), end.strftime("%y"), end.strftime("%m")
-        return f'00.00.{sd}.{sm}.{sy} - 23.59.{ed}.{em}.{ey}'
+        return f'Uklon 00.00.{sd}.{sm}.{sy} - 23.59.{ed}.{em}.{ey}.csv'
 
     def wait_otp_code(self, user):
         r = redis.Redis.from_url(os.environ["REDIS_URL"])
@@ -2414,26 +2423,26 @@ class NewUklon(SeleniumTools):
     def download_weekly_report(week_number=None, driver=True, sleep=5, headless=True):
         """Can download and save weekly report"""
         u = NewUklon(week_number=week_number, driver=False, sleep=sleep, headless=headless)
-        report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        report = NewUklonPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         if not report:
             u = NewUklon(week_number=week_number, driver=driver, sleep=sleep, headless=headless)
             u.download_payments_order()
             u.quit()
             u.save_report()
-            report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+            report = NewUklonPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         return list(report)
 
     @staticmethod
-    def download_daily_report(day=None, driver=True, sleep=5, headless=True):
+    def download_daily_report(day=None, driver=True, interval=None, sleep=5, headless=True):
         """Can download and save daily report if day is not None"""
-        u = NewUklon(day=day, driver=False, sleep=sleep, headless=headless)
-        report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+        u = NewUklon(day=day, driver=False, sleep=sleep, interval=interval, headless=headless)
+        report = NewUklonPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         if not report:
-            u = NewUklon(day=day, driver=driver, sleep=sleep, headless=headless)
+            u = NewUklon(day=day, interval=interval, driver=driver, sleep=sleep, headless=headless)
             u.download_payments_order()
             u.quit()
             u.save_report()
-            report = NewUklonPaymentsOrder.objects.filter(report_file_name=f'Uklon {u.file_patern()}.csv')
+            report = NewUklonPaymentsOrder.objects.filter(report_file_name=u.file_patern())
         return list(report)
 
 
@@ -2545,7 +2554,7 @@ class UaGps(SeleniumTools):
         time.sleep(self.sleep)
 
 
-def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, headless=True):
+def get_report(week=False, day=None, interval=None, week_number=None, driver=True, sleep=5, headless=True):
     owner = {"Fleet Owner": 0}
     reports = {}
     totals = {}
@@ -2556,7 +2565,7 @@ def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, hea
             all_drivers_report = fleet.download_weekly_report(week_number=week_number, driver=driver, sleep=sleep,
                                                               headless=headless)
         else:
-            all_drivers_report = fleet.download_daily_report(day=day, driver=driver, sleep=sleep,
+            all_drivers_report = fleet.download_daily_report(day=day, interval=interval, driver=driver, sleep=sleep,
                                                              headless=headless)
 
         for rate in Fleets_drivers_vehicles_rate.objects.filter(fleet_id=fleet.id, deleted_at=None):
@@ -2583,7 +2592,7 @@ def get_report(week=False, day=None, week_number=None, driver=True, sleep=5, hea
     return owner, totals, plan
 
 
-def download_and_save_daily_report(day=None, driver=False, sleep=5, headless=True):
+def download_and_save_daily_report(day=None, interval=None, driver=False, sleep=5, headless=True):
     fleets = Fleet.objects.filter(deleted_at=None)
     for fleet in fleets:
-        fleet.download_daily_report(day=day, driver=driver, sleep=sleep, headless=headless)
+        fleet.download_daily_report(day=day, interval=interval, driver=driver, sleep=sleep, headless=headless)

@@ -90,7 +90,7 @@ def download_daily_report(self):
     # Yesterday
     try:
         day = pendulum.now().start_of('day').subtract(days=1)  # yesterday
-        download_and_save_daily_report(driver=True, sleep=5, headless=True, day=day)
+        download_and_save_daily_report(driver=True, sleep=5, headless=True, day=day, interval=1)
     except Exception as e:
         logger.info(e)
 
@@ -178,8 +178,8 @@ def update_driver_data(self):
 def download_weekly_report_force(self):
     try:
         BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-        UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-        UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
+        # UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
+        # UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
     except Exception as e:
         logger.info(e)
 
@@ -229,7 +229,8 @@ def send_daily_into_group(self):
         if today > 0:
             for i in range(today):
                 day = pendulum.now().start_of('day').subtract(days=i + 1)
-                report = get_report(week=False, day=day, week_number=None, driver=True, sleep=5, headless=True)[2]
+                report = get_report(week=False, day=day, interval=i*2 + 1,
+                                    week_number=None, driver=True, sleep=5, headless=True)[2]
                 for key, value in report.items():
                     total_values[key] = total_values.get(key, 0) + value
         else:
