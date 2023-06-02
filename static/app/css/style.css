@@ -1704,18 +1704,16 @@ body .btn-one {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 8040;
 }
 
 .word-spacing {
     white-space: pre;
 }
 
-.content,
-.header_section,
-.info_section,
-.footer_section {
-    display: none;
-}
 
 .loader > span:nth-child(odd) {
     color: #E96F24;
