@@ -89,11 +89,11 @@ newuklon_states = {
     'NEWUKLONS_GET_DRIVER_STATUS_1': ('https://fleets.uklon.com.ua/workspace/live-map', 'url'),
     'NEWUKLONS_GET_DRIVER_STATUS_2': ('//div[contains(@class, "map-header")]', 'xpath'),
     'NEWUKLONS_WITHDRAW_MONEY_1': ('https://fleets.uklon.com.ua/workspace/finance', 'url'),
-    'NEWUKLONS_WITHDRAW_MONEY_2': ("//div[text()='Гаманці водіїв']", 'xpath'),
-    'NEWUKLONS_WITHDRAW_MONEY_3': ("//span[@class='mat-checkbox-inner-container']", 'XPATH'),
-    'NEWUKLONS_WITHDRAW_MONEY_4': ("//input[@formcontrolname='remaining']", 'XPATH'),
-    'NEWUKLONS_WITHDRAW_MONEY_5': ("//button/span[text()=' Перевод на гаманець автопарку ']", 'XPATH'),
-    'NEWUKLONS_WITHDRAW_MONEY_6': ("//button/span[text()=' Перевести гроші ']", 'XPATH'),
+    'NEWUKLONS_WITHDRAW_MONEY_2': ('//div[@class="mat-tab-labels"]/div[2]', 'xpath'),
+    'NEWUKLONS_WITHDRAW_MONEY_3': ('//span[@class="mat-checkbox-inner-container"]', 'XPATH'),
+    'NEWUKLONS_WITHDRAW_MONEY_4': ('//input[@formcontrolname="remaining"]', 'XPATH'),
+    'NEWUKLONS_WITHDRAW_MONEY_5': ('//div[contains (@class, "tw-col-span-5")]/button[1]', 'XPATH'),
+    'NEWUKLONS_WITHDRAW_MONEY_6': ('//button[@data-cy="transfer-btn"]', 'XPATH'),
 }
 
 uagps_states = {

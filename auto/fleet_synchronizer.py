@@ -468,7 +468,6 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 'email': self.validate_email(email),
                 'phone_number': self.validate_phone_number(phone_number),
                 'driver_external_id': driver_external_id,
-                'pay_cash': False,
                 'withdraw_money': withdraw_money,
                 'licence_plate': licence_plate,
                 'vehicle_name': vehicle_name,
@@ -520,7 +519,6 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             print(err.msg)
 
     def withdraw_money(self):
-        bot.send_message(chat_id='515224934', text='withdraw started')
         url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')
         xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
         self.get_target_element_of_page(url, xpath)
@@ -528,9 +526,8 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        checkbox = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_3'))))
-        checkbox.click()
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_3')))).click()
         sum_remain = WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_4'))))
         clickandclear(sum_remain)
@@ -539,7 +536,6 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_5')))).click()
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_6')))).click()
-        bot.send_message(chat_id='515224934', text='withdraw finished')
 
     def add_driver(self, jobapplication):
         url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
