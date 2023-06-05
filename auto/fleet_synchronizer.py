@@ -250,48 +250,34 @@ class BoltSynchronizer(Synchronizer, Bolt):
         while True:
             i_table += 1
             try:
-                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}{i_table}]'
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                i = 0
-                while True:
-                    i += 1
-                    try:
-                        _ = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4")
-                        el = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4.1")}'
-                        status_class = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
-                        if 'success' not in status_class:
-                            continue
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.1")}'
-                        name = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.2")}'
-                        email = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.3")}'
-                        phone_number = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.4")}'
-                        pay_cash = 'success' in WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
-                        s_name = self.split_name(name)
-                        drivers.append({
-                            'fleet_name': 'Bolt',
-                            'name': s_name[0],
-                            'second_name': s_name[1],
-                            'email': self.validate_email(email),
-                            'phone_number': self.validate_phone_number(phone_number),
-                            'driver_external_id': phone_number,
-                            'pay_cash': pay_cash,
-                            'withdraw_money': False,
-                            'licence_plate': '',
-                            'vehicle_name': '',
-                            'vin_code': '',
+                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}[{i_table}]'
+                driver_row = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath)))
+                name = driver_row.find_element(By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4"))
+                full_name = name.text
+                name.click()
+                email = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5")))).text
+                phone_number = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_6")))).text
+                elements = self.driver.find_elements(By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_7"))
+                pay_cash = (len(elements) == 2)
+                self.driver.back()
+                s_name = self.split_name(full_name)
+                drivers.append({
+                    'fleet_name': 'Bolt',
+                    'name': s_name[0],
+                    'second_name': s_name[1],
+                    'email': self.validate_email(email),
+                    'phone_number': self.validate_phone_number(phone_number),
+                    'driver_external_id': full_name,
+                    'pay_cash': pay_cash,
+                    'withdraw_money': False,
+                    'licence_plate': '',
+                    'vehicle_name': '',
+                    'vin_code': '',
 
-                        })
-                    except TimeoutException:
-                        break
+                })
             except TimeoutException:
                 break
         return drivers

@@ -230,7 +230,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
     class Scopes:
         def filter_by_driver_external_id(self, driver_external_id):
-            return self.filter(mobile_number=driver_external_id)
+            return self.filter(driver_full_name=driver_external_id)
 
     class Meta:
         verbose_name = 'Payments order: Bolt'
