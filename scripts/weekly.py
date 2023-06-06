@@ -1,4 +1,4 @@
-from auto.tasks import download_reports
+from auto.tasks import download_weekly_report
 
 
 def run(*args):
@@ -6,7 +6,7 @@ def run(*args):
         week_number = f"2022W{args[0]}5"
     else:
         week_number = None
-    print(download_reports())
+    print(download_weekly_report.delay())
 
 
 

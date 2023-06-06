@@ -471,6 +471,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 'email': self.validate_email(email),
                 'phone_number': self.validate_phone_number(phone_number),
                 'driver_external_id': driver_external_id,
+                'pay_cash': False,
                 'withdraw_money': withdraw_money,
                 'licence_plate': licence_plate,
                 'vehicle_name': vehicle_name,
@@ -483,7 +484,8 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         try:
             xpath = f"{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1')}[{search_text}]"
             WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
-        except TimeoutException:
+        except Exception as e:
+            print(e)
             return raw_data
         i = 0
         while True:

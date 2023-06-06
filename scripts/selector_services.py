@@ -7,7 +7,7 @@ bolt_states = {
     'BOLT_LOGIN_3': ('current-password', 'ID'),
     'BOLT_LOGIN_4': ('//button[@type="submit"]', 'XPATH'),
     'BOLT_DOWNLOAD_PAYMENTS_ORDER_1': ('https://fleets.bolt.eu/v2/58225/reports', 'url'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_2': ('//div[@class="max-w-[240px]"]/button', 'xpath'),
+    'BOLT_DOWNLOAD_PAYMENTS_ORDER_2': ('//div[@class="max-w-[240px]"]//button', 'xpath'),
     'BOLT_DOWNLOAD_PAYMENTS_ORDER_3': ('//div[contains(@class, "react-datepicker-wrapper")]//input', 'XPATH'),
     'BOLT_DOWNLOAD_PAYMENTS_ORDER_4': ('//div[@tabindex="0" and @role="option"]/preceding::div', 'XPATH'),
     'BOLT_DOWNLOAD_PAYMENTS_ORDER_5': ('//div[@tabindex="0" and @role="option"]', 'XPATH'),
