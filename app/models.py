@@ -244,21 +244,18 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
-        res = self.total_cach_less_drivers_amount() * rate + float(self.total_amount_cach)
+        res = self.kassa() * rate - float(self.total_amount_cach)
         return res
-
-    def total_cach_less_drivers_amount(self):
-        return float(self.total_amount) + float(self.fee) + float(self.cancels_amount) + float(
-            self.driver_bonus) + float(self.autorization_payment) + float(self.tips)
 
     def vendor(self):
         return 'bolt'
 
     def kassa(self):
-        return (self.total_cach_less_drivers_amount())
+        return float(self.total_amount) - float(self.fee) + float(self.cancels_amount) + float(
+            self.driver_bonus) + float(self.autorization_payment) + float(self.tips)
 
     def total_owner_amount(self, rate=0.65):
-        return self.total_cach_less_drivers_amount() * (1 - rate) - self.total_drivers_amount(rate)
+        return self.kassa() * (1 - rate) - self.total_drivers_amount(rate)
 
 
 class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
@@ -295,13 +292,13 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return f'Uber: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
-        return float(self.total_amount) * rate + float(self.total_amount_cach)
+        return self.kassa() * rate + float(self.total_amount_cach)
 
     def vendor(self):
         return 'uber'
 
     def total_owner_amount(self, rate=0.65):
-        return float(self.total_amount) * (1 - rate) - self.total_drivers_amount(rate)
+        return self.kassa() * (1 - rate) - self.total_drivers_amount(rate)
 
     def kassa(self):
         return float(self.total_amount)

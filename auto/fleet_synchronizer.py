@@ -497,7 +497,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                     EC.presence_of_element_located((By.XPATH, xpath))).text
 
             except TimeoutException:
-                break
+                return raw_data
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
             name, second_name = '', ''
             try:
