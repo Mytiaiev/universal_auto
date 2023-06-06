@@ -684,7 +684,15 @@ header button start
 .info_section_header .text-danger {
     font-size: 65%;
     padding-right: 5px;
-    padding-top: 5px;
+    /*padding-top: 5px;*/
+}
+
+.text-danger {
+    display: flex;
+    justify-content: center; /* Выравнивание по горизонтали */
+    align-items: center; /* Выравнивание по вертикали */
+    text-align: center;
+    margin-right: 10px;
 }
 
 .info_section_header .info_form form {
@@ -1199,6 +1207,7 @@ label {
     margin-top: 0;
     margin-bottom: 0.5rem;
     text-align: left;
+    color: white;
 }
 
 .hero-banner-one form {
@@ -1347,6 +1356,7 @@ label {
 
 .lg-pt-30 {
     padding-top: 30px;
+    color: white;
 }
 
 .pt-50 {
@@ -1567,7 +1577,8 @@ label {
     font-weight: 700;
     font-style: italic;
     margin: 0;
-    font-size: 35px
+    font-size: 35px;
+    color: #fff;
 }
 
 .btn-blog {
@@ -1622,6 +1633,7 @@ body .btn-one {
     font-weight: 500;
     margin-bottom: 20px;
     text-transform: uppercase;
+    color: black;
 }
 
 
@@ -1632,6 +1644,7 @@ body .btn-one {
     font-style: italic;
     margin-top: 20px;
     height: 150px;
+    color: black;
 }
 
 .postInUp {
