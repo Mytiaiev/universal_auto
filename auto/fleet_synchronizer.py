@@ -14,9 +14,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import TimeoutException, WebDriverException, InvalidSessionIdException
 from translators.server import tss
-from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange,\
-    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber,\
-    SeleniumTools, UaGps, clickandclear
+from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange, \
+    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber, \
+    SeleniumTools, UaGps, clickandclear, BoltPaymentsOrder, NewUklonPaymentsOrder, UberPaymentsOrder
 from auto import settings
 from auto_bot.main import bot
 
@@ -327,13 +327,16 @@ class BoltSynchronizer(Synchronizer, Bolt):
         except (TimeoutException, WebDriverException) as err:
             print(err.msg)
 
-    def download_weekly_report(self):
-        if self.payments_order_file_name() not in os.listdir(os.curdir):
-            try:
-                self.download_payments_order()
-                print(f'Bolt weekly report has been downloaded')
-            except Exception as err:
-                print(err.msg)
+    def download_weekly_report(self, day=None, interval=None):
+        try:
+            report = BoltPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            if not report:
+                self.download_payments_order(day=day, interval=interval)
+                self.save_report(day=day)
+                report = BoltPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            return list(report)
+        except Exception as err:
+            print(err)
 
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:
@@ -548,7 +551,6 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
         form_phone_number = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_5'))
         clickandclear(form_phone_number)
-        print(jobapplication.phone_number[4:])
         form_phone_number.send_keys(jobapplication.phone_number[4:])
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
@@ -606,13 +608,16 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
 
-    def download_weekly_report(self):
-        if self.payments_order_file_name() not in os.listdir(os.curdir):
-            try:
-                self.download_payments_order()
-                print(f'Uklon weekly report has been downloaded')
-            except Exception as err:
-                print(err.msg)
+    def download_weekly_report(self, day=None):
+        try:
+            report = NewUklonPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            if not report:
+                self.download_payments_order(day=day)
+                self.save_report(day=day)
+                report = NewUklonPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            return list(report)
+        except Exception as err:
+            print(err)
 
 
 class UberSynchronizer(Synchronizer, Uber):
@@ -762,13 +767,16 @@ class UberSynchronizer(Synchronizer, Uber):
         except WebDriverException as err:
             print(err.msg)
 
-    def download_weekly_report(self):
-        if self.payments_order_file_name() not in os.listdir(os.curdir):
-            try:
-                self.download_payments_order()
-                print(f'Uber weekly report has been downloaded')
-            except Exception as err:
-                print(err.msg)
+    def download_weekly_report(self, day=None):
+        try:
+            report = UberPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            if not report:
+                self.download_payments_order(day=day)
+                self.save_report(day=day)
+                report = UberPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            return list(report)
+        except Exception as err:
+            print(err.msg)
 
 
 class UaGpsSynchronizer(Synchronizer, UaGps):
