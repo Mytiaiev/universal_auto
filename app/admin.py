@@ -317,13 +317,6 @@ class ServiceStationAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
-@admin.register(Fleets_drivers_vehicles_rate)
-@add_partner_on_save_model(Fleets_drivers_vehicles_rate)
-class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_display = [f.name for f in Fleets_drivers_vehicles_rate._meta.fields]\
-
-
-
 @admin.register(ServiceStationManager)
 class ServiceStationManagerAdmin(admin.ModelAdmin):
     list_display = ('name', 'second_name', 'service_station', 'email', 'phone_number', 'created_at')
@@ -728,7 +721,7 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         else:
             return ['id', 'name', 'second_name', 'email',
-                    'phone_number', 'created_at',
+                    'phone_number', 'chat_id', 'created_at',
                     ]
 
     def get_fieldsets(self, request, obj=None):
@@ -743,7 +736,7 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         else:
             fieldsets = [
-                ('Інформація про менеджера',   {'fields': ['name', 'second_name', 'email',
+                ('Інформація про менеджера',   {'fields': ['name', 'second_name', 'email', 'chat_id',
                                                            'phone_number',
                                                            ]}),
             ]
@@ -769,9 +762,8 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         else:
             return ['id', 'name', 'second_name',
-                    'email', 'phone_number',
-                    'driver_status', 'partner',
-                    'created_at',
+                    'email', 'phone_number', 'chat_id',
+                    'driver_status', 'created_at',
                     ]
 
     def get_fieldsets(self, request, obj=None):
@@ -786,7 +778,7 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         else:
             fieldsets = [
-                ('Інформація про водія',       {'fields': ['name', 'second_name', 'email', 'phone_number',
+                ('Інформація про водія',       {'fields': ['name', 'second_name', 'email', 'phone_number', 'chat_id',
                                                            ]}),
                 ('Статус водія',               {'fields': ['driver_status',
                                                            ]}),
@@ -844,7 +836,6 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         return fieldsets
 
 
-
 @admin.register(Order)
 class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_list_display(self, request):
@@ -897,3 +888,41 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         return fieldsets
 
+
+@admin.register(Fleets_drivers_vehicles_rate)
+@add_partner_on_save_model(Fleets_drivers_vehicles_rate)
+class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['fleet', 'driver', 'vehicle',
+                    'driver_external_id', 'rate',
+                    'sum', 'payment_method', 'order_time',
+                    'created_at', 'pay_cash',
+                    'withdraw_money',
+                   ]
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Номер запису',               {'fields': ['id',
+                                                           ]}),
+                ('Деталі',                     {'fields': ['fleet', 'driver',
+                                                           'vehicle', 'driver_external_id',
+                                                           'rate', 'pay_cash', 'withdraw_money',
+                                                           'partner',
+                                                           ]}),
+            ]
+        else:
+            fieldsets = [
+                ('Номер запису',               {'fields': ['id',
+                                                           ]}),
+                ('Деталі',                     {'fields': ['fleet', 'driver',
+                                                           'vehicle', 'driver_external_id',
+                                                           'rate', 'pay_cash', 'withdraw_money'
+                                                           ]}),
+
+            ]
+
+        return fieldsets

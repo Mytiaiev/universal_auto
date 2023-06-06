@@ -857,6 +857,10 @@ class Fleets_drivers_vehicles_rate(models.Model):
     def __str__(self) -> str:
         return ''
 
+    class Meta:
+        vervbose_name = 'Рейтинг водія в автопарку'
+        vervbose_name_plural = 'Рейтинг водіїв в автопарках'
+
 
 class DriverRateLevels(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
