@@ -1005,13 +1005,19 @@ label {
 }
 
 .services-title {
-    text-align: center;
+    text-align: left;
     font-size: 36px;
     margin: 20px 0 40px;
     position: relative;
     font-family: 'Source Sans Pro', sans-serif;
     font-weight: 700;
     font-style: italic;
+    text-transform: uppercase;
+    padding-left: 10px;
+}
+
+.services-title-index{
+    height: 75px;
 }
 
 .services-grid {
@@ -1121,6 +1127,7 @@ label {
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    /*height: 200px;*/
 }
 
 .btn.btn-primary {
@@ -1411,10 +1418,9 @@ label {
 
 /*services block*/
 
-.fadeInLeft, .fadeInRight {
-    -ms-flex: 0 0 50%;
-    flex: 0 0 50%;
-    max-width: 50%;
+.fadeInLeft {
+    flex: 100%;
+    max-width: 100%;
 }
 
 .fancy-feature-one {
@@ -1423,14 +1429,6 @@ label {
 
 .inner-content {
     padding-top: 30px
-}
-
-.services-title {
-    text-transform: uppercase;
-    font-family: 'Source Sans Pro', sans-serif;
-    font-weight: 700;
-    font-style: italic;
-    padding-right: 30px;
 }
 
 .services-text {
