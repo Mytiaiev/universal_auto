@@ -73,7 +73,7 @@ class GetRequestView(View):
 
 
 
-def about(request):
+def investment(request):
     return render(request, 'investment.html', {'subscribe_form': SubscriberForm()})
 
 

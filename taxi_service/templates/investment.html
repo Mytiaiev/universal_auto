@@ -9,19 +9,11 @@
 				<div class="container">
 					<div class="row">
 						<div class="col-lg-6 col-md-7">
-							<h1 class="hero-heading fw-bold tx-dark">We’r Help <br> to Achive
-								your Success.</h1>
-							<p class="text-lg mb-60 pt-50 pe-xl-5 lg-pt-30 lg-mb-40">Agency
-								work with top rated talented people provide qulaity
-								services.</p>
-							<form action="#" class="bg-white">
-								<input type="email" placeholder="Enter your email address">
-								<button class="tran3s">SUBSCRIBE</button>
-							</form>
-							<div class="pr-info fw-500 fs-20 tx-dark mt-35">Over <span
-									class="fw-bold text-decoration-underline">150,000+ client</span>
-								all over the world.
-							</div>
+							<h1 class="hero-heading fw-bold tx-dark">Інвестуй в екологічне майбутнє</h1>
+							<p class="text-lg mb-60 pt-50 pe-xl-5 lg-pt-30 lg-mb-40">
+								Пиши нам і дізнайся більше про вигідну інвестицію, яка зробить навколишнє середовище чистішим!
+							</p>
+							{% include '_subscribe_form.html' with button=_("Підписатись") form='3' %}
 						</div>
 					</div>
 					<div class="illustration-holder">
@@ -57,62 +49,28 @@
 				<div class="row">
 					<div class="fadeInLeft">
 						<div class="title-style-one text-center text-lg-start">
-							<h2 class="services-title">Provide Quality<br>Services.</h2>
+							<h2 class="services-title">Що ми пропонуємо:</h2>
 						</div>
-					</div>
-					<div class="fadeInRight">
-						<p class="services-text">Jano provides alternative asset management
-							solutions to a global client base and manages a significant.</p>
 					</div>
 				</div>
 			</div>
 			<div class="container content">
 				<div class="row">
-					<div class="fadeInUp" data-block="1">
-						<div class="card-style">
-							<div class="icon"
-									 style="background-color: rgba(255, 171, 51, 0.18);"><img
-									src="{% static 'app/images/assets/icon_01.svg' %}" alt=""
-									class="lazy-img" style=""></div>
-							<h5 class="inner-title">Quality Design <br> Maker.</h5>
-							<p class="inner-text">The core of our service is based on the
-								objective investment advice we seek to provide supported.</p>
-							<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
-						</div> <!-- /.card-style-one -->
+					<div class="services-grid__invest col-md-6 col-lg-4" data-block="1">
+						<figure style="background-image: url({% static 'app/images/assets/img-3.jpeg' %})" class="cover"></figure>
+						<h5 class="inner-title">{% trans "Ремонт і обслуговування<br>машин за наш рахунок" %}</h5>
+						<a class="btn btn-primary" href="#">{% trans "дізнатись більше" %}</a>
 					</div>
-					<div class="fadeInUp" data-block="2">
-						<div class="card-style">
-							<div class="icon"
-									 style="background-color: rgba(100, 219, 226, 0.18);"><img
-									src="{% static 'app/images/assets/icon_02.svg' %}" alt=""
-									class="lazy-img" style=""></div>
-							<h5 class="inner-title">Professional Support <br> by expert.</h5>
-							<p class="inner-text">Through our Family Office Services, we are
-								able to provide the expertise derived from our beginnings.</p>
-							<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
-						</div> <!-- /.card-style-one -->
+					<div class="services-grid__invest col-md-6 col-lg-4" data-block="2">
+						<figure style="background-image: url({% static 'app/images/assets/img-1.jpeg' %})" class="cover"></figure>
+						<h5 class="inner-title">{% trans "Власні підзарядні станції" %}</h5>
+						<a class="btn btn-primary" href="#">{% trans "дізнатись більше" %}</a>
 					</div>
-					<div class="fadeInUp" data-block="3">
-						<div class="card-style">
-							<div class="icon"
-									 style="background-color: rgba(255, 160, 194, 0.18);"><img
-									src="{% static 'app/images/assets/icon_03.svg' %}" alt=""
-									class="lazy-img" style=""></div>
-							<h5 class="inner-title">Marketing &amp; Affiliate <br> Services.
-							</h5>
-							<p class="inner-text">Capco’s response is proven by our superb
-								record of driving change through effective portfolio.</p>
-							<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
-						</div> <!-- /.card-style-one -->
+					<div class="services-grid__invest col-md-6 col-lg-4" data-block="3">
+						<figure style="background-image: url({% static 'app/images/assets/img-2.jpeg' %})" class="cover"></figure>
+						<h5 class="inner-title">{% trans "Досвідчені і кваліфіковані водії" %}</h5>
+						<a class="btn btn-primary" href="#">{% trans "дізнатись більше" %}</a>
 					</div>
-					{#					<div class="fadeInUp">#}
-					{#						<div class="card-style">#}
-					{#							<div class="icon" style="background-color: rgba(246, 243, 255, 1);"><img src="{% static 'app/images/assets/icon_04.svg' %}" alt="" class="lazy-img" style=""></div>#}
-					{#							<h5 class="inner-title">Cross Browser <br> Optimized.</h5>#}
-					{#							<p class="inner-text">The core of our service is based on the objective investment advice we seek to provide supported.</p>#}
-					{#							<a class="btn btn-primary">{% trans "Читати далі >" %}</a>#}
-					{#						</div> <!-- /.card-style-one -->#}
-					{#					</div>#}
 				</div>
 			</div> <!-- /.inner-content -->
 		</div> <!-- /.fancy-feature-one -->
@@ -131,12 +89,11 @@
 					<div class="row align-items-center">
 						<div class="col-lg-6 col-sm-7">
 							<div class="title-style-one">
-								<h2 class="main-title">Inside <span>story</span> of our company.
-								</h2>
+								<h2 class="main-title">ВНУТРІШНЯ ІСТОРІЯ НАШОЇ КОМПАНІЇ</h2>
 							</div> <!-- /.title-style-one -->
 						</div>
 						<div class="btn-blog">
-							<a href="#" class="btn-one">Go to Blog</a>
+							<a href="#" class="btn-one">Перейти до блогу</a>
 						</div>
 					</div>
 					<div class="row lg-pt-30">
@@ -146,10 +103,9 @@
 										src="{% static 'app/images/assets/blog_img_01.jpg' %}"
 										alt="" class="lazy-img w-100 tran4s"></figure>
 								<div class="post-data">
-									<span class="post-tag" style="background-color: #FFEAC9;">Technology </span>
-									<h4 class="post-title">A Discount Cartridge dsu is Better
-										Ever.</h4>
-									<a href="#">Go to post</a>
+									<span class="post-tag" style="background-color: #FFEAC9;">Технології</span>
+									<h4 class="post-title">Технології в дії: Як електро таксі змінюють правила гри</h4>
+									<a href="#">Перейти до публікації</a>
 								</div> <!-- /.post-data -->
 							</article> <!-- /.blog-meta-one -->
 						</div>
@@ -159,10 +115,9 @@
 										src="{% static 'app/images/assets/blog_img_02.jpg' %}"
 										alt="" class="lazy-img w-100 tran4s"></figure>
 								<div class="post-data">
-									<span class="post-tag" style="background-color: #CEEBF4;">Design</span>
-									<h4 class="post-title">Good design is the key of
-										business.</h4>
-									<a href="#">Go to post</a>
+									<span class="post-tag" style="background-color: #CEEBF4;">Дизайн</span>
+									<h4 class="post-title">Дизайн майбутнього: Інноваційні концепції в електро таксі</h4>
+									<a href="#">Перейти до публікації</a>
 								</div> <!-- /.post-data -->
 							</article> <!-- /.blog-meta-one -->
 						</div>
@@ -172,10 +127,9 @@
 										src="{% static 'app/images/assets/blog_img_03.jpg' %}"
 										alt="" class="lazy-img w-100 tran4s"></figure>
 								<div class="post-data">
-									<span class="post-tag" style="background-color: #FFDFDF;">Support </span>
-									<h4 class="post-title">Client satisfaction is the goal of
-										business success.</h4>
-									<a href="#">Go to post</a>
+									<span class="post-tag" style="background-color: #FFDFDF;">Підтримка</span>
+									<h4 class="post-title">Поруч і завжди доступні: Важливість ефективної підтримки в електро таксі</h4>
+									<a href="#">Перейти до публікації</a>
 								</div> <!-- /.post-data -->
 							</article> <!-- /.blog-meta-one -->
 						</div>

@@ -681,16 +681,17 @@ $(document).ready(function(){
       },
       success: function(data){
         $('#email-error-1, #email-error-2').html('');
-        this.reset();
+        form.reset();
       },
-
-      error: function(data){
-       $('#email-error-1, #email-error-2').html('');
-        var errors = data.responseJSON;
-        $.each(errors, function(key, value) {
-          $('#' + key + '-error-1').html(value);
-          $('#' + key + '-error-2').html(value);
-        });
+      error: function(xhr, textStatus, errorThrown){
+        if (xhr.status === 400) {
+          var errors = xhr.responseJSON;
+          $.each(errors, function(key, value) {
+            $('#' + key + '-error-1, #' + key + '-error-2').html(value);
+          });
+        } else {
+          console.error('Помилка запиту: ' + textStatus);
+        }
       }
     });
   });

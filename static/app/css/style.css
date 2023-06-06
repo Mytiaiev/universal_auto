@@ -1019,6 +1019,35 @@ label {
   flex-wrap: wrap;
 }
 
+.services-grid__invest {
+    flex: 1 0 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.services-grid__invest figure {
+    position: relative;
+    border-radius: 20px;
+}
+
+.services-grid__invest figure:before {
+    padding-bottom: 65.5%;
+    display: block;
+    content: '';
+}
+
+@media (min-width: 768px) {
+  .services-grid__invest {
+    flex: 0 0 calc(50% - 20px);
+  }
+}
+
+@media (min-width: 992px) {
+  .services-grid__invest {
+    flex: 0 0 calc(33% - 20px);
+  }
+}
+
 .services-grid__item {
   flex: 1 0 100%;
   padding: 10px;
@@ -1409,6 +1438,7 @@ label {
 }
 
 .card-style {
+    text-align: left;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     padding: 20px;
     margin-bottom: 20px;
@@ -1455,6 +1485,7 @@ label {
     margin-bottom: 25px;
     margin-top: 35px;
     color: #000;
+    height: 50px;
 }
 
 .inner-text {
@@ -1561,7 +1592,6 @@ body .btn-one {
     border-radius: 25px;
     margin-top: 30px;
     transition: .3s ease-in-out;
-
 }
 
 .blog-meta-one .post-img {
@@ -1594,18 +1624,25 @@ body .btn-one {
     font-weight: 700;
     font-style: italic;
     margin-top: 20px;
+    height: 150px;
 }
 
 .postInUp {
-    visibility: visible;
-    animation-name: fadeInUp;
-    flex: 0 0 auto;
-    -ms-flex: 0 0 50%;
-    max-width: 33.33333%;
-    position: relative;
-    width: 50%;
-    padding-right: 15px;
-    padding-left: 15px;
+  flex: 1 0 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .postInUp {
+    flex: 0 0 calc(50% - 20px);
+  }
+}
+
+@media (min-width: 992px) {
+  .postInUp {
+    flex: 0 0 calc(33% - 20px);
+  }
 }
 
 .blog_section .post-data a {
