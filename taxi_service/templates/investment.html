@@ -9,9 +9,9 @@
 				<div class="container">
 					<div class="row">
 						<div class="col-lg-6 col-md-7">
-							<h1 class="hero-heading fw-bold tx-dark">Інвестуй в екологічне майбутнє</h1>
+							<h1 class="hero-heading fw-bold tx-dark">{% trans "Інвестуй в екологічне майбутнє" %}</h1>
 							<p class="text-lg mb-60 pt-50 pe-xl-5 lg-pt-30 lg-mb-40">
-								Пиши нам і дізнайся більше про вигідну інвестицію, яка зробить навколишнє середовище чистішим!
+								{% trans "Пиши нам і дізнайся більше про вигідну інвестицію, яка зробить навколишнє середовище чистішим!" %}
 							</p>
 							{% include '_subscribe_form.html' with button=_("Підписатись") form='3' %}
 						</div>
@@ -49,7 +49,7 @@
 				<div class="row">
 					<div class="fadeInLeft">
 						<div class="title-style-one text-center text-lg-start">
-							<h2 class="services-title">Що ми пропонуємо:</h2>
+							<h2 class="services-title">{% trans "Що ми пропонуємо:" %}</h2>
 						</div>
 					</div>
 				</div>
@@ -58,18 +58,18 @@
 				<div class="row">
 					<div class="services-grid__invest col-md-6 col-lg-4" data-block="1">
 						<figure style="background-image: url({% static 'app/images/assets/img-3.jpeg' %})" class="cover"></figure>
-						<h5 class="inner-title">{% trans "Ремонт і обслуговування<br>машин за наш рахунок" %}</h5>
-						<a class="btn btn-primary" href="#">{% trans "дізнатись більше" %}</a>
+						<h5 class="inner-title">{% trans "Ремонт і обслуговування машин за наш рахунок" %}</h5>
+						<a class="btn btn-primary" href="#">{% trans "Дізнатись більше" %}</a>
 					</div>
 					<div class="services-grid__invest col-md-6 col-lg-4" data-block="2">
 						<figure style="background-image: url({% static 'app/images/assets/img-1.jpeg' %})" class="cover"></figure>
 						<h5 class="inner-title">{% trans "Власні підзарядні станції" %}</h5>
-						<a class="btn btn-primary" href="#">{% trans "дізнатись більше" %}</a>
+						<a class="btn btn-primary" href="#">{% trans "Дізнатись більше" %}</a>
 					</div>
 					<div class="services-grid__invest col-md-6 col-lg-4" data-block="3">
 						<figure style="background-image: url({% static 'app/images/assets/img-2.jpeg' %})" class="cover"></figure>
 						<h5 class="inner-title">{% trans "Досвідчені і кваліфіковані водії" %}</h5>
-						<a class="btn btn-primary" href="#">{% trans "дізнатись більше" %}</a>
+						<a class="btn btn-primary" href="#">{% trans "Дізнатись більше" %}</a>
 					</div>
 				</div>
 			</div> <!-- /.inner-content -->
@@ -89,11 +89,11 @@
 					<div class="row align-items-center">
 						<div class="col-lg-6 col-sm-7">
 							<div class="title-style-one">
-								<h2 class="main-title">ВНУТРІШНЯ ІСТОРІЯ НАШОЇ КОМПАНІЇ</h2>
+								<h2 class="main-title">{% trans "ВНУТРІШНЯ ІСТОРІЯ НАШОЇ КОМПАНІЇ" %}</h2>
 							</div> <!-- /.title-style-one -->
 						</div>
 						<div class="btn-blog">
-							<a href="#" class="btn-one">Перейти до блогу</a>
+							<a href="#" class="btn-one">{% trans "Перейти до блогу" %}</a>
 						</div>
 					</div>
 					<div class="row lg-pt-30">
@@ -103,9 +103,9 @@
 										src="{% static 'app/images/assets/blog_img_01.jpg' %}"
 										alt="" class="lazy-img w-100 tran4s"></figure>
 								<div class="post-data">
-									<span class="post-tag" style="background-color: #FFEAC9;">Технології</span>
-									<h4 class="post-title">Технології в дії: Як електро таксі змінюють правила гри</h4>
-									<a href="#">Перейти до публікації</a>
+									<span class="post-tag" style="background-color: #FFEAC9;">{% trans "Технології" %}</span>
+									<h4 class="post-title">{% trans "Технології в дії: Як електро таксі змінюють правила гри" %}</h4>
+									<a href="#">{% trans "Перейти до публікації" %}</a>
 								</div> <!-- /.post-data -->
 							</article> <!-- /.blog-meta-one -->
 						</div>
@@ -115,9 +115,9 @@
 										src="{% static 'app/images/assets/blog_img_02.jpg' %}"
 										alt="" class="lazy-img w-100 tran4s"></figure>
 								<div class="post-data">
-									<span class="post-tag" style="background-color: #CEEBF4;">Дизайн</span>
-									<h4 class="post-title">Дизайн майбутнього: Інноваційні концепції в електро таксі</h4>
-									<a href="#">Перейти до публікації</a>
+									<span class="post-tag" style="background-color: #CEEBF4;">{% trans "Дизайн" %}</span>
+									<h4 class="post-title">{% trans "Дизайн майбутнього: Інноваційні концепції в електро таксі" %}</h4>
+									<a href="#">{% trans "Перейти до публікації" %}</a>
 								</div> <!-- /.post-data -->
 							</article> <!-- /.blog-meta-one -->
 						</div>
@@ -127,9 +127,9 @@
 										src="{% static 'app/images/assets/blog_img_03.jpg' %}"
 										alt="" class="lazy-img w-100 tran4s"></figure>
 								<div class="post-data">
-									<span class="post-tag" style="background-color: #FFDFDF;">Підтримка</span>
-									<h4 class="post-title">Поруч і завжди доступні: Важливість ефективної підтримки в електро таксі</h4>
-									<a href="#">Перейти до публікації</a>
+									<span class="post-tag" style="background-color: #FFDFDF;">{% trans "Підтримка" %}</span>
+									<h4 class="post-title">{% trans "Поруч і завжди доступні: Важливість ефективної підтримки в електро таксі" %}</h4>
+									<a href="#">{% trans "Перейти до публікації" %}</a>
 								</div> <!-- /.post-data -->
 							</article> <!-- /.blog-meta-one -->
 						</div>

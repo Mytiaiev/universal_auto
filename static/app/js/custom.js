@@ -733,7 +733,7 @@ $(document).ready(function() {
 
     if(content.hasClass('limited-lines')){
       content.removeClass('limited-lines');
-      t.text(gettext('Читати менше <'));
+      t.text(gettext('Читайте менше <'));
     } else {
       content.addClass('limited-lines');
       t.text(gettext('Читати далі >'));

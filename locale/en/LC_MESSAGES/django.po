@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-05-25 10:55+0300\n"
+"POT-Creation-Date: 2023-06-06 12:30+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -54,67 +54,23 @@ msgstr "Incorrect e-mail format"
 msgid "Ви вже підписались"
 msgstr "You are already subscribed"
 
-#: taxi_service/templates/about.html:18
-msgid "Про нас"
-msgstr "About us"
-
-#: taxi_service/templates/about.html:22
-msgid ""
-"Наша місія – надати пасажирам швидкий, зручний та безпечний транспорт, який "
-"буде відповідати найвищим стандартам."
-msgstr ""
-"Our mission is to provide passengers with fast, convenient and safe transport that "
-"will meet the highest standards."
-
-#: taxi_service/templates/about.html:23
-msgid ""
-"Наші електротаксі оснащені новітніми безпековими технологіями, що забезпечує "
-"максимальний захист пасажирів на дорозі."
-msgstr ""
-"Our electric taxis are equipped with the latest safety technologies, which ensures "
-"maximum protection of passengers on the road."
-
-#: taxi_service/templates/about.html:24
-msgid ""
-"Крім того, ми гарантуємо швидкий та комфортний трансфер у будь-який час дня "
-"та ночі."
-msgstr ""
-"In addition, we guarantee a fast and comfortable transfer at any time of the day "
-"and nights."
-
-#: taxi_service/templates/about.html:25
-msgid ""
-"Наші водії - це професіонали своєї справи, які мають високий рівень досвіду "
-"та знань про місто, що забезпечує швидку та безпечну поїздку для наших "
-"пасажирів."
-msgstr ""
-"Our drivers are professionals in their field with a high level of experience "
-"and knowledge about the city, which ensures a quick and safe trip for ours "
-"passengers."
-
-#: taxi_service/templates/about.html:28 taxi_service/templates/index.html:25
-#: taxi_service/templates/index.html:49 taxi_service/templates/index.html:73
-#: taxi_service/templates/index.html:206
-msgid "Дізнатися більше"
-msgstr "Learn more"
-
 #: taxi_service/templates/footer.html:17
 msgid ""
 "Хочете бути екологічно свідомими та зручно подорожувати містом? Спробуйте "
 "електротаксі!"
 msgstr ""
-"Do you want to be environmentally conscious and comfortably travel around the city? Try it "
-"electric taxi!"
+"Do you want to be environmentally conscious and comfortably travel around "
+"the city? Try it electric taxi!"
 
-#: taxi_service/templates/footer.html:24
+#: taxi_service/templates/footer.html:23
 msgid "Наші Контакти"
 msgstr "Our contacts"
 
-#: taxi_service/templates/footer.html:30
+#: taxi_service/templates/footer.html:29
 msgid "Дніпровська набережна, 13"
 msgstr "Dniprovska embankment, 13"
 
-#: taxi_service/templates/footer.html:36
+#: taxi_service/templates/footer.html:35
 msgid "Телефон"
 msgstr "Phone"
 
@@ -122,23 +78,24 @@ msgstr "Phone"
 msgid "Підписатись на розсилку"
 msgstr "Subscribe to the newsletter"
 
-#: taxi_service/templates/footer.html:50 taxi_service/templates/header.html:55
+#: taxi_service/templates/footer.html:50 taxi_service/templates/header.html:82
+#: taxi_service/templates/investment.html:16
 msgid "Підписатись"
 msgstr "Subscribe"
 
-#: taxi_service/templates/header.html:18
+#: taxi_service/templates/header.html:19
 msgid "Ninja Taxi"
 msgstr "Ninja Taxi"
 
-#: taxi_service/templates/header.html:68 taxi_service/templates/index.html:115
+#: taxi_service/templates/header.html:95 taxi_service/templates/index.html:121
 msgid "Замовити зараз"
 msgstr "Order now"
 
-#: taxi_service/templates/index.html:19
+#: taxi_service/templates/index.html:21
 msgid "Екологічно чисті"
 msgstr "Environmentally friendly"
 
-#: taxi_service/templates/index.html:22
+#: taxi_service/templates/index.html:24
 msgid ""
 "Кожен наш електромобіль працює на «чистій» енергії, що знижує викиди "
 "шкідливих вуглецевих газів і мінімізує негативний вплив на довкілля. Ми "
@@ -146,117 +103,101 @@ msgid ""
 "бути впевнені, що кожна поїздка з Ninja Taxi допомагає зменшити екологічне "
 "навантаження."
 msgstr ""
-"Each of our electric vehicles runs on «clean» energy, which reduces emissions "
-"harmful carbon gases and minimizes the negative impact on the environment. We "
-"believe that saving our planet starts with our actions, and you can "
-"be sure that every trip with Ninja Taxi helps to reduce the environmental impact "
-"load."
+"Each of our electric vehicles runs on «clean» energy, which reduces "
+"emissions harmful carbon gases and minimizes the negative impact on the "
+"environment. We believe that saving our planet starts with our actions, and "
+"you can be sure that every trip with Ninja Taxi helps to reduce the "
+"environmental impact load."
 
-#: taxi_service/templates/index.html:43
+#: taxi_service/templates/index.html:27 taxi_service/templates/index.html:51
+#: taxi_service/templates/index.html:75 taxi_service/templates/index.html:216
+#: taxi_service/templates/index.html:373
+msgid "Дізнатися більше"
+msgstr "Learn more"
+
+#: taxi_service/templates/index.html:46
 msgid "Комфорт"
 msgstr "Comfort"
 
-#: taxi_service/templates/index.html:46
+#: taxi_service/templates/index.html:49
 msgid ""
 "Завдяки електрокарам, Ваша поїздка буде тиха, приємна та м'яка. Ви "
 "заслуговуєте на найкраще, тому наші електрокари готові забезпечити Вам "
 "незабутній досвід комфорту під час кожної поїздки."
 msgstr ""
 "Thanks to electric cars, your trip will be quiet, pleasant and soft. You "
-"deserve the best, that's why our electric cars are ready to provide you with"
-"an unforgettable experience of comfort during every trip."
+"deserve the best, that's why our electric cars are ready to provide you "
+"withan unforgettable experience of comfort during every trip."
 
-#: taxi_service/templates/index.html:67
+#: taxi_service/templates/index.html:69
 msgid "Швидкість"
 msgstr "Speed"
 
-#: taxi_service/templates/index.html:70
+#: taxi_service/templates/index.html:72
 msgid ""
 "Наші таксі мають особливу ліцензію, що дозволяє нам використовувати смуги "
 "громадського транспорту, забезпечуючи вам неперевершену швидкість руху по "
 "місту, оскільки нам не треба стояти в заторах."
 msgstr ""
-"Our taxis have a special license that allows us to use the lanes "
-"public transport, providing you with an unrivaled speed of movement on"
-"the city, as we do not have to stand in traffic jams"
+"Our taxis have a special license that allows us to use the lanes public "
+"transport, providing you with an unrivaled speed of movement onthe city, as "
+"we do not have to stand in traffic jams"
 
-#: taxi_service/templates/index.html:119
+#: taxi_service/templates/index.html:125
 msgid "Замовити на інший час"
 msgstr "Order for another time"
 
-#: taxi_service/templates/index.html:166
+#: taxi_service/templates/index.html:176
 msgid "Замовити"
 msgstr "Order"
 
-#: taxi_service/templates/index.html:192
+#: taxi_service/templates/index.html:205
 msgid "ПРО НАС"
 msgstr "ABOUT US"
 
-#: taxi_service/templates/index.html:196
+#: taxi_service/templates/index.html:209
 msgid "Ninja Taxi – преміальна служба таксі в Києві!"
 msgstr "Ninja Taxi is a premium taxi service in Kyiv!"
 
-#: taxi_service/templates/index.html:197
+#: taxi_service/templates/index.html:210
 msgid ""
 "Ми пишаємося можливістю надавати найкращий сервіс, використовуючи сучасні "
 "електрокари."
 msgstr ""
-"We are proud to be able to provide the best service using modern "
-"electric cars."
+"We are proud to be able to provide the best service using modern electric "
+"cars."
 
-#: taxi_service/templates/index.html:198
+#: taxi_service/templates/index.html:211
 msgid "Наша мета - забезпечити зручність, швидкість і комфорт кожному клієнту."
 msgstr "Our goal is to provide convenience, speed and comfort to every client."
 
-#: taxi_service/templates/index.html:199
+#: taxi_service/templates/index.html:212
 msgid ""
 "Ми зосереджені на екологічній стороні таксі, тому використовуємо "
 "електрокари, що дозволять нам зменшити викиди шкідливих речовин та допомогти "
 "зберегти наше середовище."
 msgstr ""
-"We focus on the environmental side of taxis, so we use "
-"electric cars that will allow us to reduce emissions of harmful substances and help "
-"save our environment."
+"We focus on the environmental side of taxis, so we use electric cars that "
+"will allow us to reduce emissions of harmful substances and help save our "
+"environment."
 
-#: taxi_service/templates/index.html:200
+#: taxi_service/templates/index.html:213
 msgid ""
 "Таким чином Ви можете насолоджуватися комфортом і тишею під час поїздки, "
 "знаючи, що це не забруднює повітря довкола."
 msgstr ""
-"Thus, you can enjoy comfort and silence during the trip, "
-"knowing that it does not pollute the air around."
+"Thus, you can enjoy comfort and silence during the trip, knowing that it "
+"does not pollute the air around."
 
-#: taxi_service/templates/index.html:201
-msgid ""
-"Незалежно від того, чи вам потрібно дістатися до аеропорту, зустріти друзів "
-"або просто подорожувати по місту, Ninja Taxi завжди готове вам допомогти."
-msgstr ""
-"Whether you need to get to the airport, meet friends "
-"or just traveling around the city, Ninja Taxi is always ready to help you."
-
-#: taxi_service/templates/index.html:202
-msgid ""
-"Ми пропонуємо зручне онлайн-бронювання машини на певний час або миттєве "
-"замовлення машини."
-msgstr ""
-"We offer convenient online car booking for a specific time or instant "
-"car order."
-
-#: taxi_service/templates/index.html:203
-msgid ""
-"Замовте наші послуги сьогодні і переконайтеся самі в якості нашого сервісу!"
-msgstr ""
-"Order our services today and see for yourself the quality of our service!"
-
-#: taxi_service/templates/index.html:219
+#: taxi_service/templates/index.html:229
 msgid "НАШІ ПОСЛУГИ"
 msgstr "OUR SERVICES"
 
-#: taxi_service/templates/index.html:227
+#: taxi_service/templates/index.html:238
 msgid "Ваш персональний водій"
 msgstr "Your personal driver"
 
-#: taxi_service/templates/index.html:230
+#: taxi_service/templates/index.html:240
 msgid ""
 "Наші персональні водії - експерти своєї справи, які володіють високим рівнем "
 "навичок і досвідом водіння."
@@ -264,66 +205,65 @@ msgstr ""
 "Our personal drivers are experts in their field, who have a high level "
 "driving skills and experience."
 
-#: taxi_service/templates/index.html:231
+#: taxi_service/templates/index.html:241
 msgid ""
 "Вони дбайливо оберігатимуть ваш час і забезпечать швидке пересування містом, "
 "дозволяючи вам розслабитись і сконцентруватись на своїх основних справах."
 msgstr ""
-"They will carefully protect your time and ensure fast movement around the city, "
-"allowing you to relax and concentrate on your core business."
+"They will carefully protect your time and ensure fast movement around the "
+"city, allowing you to relax and concentrate on your core business."
 
-#: taxi_service/templates/index.html:232
+#: taxi_service/templates/index.html:242
 msgid ""
 "Наша послуга персонального водія пропонує гнучкий графік, що відповідає "
 "вашим потребам."
 msgstr ""
-"Our personal driver service offers a flexible schedule to suit "
-"your needs."
+"Our personal driver service offers a flexible schedule to suit your needs."
 
-#: taxi_service/templates/index.html:233
+#: taxi_service/templates/index.html:243
 msgid ""
 "Незалежно від того, чи потрібно відвезти Вас на зустріч, забрати з аеропорту "
 "чи просто покататись містом, наш водій буде готовий забезпечити Вам комфорт "
 "і конфіденційність."
 msgstr ""
-"Regardless of whether you need to be taken to a meeting, picked up from the airport "
-"чи просто покататись містом, наш водій буде готовий забезпечити Вам комфорт "
-"and privacy."
+"Regardless of whether you need to be taken to a meeting, picked up from the "
+"airport чи просто покататись містом, наш водій буде готовий забезпечити Вам "
+"комфорт and privacy."
 
-#: taxi_service/templates/index.html:234
+#: taxi_service/templates/index.html:244
 msgid ""
 "Зосередьтеся на своїх справах, відпочинку або важливих зустрічах, знімаючи "
 "будь-які турботи про дорогу."
 msgstr ""
-"Focus on your business, leisure or important meetings while shooting "
-"any worries about the road."
+"Focus on your business, leisure or important meetings while shooting any "
+"worries about the road."
 
-#: taxi_service/templates/index.html:235
+#: taxi_service/templates/index.html:245
 msgid ""
 "Наші персональні водії забезпечать вам приємну і безпечну поїздку, де ви "
 "будете мати повний контроль над своїм часом."
 msgstr ""
-"Our personal drivers will provide you with a pleasant and safe trip, wherever you are "
-"you will have complete control over your time."
+"Our personal drivers will provide you with a pleasant and safe trip, "
+"wherever you are you will have complete control over your time."
 
-#: taxi_service/templates/index.html:237 taxi_service/templates/index.html:257
-#: taxi_service/templates/index.html:277 taxi_service/templates/index.html:298
+#: taxi_service/templates/index.html:247 taxi_service/templates/index.html:267
+#: taxi_service/templates/index.html:287 taxi_service/templates/index.html:308
 msgid "Читати далі >"
 msgstr "Read more >"
 
-#: taxi_service/templates/index.html:245
+#: taxi_service/templates/index.html:255
 msgid "Персональний водій для Вашої дитини"
 msgstr "Personal driver for your child"
 
-#: taxi_service/templates/index.html:247
+#: taxi_service/templates/index.html:257
 msgid ""
 "В школу, в садочок, в басейн, на тренування або малювання - ми довеземо Вашу "
 "дитину безпечно та вчасно!"
 msgstr ""
-"To school, to kindergarten, to the pool, to training or drawing - we will take yours "
-"child safely and on time!"
+"To school, to kindergarten, to the pool, to training or drawing - we will "
+"take yours child safely and on time!"
 
-#: taxi_service/templates/index.html:248
+#: taxi_service/templates/index.html:258
 msgid ""
 "Ми створили цю унікальну послугу, щоб забезпечити Вашу дитину найвищим "
 "рівнем безпеки та захисту."
@@ -331,7 +271,7 @@ msgstr ""
 "We have created this unique service to provide your child with the highest "
 "level of security and protection."
 
-#: taxi_service/templates/index.html:249
+#: taxi_service/templates/index.html:259
 msgid ""
 "Наші ninja водії проходять ретельний відбір, професійну підготовку та мають "
 "багаторічний досвід водіння."
@@ -339,25 +279,27 @@ msgstr ""
 "Our ninja drivers are carefully selected, professionally trained and have "
 "many years of driving experience."
 
-#: taxi_service/templates/index.html:250
+#: taxi_service/templates/index.html:260
 msgid ""
 "Вони володіють усіма необхідними навичками, щоб безпечно перевозити вашу "
 "дитину в будь-якій ситуації."
 msgstr ""
-"They have all the necessary skills to transport yours safely "
-"child in any situation."
+"They have all the necessary skills to transport yours safely child in any "
+"situation."
 
-#: taxi_service/templates/index.html:251
+#: taxi_service/templates/index.html:261
 msgid "Всі наші машини оснащені дитячим автокріслом, для безпечних перевезень."
-msgstr "All our cars are equipped with a child car seat for safe transportation."
+msgstr ""
+"All our cars are equipped with a child car seat for safe transportation."
 
-#: taxi_service/templates/index.html:252
+#: taxi_service/templates/index.html:262
 msgid ""
 "Одна з головних переваг нашої послуги - особистий підхід до кожного клієнта."
 msgstr ""
-"One of the main advantages of our service is a personal approach to each client."
+"One of the main advantages of our service is a personal approach to each "
+"client."
 
-#: taxi_service/templates/index.html:253
+#: taxi_service/templates/index.html:263
 msgid ""
 "Ви особисто можете обрати водія для своєї дитини! Ми розуміємо, що кожна "
 "дитина унікальна і має свої потреби та розклад."
@@ -365,13 +307,14 @@ msgstr ""
 "You can personally choose a driver for your child! We understand that each "
 "child is unique and has their own needs and schedule."
 
-#: taxi_service/templates/index.html:254
+#: taxi_service/templates/index.html:264
 msgid ""
 "Тому наші ninja-водії гнучкі і готові адаптуватись до вашого графіку і вимог."
 msgstr ""
-"Therefore, our ninja drivers are flexible and ready to adapt to your schedule and requirements."
+"Therefore, our ninja drivers are flexible and ready to adapt to your "
+"schedule and requirements."
 
-#: taxi_service/templates/index.html:255
+#: taxi_service/templates/index.html:265
 msgid ""
 "Ви можете бути впевнені, що наш водій буде на місці вчасно, а дитина "
 "доставлена у пункт призначення без зайвих затримок."
@@ -379,71 +322,70 @@ msgstr ""
 "You can be sure that our driver will be there on time, and the child "
 "delivered to the destination without unnecessary delays."
 
-#: taxi_service/templates/index.html:265
+#: taxi_service/templates/index.html:275
 msgid "Доставка цінних речей в сейфі машини"
 msgstr "Delivery of valuables in the car safe"
 
-#: taxi_service/templates/index.html:267
+#: taxi_service/templates/index.html:277
 msgid ""
 "Ми розуміємо, що ваші цінні та особисті речі важливі для вас, і Ви хочете "
 "мати спокій, знаючи, що вони зберігаються в безпеці під час перевезення."
 msgstr ""
-"We understand that your valuables and personal belongings are important to you and you want them "
-"have peace of mind knowing they are kept safe during transit."
+"We understand that your valuables and personal belongings are important to "
+"you and you want them have peace of mind knowing they are kept safe during "
+"transit."
 
-#: taxi_service/templates/index.html:268
+#: taxi_service/templates/index.html:278
 msgid ""
 "Наша послуга сейфа в машині надає вам зручну та надійну можливість зберігати "
 "цінні речі, такі як гроші, коштовності, документи або електронні пристрої, в "
 "спеціально обладнаному безпечному сейфі всередині автомобіля."
 msgstr ""
-"Our in-car safe service provides you with a convenient and reliable storage option "
-"valuables such as money, jewellery, documents or electronic devices in "
-"a specially equipped safe deposit box inside the car."
+"Our in-car safe service provides you with a convenient and reliable storage "
+"option valuables such as money, jewellery, documents or electronic devices "
+"in a specially equipped safe deposit box inside the car."
 
-#: taxi_service/templates/index.html:269
+#: taxi_service/templates/index.html:279
 msgid ""
 "Наші сейфи мають сучасні технологічні системи безпеки, які гарантують захист "
 "ваших цінностей від втрати, крадіжки або несанкціонованого доступу."
 msgstr ""
-"Our safes have modern technological security systems that guarantee protection "
-"your valuables from loss, theft or unauthorized access."
+"Our safes have modern technological security systems that guarantee "
+"protection your valuables from loss, theft or unauthorized access."
 
-#: taxi_service/templates/index.html:270
+#: taxi_service/templates/index.html:280
 msgid ""
 "Ми пильно доглядаємо за нашими сейфами, щоб забезпечити їх надійність і "
 "безпеку."
 msgstr ""
-"We take great care of our safes to ensure they are reliable and "
-"safety."
+"We take great care of our safes to ensure they are reliable and safety."
 
-#: taxi_service/templates/index.html:271
+#: taxi_service/templates/index.html:281
 msgid ""
 "Вони виготовлені з міцних матеріалів і оснащені електронними замками або "
 "біометричними системами ідентифікації, що забезпечують тільки вам доступ до "
 "ваших цінностей."
 msgstr ""
 "They are made of durable materials and equipped with electronic locks or "
-"biometric identification systems that provide only you with access to "
-"your values."
+"biometric identification systems that provide only you with access to your "
+"values."
 
-#: taxi_service/templates/index.html:272
+#: taxi_service/templates/index.html:282
 msgid ""
 "Ваші речі будуть зберігатися в сейфі з найвищим рівнем захисту, навіть під "
 "час поїздки."
 msgstr ""
-"Your belongings will be stored in a safe with the highest level of protection, even under "
-"ravel time."
+"Your belongings will be stored in a safe with the highest level of "
+"protection, even under ravel time."
 
-#: taxi_service/templates/index.html:273
+#: taxi_service/templates/index.html:283
 msgid ""
 "Наші водії - професіонали з високою свідомістю про конфіденційність та "
 "приватність."
 msgstr ""
-"Our drivers are professionals with a high awareness of privacy and "
-"privacy."
+"Our drivers are professionals with a high awareness of privacy and privacy."
 
-#: taxi_service/templates/index.html:274
+#: taxi_service/templates/index.html:284
 msgid ""
 "Вони поважатимуть ваші особисті речі та надаватимуть максимальну увагу до їх "
 "безпеки."
@@ -451,7 +393,7 @@ msgstr ""
 "They will respect your personal belongings and pay maximum attention to them "
 "security."
 
-#: taxi_service/templates/index.html:275
+#: taxi_service/templates/index.html:285
 msgid ""
 "Ви можете мати повну впевненість, що ваші цінності будуть під надійним "
 "наглядом під час усієї поїздки."
@@ -459,49 +401,49 @@ msgstr ""
 "You can have complete confidence that your valuables will be under reliable "
 "supervision during the entire trip."
 
-#: taxi_service/templates/index.html:285
+#: taxi_service/templates/index.html:295
 msgid "Передзамовлення машини на певний час"
 msgstr "Pre-order a car for a certain time"
 
-#: taxi_service/templates/index.html:287
+#: taxi_service/templates/index.html:297
 msgid ""
 "Хочете бути впевненими, що у вас завжди буде автомобіль у потрібний час?"
 msgstr ""
 "Do you want to be sure that you will always have a car at the right time?"
 
-#: taxi_service/templates/index.html:288
+#: taxi_service/templates/index.html:298
 msgid ""
 "Наш сервіс передзамовлення таксі дозволяє забронювати автомобіль на певний "
 "час заздалегідь."
 msgstr ""
-"Our taxi pre-order service allows you to book a car for a specific "
-"time in advance."
+"Our taxi pre-order service allows you to book a car for a specific time in "
+"advance."
 
-#: taxi_service/templates/index.html:289
+#: taxi_service/templates/index.html:299
 msgid ""
 "Це означає, що ви можете спланувати свій маршрут та мати впевненість, що "
 "автомобіль буде чекати вас в потрібний момент."
 msgstr ""
-"This means you can plan your route and be sure that "
-"car will be waiting for you at the right moment."
+"This means you can plan your route and be sure that car will be waiting for "
+"you at the right moment."
 
-#: taxi_service/templates/index.html:290
+#: taxi_service/templates/index.html:300
 msgid ""
 "Наші водії завжди дотримуються зазначеного часу та місця зустрічі, щоб "
 "забезпечити максимальний комфорт та зручність для наших клієнтів."
 msgstr ""
-"Our drivers always adhere to the specified meeting time and place so that "
-"to ensure maximum comfort and convenience for our customers."
+"Our drivers always adhere to the specified meeting time and place so that to "
+"ensure maximum comfort and convenience for our customers."
 
-#: taxi_service/templates/index.html:291
+#: taxi_service/templates/index.html:301
 msgid ""
 "Наш автопарк складається з широкого вибору автомобілів, що відповідають "
 "вашим персональним вимогам і стилю."
 msgstr ""
-"Our fleet consists of a wide selection of matching vehicles "
-"your personal requirements and style."
+"Our fleet consists of a wide selection of matching vehicles your personal "
+"requirements and style."
 
-#: taxi_service/templates/index.html:292
+#: taxi_service/templates/index.html:302
 msgid ""
 "Ми пильно доглядаємо за нашими автомобілями, щоб вони завжди були у чудовому "
 "стані та готові до виїзду."
@@ -509,166 +451,212 @@ msgstr ""
 "We take great care of our cars so that they are always in excellent "
 "condition and ready to go."
 
-#: taxi_service/templates/index.html:293
+#: taxi_service/templates/index.html:303
 msgid ""
 "Ви можете бути впевнені в своєму комфорті та безпеці, користуючись нашими "
 "послугами."
-msgstr ""
-"You can be sure of your comfort and safety when using ours "
-"services."
+msgstr "You can be sure of your comfort and safety when using ours services."
 
-#: taxi_service/templates/index.html:294
+#: taxi_service/templates/index.html:304
 msgid "Наші водії - досвідчені професіонали з бездоганною репутацією."
-msgstr "Our drivers are experienced professionals with an impeccable reputation."
+msgstr ""
+"Our drivers are experienced professionals with an impeccable reputation."
 
-#: taxi_service/templates/index.html:295
+#: taxi_service/templates/index.html:305
 msgid ""
 "Вони орієнтовані на ваші потреби, добре знайомі з місцевими дорогами та "
 "забезпечують безпечну та зручну поїздку."
 msgstr ""
-"They are focused on your needs, familiar with the local roads and "
-"provide a safe and comfortable ride."
+"They are focused on your needs, familiar with the local roads and provide a "
+"safe and comfortable ride."
 
-#: taxi_service/templates/index.html:296
+#: taxi_service/templates/index.html:306
 msgid ""
 "Ви можете спокійно розраховувати на їх професіоналізм та доброзичливий "
 "сервіс."
 msgstr ""
-"You can safely count on their professionalism and friendliness "
-"service."
+"You can safely count on their professionalism and friendliness service."
 
-#: taxi_service/templates/index.html:351
+#: taxi_service/templates/index.html:362
 msgid "ІНВЕСТУЙ В ЕКОЛОГІЧНЕ МАЙБУТНЄ"
 msgstr "INVEST IN AN ECOLOGICAL FUTURE"
 
-#: taxi_service/templates/index.html:353
+#: taxi_service/templates/index.html:364
 msgid ""
 "Ми маємо захопливу новину для всіх, хто бажає зробити інвестицію у сферу "
 "електромобілів."
 msgstr ""
-"We have exciting news for everyone who wants to invest in the field "
-"electric cars."
+"We have exciting news for everyone who wants to invest in the field electric "
+"cars."
 
-#: taxi_service/templates/index.html:354
+#: taxi_service/templates/index.html:365
 msgid ""
 "Тепер у вас є унікальна можливість стати частиною нашої революційної послуги "
 "і заробити на екологічному та майбутньому орієнтованому бізнесі!"
 msgstr ""
-"Now you have a unique opportunity to become part of our revolutionary service "
-"and earn on ecological and future-oriented business!"
+"Now you have a unique opportunity to become part of our revolutionary "
+"service and earn on ecological and future-oriented business!"
 
-#: taxi_service/templates/index.html:355
+#: taxi_service/templates/index.html:366
 msgid ""
 "Якщо ви хочете зайнятися активним інвестуванням, спрямованим на розвиток "
 "стійкої транспортної системи, Ninja Taxi - ідеальний варіант."
 msgstr ""
-"If you want to engage in active investment aimed at development "
-"sustainable transport system, Ninja Taxi is an ideal option."
+"If you want to engage in active investment aimed at development sustainable "
+"transport system, Ninja Taxi is an ideal option."
 
-#: taxi_service/templates/index.html:356
+#: taxi_service/templates/index.html:367
 msgid ""
 "Завдяки зростаючому попиту на екологічно чисті послуги таксі та нашій "
 "репутації надійного партнера, ваші інвестиції матимуть потенціал для "
 "прибутковості та стабільного росту."
 msgstr ""
-"Thanks to the growing demand for environmentally friendly taxi services and our "
-"reputation as a reliable partner, your investment will have the potential for "
-"profitability and stable growth."
+"Thanks to the growing demand for environmentally friendly taxi services and "
+"our reputation as a reliable partner, your investment will have the "
+"potential for profitability and stable growth."
 
-#: taxi_service/templates/index.html:357
+#: taxi_service/templates/index.html:368
 msgid ""
 "Які переваги ви можете отримати, інвестуючи в Ninja Taxi? По-перше, ви "
 "стаєте співвласником екологічного бізнесу, спрямованого на зміну майбутнього."
 msgstr ""
-"What benefits can you get by investing in Ninja Taxi? First, you "
-"become a co-owner of an ecological business aimed at changing the future."
+"What benefits can you get by investing in Ninja Taxi? First, you become a co-"
+"owner of an ecological business aimed at changing the future."
 
-#: taxi_service/templates/index.html:358
+#: taxi_service/templates/index.html:369
 msgid ""
 "Ваш вклад допоможе нам розширити нашу мережу електромобілів та покриття "
 "послуг по всьому місту."
 msgstr ""
-"Your contribution will help us expand our EV network and coverage "
-"services throughout the city."
+"Your contribution will help us expand our EV network and coverage services "
+"throughout the city."
 
-#: taxi_service/templates/index.html:359
-msgid ""
-"Крім того, ви отримуєте можливість отримувати прибуток з нашого бізнесу."
-msgstr ""
-"In addition, you get the opportunity to earn profit from our business."
-
-#: taxi_service/templates/index.html:360
-msgid ""
-"За рахунок збільшення попиту нашого таксі та ефективного використання "
-"ресурсів, ваші інвестиції можуть приносити стабільний потік доходу."
-msgstr ""
-"Due to increased demand for our taxi and efficient use "
-"resources, your investment can bring a steady stream of income."
-
-#: taxi_service/templates/index.html:361
-msgid "Ми віримо в прозорість та взаємовигідну співпрацю."
-msgstr "We believe in transparency and mutually beneficial cooperation."
-
-#: taxi_service/templates/index.html:362
-msgid ""
-"Тому ми готові обговорити всі деталі і забезпечити вас необхідною "
-"інформацією для прийняття розумного рішення."
-msgstr ""
-"Therefore, we are ready to discuss all the details and provide you with the necessary "
-"information to make an intelligent decision."
-
-#: taxi_service/templates/index.html:363
+#: taxi_service/templates/index.html:370
 msgid "Не пропустіть шанс стати інвестором у Ninja Taxi!"
 msgstr "Don't miss the chance to become an investor in Ninja Taxi!"
 
-#: taxi_service/templates/index.html:403
+#: taxi_service/templates/index.html:413
 msgid "Юлія"
 msgstr "Julia"
 
-#: taxi_service/templates/index.html:404 taxi_service/templates/index.html:422
-#: taxi_service/templates/index.html:440
+#: taxi_service/templates/index.html:414 taxi_service/templates/index.html:432
+#: taxi_service/templates/index.html:450
 msgid "поїздок"
 msgstr "trips"
 
-#: taxi_service/templates/index.html:407
+#: taxi_service/templates/index.html:417
 msgid ""
 "Я була приємно здивована електротаксі - комфорт, тиша та екологічність "
 "відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але "
 "я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити."
 msgstr ""
-"I was pleasantly surprised by the electric taxi - comfort, silence and environmental friendliness "
-"felt from the first minutes of the trip. It's more expensive than traditional taxis, but "
-"I recommend trying it at least once if you can afford it."
+"I was pleasantly surprised by the electric taxi - comfort, silence and "
+"environmental friendliness felt from the first minutes of the trip. It's "
+"more expensive than traditional taxis, but I recommend trying it at least "
+"once if you can afford it."
 
-#: taxi_service/templates/index.html:421
+#: taxi_service/templates/index.html:431
 msgid "Євгеній"
 msgstr "Eugene"
 
-#: taxi_service/templates/index.html:425
+#: taxi_service/templates/index.html:435
 msgid ""
 "Я був приємно здивований, коли вперше використав електротаксі - це було так "
 "комфортно та тихо. Я відчував себе більш екологічно свідомими, "
 "використовуючи таксі, що не виділяє викидів."
 msgstr ""
 "I was pleasantly surprised when I first used an electric taxi - it was so "
-"comfortable and quiet. I felt more environmentally conscious "
-"using a zero emission taxi."
+"comfortable and quiet. I felt more environmentally conscious using a zero "
+"emission taxi."
 
-#: taxi_service/templates/index.html:439
+#: taxi_service/templates/index.html:449
 msgid "Ліза"
 msgstr "Lisa"
 
-#: taxi_service/templates/index.html:443
+#: taxi_service/templates/index.html:453
 msgid ""
 "Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно "
 "приємним додатком до мого досвіду використання таксі. Я би, безперечно, "
 "рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних "
 "альтернатив."
 msgstr ""
-"I was very impressed by the quietness and cleanliness of the electric taxi. It was a really "
-"nice addition to my taxi experience. I would definitely "
-"recommend electric taxis to those who are looking for green "
-"alternatives."
+"I was very impressed by the quietness and cleanliness of the electric taxi. "
+"It was a really nice addition to my taxi experience. I would definitely "
+"recommend electric taxis to those who are looking for green alternatives."
+
+#: taxi_service/templates/investment.html:12
+msgid "Інвестуй в екологічне майбутнє"
+msgstr "Invest in an ecological future"
+
+#: taxi_service/templates/investment.html:14
+msgid ""
+"Пиши нам і дізнайся більше про вигідну інвестицію, яка зробить навколишнє "
+"середовище чистішим!"
+msgstr ""
+"Write to us and find out more about a profitable investment that will make "
+"the environment cleaner!"
+
+#: taxi_service/templates/investment.html:52
+msgid "Що ми пропонуємо:"
+msgstr "What we offer:"
+
+#: taxi_service/templates/investment.html:61
+msgid "Ремонт і обслуговування машин за наш рахунок"
+msgstr "Repairs and maintenance of cars at our expense"
+
+#: taxi_service/templates/investment.html:62
+#: taxi_service/templates/investment.html:67
+#: taxi_service/templates/investment.html:72
+msgid "Дізнатись більше"
+msgstr "Learn more"
+
+#: taxi_service/templates/investment.html:66
+msgid "Власні підзарядні станції"
+msgstr "Own charging stations"
+
+#: taxi_service/templates/investment.html:71
+msgid "Досвідчені і кваліфіковані водії"
+msgstr "Experienced and qualified drivers"
+
+#: taxi_service/templates/investment.html:92
+msgid "ВНУТРІШНЯ ІСТОРІЯ НАШОЇ КОМПАНІЇ"
+msgstr "OUR COMPANY'S INTERNAL HISTORY"
+
+#: taxi_service/templates/investment.html:96
+msgid "Перейти до блогу"
+msgstr "Go to blog"
+
+#: taxi_service/templates/investment.html:106
+msgid "Технології"
+msgstr "Technologies"
+
+#: taxi_service/templates/investment.html:107
+msgid "Технології в дії: Як електро таксі змінюють правила гри"
+msgstr "Technologies in action: How electric taxis are changing the rules of the game"
+
+#: taxi_service/templates/investment.html:108
+#: taxi_service/templates/investment.html:120
+#: taxi_service/templates/investment.html:132
+msgid "Перейти до публікації"
+msgstr "Go to publication"
+
+#: taxi_service/templates/investment.html:118
+msgid "Дизайн"
+msgstr "Design"
+
+#: taxi_service/templates/investment.html:119
+msgid "Дизайн майбутнього: Інноваційні концепції в електро таксі"
+msgstr "Design of the future: Innovative concepts in electric taxis"
+
+#: taxi_service/templates/investment.html:130
+msgid "Підтримка"
+msgstr "Support"
+
+#: taxi_service/templates/investment.html:131
+msgid ""
+"Поруч і завжди доступні: Важливість ефективної підтримки в електро таксі"
+msgstr ""
+"Nearby and always available: The importance of effective support in electric taxis"
 
 #: taxi_service/templates/why.html:10
 msgid "Чому вибрати саме нас"
@@ -683,8 +671,8 @@ msgid ""
 "Швидке та інтуїтивне замовлення авто в месенджері Телеграм - що дає змогу "
 "легко зателефонувати водію через месенджер або телефон"
 msgstr ""
-"Quick and intuitive ordering of a car in the Telegram messenger - what makes it possible "
-"it's easy to call the driver via messenger or phone"
+"Quick and intuitive ordering of a car in the Telegram messenger - what makes "
+"it possible it's easy to call the driver via messenger or phone"
 
 #: taxi_service/templates/why.html:37
 msgid "Безпека водіння"
@@ -695,8 +683,8 @@ msgid ""
 "Всі машини обладнані системою трекінгу стилю водіння, яка історично гарантує "
 "що водій їздить безпечно."
 msgstr ""
-"All cars are equipped with a driving style tracking system that historically guarantees "
-"that the driver drives safely."
+"All cars are equipped with a driving style tracking system that historically "
+"guarantees that the driver drives safely."
 
 #: taxi_service/templates/why.html:52
 msgid "Повне задоволення"
@@ -707,5 +695,4 @@ msgid ""
 "Ми відвеземо вас куди скажете та почекаємо на проміжних точках вашого "
 "маршруту"
 msgstr ""
-"We will take you where you say and wait at intermediate points of yours "
-"route"
+"We will take you where you say and wait at intermediate points of yours route"
