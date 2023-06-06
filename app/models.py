@@ -1679,13 +1679,12 @@ class Uber(SeleniumTools):
         else:
             self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
             self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%B")}")]])').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%B")}")]]').click()
             self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_13")).click()
             self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%Y")}")]])').click()
+                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%Y")}")]]').click()
             self.driver.find_element(By.XPATH,
                                      f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{self.start_of_week().day}]').click()
-            self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_10")).click()
             self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
             self.driver.find_element(By.XPATH,
                                      f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.end_of_week().strftime("%B")}")]])').click()
