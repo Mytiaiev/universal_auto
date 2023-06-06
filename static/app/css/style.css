@@ -1017,7 +1017,16 @@ label {
 }
 
 .services-title-index{
-    height: 75px;
+    text-align: left;
+    font-size: 20px;
+    margin: 20px 0 40px;
+    position: relative;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    padding-left: 10px;
+    height: 50px;
 }
 
 .services-grid {
