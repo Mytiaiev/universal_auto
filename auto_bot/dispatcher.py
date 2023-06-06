@@ -13,7 +13,7 @@ from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, sa
     take_a_day_off_or_sick_leave, option, numberplate, status_car
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
-from auto_bot.handlers.reports.handlers import report, download_report
+from auto_bot.handlers.reports.handlers import report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
@@ -78,7 +78,6 @@ job_docs_conversation = ConversationHandler(
 
 def setup_dispatcher(dp):
     dp.add_handler(CommandHandler("report", report))
-    dp.add_handler(CommandHandler("download_report", download_report))
     dp.add_handler(CommandHandler("rating", drivers_rating))
     dp.add_handler(CommandHandler("total_weekly_rating", driver_total_weekly_rating))
     # Transfer money
