@@ -50,7 +50,7 @@ class Synchronizer:
     @staticmethod
     def download_from_bucket(path, filename):
         response = requests.get(path)
-        local_path = os.path.join(os.getcwd(), f"LastDownloads/{filename}.jpg")
+        local_path = os.path.join(os.getcwd(), f"Temp/{filename}.jpg")
         with open(local_path, "wb") as file:
             file.write(response.content)
         return local_path
@@ -481,21 +481,23 @@ class UklonSynchronizer(Synchronizer, NewUklon):
 
     def get_driver_status_from_map(self, search_text):
         raw_data = []
-        try:
-            xpath = f"{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1')}[{search_text}]"
-            WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
-        except Exception as e:
-            print(e)
+        self.driver.refresh()
+        xpath = f"{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1')}[{search_text}]"
+        status_box = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
+        count_drivers = status_box.find_element(
+            By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.0')).text
+        if int(count_drivers):
+            status_box.click()
+        else:
             return raw_data
         i = 0
-        while True:
+        while i < int(count_drivers):
             i += 1
             try:
                 el = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.1')
                 xpath = f"{el}{i}{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.2')}"
                 driver_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-
             except TimeoutException:
                 return raw_data
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]

@@ -244,8 +244,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.65):
-        res = self.kassa() * rate - float(self.total_amount_cach)
-        return res
+        return self.kassa() * rate - float(self.total_amount_cach)
 
     def vendor(self):
         return 'bolt'
@@ -1641,6 +1640,16 @@ class Uber(SeleniumTools):
     #     if self.sleep:
     #         time.sleep(self.sleep)
 
+    def click_uber_calendar(self, month, year, day):
+        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
+        self.driver.find_element(By.XPATH,
+                                 f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{month}")]]').click()
+        self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_13")).click()
+        self.driver.find_element(By.XPATH,
+                                 f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{year}")]]').click()
+        self.driver.find_element(By.XPATH,
+                                 f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{day}]').click()
+
     def generate_payments_order(self, day=None):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"
         xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')}"
@@ -1661,36 +1670,12 @@ class Uber(SeleniumTools):
                 self.driver.find_element(By.XPATH, xpath).click()
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_5')).click()
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_6')).click()
-        if day:
-            date_by_def = pendulum.now().start_of('week').subtract(days=7)
-            month_diff = date_by_def.month - int(day[3:5])
-            if month_diff == -1:  # if month of day is different from month of last week Monday
-                self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_7')).click()
-            elif month_diff > 0:
-                for _ in range(month_diff):
-                    self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_8')).click()
-            day_xpath = f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{int(day[:2])}]'
-            self.driver.find_element(By.XPATH, day_xpath).click()
-            self.driver.find_element(By.XPATH, day_xpath).click()
-
-        else:
-            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
-            self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%B")}")]]').click()
-            self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_13")).click()
-            self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.start_of_week().strftime("%Y")}")]]').click()
-            self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{self.start_of_week().day}]').click()
-            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
-            self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.end_of_week().strftime("%B")}")]]').click()
-            self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_13")).click()
-            self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{self.end_of_week().strftime("%Y")}")]]').click()
-            self.driver.find_element(By.XPATH,
-                                     f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{self.end_of_week().day}]').click()
-
+        self.click_uber_calendar(self.start_report_interval(day=day).strftime("%B"),
+                                 self.start_report_interval(day=day).strftime("%Y"),
+                                 self.start_report_interval(day=day).day)
+        self.click_uber_calendar(self.end_report_interval(day=day).strftime("%B"),
+                                 self.end_report_interval(day=day).strftime("%Y"),
+                                 self.end_report_interval(day=day).day)
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
         return f'{self.payments_order_file_name(day=day)}'
 

@@ -83,6 +83,7 @@ newuklon_states = {
     'NEWUKLONS_GET_DRIVERS_TABLE_12': ('//span[@data-cy="make-model-year"]', 'XPATH'),
     'NEWUKLONS_GET_DRIVERS_TABLE_13': ('//dd[@data-cy="vin-code"]', 'XPATH'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1': ("//div[contains(@class, 'panel-item')]", 'XPATH'),
+    'NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.0': ('.//div[@class="info"]/span', 'XPATH'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.1': ('//upf-map-driver-details[', 'XPATH'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.2': ("]//div[contains(@class, 'tw-text-base')]", 'XPATH'),
     'NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_3': ("//button[contains(@class, 'back-btn')]", 'XPATH'),

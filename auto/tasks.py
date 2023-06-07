@@ -371,19 +371,13 @@ def download_reports(day=None, interval=None):
     totals = {}
     salary = {}
     try:
-        if day:
-            all_drivers_report += BoltSynchronizer(
-                BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day, interval=interval)
-            all_drivers_report += UklonSynchronizer(
-                UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
-            all_drivers_report += UberSynchronizer(
-                UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
-            all_drivers_report += our_fleet.download_report(day=day)
-        else:
-            all_drivers_report += BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-            all_drivers_report += UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-            all_drivers_report += UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-            all_drivers_report += our_fleet.download_report()
+        all_drivers_report += BoltSynchronizer(
+            BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day, interval=interval)
+        all_drivers_report += UklonSynchronizer(
+            UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
+        all_drivers_report += UberSynchronizer(
+            UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
+        all_drivers_report += our_fleet.download_report(day=day)
         for rate in Fleets_drivers_vehicles_rate.objects.all():
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:
