@@ -1393,8 +1393,10 @@ def clickandclear(element):
 
 
 class SeleniumTools:
-    def __init__(self, session, week_number=None, profile=None):
+    def __init__(self, session, fleet=None, partner="Ninja", week_number=None, profile=None):
         self.session_file_name = session
+        self.fleet = fleet
+        self.partner = partner
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
         if week_number:
@@ -1408,6 +1410,17 @@ class SeleniumTools:
         for file in filenames:
             if re.search(pattern, file):
                 return file
+
+    def payments_order_file_name(self, fleet, partner, day=None):
+        return self.report_file_name(self.file_pattern(fleet, partner, day=day))
+
+    def file_pattern(self, fleet, partner, day=None):
+        start = self.start_report_interval(day=day)
+        end = self.end_report_interval(day=day)
+
+        sd, sy, sm = start.strftime("%d"), start.strftime("%Y"), start.strftime("%m")
+        ed, ey, em = end.strftime("%d"), end.strftime("%Y"), end.strftime("%m")
+        return f'{fleet} {sy}{sm}{sd}-{ey}{em}{ed}-{partner}.csv'
 
     def week_number(self):
         return f'{self.start_of_week().strftime("%W")}'
@@ -1579,9 +1592,9 @@ class SeleniumTools:
 
 
 class Uber(SeleniumTools):
-    def __init__(self, week_number=None, driver=True, sleep=3, headless=False,
+    def __init__(self, week_number=None, driver=True, sleep=3, headless=False, fleet="Uber",
                  base_url=f"{UberService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('uber', week_number=week_number, profile=profile)
+        super().__init__('uber', week_number=week_number, fleet=fleet, profile=profile)
         self.sleep = sleep
         if driver:
             if remote:
@@ -1677,10 +1690,10 @@ class Uber(SeleniumTools):
                                  self.end_report_interval(day=day).strftime("%Y"),
                                  self.end_report_interval(day=day).day)
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
-        return f'{self.payments_order_file_name(day=day)}'
+        return f'{self.payments_order_file_name(self.fleet, self.partner, day=day)}'
 
     def download_payments_order(self, day=None):
-        if os.path.exists(f'{self.payments_order_file_name(day=day)}'):
+        if os.path.exists(f"{self.payments_order_file_name(self.fleet, self.partner, day=day)}"):
             print('Report already downloaded')
             return
 
@@ -1695,34 +1708,23 @@ class Uber(SeleniumTools):
             WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
             time.sleep(self.sleep)
             if self.remote:
-                self.get_last_downloaded_file_frome_remote(self.file_pattern(day=day))
+                self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, self.partner, day=day))
             else:
-                self.get_last_downloaded_file(self.file_pattern(day=day))
+                self.get_last_downloaded_file(self.file_pattern(self.fleet, self.partner, day=day))
 
         except Exception as e:
             self.logger.error(str(e))
             pass
-
-    def payments_order_file_name(self, day=None):
-        return self.report_file_name(self.file_pattern(day=day))
-
-    def file_pattern(self, day=None):
-        start = self.start_report_interval(day=day)
-        end = self.end_report_interval(day=day)
-
-        sd, sy, sm = start.strftime("%d"), start.strftime("%Y"), start.strftime("%m")
-        ed, ey, em = end.strftime("%d"), end.strftime("%Y"), end.strftime("%m")
-        return f'Uber {sy}{sm}{sd}-{ey}{em}{ed}-payments_driver.csv'
 
     def save_report(self, day=None):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(self.file_pattern(day=day))
-        if self.payments_order_file_name(day=day) is not None:
+        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
+        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
             try:
-                with open(self.payments_order_file_name(day=day), encoding="utf-8") as file:
+                with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
                     reader = csv.reader(file)
                     next(reader)  # Advance past the header
                     for row in reader:
@@ -1733,7 +1735,7 @@ class Uber(SeleniumTools):
                         order = UberPaymentsOrder(
                             report_from=self.start_report_interval(day=day),
                             report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(day=day),
+                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
                             driver_uuid=row[0],
                             first_name=row[1],
                             last_name=row[2],
@@ -1753,7 +1755,7 @@ class Uber(SeleniumTools):
                         order = UberPaymentsOrder(
                             report_from=self.start_report_interval(day=day),
                             report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(day=day),
+                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
                             driver_uuid='00000000-0000-0000-0000-000000000000',
                             first_name='',
                             last_name='',
@@ -1870,9 +1872,9 @@ class Uber(SeleniumTools):
 
 
 class Bolt(SeleniumTools):
-    def __init__(self, week_number=None, driver=True, sleep=3, headless=False,
+    def __init__(self, week_number=None, driver=True, sleep=3, headless=False, fleet="Bolt",
                  base_url=f"{BoltService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('bolt', week_number=week_number, profile=profile)
+        super().__init__('bolt', week_number=week_number, fleet=fleet, profile=profile)
         self.sleep = sleep
         if driver:
             if remote:
@@ -1933,27 +1935,19 @@ class Bolt(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(day=day))
+            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
         else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(day=day))
-
-    def payments_order_file_name(self, day=None):
-        return self.report_file_name(self.file_pattern(day=day))
-
-    def file_pattern(self, day=None):
-        if day:
-            return f'Bolt {day} – Kyiv Fleet 03_232 park Universal-auto.csv'
-        return f"Bolt {self.current_date.strftime('%Y')}W{self.week_number()} – Kyiv Fleet 03_232 park Universal-auto.csv"
+            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
 
     def save_report(self, day=None):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(self.file_pattern(day=day))
+        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
 
-        if self.payments_order_file_name(day=day) is not None:
-            with open(self.payments_order_file_name(day=day), encoding="utf-8") as file:
+        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
+            with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
                 reader = csv.reader(file)
                 next(reader)
                 for row in reader:
@@ -2018,9 +2012,9 @@ class Bolt(SeleniumTools):
 
 
 class NewUklon(SeleniumTools):
-    def __init__(self, week_number=None, driver=True, sleep=5, headless=False,
+    def __init__(self, week_number=None, driver=True, fleet="Uklon", sleep=5, headless=False,
                  base_url=f"{NewUklonService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('nuklon', week_number=week_number, profile=profile)
+        super().__init__('nuklon', week_number=week_number, fleet=fleet, profile=profile)
         self.sleep = sleep
         if driver:
             if remote:
@@ -2073,19 +2067,19 @@ class NewUklon(SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(day=day))
+            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
         else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(day=day))
+            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
 
     def save_report(self, day=None):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(self.file_pattern(day=day))
+        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
 
-        if self.payments_order_file_name(day=day) is not None:
-            with open(self.payments_order_file_name(day=day), encoding="utf-8") as file:
+        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
+            with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
                 reader = csv.reader(file)
                 next(reader)
                 for row in reader:
@@ -2136,16 +2130,6 @@ class NewUklon(SeleniumTools):
                 pass
 
         return items
-
-    def payments_order_file_name(self, day=None):
-        return self.report_file_name(self.file_pattern(day=day))
-
-    def file_pattern(self, day=None):
-        start = self.start_report_interval(day=day)
-        end = self.end_report_interval(day=day)
-        sd, sy, sm = start.strftime("%d"), start.strftime("%y"), start.strftime("%m")
-        ed, ey, em = end.strftime("%d"), end.strftime("%y"), end.strftime("%m")
-        return f'Uklon 00.00.{sd}.{sm}.{sy} - 23.59.{ed}.{em}.{ey}.csv'
 
     def wait_otp_code(self, user):
         r = redis.Redis.from_url(os.environ["REDIS_URL"])

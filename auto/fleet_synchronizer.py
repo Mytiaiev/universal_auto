@@ -329,11 +329,13 @@ class BoltSynchronizer(Synchronizer, Bolt):
 
     def download_weekly_report(self, day=None, interval=None):
         try:
-            report = BoltPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            report = BoltPaymentsOrder.objects.filter(
+                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             if not report:
                 self.download_payments_order(day=day, interval=interval)
                 self.save_report(day=day)
-                report = BoltPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+                report = BoltPaymentsOrder.objects.filter(
+                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             return list(report)
         except Exception as err:
             print(err)
@@ -614,11 +616,13 @@ class UklonSynchronizer(Synchronizer, NewUklon):
 
     def download_weekly_report(self, day=None):
         try:
-            report = NewUklonPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            report = NewUklonPaymentsOrder.objects.filter(
+                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             if not report:
                 self.download_payments_order(day=day)
                 self.save_report(day=day)
-                report = NewUklonPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+                report = NewUklonPaymentsOrder.objects.filter(
+                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             return list(report)
         except Exception as err:
             print(err)
@@ -773,11 +777,13 @@ class UberSynchronizer(Synchronizer, Uber):
 
     def download_weekly_report(self, day=None):
         try:
-            report = UberPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+            report = UberPaymentsOrder.objects.filter(
+                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             if not report:
                 self.download_payments_order(day=day)
                 self.save_report(day=day)
-                report = UberPaymentsOrder.objects.filter(report_file_name=self.file_pattern(day=day))
+                report = UberPaymentsOrder.objects.filter(
+                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             return list(report)
         except Exception as err:
             print(err.msg)
