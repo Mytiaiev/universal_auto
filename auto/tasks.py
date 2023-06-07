@@ -30,8 +30,6 @@ UKLON_CHROME_DRIVER = None
 UBER_CHROME_DRIVER = None
 UAGPS_CHROME_DRIVER = None
 
-UPDATE_DRIVER_DATA_FREQUENCY = 60 * 60 * 1
-UPDATE_DRIVER_STATUS_FREQUENCY = 60 * 1.5
 MEMCASH_LOCK_EXPIRE = 60 * 10
 MEMCASH_LOCK_AFTER_FINISHING = 10
 
@@ -340,7 +338,7 @@ def setup_periodic_tasks(sender, **kwargs):
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s(), queue='non_priority')
-    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')

@@ -291,6 +291,10 @@ class BoltSynchronizer(Synchronizer, Bolt):
         except:
             pass
         try:
+            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}/div'
+            online = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
+            if online[-1] == '-':
+                return raw_data
             xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]'
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
         except TimeoutException:
