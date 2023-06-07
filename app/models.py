@@ -35,7 +35,9 @@ class Partner(models.Model):
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
-        return f'{self.user.first_name} {self.user.last_name}'
+        if self.user:
+            return str(self.user.username)
+        return 'Партнер не назначений'
 
 
 @receiver(post_save, sender=AuUser)
@@ -842,24 +844,24 @@ class Vehicle(models.Model):
 
 
 class Fleets_drivers_vehicles_rate(models.Model):
-    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE)
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True)
-    driver_external_id = models.CharField(max_length=255)
-    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0)
-    created_at = models.DateTimeField(editable=False, auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    pay_cash = models.BooleanField(default=False)
-    withdraw_money = models.BooleanField(default=False)
+    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, verbose_name='Автомобіль')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0, verbose_name='Рейтинг')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
+    pay_cash = models.BooleanField(default=False, verbose_name='Оплата готівкою')
+    withdraw_money = models.BooleanField(default=False, verbose_name='Зняття готівкі')
 
     def __str__(self) -> str:
         return ''
 
     class Meta:
-        vervbose_name = 'Рейтинг водія в автопарку'
-        vervbose_name_plural = 'Рейтинг водіїв в автопарках'
+        verbose_name = 'Рейтинг водія в автопарку'
+        verbose_name_plural = 'Рейтинг водіїв в автопарках'
 
 
 class DriverRateLevels(models.Model):

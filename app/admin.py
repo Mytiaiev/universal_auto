@@ -24,6 +24,7 @@ def assign_model_permissions(group):
         'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
         'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
         'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+        'Fleets_drivers_vehicles_rate': {'view': True, 'add': True, 'change': True, 'delete': True},
     }
 
     for model, permissions in models.items():
@@ -898,7 +899,6 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
         else:
             return ['fleet', 'driver', 'vehicle',
                     'driver_external_id', 'rate',
-                    'sum', 'payment_method', 'order_time',
                     'created_at', 'pay_cash',
                     'withdraw_money',
                    ]
@@ -906,8 +906,6 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
-                ('Номер запису',               {'fields': ['id',
-                                                           ]}),
                 ('Деталі',                     {'fields': ['fleet', 'driver',
                                                            'vehicle', 'driver_external_id',
                                                            'rate', 'pay_cash', 'withdraw_money',
@@ -916,8 +914,6 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
             ]
         else:
             fieldsets = [
-                ('Номер запису',               {'fields': ['id',
-                                                           ]}),
                 ('Деталі',                     {'fields': ['fleet', 'driver',
                                                            'vehicle', 'driver_external_id',
                                                            'rate', 'pay_cash', 'withdraw_money'
