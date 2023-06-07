@@ -261,20 +261,19 @@ def save_report_to_ninja_payment(day=None):
         start_date = week.start_of('week')
         end_date = week.end_of('week')
 
-    start_date, end_date = str(start_date).replace('T', ' '), str(end_date).replace('T', ' ')
     # Pulling notes for the rest of the week and grouping behind the chat_id field
     records = Order.objects.filter(driver__chat_id__isnull=False,
-                                   created_at__date__range=(start_date.split()[0], end_date.split()[0])).values(
+                                   created_at__date__range=(start_date, end_date)).values(
         'driver__chat_id')
     if records:
         for record in records:
             chat_id = record['driver__chat_id']
             total_rides = Order.objects.filter(driver__chat_id=chat_id,
-                                               created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                                               created_at__date__range=(start_date, end_date),
                                                status_order=Order.COMPLETED).count()
 
             total_distance = Order.objects.filter(driver__chat_id=chat_id,
-                                                  created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                                                  created_at__date__range=(start_date, end_date),
                                                   status_order=Order.COMPLETED).aggregate(
                 total=Sum(Coalesce(Cast('distance_gps', FloatField()),
                                    Cast('distance_google', FloatField()),
@@ -283,7 +282,7 @@ def save_report_to_ninja_payment(day=None):
             total_amount_cash = Order.objects.filter(
                 driver__chat_id=chat_id,
                 payment_method='Готівка',
-                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                created_at__date__range=(start_date, end_date),
                 status_order=Order.COMPLETED
             ).aggregate(
                 total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
@@ -291,7 +290,7 @@ def save_report_to_ninja_payment(day=None):
             total_amount_card = Order.objects.filter(
                 driver__chat_id=chat_id,
                 payment_method='Картка',
-                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
+                created_at__date__range=(start_date, end_date),
                 status_order=Order.COMPLETED
             ).aggregate(
                 total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
@@ -369,13 +368,16 @@ def download_reports(day=None, interval=None):
     totals = {}
     salary = {}
     try:
-        all_drivers_report += BoltSynchronizer(
-            BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day, interval=interval)
-        all_drivers_report += UklonSynchronizer(
-            UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
-        all_drivers_report += UberSynchronizer(
-            UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
+        # all_drivers_report += BoltSynchronizer(
+        #     BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day, interval=interval)
+        # all_drivers_report += UklonSynchronizer(
+        #     UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
+        # all_drivers_report += UberSynchronizer(
+        #     UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
+        print(our_fleet.start_report_interval())
+        print(our_fleet.end_report_interval())
         all_drivers_report += our_fleet.download_report(day=day)
+        print(all_drivers_report)
         for rate in Fleets_drivers_vehicles_rate.objects.all():
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:
