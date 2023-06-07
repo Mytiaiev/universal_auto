@@ -1,10 +1,3 @@
-// to get current year
-(function() {
-  var currentDate = new Date();
-  var currentYear = currentDate.getFullYear();
-  document.querySelector("#displayYear").innerHTML = currentYear;
-})();
-
 function toRadians(degrees) {
   return degrees * Math.PI / 180;
 }
@@ -96,17 +89,15 @@ function setAutoCenter(map) {
 
 var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi = [];
 
-const decodedData = parkSettings.replace(/&#x(\w+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
-const parsedData = JSON.parse(decodedData.replace(/'/g, '"'));
-const FREE_DISPATCH = parseInt(parsedData["FREE_CAR_SENDING_DISTANCE"]);
-const TARIFF_DISPATCH = parseInt(parsedData["TARIFF_CAR_DISPATCH"]);
-const TARIFF_OUTSIDE_DISPATCH = parseInt(parsedData["TARIFF_CAR_OUTSIDE_DISPATCH"]);
-const TARIFF_IN_THE_CITY = parseInt(parsedData["TARIFF_IN_THE_CITY"]);
-const TARIFF_OUTSIDE_THE_CITY = parseInt(parsedData["TARIFF_OUTSIDE_THE_CITY"]);
-const CENTRE_CITY_LAT = parseFloat(parsedData["CENTRE_CITY_LAT"]);
-const CENTRE_CITY_LNG = parseFloat(parsedData["CENTRE_CITY_LNG"]);
-const CENTRE_CITY_RADIUS = parseInt(parsedData["CENTRE_CITY_RADIUS"]);
-const SEND_TIME_ORDER_MIN = parseInt(parsedData["SEND_TIME_ORDER_MIN"]);
+const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
+const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH|| 0);
+const TARIFF_OUTSIDE_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_OUTSIDE_DISPATCH|| 0);
+const TARIFF_IN_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_IN_THE_CITY|| 0);
+const TARIFF_OUTSIDE_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_OUTSIDE_THE_CITY|| 0);
+const CENTRE_CITY_LAT = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LAT || 0);
+const CENTRE_CITY_LNG = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LNG|| 0);
+const CENTRE_CITY_RADIUS = parseInt(parkSettings && parkSettings.CENTRE_CITY_RADIUS|| 0);
+const SEND_TIME_ORDER_MIN = parseInt(parkSettings && parkSettings.SEND_TIME_ORDER_MIN|| 0);
 const userLanguage = navigator.language || navigator.userLanguage;
 
 const city_boundaries = function () {
@@ -517,7 +508,7 @@ function intlTelInit(phoneEl) {
 }
 
 $(document).ready(function(){
-  setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
+  if(csrfToken) setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
 
   $('#delivery_time').mask("dd:dd", {placeholder: gettext("00:00 (Вкажіть час)")});
   intlTelInit('#phone');
@@ -690,16 +681,17 @@ $(document).ready(function(){
       },
       success: function(data){
         $('#email-error-1, #email-error-2').html('');
-        this.reset();
+        form.reset();
       },
-
-      error: function(data){
-       $('#email-error-1, #email-error-2').html('');
-        var errors = data.responseJSON;
-        $.each(errors, function(key, value) {
-          $('#' + key + '-error-1').html(value);
-          $('#' + key + '-error-2').html(value);
-        });
+      error: function(xhr, textStatus, errorThrown){
+        if (xhr.status === 400) {
+          var errors = xhr.responseJSON;
+          $.each(errors, function(key, value) {
+            $('#' + key + '-error-1, #' + key + '-error-2').html(value);
+          });
+        } else {
+          console.error('Помилка запиту: ' + textStatus);
+        }
       }
     });
   });
@@ -725,47 +717,38 @@ function initAutocomplete(inputID) {
   });
 }
 
-loadGoogleMaps( 3, apiGoogle, userLanguage,'','geometry,places').then(function() {
- initAutocomplete('address');
- initAutocomplete('to_address');
- checkCookies()
-});
-
 $(document).ready(function() {
-    var item = $('.services-grid__item');
 
-    item.each(function() {
-      var text = $(this).find('.service-text');
-      var button = $(this).find('.btn');
-      var isExpanded = false;
-
-      text.addClass('limited-lines');
-      button.text(gettext('Читати далі >'));
-
-      button.on('click', function() {
-        if (isExpanded) {
-          text.addClass('limited-lines');
-          button.text(gettext('Читати далі >'));
-        } else {
-          text.removeClass('limited-lines');
-          button.text(gettext('Читайте менше <'));
-        }
-        isExpanded = !isExpanded;
-      });
+  if($('#address').length || $('#to_address').length) {
+    loadGoogleMaps(3, apiGoogle, userLanguage, '', 'geometry,places').then(function () {
+      initAutocomplete('address');
+      initAutocomplete('to_address');
+      checkCookies()
     });
+  }
+
+  $(this).on('click', '.services-grid__item .btn', function(){
+    var t = $(this);
+    content = t.prev();
+
+    if(content.hasClass('limited-lines')){
+      content.removeClass('limited-lines');
+      t.text(gettext('Читайте менше <'));
+    } else {
+      content.addClass('limited-lines');
+      t.text(gettext('Читати далі >'));
+    }
+
+    $('html, body').animate({ scrollTop: $('.services-grid').offset().top }, 100);
+
+    return false;
   });
 
-
-$(document).ready(function() {
     $("a[href='#order-now']").click(function() {
       $('html, body').animate({
         scrollTop: $("#order-now").offset().top
       }, 1000); // Час прокрутки в мілісекундах (1000 мс = 1 с)
     });
-  });
-
-
-$(document).ready(function() {
 
   if (userLanguage === "uk") {
     $(".img-box-en").addClass("hidden");
@@ -774,4 +757,22 @@ $(document).ready(function() {
     $(".img-box-en").removeClass("hidden");
     $(".img-box-uk").addClass("hidden");
   }
+
+  const $blocks = $('[data-block]');
+
+  $blocks.on('mouseenter', function() {
+      const $currentBlock = $(this);
+      const initialHeight = $currentBlock.height();
+
+      $currentBlock.animate({ marginTop: -20 }, 300);
+  });
+
+  $blocks.on('mouseleave', function() {
+      const $currentBlock = $(this);
+      $currentBlock.animate({ marginTop: 0 }, 300);
+  });
+});
+
+$(window).on('load', function() {
+  $('.loader').remove();
 });
