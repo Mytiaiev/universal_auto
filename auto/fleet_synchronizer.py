@@ -785,13 +785,26 @@ class UberSynchronizer(Synchronizer, Uber):
             report = UberPaymentsOrder.objects.filter(
                 report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             if not report:
-                self.download_payments_order(day=day)
+                self.download_payments_order(UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3'),
+                                             UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4'),
+                                             day=day)
                 self.save_report(day=day)
                 report = UberPaymentsOrder.objects.filter(
                     report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             return list(report)
         except Exception as err:
             print(err.msg)
+
+    def download_trips(self, pattern, day):
+        report = UberTrips.objects.filter(report_file_name=self.file_pattern(self.fleet, pattern, day))
+        if not report:
+            self.download_payments_order(UberService.get_value("UBER_GENERATE_TRIPS_1"),
+                                         UberService.get_value("UBER_GENERATE_TRIPS_2"),
+                                         pattern, day
+                                         )
+            self.save_trips_report(pattern, day)
+            report = UberTrips.objects.filter(report_file_name=self.file_pattern(self.fleet, pattern, day))
+        return list(report)
 
 
 class UaGpsSynchronizer(Synchronizer, UaGps):

@@ -292,7 +292,7 @@ def order_on_time(update, context):
     if re.match(pattern, user_time):
         format_time = timezone.datetime.strptime(user_time, '%H:%M').time()
         min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(
-            ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+            ParkSettings.get_value('TIME_ORDER_MIN', 60)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
             if context.user_data.get('time_order') is not None:

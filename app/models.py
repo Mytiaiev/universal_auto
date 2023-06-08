@@ -378,14 +378,12 @@ class User(models.Model):
         SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
         OWNER = 'OWNER', 'Owner'
 
-    id = models.AutoField(primary_key=True)
-
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
     email = models.EmailField(blank=True, max_length=254, verbose_name='Електрона пошта')
     phone_number = models.CharField(blank=True, max_length=13, verbose_name='Номер телефона')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
-    created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
@@ -519,10 +517,6 @@ class Driver(User):
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
 
-    @staticmethod
-    def save_driver_status(status):
-        driver = Driver.objects.create(driver_status=status)
-        driver.save()
 
     @staticmethod
     def get_by_chat_id(chat_id):
@@ -1182,7 +1176,7 @@ class Event(models.Model):
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     status_event = models.BooleanField(default=False, verbose_name='Працює')
 
-    created_at = models.DateTimeField(editable=False, verbose_name='Створено')
+    created_at = models.DateTimeField(auto_now_add=True, editable=False, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
@@ -1669,8 +1663,7 @@ class Uber(SeleniumTools):
         self.driver.find_element(By.XPATH,
                                  f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{day}]').click()
 
-    def generate_payments_order(self, day=None):
-    def generate_payments_order(self, report_en, report_ua, pattern):
+    def generate_payments_order(self, report_en, report_ua, pattern, day):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"
         xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')}"
         self.get_target_page_or_login(url, xpath, self.login_v3)
@@ -1688,7 +1681,10 @@ class Uber(SeleniumTools):
                 xpath = report_ua
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 self.driver.find_element(By.XPATH, xpath).click()
-        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_5')).click()
+        try:
+            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_5')).click()
+        except:
+            pass
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_6')).click()
         self.click_uber_calendar(self.start_report_interval(day=day).strftime("%B"),
                                  self.start_report_interval(day=day).strftime("%Y"),
@@ -1697,31 +1693,31 @@ class Uber(SeleniumTools):
                                  self.end_report_interval(day=day).strftime("%Y"),
                                  self.end_report_interval(day=day).day)
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
-        return f'{self.payments_order_file_name(self.fleet, self.partner, day=day)}'
+        return f'{self.payments_order_file_name(self.fleet, pattern, day=day)}'
 
-    def download_payments_order(self, report_en, report_ua, pattern):
-        if os.path.exists(f'{self.payments_order_file_name(pattern)}'):
+    def download_payments_order(self, report_en, report_ua, pattern="Ninja", day=None):
+        if os.path.exists(f'{self.payments_order_file_name(self.fleet, pattern, day)}'):
             print('Report already downloaded')
             return
 
-        self.generate_payments_order(report_en, report_ua, pattern)
+        self.generate_payments_order(report_en, report_ua, pattern, day)
+        print('Report generated')
         download_button = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_1')}"
         try:
             in_progress_text = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_2')}"
             WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, in_progress_text)))
             WebDriverWait(self.driver, 600).until_not(EC.presence_of_element_located((By.XPATH, in_progress_text)))
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, download_button)))
-            WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
-            time.sleep(self.sleep)
-            if self.remote:
-                self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, self.partner, day=day))
-            else:
-                self.get_last_downloaded_file(self.file_pattern(self.fleet, self.partner, day=day))
-
-        except Exception as e:
-            self.logger.error(str(e))
+        except:
             pass
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, download_button)))
+        WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
+        time.sleep(self.sleep)
+        if self.remote:
+            self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
+        else:
+            self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
+
 
     def save_report(self, day=None):
         if self.sleep:
@@ -1780,18 +1776,18 @@ class Uber(SeleniumTools):
                 pass
         return items
 
-    def save_trips_report(self, pattern):
+    def save_trips_report(self, pattern="Trips", day=None):
         items = []
 
-        self.logger.info(f'Uber {self.file_patern(pattern)}.csv')
-        if self.payments_order_file_name(pattern) is not None:
+        self.logger.info(self.file_pattern(self.fleet, pattern, day))
+        if self.payments_order_file_name(self.fleet, pattern, day) is not None:
             try:
-                with open(self.payments_order_file_name(pattern), encoding="utf-8") as file:
+                with open(self.payments_order_file_name(self.fleet, pattern, day), encoding="utf-8") as file:
                     reader = csv.reader(file)
                     next(reader)  # Advance past the header
                     for row in reader:
                         order = UberTrips(
-                            report_file_name=self.payments_order_file_name(pattern),
+                            report_file_name=self.payments_order_file_name(self.fleet, pattern, day),
                             driver_external_id=row[1],
                             license_plate=row[5],
                             start_trip=row[7],
@@ -1804,7 +1800,7 @@ class Uber(SeleniumTools):
                         items.append(order)
                     if not items:
                         order = UberTrips(
-                            report_file_name=self.payments_order_file_name(pattern),
+                            report_file_name=self.payments_order_file_name(self.fleet, pattern, day),
                             driver_external_id='00000000-0000-0000-0000-000000000000',
                             license_plate=''
                         )
@@ -1913,21 +1909,6 @@ class Uber(SeleniumTools):
         send_data.click()
         if self.sleep:
             time.sleep(self.sleep)
-
-    @staticmethod
-    def download_trips(day=None, driver=True, sleep=5, headless=True):
-        u = Uber(day=day, driver=False, sleep=sleep, headless=headless)
-        report = UberTrips.objects.filter(report_file_name=f'Uber {u.file_patern("trip_activity")}.csv')
-        if not report:
-            u = Uber(day=day, driver=driver, sleep=sleep, headless=headless)
-            u.download_payments_order(UberService.get_value("UBER_GENERATE_TRIPS_1"),
-                                      UberService.get_value("UBER_GENERATE_TRIPS_2"),
-                                      "trip_activity"
-                                      )
-            u.save_trips_report("trip_activity")
-            u.quit()
-            report = UberTrips.objects.filter(report_file_name=f'Uber {u.file_patern("trip_activity")}.csv')
-        return list(report)
 
 class Bolt(SeleniumTools):
     def __init__(self, week_number=None, driver=True, sleep=3, headless=False, fleet="Bolt",

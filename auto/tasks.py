@@ -202,6 +202,16 @@ def withdraw_uklon(self):
 
 
 @app.task(bind=True, queue='non_priority')
+def download_uber_trips(self):
+    try:
+        day = pendulum.now().start_of('day').subtract(days=1)
+        format_day = day.format("DD.MM.YYYY")
+        UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_trips', 'Trips', day=format_day)
+    except Exception as e:
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
 def send_daily_into_group(self):
     try:
         total_values = {}
@@ -338,19 +348,19 @@ def setup_periodic_tasks(sender, **kwargs):
     global UBER_CHROME_DRIVER
     global UAGPS_CHROME_DRIVER
     init_chrome_driver()
-    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             send_time_order.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
-                             queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
+    #                          send_time_order.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
+    #                          queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
 
 
 def init_chrome_driver():
