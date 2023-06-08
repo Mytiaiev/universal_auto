@@ -264,11 +264,12 @@ function onOrderPayment(paymentMethod) {
   }
 
   var orderData = JSON.parse(savedOrderData);
-  orderData.latitude = getCookie('fromLat')
-  orderData.longitude = getCookie('fromLon')
-  orderData.to_latitude = getCookie('toLat')
-  orderData.to_longitude = getCookie('toLon')
+  orderData.latitude = getCookie('fromLat');
+  orderData.longitude = getCookie('fromLon');
+  orderData.to_latitude = getCookie('toLat');
+  orderData.to_longitude = getCookie('toLon');
   orderData.payment_method = paymentMethod;
+  orderData.status_order = 'Очікується';
 
   return new Promise((resolve, reject) => {
     $.ajax({
@@ -276,7 +277,7 @@ function onOrderPayment(paymentMethod) {
       method: 'POST',
       data: orderData,
       headers: {
-        'X-CSRF-Token': getCookie("csrfToken")
+        'X-CSRF-Token': $('input[name="csrfmiddlewaretoken"]').val()
       },
       success: function (response) {
         var idOrder = JSON.parse(response.data)
@@ -304,7 +305,7 @@ function onOrderReject() {
       url: ajaxPostUrl,
       method: 'POST',
       data: {
-        csrfmiddlewaretoken: getCookie("csrfToken"),
+        csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
         action: 'user_opt_out',
         idOrder: idOrder,
         sum: sum,
@@ -348,7 +349,7 @@ function sendComment() {
     url: ajaxPostUrl,
     method: 'POST',
     data: {
-      csrfmiddlewaretoken: getCookie("csrfToken"),
+      csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
       action: 'send_comment',
       comment: $('[name="reject_comment"]').val()
     },
@@ -372,7 +373,7 @@ function consentTrip() {
     url: ajaxPostUrl,
     method: 'POST',
     data: {
-      csrfmiddlewaretoken: getCookie("csrfToken"),
+      csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
       action: 'order_sum',
       idOrder: idOrder,
       sum: sum,
@@ -445,6 +446,18 @@ function createMap(address, to_address, taxiArr) {
     });
   });
 
+  // Додати коло з радіусом 5 км
+  var circle = new google.maps.Circle({
+    map: map,
+    center: address[0].geometry.location,
+    radius: 5000, // радіус у метрах
+    strokeColor: '#FF0000',
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    fillColor: '#FF0000',
+    fillOpacity: 0.35
+  });
+
   setAutoCenter(map);
 
   // Додати текст та таймер до елементу costDiv
@@ -485,7 +498,7 @@ function createMap(address, to_address, taxiArr) {
 function startTimer() {
   var timerInterval;
   var startTime = Date.now();
-  var duration = 10 * 1000; // 3 хвилини
+  var duration = 3 * 60 * 1000; // 3 хвилини
   var timerElement = document.getElementById('timer');
 
   // Зупинити попередній таймер, якщо він вже запущений
@@ -567,10 +580,13 @@ function onIncreasePrice() {
     url: ajaxPostUrl,
     method: 'POST',
     data: {
-      csrfmiddlewaretoken: csrfToken,
+      csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
       action: 'increase_price',
       idOrder: idOrder,
       carDeliveryPrice: carDeliveryPrice
+    },
+    success: function (response) {
+      startTimer()
     }
   });
 }
@@ -583,9 +599,12 @@ function onContinueSearch() {
     url: ajaxPostUrl,
     method: 'POST',
     data: {
-      csrfmiddlewaretoken: csrfToken,
+      csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
       action: 'continue_search',
       idOrder: idOrder
+    },
+    success: function (response) {
+      startTimer()
     }
   });
 }

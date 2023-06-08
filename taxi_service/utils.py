@@ -16,7 +16,6 @@ def active_vehicles_gps():
             for vehicle_gps in vehicles:
                 vehicles_gps.append(vehicle_gps)
     json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
-    print('UTILS', json_data)
     return json_data
 
 
@@ -44,4 +43,19 @@ def update_order_sum_or_status(id_order, arg, action):
         order = Order.objects.get(id=id_order)
         order.status_order = Order.CANCELED
         order.sum = arg
+        order.save()
+
+
+def restart_order(id_order, car_delivery_price, action):
+    if action == 'increase_price':
+        print('increase_price ACTION', action, id_order, car_delivery_price)
+        order = Order.objects.get(id=id_order)
+        order.car_delivery_price = car_delivery_price
+        order.checked = False
+        order.save()
+
+    if action == 'continue_search':
+        print('continue_search ACTION', action, id_order, car_delivery_price)
+        order = Order.objects.get(id=id_order)
+        order.checked = False
         order.save()

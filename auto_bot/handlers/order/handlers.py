@@ -238,7 +238,7 @@ def send_order_to_driver(sender=None, **kwargs):
                         continue
             time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180))/3)
             count += 1
-            if count == 3:
+            if count == 3 and order.chat_id_client:
                 try:
                     bot.delete_message(chat_id=order.chat_id_client, message_id=msg)
                     bot.delete_message(chat_id=order.chat_id_client, message_id=msg_1)

@@ -55,6 +55,9 @@ class PostRequestView(View):
             return handler.handle_comment_form(request)
         elif action in ['order_sum', 'user_opt_out']:
             return handler.handle_update_order(request)
+        elif action in ['increase_price', 'continue_search']:
+            print('RESTARTING ORDER VIEW')
+            return handler.handler_restarting_order(request)
         else:
             return handler.handle_unknown_action(request)
 
