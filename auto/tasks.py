@@ -16,7 +16,8 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    Bolt, NewUklon, Uber, UaGps, get_report, download_and_save_daily_report, NinjaPaymentsOrder, UseOfCars
+    Bolt, NewUklon, Uber, UaGps, NinjaPaymentsOrder, UseOfCars, \
+    Fleets_drivers_vehicles_rate, NinjaFleet
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 
@@ -29,8 +30,6 @@ UKLON_CHROME_DRIVER = None
 UBER_CHROME_DRIVER = None
 UAGPS_CHROME_DRIVER = None
 
-UPDATE_DRIVER_DATA_FREQUENCY = 60 * 60 * 1
-UPDATE_DRIVER_STATUS_FREQUENCY = 60 * 1.5
 MEMCASH_LOCK_EXPIRE = 60 * 10
 MEMCASH_LOCK_AFTER_FINISHING = 10
 
@@ -76,21 +75,19 @@ def raw_gps_handler(id):
     return True
 
 
-@app.task
-def download_weekly_report(fleet_name, missing_weeks):
-    weeks = missing_weeks.split(';')
-    fleets = Fleet.objects.filter(name=fleet_name, deleted_at=None)
-    for fleet in fleets:
-        for week_number in weeks:
-            fleet.download_weekly_report(week_number=week_number, driver=True, sleep=5, headless=True)
+@app.task(bind=True, queue='non_priority')
+def download_weekly_report(self):
+    report = download_reports()
+    return report
 
 
 @app.task(bind=True, queue='non_priority')
 def download_daily_report(self):
     # Yesterday
     try:
-        day = pendulum.now().start_of('day').subtract(days=1)  # yesterday
-        download_and_save_daily_report(driver=True, sleep=5, headless=True, day=day)
+        day = pendulum.now().start_of('day').subtract(days=1)
+        format_day = day.format("DD.MM.YYYY")
+        download_reports(day=format_day, interval=1)
     except Exception as e:
         logger.info(e)
 
@@ -175,16 +172,6 @@ def update_driver_data(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def download_weekly_report_force(self):
-    try:
-        BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-        UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-        UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report')
-    except Exception as e:
-        logger.info(e)
-
-
-@app.task(bind=True, queue='non_priority')
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
@@ -205,15 +192,6 @@ def get_rent_information(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def get_report_for_tg(self):
-    try:
-        report = get_report(week=True, week_number=None, driver=True, sleep=5, headless=True)
-        return report
-    except Exception as e:
-        logger.info(e)
-
-
-@app.task(bind=True, queue='non_priority')
 def withdraw_uklon(self):
     try:
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('withdraw_money')
@@ -229,11 +207,12 @@ def send_daily_into_group(self):
         if today > 0:
             for i in range(today):
                 day = pendulum.now().start_of('day').subtract(days=i + 1)
-                report = get_report(week=False, day=day, week_number=None, driver=True, sleep=5, headless=True)[2]
+                format_day = day.format("DD.MM.YYYY")
+                report = download_reports(day=format_day, interval=i*2 + 1)[2]
                 for key, value in report.items():
                     total_values[key] = total_values.get(key, 0) + value
         else:
-            total_values = get_report(week=True, week_number=None, driver=True, sleep=5, headless=True)[2]
+            total_values = download_reports()[2]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
         message = [f'{k}: %.2f' % v for k, v in sort_report.items()]
         return message
@@ -359,10 +338,9 @@ def setup_periodic_tasks(sender, **kwargs):
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s(), queue='non_priority')
-    sender.add_periodic_task(UPDATE_DRIVER_STATUS_FREQUENCY, update_driver_status.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=15, hour='*/2'), update_driver_data.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_weekly_report_force.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), get_report_for_tg.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
@@ -381,3 +359,44 @@ def init_chrome_driver():
     UKLON_CHROME_DRIVER = NewUklon(week_number=None, driver=True, sleep=5, headless=True, profile='Uklon_CeleryTasks')
     UBER_CHROME_DRIVER = Uber(week_number=None, driver=True, sleep=5, headless=True, profile='Uber_CeleryTasks')
     UAGPS_CHROME_DRIVER = UaGps(headless=True, profile='Uagps_CeleryTasks')
+
+
+def download_reports(day=None, interval=None):
+    our_fleet = NinjaFleet()
+    all_drivers_report = []
+    owner = {"Fleet Owner": 0}
+    reports = {}
+    totals = {}
+    salary = {}
+    try:
+        all_drivers_report += BoltSynchronizer(
+            BOLT_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day, interval=interval)
+        all_drivers_report += UklonSynchronizer(
+            UKLON_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
+        all_drivers_report += UberSynchronizer(
+            UBER_CHROME_DRIVER.driver).try_to_execute('download_weekly_report', day=day)
+        all_drivers_report += our_fleet.download_report(day=day)
+        for rate in Fleets_drivers_vehicles_rate.objects.all():
+            r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
+            if r:
+                r = r[0]
+                name = rate.driver.full_name()
+                reports[name] = reports.get(name, '') + r.report_text(name, float(rate.rate)) + '\n'
+                totals[name] = totals.get(name, 0) + r.kassa()
+                salary[name] = salary.get(name, 0) + r.total_drivers_amount(float(rate.rate))
+                owner["Fleet Owner"] += r.total_owner_amount(float(rate.rate))
+
+        totals = {k: v for k, v in totals.items() if v != 0.0}
+        plan = dict(totals)
+        totals = {k: f'Загальна каса {k}: %.2f\n' % v for k, v in totals.items()}
+        totals = {k: v + reports[k] for k, v in totals.items()}
+        for k, v in totals.items():
+            if plan[k] > int(ParkSettings.get_value("DRIVER_PLAN", 10000)):
+                totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
+            else:
+                incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000)) - plan[k]) / 2
+                totals[
+                    k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + "-" * 39
+        return owner, totals, plan
+    except Exception as e:
+        logger.info(e)
