@@ -1,12 +1,13 @@
 import datetime
 
+from django.utils import timezone
 from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
 from app.models import Driver, Vehicle, Report_of_driver_debt, Event, ParkStatus
-from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard, option_keyboard
+from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard
 from auto_bot.handlers.driver.static_text import *
-from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
+from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, inline_start_driver_kb
 
 
 def status_car(update, context):
@@ -80,32 +81,22 @@ def save_debt_report(update, context):
         return 'WAIT_FOR_DEBT_PHOTO'
 
 
-def option(update, context):
-    chat_id = update.message.chat.id
-    driver = Driver.get_by_chat_id(chat_id)
-    if driver is not None:
-        update.message.reply_text('Оберіть опцію: ', reply_markup=markup_keyboard_onetime(option_keyboard))
-    else:
-        update.message.reply_text(not_driver_text, reply_markup=ReplyKeyboardRemove())
-
-
 def take_a_day_off_or_sick_leave(update, context):
-    event = update.message.text
-    chat_id = update.message.chat.id
-    event = event.split()
-    driver = Driver.get_by_chat_id(chat_id)
-    events = Event.objects.filter(full_name_driver=driver, status_event=False)
-    list_event = [i for i in events]
-    if len(list_event) > 0:
-        update.message.reply_text(f"У вас вже відкритий <<Лікарняний>> або <<Вихідний>>.\n"
-                                  f"Щоб закрити подію скористайтесь командою /status")
+    query = update.callback_query
+    if query.data.split()[0] == "Off":
+        event = DAY_OFF
+    else:
+        event = SICK_DAY
+    driver = Driver.get_by_chat_id(update.effective_chat.id)
+    check_event = Event.objects.filter(full_name_driver=driver, status_event=False).last()
+    if check_event:
+        query.edit_message_text(text=f"У вас вже відкритий {check_event.event}.Бажаєте завершити його?")
+        query.edit_message_reply_markup(reply_markup=inline_start_driver_kb())
     else:
         ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
         Event.objects.create(
             full_name_driver=driver,
-            event=event[1].title(),
-            chat_id=chat_id,
-            created_at=datetime.datetime.now())
-        update.message.reply_text(
-            f'Ваш статус зміненно на <<{Driver.OFFLINE}>> та ваш <<{event[1].title()}>> розпочато',
-            reply_markup=ReplyKeyboardRemove())
+            event=event,
+            chat_id=driver.chat_id,
+            created_at=timezone.localtime())
+        query.edit_message_text(text=f'Ваш <<{event}>> розпочато.')

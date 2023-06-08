@@ -12,6 +12,11 @@ def status(update, context):
     chat_id = update.effective_chat.id
     driver = Driver.get_by_chat_id(chat_id)
     vehicle = Vehicle.objects.filter(driver=driver)
+    event = Event.objects.filter(full_name_driver=driver, status_event=False).last()
+    if event:
+        event.status_event = True
+        event.save()
+        context.bot.send_message(chat_id=chat_id, text=f"Ваш {event.event} завершено.")
     if len(vehicle) == 1:
         UseOfCars.objects.create(
             user_vehicle=driver,
@@ -32,15 +37,6 @@ def send_set_status(update, context):
 
 def set_status(update, context):
     driver_status = update.message.text
-    try:
-        events = Event.objects.filter(full_name_driver=context.user_data['u_driver'], status_event=False)
-        if events:
-            event = [i for i in events]
-            event[-1].status_event = True
-            event[-1].save()
-            update.message.reply_text(f"{context.user_data['u_driver']}: Ваш - {event[-1].event} завершено")
-    except IndexError:
-        pass
     if driver_status == Driver.OFFLINE:
         finish_job_main(update, context)
     else:
