@@ -291,16 +291,16 @@ class BoltSynchronizer(Synchronizer, Bolt):
         except:
             pass
         try:
-            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}/div'
-            online = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-            if online[-1] == '-':
-                return raw_data
             xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]'
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
+            element_count = WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.XPATH, xpath)))
+            if element_count.text[-1] == '-':
+                return raw_data
+            element_count.click()
         except TimeoutException:
             return raw_data
         i = 0
-        while True:
+        while i < int(element_count.text[-1]):
             i += 1
             try:
                 el = BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_3")
@@ -325,8 +325,8 @@ class BoltSynchronizer(Synchronizer, Bolt):
             xpath = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_2')
             self.get_target_element_of_page(url, xpath)
             return {
-                'width_client': self.get_driver_status_from_map('2'),
-                'wait': self.get_driver_status_from_map('3')
+                'width_client': self.get_driver_status_from_map('1'),
+                'wait': self.get_driver_status_from_map('2')
             }
         except (TimeoutException, WebDriverException) as err:
             print(err.msg)
