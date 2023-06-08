@@ -38,8 +38,7 @@ bolt_states = {
     'BOLTS_GET_DRIVER_STATUS_1': ('https://fleets.bolt.eu/v2/58225/liveMap', 'url'),
     'BOLTS_GET_DRIVER_STATUS_2': ('//div[contains(@class, "map-overlay")]', 'XPATH'),
     'BOLTS_GET_DRIVER_STATUS_FROM_MAP_1': ("//button[@aria-label='Close']", 'XPATH'),
-    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_2': (
-        '//div[contains(@class, "map-overlay")]/div/div[1]/div[@role="tablist"]/div/div', 'XPATH'),
+    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_2': ('//div[@role="tab"]', 'XPATH'),
     'BOLTS_GET_DRIVER_STATUS_FROM_MAP_3': (
         '//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][', 'XPATH'),
     'BOLTS_GET_DRIVER_STATUS_FROM_MAP_3.1': (']/div/div/div[1]/span/span', 'XPATH'),

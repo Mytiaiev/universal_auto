@@ -291,7 +291,7 @@ class BoltSynchronizer(Synchronizer, Bolt):
         except:
             pass
         try:
-            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]'
+            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]/div'
             element_count = WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, xpath)))
             if element_count.text[-1] == '-':
