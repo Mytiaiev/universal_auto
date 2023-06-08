@@ -193,7 +193,7 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     fares = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Штрафи')
     comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Uklon')
     total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Разом')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
@@ -251,7 +251,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     refunds = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
     tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
     weekly_balance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Тижневий баланс')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
@@ -303,7 +303,7 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Перераховано на банківський рахунок')
     returns = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Відшкодування та витрати')
     tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
@@ -347,7 +347,7 @@ class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     total_amount_cash = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума готівкою')
     total_amount_on_card = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума карточкою')
     total_amount = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
@@ -496,7 +496,7 @@ class Driver(User):
     RENT = 'Орендую авто'
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
 
     class Meta:
@@ -588,7 +588,7 @@ class StatusChange(models.Model):
 
 class RentInformation(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     driver_name = models.CharField(max_length=50, blank=True, verbose_name='ПІ Водія')
     rent_time = models.DurationField(null=True, blank=True, verbose_name='Час оренди')
     rent_distance = models.DecimalField(null=True, blank=True, max_digits=6,
@@ -638,7 +638,7 @@ class Client(User):
 class DriverManager(User):
     driver_id = models.ManyToManyField(Driver, blank=True, verbose_name='Driver')
     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
         verbose_name = 'Менеджер водія'
@@ -787,7 +787,7 @@ class Vehicle(models.Model):
     gps_imei = models.CharField(max_length=100, default='')
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Водій')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
@@ -1165,6 +1165,7 @@ class Comment(models.Model):
     comment = models.TextField(verbose_name='Відгук')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='ID в чаті')
     processed = models.BooleanField(default=False, verbose_name='Опрацьовано')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
     created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
@@ -1207,7 +1208,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
     comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL, verbose_name='Відгук')
     checked = models.BooleanField(default=False, verbose_name='Перевірено')
-    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
         verbose_name = 'Замовлення'

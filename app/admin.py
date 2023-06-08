@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.admin import AdminSite
+
 from .models import *
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
@@ -25,6 +27,7 @@ def assign_model_permissions(group):
         'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
         'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
         'Fleets_drivers_vehicles_rate': {'view': True, 'add': True, 'change': True, 'delete': True},
+        'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
     }
 
     for model, permissions in models.items():
@@ -71,12 +74,15 @@ def add_partner_on_save_model(*models):
         original_save_model = admin_class.save_model
 
         def save_model(self, request, obj, form, change):
-            if not change and not obj.partner:
+            if not change and not obj.partner_id:
                 if request.user.is_superuser:
                     pass
                 else:
-                    partner = Partner.objects.get(user=request.user.pk)
-                    obj.partner = partner
+                    partner = Partner.objects.get(user=request.user)
+                    if partner:
+                        obj.partner_id = partner.pk
+            elif change and 'partner_id' not in form.changed_data:
+                obj.partner_id = obj.partner_id
             original_save_model(self, request, obj, form, change)
 
         admin_class.save_model = save_model
@@ -125,8 +131,6 @@ def add_partner_on_save_model(*models):
 #     base_model = NinjaFleet
 #     show_in_index = False
 
-
-
 class DriverManagerInline(admin.TabularInline):
     model = DriverManager.driver_id.through
     extra = 0
@@ -139,6 +143,13 @@ class DriverManagerInline(admin.TabularInline):
         if parent_model is DriverManager:
             self.verbose_name = 'Водій'
             self.verbose_name_plural = 'Водії'
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'driver_id':
+            related_model = db_field.related_model
+            kwargs['queryset'] = related_model.objects.filter(drivermanager__partner__user=request.user)
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
 class SupportManagerClientInline(admin.TabularInline):
@@ -167,6 +178,8 @@ class SupportManagerDriverInline(admin.TabularInline):
         if parent_model is SupportManager:
             self.verbose_name = 'Водій'
             self.verbose_name_plural = 'Водії'
+
+
 
 
 class ServiceStationManagerVehicleInline(admin.TabularInline):
@@ -346,16 +359,6 @@ class ReportOfDriverDebtAdmin(admin.ModelAdmin):
         (None, {'fields': ['driver', 'image']}),
     ]
 
-
-@admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
-    list_display = ('comment', 'chat_id', 'processed')
-    list_filter = ('chat_id', 'processed')
-    list_editable = ['processed']
-
-    fieldsets = [
-        (None, {'fields': ['comment', 'chat_id']}),
-    ]
 
 
 @admin.register(Event)
@@ -744,6 +747,12 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         return fieldsets
 
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'driver_id':
+            kwargs['queryset'] = Driver.objects.filter(partner__user=request.user)
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
 
 @admin.register(Driver)
 @add_partner_on_save_model(Driver)
@@ -786,6 +795,12 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             ]
 
         return fieldsets
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == 'driver_id':
+            kwargs['queryset'] = DriverManager.objects.filter(partner__user=request.user)
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
 @admin.register(Vehicle)
@@ -922,3 +937,39 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
             ]
 
         return fieldsets
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "vehicle":
+            kwargs["queryset"] = Vehicle.objects.filter(partner__user=request.user)
+        elif db_field.name == "driver":
+            kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(Comment)
+class CommentAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['comment', 'chat_id', 'processed',
+                    ]
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Деталі',                     {'fields': ['comment', 'chat_id',
+                                                           'processed', 'partner',
+                                                           ]}),
+            ]
+        else:
+            fieldsets = [
+                ('Деталі',                     {'fields': ['comment', 'chat_id',
+                                                           'processed', 'partner',
+                                                           ]}),
+
+            ]
+
+        return fieldsets
+
