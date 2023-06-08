@@ -25,6 +25,7 @@ class PostRequestHandler:
         sub_form = SubscriberForm(request.POST)
         if sub_form.is_valid():
             sub_form.save()
+            return JsonResponse({}, status=200)
         else:
             return JsonResponse(sub_form.errors, status=400)
 

@@ -17,7 +17,7 @@ from selenium.common import TimeoutException, WebDriverException, InvalidSession
 from translators.server import tss
 from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange, \
     ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber, \
-    SeleniumTools, UaGps, clickandclear, UberTrips
+    SeleniumTools, UaGps, clickandclear, BoltPaymentsOrder, NewUklonPaymentsOrder, UberPaymentsOrder, UberTrips
 from auto import settings
 from auto_bot.main import bot
 
@@ -51,7 +51,7 @@ class Synchronizer:
     @staticmethod
     def download_from_bucket(path, filename):
         response = requests.get(path)
-        local_path = os.path.join(os.getcwd(), f"LastDownloads/{filename}.jpg")
+        local_path = os.path.join(os.getcwd(), f"Temp/{filename}.jpg")
         with open(local_path, "wb") as file:
             file.write(response.content)
         return local_path
@@ -251,48 +251,34 @@ class BoltSynchronizer(Synchronizer, Bolt):
         while True:
             i_table += 1
             try:
-                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}{i_table}]'
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                i = 0
-                while True:
-                    i += 1
-                    try:
-                        _ = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4")
-                        el = BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4.1")}'
-                        status_class = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
-                        if 'success' not in status_class:
-                            continue
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.1")}'
-                        name = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.2")}'
-                        email = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.3")}'
-                        phone_number = WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).text
-                        xpath = f'{el}{i_table}{_}{i}{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5.4")}'
-                        pay_cash = 'success' in WebDriverWait(self.driver, self.sleep).until(
-                            EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("class")
-                        s_name = self.split_name(name)
-                        drivers.append({
-                            'fleet_name': 'Bolt',
-                            'name': s_name[0],
-                            'second_name': s_name[1],
-                            'email': self.validate_email(email),
-                            'phone_number': self.validate_phone_number(phone_number),
-                            'driver_external_id': phone_number,
-                            'pay_cash': pay_cash,
-                            'withdraw_money': False,
-                            'licence_plate': '',
-                            'vehicle_name': '',
-                            'vin_code': '',
+                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}[{i_table}]'
+                driver_row = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, xpath)))
+                name = driver_row.find_element(By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4"))
+                full_name = name.text
+                name.click()
+                email = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5")))).text
+                phone_number = WebDriverWait(self.driver, self.sleep).until(
+                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_6")))).text
+                elements = self.driver.find_elements(By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_7"))
+                pay_cash = (len(elements) == 2)
+                self.driver.back()
+                s_name = self.split_name(full_name)
+                drivers.append({
+                    'fleet_name': 'Bolt',
+                    'name': s_name[0],
+                    'second_name': s_name[1],
+                    'email': self.validate_email(email),
+                    'phone_number': self.validate_phone_number(phone_number),
+                    'driver_external_id': full_name,
+                    'pay_cash': pay_cash,
+                    'withdraw_money': False,
+                    'licence_plate': '',
+                    'vehicle_name': '',
+                    'vin_code': '',
 
-                        })
-                    except TimeoutException:
-                        break
+                })
             except TimeoutException:
                 break
         return drivers
@@ -306,12 +292,16 @@ class BoltSynchronizer(Synchronizer, Bolt):
         except:
             pass
         try:
-            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]'
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
+            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]/div'
+            element_count = WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.XPATH, xpath)))
+            if element_count.text[-1] == '-':
+                return raw_data
+            element_count.click()
         except TimeoutException:
             return raw_data
         i = 0
-        while True:
+        while i < int(element_count.text[-1]):
             i += 1
             try:
                 el = BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_3")
@@ -336,19 +326,24 @@ class BoltSynchronizer(Synchronizer, Bolt):
             xpath = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_2')
             self.get_target_element_of_page(url, xpath)
             return {
-                'width_client': self.get_driver_status_from_map('2'),
-                'wait': self.get_driver_status_from_map('3')
+                'width_client': self.get_driver_status_from_map('1'),
+                'wait': self.get_driver_status_from_map('2')
             }
         except (TimeoutException, WebDriverException) as err:
             self.logger.error(err)
 
-    def download_weekly_report(self):
-        if self.payments_order_file_name() not in os.listdir(os.curdir):
-            try:
-                self.download_payments_order()
-                self.logger.info('Bolt weekly report has been downloaded')
-            except Exception as err:
-                self.logger.error(err)
+    def download_weekly_report(self, day=None, interval=None):
+        try:
+            report = BoltPaymentsOrder.objects.filter(
+                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            if not report:
+                self.download_payments_order(day=day, interval=interval)
+                self.save_report(day=day)
+                report = BoltPaymentsOrder.objects.filter(
+                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            return list(report)
+        except Exception as err:
+            print(err)
 
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:
@@ -493,22 +488,25 @@ class UklonSynchronizer(Synchronizer, NewUklon):
 
     def get_driver_status_from_map(self, search_text):
         raw_data = []
-        try:
-            xpath = f"{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1')}[{search_text}]"
-            WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
-        except TimeoutException:
+        self.driver.refresh()
+        xpath = f"{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1')}[{search_text}]"
+        status_box = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
+        count_drivers = status_box.find_element(
+            By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.0')).text
+        if int(count_drivers):
+            status_box.click()
+        else:
             return raw_data
         i = 0
-        while True:
+        while i < int(count_drivers):
             i += 1
             try:
                 el = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.1')
                 xpath = f"{el}{i}{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.2')}"
                 driver_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
-
             except TimeoutException:
-                break
+                return raw_data
             name_list = [x for x in driver_name.split(' ') if len(x) > 0]
             name, second_name = '', ''
             try:
@@ -535,7 +533,6 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             self.logger.error(err)
 
     def withdraw_money(self):
-        bot.send_message(chat_id='515224934', text='withdraw started')
         url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')
         xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
         self.get_target_element_of_page(url, xpath)
@@ -543,9 +540,8 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        checkbox = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_3'))))
-        checkbox.click()
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_3')))).click()
         sum_remain = WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_4'))))
         clickandclear(sum_remain)
@@ -554,7 +550,6 @@ class UklonSynchronizer(Synchronizer, NewUklon):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_5')))).click()
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_6')))).click()
-        bot.send_message(chat_id='515224934', text='withdraw finished')
 
     def add_driver(self, jobapplication):
         url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
@@ -624,13 +619,18 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
 
-    def download_weekly_report(self):
-        if self.payments_order_file_name() not in os.listdir(os.curdir):
-            try:
-                self.download_payments_order()
-                self.logger.info('Uklon weekly report has been downloaded')
-            except Exception as err:
-                self.logger.error(err)
+    def download_weekly_report(self, day=None):
+        try:
+            report = NewUklonPaymentsOrder.objects.filter(
+                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            if not report:
+                self.download_payments_order(day=day)
+                self.save_report(day=day)
+                report = NewUklonPaymentsOrder.objects.filter(
+                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            return list(report)
+        except Exception as err:
+            print(err)
 
 
 class UberSynchronizer(Synchronizer, Uber):
@@ -780,15 +780,18 @@ class UberSynchronizer(Synchronizer, Uber):
         except WebDriverException as err:
             self.logger.error(err)
 
-    def download_weekly_report(self):
-        if self.payments_order_file_name("payments_driver") not in os.listdir(os.curdir):
-            try:
-                self.download_payments_order(UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_3"),
-                                             UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_4"),
-                                             "payments_driver")
-                self.logger.info('Uber weekly report has been downloaded')
-            except Exception as err:
-                self.logger.error(err)
+    def download_weekly_report(self, day=None):
+        try:
+            report = UberPaymentsOrder.objects.filter(
+                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            if not report:
+                self.download_payments_order(day=day)
+                self.save_report(day=day)
+                report = UberPaymentsOrder.objects.filter(
+                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            return list(report)
+        except Exception as err:
+            print(err.msg)
 
 
 class UaGpsSynchronizer(Synchronizer, UaGps):

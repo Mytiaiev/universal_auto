@@ -132,11 +132,11 @@ class FleetAdmin(admin.ModelAdmin):
         ServiceStationManagerFleetInline
     ]
 
-    # def has_add_permission(self, request, obj=None):
-    #     return False
+    def has_add_permission(self, request, obj=None):
+        return False
 
-    # def has_delete_permission(self, request, obj=None):
-    #     return False
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Driver)
@@ -237,19 +237,12 @@ class PaymentsOrderAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
-@admin.register(UklonPaymentsOrder)
-class UklonPaymentsOrderAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in UklonPaymentsOrder._meta.fields]
-    search_fields = ('signal', 'licence_plate')
-    ordering = ('-report_from', 'signal')
-    list_per_page = 25
-
-
 @admin.register(NinjaPaymentsOrder)
 class NinjaPaymentsOrderAdmin(admin.ModelAdmin):
     list_display = [f.name for f in NinjaPaymentsOrder._meta.fields]
     ordering = ('-report_from', 'chat_id')
     list_per_page = 25
+
 
 @admin.register(NewUklonPaymentsOrder)
 class NewUklonPaymentsOrderAdmin(admin.ModelAdmin):
