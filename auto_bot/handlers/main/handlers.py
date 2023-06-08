@@ -7,8 +7,8 @@ from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 
 from app.models import User, Driver, DriverManager, Owner, ServiceStationManager, UseOfCars
-from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard,\
-    inline_start_driver_kb, inline_finish_driver_kb, inline_more_func_kb
+from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, \
+    inline_start_driver_kb, inline_finish_driver_kb, inline_more_func_kb, inline_driver_func_kb
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
@@ -55,6 +55,12 @@ def more_function_user(update, context):
     query = update.callback_query
     query.edit_message_text(text=more_func_text)
     query.edit_message_reply_markup(reply_markup=inline_more_func_kb())
+
+
+def more_function_driver(update, context):
+    query = update.callback_query
+    query.edit_message_text(text=more_func_text)
+    query.edit_message_reply_markup(reply_markup=inline_driver_func_kb())
 
 
 def update_phone_number(update, context):
