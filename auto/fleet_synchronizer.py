@@ -122,7 +122,7 @@ class Synchronizer:
         update_fields = []
         if vehicle.name == '' and kwargs['vehicle_name'] != '':
             vehicle.name = kwargs['vehicle_name']
-            update_fields.append('vehicle_name')
+            update_fields.append('name')
         if vehicle.vin_code == '' and kwargs['vin_code'] != '':
             vehicle.vin_code = kwargs['vin_code']
             update_fields.append('vin_code')
@@ -850,85 +850,16 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
         rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
         return rent_distance, rent_time
 
-    # def get_rent_distance(self):
-    #     now = timezone.localtime()
-    #     start = timezone.datetime.combine(now, datetime.datetime.min.time()).astimezone()
-    #     for _driver in Driver.objects.all():
-    #         rent_distance = 0
-    #         rent_time = datetime.timedelta()
-    #         # car that have worked at that day
-    #         working_cars = UseOfCars.objects.filter(created_at__gte=start,
-    #                                                 created_at__lte=now)
-    #         vehicles = Vehicle.objects.filter(driver=_driver)
-    #         if vehicles:
-    #             for vehicle in vehicles:
-    #                 # check driver's car before they start work
-    #                 first_use = working_cars.filter(licence_plate=vehicle.licence_plate).first()
-    #                 if first_use:
-    #                     rent_before = self.generate_report(start,
-    #                                                        timezone.localtime(first_use.created_at),
-    #                                                        vehicle.licence_plate)
-    #                     rent_distance += rent_before[0]
-    #                     rent_time += rent_before[1]
-    #                     # check driver's car after work
-    #                     last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
-    #                     if last_use.end_at:
-    #                         rent_after = self.generate_report(timezone.localtime(last_use.end_at),
-    #                                                           now,
-    #                                                           vehicle.licence_plate)
-    #                         rent_distance += rent_after[0]
-    #                         rent_time += rent_after[1]
-    #                 #  car not used in that day
-    #                 else:
-    #                     rent = self.generate_report(start, now, vehicle.licence_plate)
-    #                     rent_distance += rent[0]
-    #                     rent_time += rent[1]
-    #         # driver work at that day
-    #         driver_use = working_cars.filter(user_vehicle=_driver)
-    #         if driver_use:
-    #             for car in driver_use:
-    #                 if car.end_at:
-    #                     end = car.end_at
-    #                 else:
-    #                     end = now
-    #                 rent_statuses = StatusChange.objects.filter(driver=_driver.id,
-    #                                                             name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
-    #                                                             start_time__gte=timezone.localtime(car.created_at),
-    #                                                             start_time__lte=timezone.localtime(end))
-    #                 for status in rent_statuses:
-    #                     if status.end_time:
-    #                         end = status.end_time
-    #                     else:
-    #                         end = now
-    #                     status_report = self.generate_report(timezone.localtime(status.start_time),
-    #                                                          timezone.localtime(end),
-    #                                                          car.licence_plate)
-    #                     rent_distance += status_report[0]
-    #                     rent_time += status_report[1]
-    #         #             update today rent in db
-    #         rent_today = RentInformation.objects.filter(driver_name=_driver,
-    #                                                     created_at__date=timezone.now().date()).first()
-    #         if rent_today:
-    #             rent_today.rent_time = rent_time
-    #             rent_today.rent_distance = rent_distance
-    #             rent_today.save()
-    #         else:
-    #             #  create rent file for today
-    #             RentInformation.objects.create(driver_name=_driver,
-    #                                            driver=_driver,
-    #                                            rent_time=rent_time,
-    #                                            rent_distance=rent_distance)
-
     def get_rent_distance(self):
         yesterday = timezone.localtime() - datetime.timedelta(days=1)
         start = timezone.datetime.combine(yesterday, datetime.datetime.min.time()).astimezone()
         end = timezone.datetime.combine(yesterday, datetime.datetime.max.time()).astimezone()
+        working_cars = UseOfCars.objects.filter(created_at__gte=start,
+                                                created_at__lte=end)
         for _driver in Driver.objects.all():
             rent_distance = 0
             rent_time = datetime.timedelta()
             # car that have worked at that day
-            working_cars = UseOfCars.objects.filter(created_at__gte=start,
-                                                    created_at__lte=end)
             vehicles = Vehicle.objects.filter(driver=_driver)
             if vehicles:
                 for vehicle in vehicles:
@@ -941,7 +872,7 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                         rent_distance += rent_before[0]
                         rent_time += rent_before[1]
                         # check driver's car after work
-                        last_use = list(working_cars.filter(licence_plate=vehicle.licence_plate))[-1]
+                        last_use = working_cars.filter(licence_plate=vehicle.licence_plate).last()
                         if last_use.end_at:
                             rent_after = self.generate_report(timezone.localtime(last_use.end_at),
                                                               end,
@@ -950,20 +881,28 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                             rent_time += rent_after[1]
                     #  car not used in that day
                     else:
+                        rent = self.generate_report(start, end, vehicle.licence_plate)
+                        rent_distance += rent[0]
+                        rent_time += rent[1]
+            driver_use = working_cars.filter(user_vehicle=_driver)
+            if driver_use:
+                for car in driver_use:
+                    if car.end_at:
+                        end = car.end_at
                         # driver work at that day
-                        rent_statuses = StatusChange.objects.filter(driver=_driver.id,
-                                                                    name__in=[Driver.ACTIVE, Driver.OFFLINE,
-                                                                              Driver.RENT],
-                                                                    start_time__gte=timezone.localtime(start),
-                                                                    start_time__lte=timezone.localtime(end))
-                        for status in rent_statuses:
-                            if status.end_time:
-                                end = status.end_time
-                            status_report = self.generate_report(timezone.localtime(status.start_time),
-                                                                 timezone.localtime(end),
-                                                                 vehicle.licence_plate)
-                            rent_distance += status_report[0]
-                            rent_time += status_report[1]
+                    rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+                                                                name__in=[Driver.ACTIVE, Driver.OFFLINE,
+                                                                          Driver.RENT],
+                                                                start_time__gte=timezone.localtime(car.created_at),
+                                                                end_time__lte=timezone.localtime(end))
+                    for status in rent_statuses:
+                        if status.end_time:
+                            end = status.end_time
+                        status_report = self.generate_report(timezone.localtime(status.start_time),
+                                                             timezone.localtime(end),
+                                                             car.licence_plate)
+                        rent_distance += status_report[0]
+                        rent_time += status_report[1]
             RentInformation.objects.create(driver_name=_driver,
                                            driver=_driver,
                                            rent_time=rent_time,
@@ -976,7 +915,7 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                                                   created_at__date=timezone.localtime().date()).first()
             driver_id = driver.get_driver_external_id('Uber')
             distance_in_trips = 0
-            if driver_id:
+            if driver_id and rent:
                 trips = UberTrips.objects.filter(driver_external_id=driver_id,
                                                  created_at__date=timezone.localtime().date())
                 for trip in trips:
@@ -984,8 +923,8 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                                                          timezone.localtime(trip.end_trip),
                                                          trip.license_plate)
                     distance_in_trips += trip_distance[0]
-            rent.rent_distance -= Decimal(distance_in_trips)
-            rent.save()
+                rent.rent_distance -= Decimal(distance_in_trips)
+                rent.save()
 
 
 
