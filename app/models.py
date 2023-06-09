@@ -4,6 +4,8 @@ import csv
 import datetime
 import re
 import pendulum
+from django.core.exceptions import ObjectDoesNotExist
+
 from scripts.selector_services import *
 from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
@@ -1322,42 +1324,26 @@ class Service(PolymorphicModel):
         verbose_name = 'Сервіс'
         verbose_name_plural = 'Сервіси'
 
-
-class BoltService(Service):
-    @staticmethod
-    def get_value(key, default=None):
+    @classmethod
+    def get_value(cls, key, default=None):
         try:
-            setting = BoltService.objects.get(key=key)
-        except BoltService.DoesNotExist:
+            setting = cls.objects.get(key=key)
+        except ObjectDoesNotExist:
             return default
         return setting.value
+
+
+class BoltService(Service):
+    pass
 
 
 class NewUklonService(Service):
-    @staticmethod
-    def get_value(key, default=None):
-        try:
-            setting = NewUklonService.objects.get(key=key)
-        except NewUklonService.DoesNotExist:
-            return default
-        return setting.value
+    pass
 
 
 class UaGpsService(Service):
-    @staticmethod
-    def get_value(key, default=None):
-        try:
-            setting = UaGpsService.objects.get(key=key)
-        except UaGpsService.DoesNotExist:
-            return default
-        return setting.value
+    pass
 
 
 class UberService(Service):
-    @staticmethod
-    def get_value(key, default=None):
-        try:
-            setting = UberService.objects.get(key=key)
-        except UberService.DoesNotExist:
-            return default
-        return setting.value
+    pass
