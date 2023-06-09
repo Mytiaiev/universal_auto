@@ -268,17 +268,9 @@ def increase_order_price(update, context):
     chat_id = query.from_user.id
     context.bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
     order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
-    order.car_delivery_price += int(query.data)
-    order.sum += int(query.data)
-    order.checked = False
-    order.save()
-
-
-def continue_search(update, context):
-    query = update.callback_query
-    chat_id = query.from_user.id
-    context.bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
-    order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
+    if query.data != "Continue_search":
+        order.car_delivery_price += int(query.data)
+        order.sum += int(query.data)
     order.checked = False
     order.save()
 
