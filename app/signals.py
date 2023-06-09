@@ -2,8 +2,7 @@ from django.utils import timezone
 from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from app.models import Driver, Order, StatusChange, JobApplication, \
-    RentInformation, ParkSettings, ParkStatus
+from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus
 from auto_bot.main import bot
 
 

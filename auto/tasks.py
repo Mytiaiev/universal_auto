@@ -16,14 +16,14 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    Bolt, NewUklon, Uber, UaGps, NinjaPaymentsOrder, UseOfCars, \
-    Fleets_drivers_vehicles_rate, NinjaFleet
+     NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
+from auto.drivers import Bolt, NewUklon, Uber, UaGps
 
 BOLT_CHROME_DRIVER = None
 UKLON_CHROME_DRIVER = None

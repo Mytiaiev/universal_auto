@@ -1,4 +1,4 @@
-from app.models import Uber
+from auto.drivers import Uber
 
 
 def run():

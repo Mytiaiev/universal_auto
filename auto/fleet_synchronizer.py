@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import re
 import time
 import datetime
 from decimal import Decimal
@@ -16,10 +15,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import TimeoutException, WebDriverException, InvalidSessionIdException
 from translators.server import tss
 from app.models import Driver, Fleets_drivers_vehicles_rate, Fleet, Vehicle, UseOfCars, RentInformation, StatusChange, \
-    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, Bolt, NewUklon, Uber, \
-    SeleniumTools, UaGps, clickandclear, BoltPaymentsOrder, NewUklonPaymentsOrder, UberPaymentsOrder, UberTrips
+    ParkSettings, UberService, UaGpsService, NewUklonService, BoltService, NewUklonFleet, BoltPaymentsOrder, \
+    NewUklonPaymentsOrder, UberPaymentsOrder, UberTrips
 from auto import settings
-from auto_bot.main import bot
+from auto.drivers import Bolt, NewUklon, Uber, UaGps, clickandclear
 
 LOGGER.setLevel(logging.WARNING)
 
