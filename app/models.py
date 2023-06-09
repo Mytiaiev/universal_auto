@@ -531,14 +531,6 @@ class ParkStatus(models.Model):
         ordering = ['-created_at']
 
 
-class StatusChange(models.Model):
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255, verbose_name='Назва статусу')
-    start_time = models.DateTimeField(auto_now_add=True)
-    end_time = models.DateTimeField(null=True, blank=True)
-    duration = models.DurationField(null=True, blank=True)
-
-
 class RentInformation(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True)
     driver_name = models.CharField(max_length=50, blank=True)
@@ -771,6 +763,14 @@ class Vehicle(models.Model):
         else:
             return None
 
+
+class StatusChange(models.Model):
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, verbose_name='Назва статусу')
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    duration = models.DurationField(null=True, blank=True)
 
 class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE)

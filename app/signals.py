@@ -2,7 +2,7 @@ from django.utils import timezone
 from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus
+from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus, Vehicle
 from auto_bot.main import bot
 
 
@@ -22,9 +22,11 @@ def create_status_change(sender, instance, **kwargs):
             prev_status_change.duration = prev_status_change.end_time - prev_status_change.start_time
             prev_status_change.save()
         # driver_status has changed, create new status change
+        vehicle = Vehicle.objects.filter(driver=instance).first()
         status_change = StatusChange(
             driver=instance,
             name=instance.driver_status,
+            vehicle=vehicle,
             start_time=timezone.now(),
         )
         status_change.save()
