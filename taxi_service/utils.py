@@ -48,14 +48,12 @@ def update_order_sum_or_status(id_order, arg, action):
 
 def restart_order(id_order, car_delivery_price, action):
     if action == 'increase_price':
-        print('increase_price ACTION', action, id_order, car_delivery_price)
         order = Order.objects.get(id=id_order)
         order.car_delivery_price = car_delivery_price
         order.checked = False
         order.save()
 
     if action == 'continue_search':
-        print('continue_search ACTION', action, id_order, car_delivery_price)
         order = Order.objects.get(id=id_order)
         order.checked = False
         order.save()

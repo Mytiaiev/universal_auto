@@ -52,7 +52,6 @@ class PostRequestHandler:
         id_order = request.POST.get('idOrder')
         car_delivery_price = request.POST.get('carDeliveryPrice', 0)
         action = request.POST.get('action')
-        print('RESTARTING ORDER HANDLER', id_order, car_delivery_price, action)
         restart_order(id_order, car_delivery_price, action)
 
         return JsonResponse({}, status=200)

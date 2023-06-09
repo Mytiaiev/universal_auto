@@ -89,6 +89,7 @@ function setAutoCenter(map) {
 }
 
 var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi = [];
+var circle;
 
 const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
 const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH || 0);
@@ -99,6 +100,9 @@ const CENTRE_CITY_LAT = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LAT 
 const CENTRE_CITY_LNG = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LNG || 0);
 const CENTRE_CITY_RADIUS = parseInt(parkSettings && parkSettings.CENTRE_CITY_RADIUS || 0);
 const SEND_TIME_ORDER_MIN = parseInt(parkSettings && parkSettings.SEND_TIME_ORDER_MIN || 0);
+const MINIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MINIMUM_PRICE_RADIUS || 0);
+const MAXIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MAXIMUM_PRICE_RADIUS || 0);
+const TIMER = parseInt(parkSettings && parkSettings.TIMER_SEARCH_DRIVER || 0);
 const userLanguage = navigator.language || navigator.userLanguage;
 
 const city_boundaries = function () {
@@ -143,7 +147,10 @@ function orderUpdate(id_order) {
           clearInterval(intervalId);
 
           removeAllMarkers();
-
+          $('#timer').remove();
+          if ($('timer-modal')){
+            $('#timer-modal').remove();
+          }
           const driverMarker = addMarker({
             position: new google.maps.LatLng(driverOrder[0].lat, driverOrder[0].lon),
             map,
@@ -299,6 +306,7 @@ function onOrderReject() {
   var idOrder = getCookie('idOrder')
   var sum = getCookie('sum') || 0;
   destroyMap()
+  $('#timer').remove();
 
   if (idOrder)
     $.ajax({
@@ -447,14 +455,14 @@ function createMap(address, to_address, taxiArr) {
   });
 
   // Додати коло з радіусом 5 км
-  var circle = new google.maps.Circle({
+  circle = new google.maps.Circle({
     map: map,
     center: address[0].geometry.location,
-    radius: 5000, // радіус у метрах
-    strokeColor: '#FF0000',
+    radius: FREE_DISPATCH * 1000, // радіус у метрах
+    strokeColor: '#00FFFF',
     strokeOpacity: 0.8,
     strokeWeight: 2,
-    fillColor: '#FF0000',
+    fillColor: '#00FFFF',
     fillOpacity: 0.35
   });
 
@@ -484,7 +492,8 @@ function createMap(address, to_address, taxiArr) {
   orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
   orderConfirm.addEventListener("click", function () {
     costText = gettext("Заждіть поки ми підберемо вам автомобіль.");
-    costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
+    costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
+      '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
     onOrderPayment('Готівка');
     hidePaymentButtons();
     startTimer();
@@ -498,8 +507,13 @@ function createMap(address, to_address, taxiArr) {
 function startTimer() {
   var timerInterval;
   var startTime = Date.now();
-  var duration = 3 * 60 * 1000; // 3 хвилини
-  var timerElement = document.getElementById('timer');
+  var duration = TIMER * 1000; // 3 хвилини
+
+  var timerElement = document.createElement('div');
+  timerElement.id = 'timer';
+
+  var costDiv = document.getElementsByClassName('alert alert-primary mt-2')[0];
+  costDiv.appendChild(timerElement);
 
   // Зупинити попередній таймер, якщо він вже запущений
   clearInterval(timerInterval);
@@ -511,7 +525,7 @@ function startTimer() {
     // Перевірити, чи таймер закінчився
     if (remainingTime <= 0) {
       clearInterval(timerInterval);
-      timerElement.innerHTML = '';
+      $('#timer').remove();
 
       var modalContent = document.createElement('div');
       modalContent.innerHTML = '<div id="timer-modal" class="modal">\n' +
@@ -519,8 +533,8 @@ function startTimer() {
         '    <p>Вибачте за затримку. Наразі немає вільних автомобілів поряд з вами. </p>\n' +
         '    <p>Чи не бажаєте підняти ціну для ширшого пошуку автомобіля?</p>\n' +
         '    <div class="slider-container">\n' +
-        '      <input type="range" id="price-range" min="20" max="1000" step="1" value="20" class="price-range">\n' +
-        '      <span id="slider-value">20 ₴</span>\n' +
+        '      <input type="range" id="price-range" min="' + MINIMUM_PRICE_RADIUS + '" max="' + MAXIMUM_PRICE_RADIUS + '" step="1" value="' + MINIMUM_PRICE_RADIUS + '" class="price-range">\n' +
+        '      <span id="slider-value">30 ₴</span>\n' +
         '    </div>\n' +
         '    <div class="button-group">\n' +
         '      <button class="btn btn-primary">Підвищити</button>\n' +
@@ -546,7 +560,6 @@ function startTimer() {
       });
       continueSearch.addEventListener('click', function (){
         onContinueSearch();
-        startTimer();
         modal.remove();
       });
       rejectSearch.addEventListener('click', function (){
@@ -574,7 +587,9 @@ function startTimer() {
 function onIncreasePrice() {
   var idOrder = getCookie('idOrder');
   var carDeliveryPrice = getCookie('car_delivery_price');
-  var csrfToken = getCookie('csrfToken');
+
+  // Розрахунок нового радіуса
+  var newRadius = (FREE_DISPATCH * 1000) + (carDeliveryPrice / TARIFF_DISPATCH) * 1000;
 
   $.ajax({
     url: ajaxPostUrl,
@@ -586,14 +601,25 @@ function onIncreasePrice() {
       carDeliveryPrice: carDeliveryPrice
     },
     success: function (response) {
-      startTimer()
+      // Оновлення радіуса на карті
+      updateCircleRadius(newRadius);
+      startTimer();
     }
   });
 }
 
+function updateCircleRadius(radius) {
+  // Перевірити, чи коло вже існує
+  if (circle) {
+    // Оновити радіус кола
+    circle.setRadius(radius);
+  }
+}
+
+
+
 function onContinueSearch() {
   var idOrder = getCookie('idOrder');
-  var csrfToken = getCookie('csrfToken');
 
   $.ajax({
     url: ajaxPostUrl,

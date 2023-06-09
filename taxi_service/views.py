@@ -27,7 +27,8 @@ class IndexView(TemplateView):
             "FREE_CAR_SENDING_DISTANCE", "TARIFF_CAR_DISPATCH",
             "TARIFF_CAR_OUTSIDE_DISPATCH", "TARIFF_IN_THE_CITY",
             "TARIFF_OUTSIDE_THE_CITY", "CENTRE_CITY_LAT", "CENTRE_CITY_LNG",
-            "CENTRE_CITY_RADIUS", "SEND_TIME_ORDER_MIN"
+            "CENTRE_CITY_RADIUS", "SEND_TIME_ORDER_MIN", "TIMER_SEARCH_DRIVER",
+            "MINIMUM_PRICE_RADIUS", "MAXIMUM_PRICE_RADIUS"
         ]
 
         park_setting_objects = ParkSettings.objects.filter(
@@ -56,7 +57,6 @@ class PostRequestView(View):
         elif action in ['order_sum', 'user_opt_out']:
             return handler.handle_update_order(request)
         elif action in ['increase_price', 'continue_search']:
-            print('RESTARTING ORDER VIEW')
             return handler.handler_restarting_order(request)
         else:
             return handler.handle_unknown_action(request)
