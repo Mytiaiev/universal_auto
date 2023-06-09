@@ -218,10 +218,11 @@ class Fleets_drivers_vehicles_rateInline(admin.TabularInline):
 
 @admin.register(Fleet)
 class FleetAdmin(admin.ModelAdmin):
-    inlines = [
-        Fleets_drivers_vehicles_rateInline,
-        ServiceStationManagerFleetInline
-    ]
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(DriverRateLevels)
@@ -785,15 +786,9 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'manager':
-            partner = self.get_parent_instance(request)
-
-            if partner:
-                kwargs['queryset'] = db_field.related_model.objects.filter(partner=partner)
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-    def get_parent_instance(self, request):
-        return Partner.objects.get(user=request.user.pk)
 
 
 @admin.register(Vehicle)
@@ -934,8 +929,6 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
             kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-
 
 
 @admin.register(Comment)

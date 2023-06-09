@@ -10,17 +10,17 @@ from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fle
 from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
-    take_a_day_off_or_sick_leave, option, numberplate, status_car
+    take_a_day_off_or_sick_leave, numberplate, status_car
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
-from auto_bot.handlers.reports.handlers import report, download_report
+from auto_bot.handlers.reports.handlers import report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, continue_search, first_address_check, second_address_check, client_reject_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
-    more_function_user
+    more_function_user, more_function_driver
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -31,8 +31,7 @@ from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
-from auto_bot.handlers.driver.static_text import TAKE_SICK_LEAVE, TAKE_A_DAY_OFF, SERVICEABLE, BROKEN
-from auto_bot.handlers.main.static_text import main_buttons
+from auto_bot.handlers.driver.static_text import SERVICEABLE, BROKEN
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
@@ -78,7 +77,6 @@ job_docs_conversation = ConversationHandler(
 
 def setup_dispatcher(dp):
     dp.add_handler(CommandHandler("report", report))
-    dp.add_handler(CommandHandler("download_report", download_report))
     dp.add_handler(CommandHandler("rating", drivers_rating))
     dp.add_handler(CommandHandler("total_weekly_rating", driver_total_weekly_rating))
     # Transfer money
@@ -102,7 +100,7 @@ def setup_dispatcher(dp):
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
     dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
-    dp.add_handler(CallbackQueryHandler(more_function_user, pattern="Other"))
+    dp.add_handler(CallbackQueryHandler(more_function_user, pattern="Other_user"))
     dp.add_handler(MessageHandler(Filters.location, get_location))
     dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order|Wrong_place"))
     dp.add_handler(CallbackQueryHandler(to_the_address, pattern="Right_place"))
@@ -124,11 +122,11 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(save_comment, pattern="5_Star|4_Star|3_Star|2_Star|1_Star"))
 
     # Add job application
-    dp.add_handler(MessageHandler(Filters.regex(fr"^\{main_buttons[2]}$"), job_application))
     # Commands for Drivers
-    # Changing status of driver
     dp.add_handler(CallbackQueryHandler(status, pattern="Start_work"))
     dp.add_handler(CallbackQueryHandler(finish_job_main, pattern="Finish_work"))
+    dp.add_handler(CallbackQueryHandler(more_function_driver, pattern="More_driver"))
+    dp.add_handler(CallbackQueryHandler(take_a_day_off_or_sick_leave, pattern="Off day_driver|Sick day_driver"))
     dp.add_handler(MessageHandler(
         Filters.regex(fr"^{Driver.ACTIVE}$") |
         Filters.regex(fr"^{Driver.OFFLINE}$") |
@@ -144,13 +142,6 @@ def setup_dispatcher(dp):
 
     # Sending report(payment debt)
     dp.add_handler(debt_conversation)
-
-    # Take a day off/Take sick leave
-    dp.add_handler(CommandHandler("option", option))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr'^{TAKE_A_DAY_OFF}$') |
-        Filters.regex(fr'^{TAKE_SICK_LEAVE}$'),
-        take_a_day_off_or_sick_leave))
 
     # Сar registration for today
     dp.add_handler(MessageHandler(Filters.regex(fr'^{NOT_CORRECT_CHOICE}$'), get_vehicle_of_driver))
