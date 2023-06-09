@@ -488,6 +488,26 @@ class User(models.Model):
             return None
 
 
+class DriverManager(User):
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    class Meta:
+        verbose_name = 'Менеджер водія'
+        verbose_name_plural = 'Менеджер водіїв'
+
+    def __str__(self):
+        return f'{self.name} {self.second_name}'
+
+    @staticmethod
+    def get_by_chat_id(chat_id):
+        try:
+            driver_manager = DriverManager.objects.get(chat_id=chat_id)
+            return driver_manager
+        except DriverManager.DoesNotExist:
+            return None
+
+
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
@@ -497,6 +517,7 @@ class Driver(User):
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
 
     class Meta:
@@ -632,27 +653,6 @@ class Client(User):
             client = Client.objects.get(chat_id=chat_id)
             return client
         except Client.DoesNotExist:
-            return None
-
-
-class DriverManager(User):
-    driver_id = models.ManyToManyField(Driver, blank=True, verbose_name='Driver')
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
-
-    class Meta:
-        verbose_name = 'Менеджер водія'
-        verbose_name_plural = 'Менеджер водіїв'
-
-    def __str__(self):
-        return f'{self.name} {self.second_name}'
-
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        try:
-            driver_manager = DriverManager.objects.get(chat_id=chat_id)
-            return driver_manager
-        except DriverManager.DoesNotExist:
             return None
 
 

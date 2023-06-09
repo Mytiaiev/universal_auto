@@ -22,7 +22,7 @@ dj-database-url
 pytest==7.1.3
 pytest-django==4.5.2
 django-polymorphic
-celery
+celery==5.1.2
 folium
 shapely
 python-gettext

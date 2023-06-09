@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin import AdminSite
+from django.forms import BaseInlineFormSet
 
 from .models import *
 from django.contrib.auth.models import Group, Permission
@@ -91,6 +92,8 @@ def add_partner_on_save_model(*models):
     return decorator
 
 
+
+
 # class FleetChildAdmin(PolymorphicChildModelAdmin):
 #     base_model = Fleet
 #     show_in_index = False
@@ -131,25 +134,7 @@ def add_partner_on_save_model(*models):
 #     base_model = NinjaFleet
 #     show_in_index = False
 
-class DriverManagerInline(admin.TabularInline):
-    model = DriverManager.driver_id.through
-    extra = 0
 
-    def __init__(self, parent_model, admin_site):
-        super().__init__(parent_model, admin_site)
-        if parent_model is Driver:
-            self.verbose_name = 'Менеджер'
-            self.verbose_name_plural = 'Менеджери'
-        if parent_model is DriverManager:
-            self.verbose_name = 'Водій'
-            self.verbose_name_plural = 'Водії'
-
-    def formfield_for_manytomany(self, db_field, request, **kwargs):
-        if db_field.name == 'driver_id':
-            related_model = db_field.related_model
-            kwargs['queryset'] = related_model.objects.filter(drivermanager__partner__user=request.user)
-
-        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
 class SupportManagerClientInline(admin.TabularInline):
@@ -178,8 +163,6 @@ class SupportManagerDriverInline(admin.TabularInline):
         if parent_model is SupportManager:
             self.verbose_name = 'Водій'
             self.verbose_name_plural = 'Водії'
-
-
 
 
 class ServiceStationManagerVehicleInline(admin.TabularInline):
@@ -219,6 +202,18 @@ class Fleets_drivers_vehicles_rateInline(admin.TabularInline):
     fieldsets = [
         (None, {'fields': ['fleet', 'driver', 'vehicle', 'driver_external_id', 'rate']}),
     ]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name in ('vehicle', 'driver'):
+            partner = self.get_parent_instance(request)
+
+            if partner:
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner=partner)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_parent_instance(self, request):
+        return Partner.objects.get(user=request.user.pk)
 
 
 @admin.register(Fleet)
@@ -716,9 +711,6 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     ordering = ('name', 'second_name')
     list_per_page = 25
 
-    inlines = [
-        DriverManagerInline,
-    ]
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -761,26 +753,20 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     ordering = ('name', 'second_name')
     list_per_page = 25
 
-    inlines = [
-        Fleets_drivers_vehicles_rateInline,
-        DriverManagerInline,
-        SupportManagerDriverInline,
-    ]
-
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
             return ['id', 'name', 'second_name',
                     'email', 'phone_number', 'chat_id',
-                    'driver_status', 'created_at',
+                    'driver_status', 'manager', 'created_at',
                     ]
 
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
                 ('Інформація про водія',      {'fields': ['name', 'second_name', 'email', 'phone_number',
-                                                          'driver_status', 'chat_id',
+                                                          'driver_status', 'chat_id', 'manager',
                                                           ]}),
                 ('Додатково',                  {'fields': ['partner',
                                                            ]}),
@@ -788,7 +774,8 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         else:
             fieldsets = [
-                ('Інформація про водія',       {'fields': ['name', 'second_name', 'email', 'phone_number', 'chat_id',
+                ('Інформація про водія',       {'fields': ['name', 'second_name', 'email', 'phone_number',
+                                                           'manager',  'chat_id',
                                                            ]}),
                 ('Статус водія',               {'fields': ['driver_status',
                                                            ]}),
@@ -796,11 +783,17 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         return fieldsets
 
-    def formfield_for_manytomany(self, db_field, request, **kwargs):
-        if db_field.name == 'driver_id':
-            kwargs['queryset'] = DriverManager.objects.filter(partner__user=request.user)
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'manager':
+            partner = self.get_parent_instance(request)
 
-        return super().formfield_for_manytomany(db_field, request, **kwargs)
+            if partner:
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner=partner)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_parent_instance(self, request):
+        return Partner.objects.get(user=request.user.pk)
 
 
 @admin.register(Vehicle)
@@ -810,10 +803,6 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     ordering = ('name',)
     exclude = ('deleted_at',)
     list_per_page = 25
-
-    inlines = [
-        Fleets_drivers_vehicles_rateInline,
-    ]
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -947,8 +936,11 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+
+
 @admin.register(Comment)
 class CommentAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
@@ -972,4 +964,8 @@ class CommentAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             ]
 
         return fieldsets
+
+
+
+
 
