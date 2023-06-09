@@ -89,7 +89,7 @@ function setAutoCenter(map) {
 }
 
 var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi = [];
-var circle;
+var circle, intervalId, intervalTime;
 
 const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
 const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH || 0);
@@ -133,7 +133,7 @@ function getMarkerIcon(type) {
 }
 
 function orderUpdate(id_order) {
-  var intervalId = setInterval(function () {
+  intervalId = setInterval(function () {
     $.ajax({
       url: ajaxGetUrl,
       method: 'GET',
@@ -143,18 +143,17 @@ function orderUpdate(id_order) {
       },
       success: function (response) {
         var driverOrder = JSON.parse(response.data)
-        if (driverOrder.length > 0) {
+        if (driverOrder.vehicle_gps) {
           clearInterval(intervalId);
+          clearInterval(intervalTime);
 
           removeAllMarkers();
           $('#timer').remove();
-          if ($('timer-modal')){
-            $('#timer-modal').remove();
-          }
+
           const driverMarker = addMarker({
-            position: new google.maps.LatLng(driverOrder[0].lat, driverOrder[0].lon),
+            position: new google.maps.LatLng(driverOrder.vehicle_gps[0].lat, driverOrder.vehicle_gps[0].lon),
             map,
-            title: driverOrder[0].vehicle__licence_plate,
+            title: driverOrder.vehicle_gps[0].vehicle__licence_plate,
             icon: getMarkerIcon('taxi1'),
             animation: google.maps.Animation.DROP
           });
@@ -234,22 +233,22 @@ function orderUpdate(id_order) {
               let inCityDistanceServing = calculateDistance(inCityCoordsServing)
               let outOfCityDistanceServing = calculateDistance(outOfCityCoordsServing)
 
-              var servingTaxi;
-              if (inCityDistanceServing <= FREE_DISPATCH) {
-                servingTaxi = 0;
-              } else {
-                servingTaxi = ((inCityDistanceServing - FREE_DISPATCH) * TARIFF_DISPATCH) + (outOfCityDistanceServing * TARIFF_OUTSIDE_DISPATCH);
-              }
+              // var servingTaxi;
+              // if (inCityDistanceServing <= FREE_DISPATCH) {
+              //   servingTaxi = 0;
+              // } else {
+              //   servingTaxi = ((inCityDistanceServing - FREE_DISPATCH) * TARIFF_DISPATCH) + (outOfCityDistanceServing * TARIFF_OUTSIDE_DISPATCH);
+              // }
 
               var tripAmount = (inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY);
 
-              var cost = servingTaxi + tripAmount;
+              var cost = driverOrder.car_delivery_price + tripAmount;
               cost = Math.ceil(cost);
               setCookie('sum', cost, 1)
 
               var durationToA = result.routes[0].legs[0].duration.text;
 
-              $('.alert-message').html(gettext('Ціна поїздки:') + cost + gettext(' грн. Приблизний час прибуття авто: ') + durationToA);
+              $('.alert-message').html(gettext('Ціна поїздки: ') + cost + gettext(' грн. Приблизний час прибуття авто: ') + durationToA);
               $('.order-confirm').remove();
               $('.order-reject').before('<button class="order-go btn btn-primary ml-3" onclick="consentTrip()">' + gettext("Погодитись") + '</button>');
 
@@ -505,7 +504,6 @@ function createMap(address, to_address, taxiArr) {
 }
 
 function startTimer() {
-  var timerInterval;
   var startTime = Date.now();
   var duration = TIMER * 1000; // 3 хвилини
 
@@ -516,15 +514,15 @@ function startTimer() {
   costDiv.appendChild(timerElement);
 
   // Зупинити попередній таймер, якщо він вже запущений
-  clearInterval(timerInterval);
+  clearInterval(intervalTime);
 
-  timerInterval = setInterval(function () {
+  intervalTime = setInterval(function () {
     var elapsedTime = Date.now() - startTime;
     var remainingTime = duration - elapsedTime;
 
     // Перевірити, чи таймер закінчився
     if (remainingTime <= 0) {
-      clearInterval(timerInterval);
+      clearInterval(intervalTime);
       $('#timer').remove();
 
       var modalContent = document.createElement('div');

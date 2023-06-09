@@ -21,13 +21,18 @@ def active_vehicles_gps():
 
 def order_confirm(id_order):
     order = Order.objects.get(id=id_order)
+    car_delivery_price = order.car_delivery_price
     driver = order.driver
     vehicle = UseOfCars.objects.filter(user_vehicle=driver).first()
     if vehicle is not None:
         vehicle_gps = VehicleGPS.objects.filter(
             vehicle__licence_plate=vehicle.licence_plate
         ).values('vehicle__licence_plate', 'lat', 'lon')
-        json_data = json.dumps(list(vehicle_gps), cls=DjangoJSONEncoder)
+        data = {
+            'vehicle_gps': list(vehicle_gps),
+            'car_delivery_price': car_delivery_price
+        }
+        json_data = json.dumps(data, cls=DjangoJSONEncoder)
         return json_data
     else:
         return "[]"
