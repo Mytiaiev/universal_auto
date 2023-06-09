@@ -1697,11 +1697,10 @@ class Uber(SeleniumTools):
 
     def download_payments_order(self, report_en, report_ua, pattern="Ninja", day=None):
         if os.path.exists(f'{self.payments_order_file_name(self.fleet, pattern, day)}'):
-            print('Report already downloaded')
+            self.logger.info('Report already downloaded')
             return
 
         self.generate_payments_order(report_en, report_ua, pattern, day)
-        print('Report generated')
         download_button = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_1')}"
         try:
             in_progress_text = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_2')}"
@@ -1717,7 +1716,6 @@ class Uber(SeleniumTools):
             self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
         else:
             self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
-
 
     def save_report(self, day=None):
         if self.sleep:

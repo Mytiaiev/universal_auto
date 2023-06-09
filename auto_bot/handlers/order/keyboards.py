@@ -49,7 +49,8 @@ def inline_increase_price_kb():
         [InlineKeyboardButton(price_inline_buttons[0], callback_data="30"),
          InlineKeyboardButton(price_inline_buttons[1], callback_data="50")],
         [InlineKeyboardButton(price_inline_buttons[2], callback_data="100"),
-         InlineKeyboardButton(price_inline_buttons[3], callback_data="150")]
+         InlineKeyboardButton(price_inline_buttons[3], callback_data="150")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Ask_action")],
     ]
     return InlineKeyboardMarkup(keyboard)
 

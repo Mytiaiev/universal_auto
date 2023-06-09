@@ -1,5 +1,6 @@
 from telegram import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from auto_bot.handlers.main.static_text import main_buttons, driver_option_buttons
+from auto_bot.handlers.order.static_text import order_inline_buttons
 
 contact_keyboard = [
     KeyboardButton(text=main_buttons[3], request_contact=True)
@@ -15,7 +16,8 @@ driver_keyboard = [
 def inline_more_func_kb():
     keyboard = [
         [InlineKeyboardButton(main_buttons[1], callback_data="Comment client")],
-        [InlineKeyboardButton(main_buttons[2], callback_data="Job_application")]
+        [InlineKeyboardButton(main_buttons[2], callback_data="Job_application")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -26,7 +28,8 @@ def inline_driver_func_kb():
         # [InlineKeyboardButton(driver_option_buttons[0], callback_data="Service_car")],
         # [InlineKeyboardButton(driver_option_buttons[1], callback_data="Crash_car")],
         [InlineKeyboardButton(driver_option_buttons[2], callback_data="Off day_driver")],
-        [InlineKeyboardButton(driver_option_buttons[3], callback_data="Sick day_driver")]
+        [InlineKeyboardButton(driver_option_buttons[3], callback_data="Sick day_driver")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

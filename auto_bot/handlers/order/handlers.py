@@ -170,17 +170,17 @@ def order_create(update, context):
                                      destination_lat, destination_long,
                                      ParkSettings.get_value('GOOGLE_API_KEY'))
     order = Order.objects.create(
-            from_address=context.user_data['from_address'],
-            latitude=context.user_data['latitude'],
-            longitude=context.user_data['longitude'],
-            to_the_address=context.user_data['to_the_address'],
-            to_latitude=destination_lat,
-            to_longitude=destination_long,
-            phone_number=user.phone_number,
-            chat_id_client=user.chat_id,
-            payment_method=payment,
-            sum=distance_price[0],
-            distance_google=round(distance_price[1], 2))
+        from_address=context.user_data['from_address'],
+        latitude=context.user_data['latitude'],
+        longitude=context.user_data['longitude'],
+        to_the_address=context.user_data['to_the_address'],
+        to_latitude=destination_lat,
+        to_longitude=destination_long,
+        phone_number=user.phone_number,
+        chat_id_client=user.chat_id,
+        payment_method=payment,
+        sum=distance_price[0],
+        distance_google=round(distance_price[1], 2))
     if context.user_data.get('time_order'):
         order.status_order = Order.ON_TIME
         order.order_time = context.user_data['time_order']
@@ -209,7 +209,7 @@ def send_order_to_driver(sender=None, **kwargs):
             if count == 1:
                 msg_1 = text_to_client(order, search_driver_1)
             elif count == 2:
-                 msg_2 = text_to_client(order, search_driver_2)
+                msg_2 = text_to_client(order, search_driver_2)
             drivers = Driver.objects.filter(chat_id__isnull=False)
             for driver in drivers:
                 record = UseOfCars.objects.filter(user_vehicle=driver,
@@ -221,7 +221,8 @@ def send_order_to_driver(sender=None, **kwargs):
                         driver_lat, driver_long = get_location_from_db(vehicle)
                         distance = haversine(float(driver_lat), float(driver_long),
                                              float(order.latitude), float(order.longitude))
-                        radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + order.car_delivery_price/10
+                        radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
+                                 order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
                         if distance <= radius:
                             message = order_info(order.pk, order.from_address, order.to_the_address,
                                                  order.payment_method, order.phone_number)
@@ -237,7 +238,7 @@ def send_order_to_driver(sender=None, **kwargs):
                             bot.send_message(chat_id=driver.chat_id, text=decline_order)
                     else:
                         continue
-            time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180))/3)
+            time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180)) / 3)
             count += 1
             if count == 3:
                 try:
@@ -254,6 +255,12 @@ def increase_search_radius(update, context):
     query = update.callback_query
     query.edit_message_text(text=increase_radius_text)
     query.edit_message_reply_markup(reply_markup=inline_increase_price_kb())
+
+
+def ask_client_action(update, context):
+    query = update.callback_query
+    query.edit_message_text(text=no_driver_in_radius)
+    query.edit_message_reply_markup(reply_markup=inline_search_kb())
 
 
 def increase_order_price(update, context):
@@ -423,7 +430,6 @@ def handle_callback_order(update, context):
             message = driver_complete_text(order.sum)
             query.edit_message_text(text=message)
             text_to_client(order, complete_order_text, button=inline_comment_for_client())
-
 
         # if order.payment_method == PAYCARD:
         #     payment_id = str(uuid4())
