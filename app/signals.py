@@ -13,7 +13,7 @@ def create_status_change(sender, instance, **kwargs):
     except Driver.DoesNotExist:
         # new instance, ignore
         return
-
+    vehicle = Vehicle.objects.filter(driver=instance).first()
     if old_instance.driver_status != instance.driver_status:
         # update the end time of the previous status change
         prev_status_change = StatusChange.objects.filter(driver=instance, end_time=None).first()
@@ -22,7 +22,6 @@ def create_status_change(sender, instance, **kwargs):
             prev_status_change.duration = prev_status_change.end_time - prev_status_change.start_time
             prev_status_change.save()
         # driver_status has changed, create new status change
-        vehicle = Vehicle.objects.filter(driver=instance).first()
         status_change = StatusChange(
             driver=instance,
             name=instance.driver_status,

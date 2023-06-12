@@ -766,7 +766,7 @@ class Vehicle(models.Model):
 
 class StatusChange(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(Vehicle, null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=255, verbose_name='Назва статусу')
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)

@@ -858,14 +858,28 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
             rent_distance = 0
             rent_time = datetime.timedelta()
             # car that have worked at that day
-            vehicles = Vehicle.objects.filter(driver=_driver)
-            if vehicles:
-                for vehicle in vehicles:
-                    rent_statuses = StatusChange.objects.filter(driver=_driver.id,
-                                                                vehicle=vehicle,
-                                                                name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
-                                                                start_time__gte=timezone.localtime(start),
-                                                                end_time__lte=timezone.localtime(end))
+            vehicle = Vehicle.objects.filter(driver=_driver).first()
+            if vehicle:
+                rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+                                                            vehicle=vehicle,
+                                                            name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
+                                                            start_time__gte=timezone.localtime(start),
+                                                            end_time__lte=timezone.localtime(end))
+                if rent_statuses:
+                    first_status = rent_statuses.first()
+                    first_report = self.generate_report(timezone.localtime(start),
+                                                        timezone.localtime(first_status.start_time),
+                                                        vehicle.licence_plate)
+                    rent_distance += first_report[0]
+                    rent_time += first_report[1]
+
+                    last_status = rent_statuses.last()
+                    last_report = self.generate_report(timezone.localtime(last_status.end_time),
+                                                       timezone.localtime(end),
+                                                       vehicle.licence_plate)
+                    rent_distance += last_report[0]
+                    rent_time += last_report[1]
+
                     for status in rent_statuses:
                         if status.end_time:
                             end = status.end_time
@@ -874,6 +888,12 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                                                              vehicle.licence_plate)
                         rent_distance += status_report[0]
                         rent_time += status_report[1]
+                else:
+                    report = self.generate_report(timezone.localtime(start),
+                                                  timezone.localtime(end),
+                                                  vehicle.licence_plate)
+                    rent_distance += report[0]
+                    rent_time += report[1]
 
             RentInformation.objects.create(driver_name=_driver,
                                            driver=_driver,
