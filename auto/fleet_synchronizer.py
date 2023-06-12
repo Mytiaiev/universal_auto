@@ -862,7 +862,6 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
             if vehicle:
                 rent_statuses = StatusChange.objects.filter(driver=_driver.id,
                                                             vehicle=vehicle,
-                                                            name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT],
                                                             start_time__gte=timezone.localtime(start),
                                                             end_time__lte=timezone.localtime(end))
                 if rent_statuses:
@@ -879,12 +878,10 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                                                        vehicle.licence_plate)
                     rent_distance += last_report[0]
                     rent_time += last_report[1]
-
-                    for status in rent_statuses:
-                        if status.end_time:
-                            end = status.end_time
+                    statuses = rent_statuses.filter(name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT])
+                    for status in statuses:
                         status_report = self.generate_report(timezone.localtime(status.start_time),
-                                                             timezone.localtime(end),
+                                                             timezone.localtime(status.end_time),
                                                              vehicle.licence_plate)
                         rent_distance += status_report[0]
                         rent_time += status_report[1]
