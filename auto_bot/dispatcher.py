@@ -1,7 +1,9 @@
 import re
 
-from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
+from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler, Dispatcher
 from app.models import Driver
+from auto.settings import DEBUG
+from auto_bot.main import bot
 from auto_bot.states import text
 # handlers
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
@@ -211,3 +213,7 @@ def setup_dispatcher(dp):
     # dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
     return dp
+
+
+n_workers = 0 if DEBUG else 4
+dispatcher = setup_dispatcher(Dispatcher(bot, update_queue=None, workers=n_workers, use_context=True))

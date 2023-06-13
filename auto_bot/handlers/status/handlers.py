@@ -72,15 +72,18 @@ def get_vehicle_of_driver(update, context):
 def finish_job_main(update, context):
     query = update.callback_query
     driver = Driver.get_by_chat_id(update.effective_chat.id)
-    record = UseOfCars.objects.get(user_vehicle=driver,
-                                   created_at__date=timezone.now().date(), end_at=None)
-    record.end_at = timezone.now()
-    driver.driver_status = Driver.OFFLINE
-    driver.save()
-    record.save()
-    ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
-    query.edit_message_text(finish_job)
-    context.user_data.clear()
+    record = UseOfCars.objects.filter(user_vehicle=driver,
+                                      created_at__date=timezone.now().date(), end_at=None).first()
+    if record:
+        record.end_at = timezone.now()
+        driver.driver_status = Driver.OFFLINE
+        driver.save()
+        record.save()
+        ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
+        query.edit_message_text(finish_job)
+        context.user_data.clear()
+    else:
+        query.edit_message_text(finish_job)
 
 
 def correct_or_not_auto(update, context):

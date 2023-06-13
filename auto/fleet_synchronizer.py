@@ -848,6 +848,7 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
         roadtimestr = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_8')).text
         roadtime = [int(i) for i in roadtimestr.split(':')]
         rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
+        time.sleep(1)
         return rent_distance, rent_time
 
     def get_rent_distance(self):
