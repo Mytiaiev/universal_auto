@@ -1,7 +1,9 @@
 import re
 
-from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
+from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler, Dispatcher
 from app.models import Driver
+from auto.settings import DEBUG
+from auto_bot.main import bot
 from auto_bot.states import text
 # handlers
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
@@ -18,9 +20,10 @@ from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_s
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
-    increase_order_price, continue_search, first_address_check, second_address_check, client_reject_order
+    increase_order_price, first_address_check, second_address_check, client_reject_order, \
+    ask_client_action
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
-    more_function_user, more_function_driver
+    more_function_user, more_function_driver, start_query
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -99,6 +102,7 @@ def setup_dispatcher(dp):
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
+    dp.add_handler(CallbackQueryHandler(start_query, pattern="Back_to_main"))
     dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
     dp.add_handler(CallbackQueryHandler(more_function_user, pattern="Other_user"))
     dp.add_handler(MessageHandler(Filters.location, get_location))
@@ -109,9 +113,9 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(cancel_order, pattern="Cancel_no_comment"))
     dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))
     dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
-    dp.add_handler(CallbackQueryHandler(continue_search, pattern="Continue_search"))
     dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order|No_driver_time_order"))
-    dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150"))
+    dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
+    dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
                                         pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
                                                            "Client_on_site|Along_the_route|Off_route|"
@@ -209,3 +213,7 @@ def setup_dispatcher(dp):
     # dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
     return dp
+
+
+n_workers = 0 if DEBUG else 4
+dispatcher = setup_dispatcher(Dispatcher(bot, update_queue=None, workers=n_workers, use_context=True))
