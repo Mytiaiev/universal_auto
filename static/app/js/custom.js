@@ -89,7 +89,7 @@ function setAutoCenter(map) {
 }
 
 var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi = [];
-var circle, intervalId, intervalTime;
+var circle, intervalId, intervalTime, intervalTaxiMarker;
 
 const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
 const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH || 0);
@@ -146,8 +146,9 @@ function orderUpdate(id_order) {
         if (driverOrder.vehicle_gps) {
           clearInterval(intervalId);
           clearInterval(intervalTime);
+          clearInterval(intervalTaxiMarker);
 
-          removeAllMarkers();
+          clearTaxiMarkers();
           $('#timer').remove();
 
           const driverMarker = addMarker({
@@ -157,6 +158,7 @@ function orderUpdate(id_order) {
             icon: getMarkerIcon('taxi1'),
             animation: google.maps.Animation.DROP
           });
+
           var from = JSON.parse(getCookie('address'));
           var to = JSON.parse(getCookie('to_address'));
 
@@ -206,6 +208,7 @@ function orderUpdate(id_order) {
           // Call the directions service to get the route
           directionsService.route(routeOptions, function (result, status) {
             if (status == google.maps.DirectionsStatus.OK) {
+              directionsRenderer.setDirections(result);
 
               var tripAmount = parseInt(getCookie('sumOder'));
               var cost = parseInt(driverOrder.car_delivery_price) + tripAmount;
@@ -269,6 +272,7 @@ function onOrderPayment(paymentMethod) {
 
 function onOrderReject() {
   var idOrder = getCookie('idOrder')
+  clearInterval(intervalTaxiMarker);
   destroyMap()
   $('#timer').remove();
 
@@ -374,6 +378,7 @@ function createMap(address, to_address, taxiArr) {
     center: new google.maps.LatLng(50.4546600, 30.5238000)
   };
   map = new google.maps.Map(mapCanvas, mapOpts);
+
   // Додати from_address маркер
   addMarker({
     position: address[0].geometry.location,
@@ -383,7 +388,6 @@ function createMap(address, to_address, taxiArr) {
     animation: google.maps.Animation.DROP
   });
 
-
   // Додати to_address маркер
   addMarker({
     position: to_address[0].geometry.location,
@@ -391,18 +395,6 @@ function createMap(address, to_address, taxiArr) {
     title: to_address[0].formatted_address,
     icon: getMarkerIcon('to_address'),
     animation: google.maps.Animation.DROP
-  });
-
-  // Додати маркери для таксі
-  taxiArr.forEach(taxi => {
-    // Створити маркер для таксі зі спеціальною іконкою
-    addMarker({
-      position: new google.maps.LatLng(taxi.lat, taxi.lon),
-      map,
-      title: taxi.vehicle__licence_plate,
-      icon: getMarkerIcon('taxi1'),
-      animation: google.maps.Animation.DROP
-    });
   });
 
   var directionsService = new google.maps.DirectionsService();
@@ -749,6 +741,7 @@ $(document).ready(function () {
 
                 if (taxiArr.length > 0) {
                   createMap(fromGeocoded, toGeocoded, taxiArr);
+                  intervalTaxiMarker = setInterval(updateTaxiMarkers, 10000);
                 } else {
                   var text3 = gettext('Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою замовлення на інший час!')
                   var noTaxiArr = document.createElement("div");
@@ -779,6 +772,53 @@ $(document).ready(function () {
     }
   });
 });
+
+// Declare the taxiMarkers variable as an empty array
+var taxiMarkers = [];
+
+function updateTaxiMarkers() {
+  $.ajax({
+    url: ajaxGetUrl,
+    method: 'GET',
+    data: {
+      "action": "active_vehicles_locations"
+    },
+    success: function (response) {
+      var taxiArr = JSON.parse(response.data);
+      // Clear previous taxi markers
+      clearTaxiMarkers();
+      // Add new taxi markers
+      addTaxiMarkers(taxiArr);
+    },
+    error: function (error) {
+      console.log("Error retrieving taxi data:", error);
+    }
+  });
+}
+
+function clearTaxiMarkers() {
+  // Remove all taxi markers from the map
+  taxiMarkers.forEach(function (marker) {
+    marker.setMap(null);
+  });
+  // Clear the taxiMarkers array
+  taxiMarkers = [];
+}
+
+function addTaxiMarkers(taxiArr) {
+  taxiArr.forEach(taxi => {
+    // Create a marker for each taxi with a custom icon
+    var marker = new google.maps.Marker({
+      position: new google.maps.LatLng(taxi.lat, taxi.lon),
+      map: map,
+      title: taxi.vehicle__licence_plate,
+      icon: getMarkerIcon('taxi1'),
+      animation: google.maps.Animation.SCALE
+    });
+    // Add the marker to the taxiMarkers array
+    taxiMarkers.push(marker);
+  });
+}
 
 
 $(document).ready(function () {

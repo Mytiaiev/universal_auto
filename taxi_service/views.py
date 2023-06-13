@@ -40,7 +40,7 @@ class IndexView(TemplateView):
         return json.dumps(park_settings)
 
     def get_google_api_key(self):
-        return ParkSettings.get_value("GOOGLE_API_KEY", os.environ["GOOGLE_API_KEY"])
+        return ParkSettings.get_value("GOOGLE_API_KEY")
 
 
 class PostRequestView(View):
