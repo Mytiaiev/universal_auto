@@ -462,41 +462,18 @@ class ParkSettingsAdmin(admin.ModelAdmin):
 class BoltServiceAdmin(admin.ModelAdmin):
     list_display = ['key', 'value', 'description', ]
 
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
 
 @admin.register(UaGpsService)
 class UaGpsServiceAdmin(admin.ModelAdmin):
     list_display = ['key', 'value', 'description', ]
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 @admin.register(NewUklonService)
 class NewUklonServiceAdmin(admin.ModelAdmin):
     list_display = ['key', 'value', 'description', ]
 
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
 
 @admin.register(UberService)
 class UberServiceAdmin(admin.ModelAdmin):
     list_display = ['key', 'value', 'description', ]
 
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False

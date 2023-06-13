@@ -92,21 +92,6 @@ processes = []
     handlers = []
     port = 44303
 
-
-[[services]]
-  processes = ["bot"]
-  cmd = "python3 manage.py runscript bot"
-  http_checks = []
-  internal_port = 44305
-  protocol = "tcp"
-  [services.concurrency]
-    hard_limit = 10
-    soft_limit = 5
-    type = "connections"
-  [[services.ports]]
-    handlers = []
-    port = 44305
-
 [[services]]
   http_checks = []
   internal_port = 44300
@@ -139,8 +124,6 @@ processes = []
 #  [[services.ports]]
 #    handlers = []
 #    port = 44300
-
-
 
 [[statics]]
   cache_key = "_static___app_public"
