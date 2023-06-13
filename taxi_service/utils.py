@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from django.core.serializers.json import DjangoJSONEncoder
 
 from app.models import Driver, UseOfCars, VehicleGPS, Order
@@ -8,7 +9,8 @@ def active_vehicles_gps():
     vehicles_gps = []
     active_drivers = Driver.objects.filter(driver_status=Driver.ACTIVE)
     for driver in active_drivers:
-        vehicle = UseOfCars.objects.filter(user_vehicle=driver).first()
+        today = date.today()
+        vehicle = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=today).first()
         if vehicle:
             vehicles = VehicleGPS.objects.filter(
                 vehicle__licence_plate=vehicle.licence_plate
@@ -38,16 +40,11 @@ def order_confirm(id_order):
         return "[]"
 
 
-def update_order_sum_or_status(id_order, arg, action):
-    if action == 'order_sum':
-        order = Order.objects.get(id=id_order)
-        order.sum = arg
-        order.save()
+def update_order_sum_or_status(id_order, action):
 
     if action == 'user_opt_out':
         order = Order.objects.get(id=id_order)
         order.status_order = Order.CANCELED
-        order.sum = arg
         order.save()
 
 

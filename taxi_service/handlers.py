@@ -41,10 +41,9 @@ class PostRequestHandler:
 
     def handle_update_order(self, request):
         id_order = request.POST.get('idOrder')
-        sum_value = request.POST.get('sum')
         action = request.POST.get('action')
 
-        update_order_sum_or_status(id_order, sum_value, action)
+        update_order_sum_or_status(id_order, action)
 
         return JsonResponse({}, status=200)
 

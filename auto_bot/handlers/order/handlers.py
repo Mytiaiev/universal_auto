@@ -546,6 +546,7 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
                 logger.error(msg=str(e))
                 time.sleep(30)
         else:
-            context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
-            context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
+            if order.chat_id_client:
+                context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
+                context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
             break

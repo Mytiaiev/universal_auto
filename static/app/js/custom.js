@@ -102,7 +102,7 @@ const CENTRE_CITY_RADIUS = parseInt(parkSettings && parkSettings.CENTRE_CITY_RAD
 const SEND_TIME_ORDER_MIN = parseInt(parkSettings && parkSettings.SEND_TIME_ORDER_MIN || 0);
 const MINIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MINIMUM_PRICE_RADIUS || 0);
 const MAXIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MAXIMUM_PRICE_RADIUS || 0);
-const TIMER = parseInt(parkSettings && parkSettings.TIMER_SEARCH_DRIVER || 0);
+const TIMER = parseInt(parkSettings && parkSettings.SEARCH_TIME || 0);
 const userLanguage = navigator.language || navigator.userLanguage;
 
 const city_boundaries = function () {
@@ -206,45 +206,10 @@ function orderUpdate(id_order) {
           // Call the directions service to get the route
           directionsService.route(routeOptions, function (result, status) {
             if (status == google.maps.DirectionsStatus.OK) {
-              // Display the route on the map
-              directionsRenderer.setDirections(result);
 
-              var pickupDistanceInMeters = result.routes[0].legs[0]['steps'];
-              var finalDistanceInMeters = result.routes[0].legs[1]['steps'];
-
-              var allPathsAddress = getAllPath(finalDistanceInMeters)
-              var allPathsServing = getAllPath(pickupDistanceInMeters)
-
-              var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
-              var inCitOrOutCityServing = pathSeparation(allPathsServing)
-              var inCity = inCitOrOutCityAddress[0]
-              var outOfCity = inCitOrOutCityAddress[1]
-              var inCityServing = inCitOrOutCityServing[0]
-              var outOfCityServing = inCitOrOutCityServing[1]
-
-              var inCityCoords = getPathCoords(inCity)
-              var outOfCityCoords = getPathCoords(outOfCity)
-              var inCityCoordsServing = getPathCoords(inCityServing)
-              var outOfCityCoordsServing = getPathCoords(outOfCityServing)
-
-
-              let inCityDistance = calculateDistance(inCityCoords)
-              let outOfCityDistance = calculateDistance(outOfCityCoords)
-              let inCityDistanceServing = calculateDistance(inCityCoordsServing)
-              let outOfCityDistanceServing = calculateDistance(outOfCityCoordsServing)
-
-              // var servingTaxi;
-              // if (inCityDistanceServing <= FREE_DISPATCH) {
-              //   servingTaxi = 0;
-              // } else {
-              //   servingTaxi = ((inCityDistanceServing - FREE_DISPATCH) * TARIFF_DISPATCH) + (outOfCityDistanceServing * TARIFF_OUTSIDE_DISPATCH);
-              // }
-
-              var tripAmount = (inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY);
-
-              var cost = driverOrder.car_delivery_price + tripAmount;
+              var tripAmount = parseInt(getCookie('sumOder'));
+              var cost = parseInt(driverOrder.car_delivery_price) + tripAmount;
               cost = Math.ceil(cost);
-              setCookie('sum', cost, 1)
 
               var durationToA = result.routes[0].legs[0].duration.text;
 
@@ -270,6 +235,7 @@ function onOrderPayment(paymentMethod) {
   }
 
   var orderData = JSON.parse(savedOrderData);
+  orderData.sum = getCookie('sumOder');
   orderData.latitude = getCookie('fromLat');
   orderData.longitude = getCookie('fromLon');
   orderData.to_latitude = getCookie('toLat');
@@ -303,7 +269,6 @@ function onOrderPayment(paymentMethod) {
 
 function onOrderReject() {
   var idOrder = getCookie('idOrder')
-  var sum = getCookie('sum') || 0;
   destroyMap()
   $('#timer').remove();
 
@@ -315,7 +280,6 @@ function onOrderReject() {
         csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
         action: 'user_opt_out',
         idOrder: idOrder,
-        sum: sum,
       },
     })
 
@@ -374,41 +338,28 @@ function sendComment() {
 }
 
 function consentTrip() {
-  var idOrder = getCookie('idOrder')
-  var sum = getCookie('sum')
-  $.ajax({
-    url: ajaxPostUrl,
-    method: 'POST',
-    data: {
-      csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-      action: 'order_sum',
-      idOrder: idOrder,
-      sum: sum,
-    },
-    success: function (response) {
-      destroyMap();
-      var text1 = gettext('Ваша заявка прийнята. Очікуйте на автомобіль!')
-      var applicationAccepted = document.createElement("div");
-      applicationAccepted.innerHTML = `
-        <div class="modal">
-          <div class="modal-content">
-            <h3>${text1}</h3>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(applicationAccepted);
-      deleteAllCookies();
+  destroyMap();
+  var text1 = gettext('Ваша заявка прийнята. Очікуйте на автомобіль!');
+  var applicationAccepted = document.createElement("div");
+  applicationAccepted.innerHTML = `
+    <div class="modal">
+      <div class="modal-content">
+        <h3>${text1}</h3>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(applicationAccepted);
+  deleteAllCookies();
 
-      var modal = applicationAccepted.querySelector(".modal");
+  var modal = applicationAccepted.querySelector(".modal");
 
-      setTimeout(function () {
-        modal.parentNode.removeChild(modal);
-        deleteAllCookies();
-        location.reload();
-      }, 5000);
-    }
-  })
+  setTimeout(function () {
+    modal.parentNode.removeChild(modal);
+    deleteAllCookies();
+    location.reload();
+  }, 5000);
 }
+
 
 function createMap(address, to_address, taxiArr) {
   var modal = document.createElement('div');
@@ -432,6 +383,7 @@ function createMap(address, to_address, taxiArr) {
     animation: google.maps.Animation.DROP
   });
 
+
   // Додати to_address маркер
   addMarker({
     position: to_address[0].geometry.location,
@@ -453,59 +405,78 @@ function createMap(address, to_address, taxiArr) {
     });
   });
 
-  // Додати коло з радіусом 5 км
-  circle = new google.maps.Circle({
-    map: map,
-    center: address[0].geometry.location,
-    radius: FREE_DISPATCH * 1000, // радіус у метрах
-    strokeColor: '#00FFFF',
-    strokeOpacity: 0.8,
-    strokeWeight: 2,
-    fillColor: '#00FFFF',
-    fillOpacity: 0.35
+  var directionsService = new google.maps.DirectionsService();
+  var request = {
+    origin: address[0].formatted_address,
+    destination: to_address[0].formatted_address,
+    travelMode: google.maps.TravelMode.DRIVING
+  };
+  directionsService.route(request, function (result, status) {
+    if (status == google.maps.DirectionsStatus.OK) {
+      // Отримати відстань між точками
+      var distanceInMeters = result.routes[0].legs[0]['steps'];
+
+      var allPathsAddress = getAllPath(distanceInMeters)
+
+      var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
+      var inCity = inCitOrOutCityAddress[0]
+      var outOfCity = inCitOrOutCityAddress[1]
+
+      var inCityCoords = getPathCoords(inCity)
+      var outOfCityCoords = getPathCoords(outOfCity)
+
+
+      let inCityDistance = calculateDistance(inCityCoords)
+      let outOfCityDistance = calculateDistance(outOfCityCoords)
+
+      var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
+      setCookie('sumOder', tripAmount, 1)
+      setAutoCenter(map);
+
+      // Додати текст та таймер до елементу costDiv
+      var costText = gettext("Оберіть метод оплати.");
+      var costDiv = document.createElement('div');
+      costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
+      map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
+
+      // Додати кнопки оплати на карту
+      var paymentDiv = document.createElement('div');
+      var button1 = gettext('Готівка');
+      var button2 = gettext('Картка');
+      var button3 = gettext('Відмовитись');
+      paymentDiv.innerHTML =
+        "<div class='mb-3'>" +
+        "<button class='order-confirm btn btn-primary'>" + button1 + "</button>" +
+        // "<button class='order-confirm btn btn-primary ml-3'>" + button2 + "</button>" +
+        "<button class='order-reject btn btn-danger ml-3'>" + button3 + "</button>" +
+        "</div>";
+
+      map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
+
+      // Додати обробник події для кнопки "Готівка" для відправлення POST-запиту до views.py
+      orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
+      orderConfirm.addEventListener("click", function () {
+        costText = gettext("Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
+        costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
+          '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
+        map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
+        onOrderPayment('Готівка');
+        hidePaymentButtons();
+        startTimer();
+      });
+
+      // Додати обробник події для кнопки "Відмовитись" для перенаправлення на домашню сторінку
+      orderReject = paymentDiv.getElementsByClassName('order-reject')[0];
+      orderReject.addEventListener("click", onOrderReject);
+    }
   });
-
-  setAutoCenter(map);
-
-  // Додати текст та таймер до елементу costDiv
-  var costText = gettext("Оберіть метод оплати.");
-  var costDiv = document.createElement('div');
-  costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
-  map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
-
-  // Додати кнопки оплати на карту
-  var paymentDiv = document.createElement('div');
-  var button1 = gettext('Готівка');
-  var button2 = gettext('Картка');
-  var button3 = gettext('Відмовитись');
-  paymentDiv.innerHTML =
-    "<div class='mb-3'>" +
-    "<button class='order-confirm btn btn-primary'>" + button1 + "</button>" +
-    // "<button class='order-confirm btn btn-primary ml-3'>" + button2 + "</button>" +
-    "<button class='order-reject btn btn-danger ml-3'>" + button3 + "</button>" +
-    "</div>";
-
-  map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
-
-  // Додати обробник події для кнопки "Готівка" для відправлення POST-запиту до views.py
-  orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
-  orderConfirm.addEventListener("click", function () {
-    costText = gettext("Заждіть поки ми підберемо вам автомобіль.");
-    costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
-      '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
-    onOrderPayment('Готівка');
-    hidePaymentButtons();
-    startTimer();
-  });
-
-  // Додати обробник події для кнопки "Відмовитись" для перенаправлення на домашню сторінку
-  orderReject = paymentDiv.getElementsByClassName('order-reject')[0];
-  orderReject.addEventListener("click", onOrderReject);
 }
 
 function startTimer() {
   var startTime = Date.now();
   var duration = TIMER * 1000; // 3 хвилини
+  // var duration = 10 * 1000; // 3 хвилини
 
   var timerElement = document.createElement('div');
   timerElement.id = 'timer';
@@ -528,8 +499,7 @@ function startTimer() {
       var modalContent = document.createElement('div');
       modalContent.innerHTML = '<div id="timer-modal" class="modal">\n' +
         '  <div class="modal-content">\n' +
-        '    <p>Вибачте за затримку. Наразі немає вільних автомобілів поряд з вами. </p>\n' +
-        '    <p>Чи не бажаєте підняти ціну для ширшого пошуку автомобіля?</p>\n' +
+        '    <p>Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?</p>\n' +
         '    <div class="slider-container">\n' +
         '      <input type="range" id="price-range" min="' + MINIMUM_PRICE_RADIUS + '" max="' + MAXIMUM_PRICE_RADIUS + '" step="1" value="' + MINIMUM_PRICE_RADIUS + '" class="price-range">\n' +
         '      <span id="slider-value">30 ₴</span>\n' +
@@ -551,16 +521,16 @@ function startTimer() {
       var continueSearch = modal.getElementsByClassName('btn-primary')[1];
       var rejectSearch = modal.getElementsByClassName('btn-danger')[0];
 
-      increasePrice.addEventListener('click', function (){
+      increasePrice.addEventListener('click', function () {
         setCookie("car_delivery_price", sliderElement.value, 1);
         onIncreasePrice();
         modal.remove();
       });
-      continueSearch.addEventListener('click', function (){
+      continueSearch.addEventListener('click', function () {
         onContinueSearch();
         modal.remove();
       });
-      rejectSearch.addEventListener('click', function (){
+      rejectSearch.addEventListener('click', function () {
         onOrderReject();
         modal.remove();
       });
@@ -613,7 +583,6 @@ function updateCircleRadius(radius) {
     circle.setRadius(radius);
   }
 }
-
 
 
 function onContinueSearch() {
