@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+from google.oauth2 import service_account
 import os
+import logging
 import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -120,12 +122,10 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'data/staticfiles'
 
-from google.oauth2 import service_account
 
 GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
     os.path.join(BASE_DIR, "credentials.json"))
 
- ###configuration for media file storing and reriving media file from gcloud
 DEFAULT_FILE_STORAGE = "auto.gcloud.GoogleCloudMediaFileStorage"
 GS_PROJECT_ID = "ninja-taxi-9aa7d"
 GS_BUCKET_NAME = 'jobdriver-bucket'
@@ -147,3 +147,4 @@ CELERY_RESULT_BACKEND = os.environ['CELERY_RESULT_BACKEND']
 CELERY_IMPORTS = [
     'auto.tasks',
 ]
+logging.getLogger('telegram.bot').setLevel(logging.WARNING)

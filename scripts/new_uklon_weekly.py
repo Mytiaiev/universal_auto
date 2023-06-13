@@ -1,4 +1,4 @@
-from app.models import NewUklon
+from auto.drivers import NewUklon
 
 
 def run():

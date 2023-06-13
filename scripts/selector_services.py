@@ -144,6 +144,8 @@ uber_states = {
     'UBER_GENERATE_PAYMENTS_ORDER_12': ('//li[@role="option" and text()[contains(.,"', 'XPATH'),
     'UBER_GENERATE_PAYMENTS_ORDER_13': ('//button[@aria-live="polite"][2]', 'XPATH'),
     'UBER_GENERATE_PAYMENTS_ORDER_14': ('//button[@data-testid="generate-report-button"]', 'XPATH'),
+    'UBER_GENERATE_TRIPS_1': ('//ul/li/div[text()[contains(.,"Trip Activity")]]', 'XPATH'),
+    'UBER_GENERATE_TRIPS_2': ('//ul/li/div[text()[contains(.,"Информация о поездке")]]', 'XPATH'),
     'UBER_DOWNLOAD_PAYMENTS_ORDER_1': ('(//div[@data-testid="paginated-table"]//button)[1]', 'XPATH'),
     'UBER_DOWNLOAD_PAYMENTS_ORDER_2': ('//i[@class="_css-bvkFtm"]', 'XPATH'),
     'UBER_OTP_CODE_V2_1': ('PHONE_SMS_OTP-0', 'ID'),

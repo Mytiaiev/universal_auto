@@ -23,7 +23,6 @@ processes = []
   worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q non_priority"
   gps    = "python3 manage.py runscript async_gps_server"
   beat   = "celery -A auto beat -l INFO"
-  bot    = "python3 manage.py runscript bot"
 
 [[services]]
   http_checks = []

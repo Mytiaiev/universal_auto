@@ -97,6 +97,5 @@ def take_a_day_off_or_sick_leave(update, context):
         Event.objects.create(
             full_name_driver=driver,
             event=event,
-            chat_id=driver.chat_id,
-            created_at=timezone.localtime())
+            chat_id=driver.chat_id)
         query.edit_message_text(text=f'Ваш <<{event}>> розпочато.')
