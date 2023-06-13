@@ -630,6 +630,7 @@ class BoltPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmi
 
         return fieldsets
 
+
 @admin.register(UberPaymentsOrder)
 class UberPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('driver_uuid', 'first_name', 'last_name')
@@ -901,10 +902,11 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "vehicle":
-            kwargs["queryset"] = Vehicle.objects.filter(partner__user=request.user)
-        elif db_field.name == "driver":
-            kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
+        if not request.user.is_superuser:
+            if db_field.name == "vehicle":
+                kwargs["queryset"] = Vehicle.objects.filter(partner__user=request.user)
+            elif db_field.name == "driver":
+                kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
