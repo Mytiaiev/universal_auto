@@ -355,7 +355,7 @@ function onOrderPayment(paymentMethod) {
   }
 
   var orderData = JSON.parse(savedOrderData);
-  orderData.sum = getCookie('sumOder');
+  orderData.sum = getCookie('sumOder') || 0;
   orderData.latitude = getCookie('fromLat');
   orderData.longitude = getCookie('fromLon');
   orderData.to_latitude = getCookie('toLat');
