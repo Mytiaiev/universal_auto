@@ -1325,6 +1325,20 @@ def admin_image_preview(image, default_image=None):
     return None
 
 
+class CarEfficiency(models.Model):
+    start_report = models.DateTimeField(verbose_name='Звіт з')
+    end_report = models.DateTimeField(verbose_name='Звіт по')
+    driver = models.CharField(null=True, max_length=25, verbose_name='Водій авто')
+    efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність грн/км')
+
+    class Meta:
+        verbose_name = 'Ефективність автомобіля'
+        verbose_name_plural = 'Ефективність автомобілів'
+
+    def __str__(self):
+        return self.driver
+
+
 class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')

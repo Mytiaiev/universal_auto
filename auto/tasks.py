@@ -4,6 +4,7 @@ import pendulum
 from contextlib import contextmanager
 import datetime
 
+from _decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
 
@@ -16,8 +17,8 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-     NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet
-from django.db.models import Sum, IntegerField, FloatField
+    NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency
+from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
@@ -234,7 +235,9 @@ def send_daily_into_group(self):
             total_values = download_reports()[2]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
         for key in sort_report:
-            report_values[key] = "Всього: {:.2f} Учора: (+{:.2f})".format(sort_report[key], day_values.get(key, 0))
+            effect = calculate_efficiency(key)
+            report_values[key] = f"Всього: {int(sort_report[key])}, тижнева ефект: {effect[0]} \n" \
+                                 f"Учора: [+{int(day_values.get(key, 0))}, ефект: {effect[1]}]"
         message = [f'{k}:\n{v}' for k, v in report_values.items()]
         return message
     except Exception as e:
@@ -348,6 +351,52 @@ def save_report_to_ninja_payment(day=None):
             report.save()
         except IntegrityError:
             pass
+
+
+@app.task(bind=True, queue='non_priority')
+def get_car_efficiency(self, day=None):
+    if not day:
+        day = pendulum.now().start_of('day').subtract(days=1)
+    format_day = day.format("DD.MM.YYYY")
+    efficiency = CarEfficiency.objects.filter(start_report=day.start_of('day'),
+                                              end_report=day.end_of('day'))
+    driver_km = {}
+    if not efficiency:
+        try:
+            total_km = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('total_per_day', format_day)
+            total_kasa = download_reports(day=format_day, interval=1)[2]
+            for vehicle, km in total_km.items():
+                driver = Driver.objects.filter(vehicle__licence_plate=vehicle).first()
+                driver_km[str(driver)] = km
+            result = {key: Decimal(total_kasa[key])/Decimal(driver_km[key])
+                      for key in total_kasa if key in driver_km and driver_km[key] != 0}
+            for key, value in result.items():
+                CarEfficiency.objects.create(start_report=day.start_of('day'),
+                                             end_report=day.end_of('day'),
+                                             driver=key,
+                                             efficiency=value)
+        except Exception as e:
+            logger.info(e)
+
+
+def calculate_efficiency(driver):
+    today = pendulum.now().weekday()
+    if not today:
+        today = 7
+    for i in range(today):
+        day = pendulum.now().start_of('day').subtract(days=i + 1)
+        get_car_efficiency(day)
+    start_period = pendulum.now().start_of('day').subtract(days=today)
+    end_period = pendulum.now().start_of('day').subtract(days=1)
+    efficiency_objects = CarEfficiency.objects.filter(start_report__range=[start_period, end_period],
+                                                      driver=driver)
+    yesterday_efficiency = CarEfficiency.objects.filter(start_report=end_period,
+                                                        driver=driver).first()
+    efficiency = yesterday_efficiency.efficiency if yesterday_efficiency else 0
+    average_efficiency = efficiency_objects.aggregate(avg_efficiency=Avg('efficiency'))['avg_efficiency']
+    formatted_efficiency = '{:.2f}'.format(average_efficiency) if average_efficiency is not None else '0.00'
+
+    return formatted_efficiency, efficiency
 
 
 @app.on_after_finalize.connect

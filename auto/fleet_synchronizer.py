@@ -821,13 +821,14 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
         """
         xpath = UaGpsService.get_value('UAGPSS_GENERATE_REPORT_1')
         self.get_target_page_or_login(self.base_url, xpath, self.login)
-        self.driver.find_element(By.XPATH, xpath).click()
+        WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
         unit = WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_2'))))
         unit.click()
         try:
-            self.driver.find_element(By.XPATH,
-                                     f'{UaGpsService.get_value("UAGPSS_GENERATE_REPORT_3")} "{report_object}")]').click()
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((
+                    By.XPATH, f'{UaGpsService.get_value("UAGPSS_GENERATE_REPORT_3")} "{report_object}")]'))).click()
         except:
             return 0, datetime.timedelta()
         from_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_4'))
@@ -916,6 +917,14 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                 rent.rent_distance -= Decimal(distance_in_trips)
                 rent.save()
 
+    def total_per_day(self, day):
+        totals = {}
+        for vehicle in Vehicle.objects.all().only('licence_plate'):
+            distance = self.generate_report(self.start_report_interval(day),
+                                            self.end_report_interval(day),
+                                            vehicle.licence_plate)[0]
+            totals[vehicle.licence_plate] = distance
+        return totals
 
 
 

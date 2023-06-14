@@ -406,6 +406,12 @@ class JobApplicationAdmin(admin.ModelAdmin):
     ]
 
 
+@admin.register(CarEfficiency)
+class CarEfficiencyAdmin(admin.ModelAdmin):
+    list_display = ['driver', 'efficiency', 'start_report', 'end_report']
+    readonly_fields = ['driver', 'efficiency', 'start_report', 'end_report']
+
+
 @admin.register(ParkSettings)
 class ParkSettingsAdmin(admin.ModelAdmin):
     list_display = ['description', 'value', ]
