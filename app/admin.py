@@ -832,8 +832,6 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
-                ('Номер замовлення',           {'fields': ['id',
-                                                           ]}),
                 ('Адреси',                     {'fields': ['from_address', 'to_the_address',
                                                            ]}),
                 ('Контакти',                   {'fields': ['phone_number', 'chat_id_client',
@@ -849,8 +847,6 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             ]
         else:
             fieldsets = [
-                ('Номер замовлення',           {'fields': ['id',
-                                                           ]}),
                 ('Адреси',                     {'fields': ['from_address', 'to_the_address',
                                                            ]}),
                 ('Контакти',                   {'fields': ['phone_number',
