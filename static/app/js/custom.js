@@ -482,17 +482,8 @@ function consentTrip() {
 }
 
 function startTimer() {
-  // var startTime = Date.now();
   var duration = TIMER * 1000; // 3 хвилини
   // var duration = 10 * 1000; // 3 хвилини
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var timerElement = document.createElement('div');
-    timerElement.id = 'timer';
-
-    var costDiv = document.getElementsByClassName('alert alert-primary mt-2')[0];
-    costDiv.appendChild(timerElement);
-  });
 
   // Отримати збережений час початку таймера
   var startTime = getCookie('timerStartTime');
@@ -504,20 +495,29 @@ function startTimer() {
     setCookie('timerStartTime', startTime, 1);
   }
 
+  document.addEventListener('DOMContentLoaded', function() {
+    var timer = document.createElement('div');
+    timer.id = 'timer';
+
+    var costDiv = document.getElementsByClassName('alert alert-primary mt-2')[0];
+    costDiv.appendChild(timer);
+  });
+
   // Зупинити попередній таймер, якщо він вже запущений
   clearInterval(intervalTime);
 
-  intervalTime = setInterval(function () {
+  var intervalTime = setInterval(function () {
     var elapsedTime = Date.now() - startTime;
     var remainingTime = duration - elapsedTime;
 
     // Перевірити, чи таймер закінчився
     if (remainingTime <= 0) {
+      deleteCookie('timerStartTime');
       clearInterval(intervalTime);
-      var timerElement = document.getElementById('timer');
-      if (timerElement) {
-        timerElement.remove();
-      }
+      // var timerElement = document.getElementById('timer');
+      // if (timerElement) {
+      //   timerElement.remove();
+      // }
 
       var modalContent = document.createElement('div');
       modalContent.innerHTML = '<div id="timer-modal" class="modal">\n' +
@@ -570,9 +570,9 @@ function startTimer() {
     var seconds = Math.floor((remainingTime % 60000) / 1000);
 
     // Відобразити таймер у форматі "хвилини:секунди"
-    timerElement = document.getElementById('timer');
-    if (timerElement) {
-      timerElement.innerHTML = 'Приблизний час пошуку: ' + minutes + ' хв ' + seconds + ' сек';
+    var timerElements = document.getElementById('timer');
+    if (timerElements) {
+      timerElements.innerHTML = 'Приблизний час пошуку: ' + minutes + ' хв ' + seconds + ' сек';
     }
   }, 1000);
 }
