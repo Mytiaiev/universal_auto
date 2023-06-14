@@ -6,7 +6,7 @@ import time
 from celery.signals import task_postrun
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus
+from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings
 from auto.tasks import logger, get_distance_trip, check_time_order, check_order, send_time_order
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_start_driver_kb, inline_user_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
@@ -28,7 +28,8 @@ def continue_order(update, context):
     else:
         context.user_data['state'] = START_TIME_ORDER
         context.user_data['location_button'] = False
-        query.edit_message_text(text=price_info)
+        query.edit_message_text(text=price_info(ParkSettings.get_value('TARIFF_IN_THE_CITY'),
+                                                ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')))
     query.edit_message_reply_markup(reply_markup=inline_start_order_kb())
 
 
@@ -169,17 +170,17 @@ def order_create(update, context):
                                      destination_lat, destination_long,
                                      ParkSettings.get_value('GOOGLE_API_KEY'))
     order = Order.objects.create(
-            from_address=context.user_data['from_address'],
-            latitude=context.user_data['latitude'],
-            longitude=context.user_data['longitude'],
-            to_the_address=context.user_data['to_the_address'],
-            to_latitude=destination_lat,
-            to_longitude=destination_long,
-            phone_number=user.phone_number,
-            chat_id_client=user.chat_id,
-            payment_method=payment,
-            sum=distance_price[0],
-            distance_google=round(distance_price[1], 2))
+        from_address=context.user_data['from_address'],
+        latitude=context.user_data['latitude'],
+        longitude=context.user_data['longitude'],
+        to_the_address=context.user_data['to_the_address'],
+        to_latitude=destination_lat,
+        to_longitude=destination_long,
+        phone_number=user.phone_number,
+        chat_id_client=user.chat_id,
+        payment_method=payment,
+        sum=distance_price[0],
+        distance_google=round(distance_price[1], 2))
     if context.user_data.get('time_order'):
         order.status_order = Order.ON_TIME
         order.order_time = context.user_data['time_order']
@@ -208,7 +209,7 @@ def send_order_to_driver(sender=None, **kwargs):
             if count == 1:
                 msg_1 = text_to_client(order, search_driver_1)
             elif count == 2:
-                 msg_2 = text_to_client(order, search_driver_2)
+                msg_2 = text_to_client(order, search_driver_2)
             drivers = Driver.objects.filter(chat_id__isnull=False)
             for driver in drivers:
                 record = UseOfCars.objects.filter(user_vehicle=driver,
@@ -220,7 +221,8 @@ def send_order_to_driver(sender=None, **kwargs):
                         driver_lat, driver_long = get_location_from_db(vehicle)
                         distance = haversine(float(driver_lat), float(driver_long),
                                              float(order.latitude), float(order.longitude))
-                        radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + order.car_delivery_price/10
+                        radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
+                                 order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
                         if distance <= radius:
                             message = order_info(order.pk, order.from_address, order.to_the_address,
                                                  order.payment_method, order.phone_number)
@@ -236,7 +238,7 @@ def send_order_to_driver(sender=None, **kwargs):
                             bot.send_message(chat_id=driver.chat_id, text=decline_order)
                     else:
                         continue
-            time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180))/3)
+            time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180)) / 3)
             count += 1
             if count == 3 and order.chat_id_client:
                 try:
@@ -255,22 +257,20 @@ def increase_search_radius(update, context):
     query.edit_message_reply_markup(reply_markup=inline_increase_price_kb())
 
 
+def ask_client_action(update, context):
+    query = update.callback_query
+    query.edit_message_text(text=no_driver_in_radius)
+    query.edit_message_reply_markup(reply_markup=inline_search_kb())
+
+
 def increase_order_price(update, context):
     query = update.callback_query
     chat_id = query.from_user.id
     context.bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
     order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
-    order.car_delivery_price += int(query.data)
-    order.sum += int(query.data)
-    order.checked = False
-    order.save()
-
-
-def continue_search(update, context):
-    query = update.callback_query
-    chat_id = query.from_user.id
-    context.bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
-    order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
+    if query.data != "Continue_search":
+        order.car_delivery_price += int(query.data)
+        order.sum += int(query.data)
     order.checked = False
     order.save()
 
@@ -291,7 +291,7 @@ def order_on_time(update, context):
     if re.match(pattern, user_time):
         format_time = timezone.datetime.strptime(user_time, '%H:%M').time()
         min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(
-            ParkSettings.get_value('SEND_TIME_ORDER_MIN', 15)))
+            ParkSettings.get_value('TIME_ORDER_MIN', 60)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
         if min_time <= conv_time:
             if context.user_data.get('time_order') is not None:
@@ -423,7 +423,6 @@ def handle_callback_order(update, context):
             query.edit_message_text(text=message)
             text_to_client(order, complete_order_text, button=inline_comment_for_client())
 
-
         # if order.payment_method == PAYCARD:
         #     payment_id = str(uuid4())
         #     payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
@@ -505,9 +504,10 @@ def change_sum_trip(sender=None, **kwargs):
         order_id, query_id, minutes_of_trip, distance = rep
         order = Order.objects.filter(pk=order_id).first()
         order.distance_gps = distance
-        price_per_minute = (AVERAGE_DISTANCE_PER_HOUR * COST_PER_KM) / 60
+        price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
+                            int(ParkSettings.get_value('COST_PER_KM'))) / 60
         price_per_minute = price_per_minute * minutes_of_trip
-        price_per_distance = round(COST_PER_KM * distance)
+        price_per_distance = round(int(ParkSettings.get_value('COST_PER_KM')) * distance)
         if price_per_distance > price_per_minute:
             order.sum = int(price_per_distance) + int(order.car_delivery_price)
         else:

@@ -1,4 +1,4 @@
-from app.models import Bolt
+from auto.drivers import Bolt
 
 
 def run():

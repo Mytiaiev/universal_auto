@@ -1,8 +1,5 @@
 import pendulum
 from datetime import datetime
-from datetime import timezone
-
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from app.models import UberPaymentsOrder, BoltPaymentsOrder, UklonPaymentsOrder, NewUklonPaymentsOrder, \
@@ -10,7 +7,6 @@ from app.models import UberPaymentsOrder, BoltPaymentsOrder, UklonPaymentsOrder,
 from auto.tasks import download_weekly_report
 
 from auto import celery_app
-from app.models import SeleniumTools
 
 i = celery_app.control.inspect()
 sc = i.scheduled()
@@ -20,11 +16,11 @@ ac = i.active()
 class DriversRatingMixin:
 
     def get_rating(self, start=None, end=None):
-        st = SeleniumTools(session='')
+        current_date = pendulum.now().start_of('week').subtract(days=3)
         if not start:
-            start = st.start_of_week()
+            start = current_date.start_of('week')
         if not end:
-            end = st.end_of_week()
+            end = current_date.end_of('week')
 
         # st = SeleniumTools(session='', week_number='2022-09-19')
 
@@ -163,7 +159,7 @@ class BoltDriversRating(DriversRating, metaclass=GenericDriversRating):
             return f"<MultipleObjectsReturned {self.get_driver_identifier(item)}> {item.driver_full_name}"
 
     def get_driver_identifier(self, item):
-        return item.mobile_number
+        return item.driver_full_name
 
 
 class UklonDriversRating(DriversRating, metaclass=GenericDriversRating):

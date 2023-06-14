@@ -1,5 +1,5 @@
 
-from app.models import Driver, Vehicle, Fleets_drivers_vehicles_rate, BoltFleet, UberFleet, UklonFleet, NewUklonFleet, \
+from app.models import Driver, Vehicle, Fleets_drivers_vehicles_rate, BoltFleet, UberFleet, NewUklonFleet, \
     DriverRateLevels, NinjaFleet
 
 DRIVERS_MAP = {

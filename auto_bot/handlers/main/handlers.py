@@ -51,6 +51,17 @@ def start(update, context):
                                   reply_markup=markup_keyboard([contact_keyboard]))
 
 
+def start_query(update, context):
+    query = update.callback_query
+    driver = Driver.get_by_chat_id(update.effective_chat.id)
+    if driver:
+        reply_markup = inline_start_driver_kb()
+    else:
+        reply_markup = inline_user_kb()
+    query.edit_message_text(text=user_greetings_text)
+    query.edit_message_reply_markup(reply_markup=reply_markup)
+
+
 def more_function_user(update, context):
     query = update.callback_query
     query.edit_message_text(text=more_func_text)

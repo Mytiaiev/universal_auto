@@ -1,31 +1,47 @@
 import string
 import random
-import time
 import csv
 import datetime
-import os
 import re
-import logging
-import redis
-import base64
-import shutil
 import pendulum
+from django.core.exceptions import ObjectDoesNotExist
+
+from scripts.selector_services import *
 from django.db import models, IntegrityError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
 from django.utils.safestring import mark_safe
-from django.utils import timezone
 from polymorphic.models import PolymorphicModel
-from selenium.common import TimeoutException, WebDriverException
-from scripts.selector_services import *
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver import ActionChains
-from selenium.webdriver import DesiredCapabilities
+from django.contrib.auth.models import User as AuUser
+from django.dispatch import receiver
+from django.db.models.signals import post_save, pre_save
+
+
+class Partner(models.Model):
+    user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        if self.user:
+            return str(self.user.username)
+        return 'Партнер не назначений'
+
+
+@receiver(post_save, sender=AuUser)
+def create_partner(sender, instance, created, **kwargs):
+    if created:
+        Partner.objects.create(user=instance)
+
+
+class Park(models.Model):
+    name = models.CharField(max_length=255, verbose_name='Імя автопарка')
+    partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        verbose_name = 'Автопарк'
+        verbose_name_plural = 'Автопарки'
+
+    def __str__(self):
+        return self.name
 
 
 class PaymentsOrder(models.Model):
@@ -147,25 +163,26 @@ class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField()
-    report_to = models.DateTimeField()
-    report_file_name = models.CharField(max_length=255)
-    full_name = models.CharField(max_length=255)  # "Водій"
-    signal = models.CharField(max_length=8)  # "Позивний"
-    total_rides = models.PositiveIntegerField()  # "Кількість поїздок"
-    total_distance = models.DecimalField(decimal_places=2, max_digits=10)  # "Пробіг під замовленнями, км"
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10)  # "Готівкою, грн"
-    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10)  # "На гаманець, грн"
-    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10)  # "На картку, грн"
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10)  # "Всього, грн"
-    tips = models.DecimalField(decimal_places=2, max_digits=10)  # "Чайові, грн"
-    bonuses = models.DecimalField(decimal_places=2, max_digits=10)  # "Бонуси, грн"
-    fares = models.DecimalField(decimal_places=2, max_digits=10)  # "Штрафи, грн"
-    comission = models.DecimalField(decimal_places=2, max_digits=10)  # "Комісія Уклон, грн"
-    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10)  # " Разом, грн"
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
+    full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
+    signal = models.CharField(max_length=8, verbose_name='Унікальний індифікатор водія')
+    total_rides = models.PositiveIntegerField(verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Пробіг під замовлення')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
+    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На гаманець')
+    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На картку')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна сума')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    bonuses = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Бонуси')
+    fares = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Штрафи')
+    comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Uklon')
+    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Разом')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     vendor_name = 'NewUklon'
 
@@ -174,8 +191,8 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(signal=driver_external_id)
 
     class Meta:
-        verbose_name = 'Payments order: NewUklon'
-        verbose_name_plural = 'Payments order: NewUklon'
+        verbose_name = 'Платіжний звіт: NewUklon'
+        verbose_name_plural = 'Платіжні звіти: NewUklon'
         unique_together = (('report_from', 'report_to', 'full_name', 'signal'))
 
     def driver_id(self):
@@ -223,6 +240,8 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     refunds = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
     tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
     weekly_balance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Тижневий баланс')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
@@ -233,8 +252,8 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(driver_full_name=driver_external_id)
 
     class Meta:
-        verbose_name = 'Payments order: Bolt'
-        verbose_name_plural = 'Payments order: Bolt'
+        verbose_name = 'Платіжний звіт: Bolt'
+        verbose_name_plural = 'Платіжні звіти: Bolt'
         unique_together = (('report_from', 'report_to', 'driver_full_name', 'mobile_number'))
 
     def driver_id(self):
@@ -258,20 +277,21 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField()
-    report_to = models.DateTimeField()
-    report_file_name = models.CharField(max_length=255)
-    driver_uuid = models.UUIDField()
-    first_name = models.CharField(max_length=24)
-    last_name = models.CharField(max_length=24)
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10)
-    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10)
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10)
-    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10)
-    returns = models.DecimalField(decimal_places=2, max_digits=10)
-    tips = models.DecimalField(decimal_places=2, max_digits=10)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файла')
+    driver_uuid = models.UUIDField(verbose_name='Унікальний індитифікатор водія')
+    first_name = models.CharField(max_length=24, verbose_name='Імя водія')
+    last_name = models.CharField(max_length=24, verbose_name='Прізвище водія')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід')
+    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід - Чистий тариф')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Виплати')
+    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Перераховано на банківський рахунок')
+    returns = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Відшкодування та витрати')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     vendor_name = 'Uber'
 
@@ -280,8 +300,8 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(driver_uuid=driver_external_id)
 
     class Meta:
-        verbose_name = 'Payments order: Uber'
-        verbose_name_plural = 'Payments order: Uber'
+        verbose_name = 'Платіжний звіт: Uber'
+        verbose_name_plural = 'Платіжні звіти: Uber'
         unique_together = (('report_from', 'report_to', 'driver_uuid'))
 
     def driver_id(self):
@@ -304,18 +324,19 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
 
 
 class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField()
-    report_to = models.DateTimeField()
-    full_name = models.CharField(max_length=255)
-    chat_id = models.CharField(max_length=11)
-    total_rides = models.PositiveIntegerField(null=True, blank=True)
-    total_distance = models.DecimalField(decimal_places=2, max_digits=10)
-    total_amount_cash = models.PositiveIntegerField(null=True, blank=True)
-    total_amount_on_card = models.PositiveIntegerField(null=True, blank=True)
-    total_amount = models.PositiveIntegerField(null=True, blank=True)
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
+    chat_id = models.CharField(max_length=11, verbose_name='Унікальний індифікатор водія')
+    total_rides = models.PositiveIntegerField(null=True, blank=True, verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дистанція')
+    total_amount_cash = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума готівкою')
+    total_amount_on_card = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума карточкою')
+    total_amount = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     vendor_name = 'Ninja'
 
@@ -324,8 +345,8 @@ class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
             return self.filter(signal=driver_external_id)
 
     class Meta:
-        verbose_name = 'Payments order: Ninja'
-        verbose_name_plural = 'Payments order: Ninja'
+        verbose_name = 'Платіжний звіт: Ninja'
+        verbose_name_plural = 'Платіжні звіти: Ninja'
         unique_together = (('report_from', 'report_to', 'full_name', 'chat_id'))
 
     def driver_id(self):
@@ -350,6 +371,15 @@ class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return float(self.total_amount)
 
 
+class UberTrips(models.Model):
+    report_file_name = models.CharField(max_length=255)
+    driver_external_id = models.CharField(max_length=50)
+    license_plate = models.CharField(max_length=10)
+    start_trip = models.DateTimeField(null=True, blank=True)
+    end_trip = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class FileNameProcessed(models.Model):
     filename_weekly = models.CharField(max_length=150, unique=True)
 
@@ -365,21 +395,18 @@ class FileNameProcessed(models.Model):
 class User(models.Model):
     class Role(models.TextChoices):
         CLIENT = 'CLIENT', 'Client'
-        PARTNER = 'PARTNER', 'Partner'
         DRIVER = 'DRIVER', 'Driver'
         DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
         SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
         SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
         OWNER = 'OWNER', 'Owner'
 
-    id = models.AutoField(primary_key=True)
-
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
     email = models.EmailField(blank=True, max_length=254, verbose_name='Електрона пошта')
     phone_number = models.CharField(blank=True, max_length=13, verbose_name='Номер телефона')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
-    created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
@@ -454,6 +481,26 @@ class User(models.Model):
             return None
 
 
+class DriverManager(User):
+    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    class Meta:
+        verbose_name = 'Менеджер водія'
+        verbose_name_plural = 'Менеджер водіїв'
+
+    def __str__(self):
+        return f'{self.name} {self.second_name}'
+
+    @staticmethod
+    def get_by_chat_id(chat_id):
+        try:
+            driver_manager = DriverManager.objects.get(chat_id=chat_id)
+            return driver_manager
+        except DriverManager.DoesNotExist:
+            return None
+
+
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
@@ -461,9 +508,9 @@ class Driver(User):
     OFFLINE = 'Не працюю'
     RENT = 'Орендую авто'
 
-    fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL)
-    # partner = models.ManyToManyField('Partner', blank=True)
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER)
+    fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
 
     class Meta:
@@ -486,9 +533,9 @@ class Driver(User):
 
     def get_kassa(self, vendor: str, week_number: [str, None] = None) -> float:
         driver_external_id = self.get_driver_external_id(vendor)
-        st = SeleniumTools(session='', week_number=week_number)
+        current_date = pendulum.parse(week_number, tz="Europe/Kiev")
         qset = GenericPaymentsOrder.filter_by_driver(vendor, driver_external_id) \
-            .filter(report_from__lte=st.end_of_week(), report_to__gte=st.start_of_week())
+            .filter(report_from__lte=current_date.end_of('week'), report_to__gte=current_date.start_of('week'))
         return sum(map(lambda x: x.kassa(), qset))
 
     def get_dynamic_rate(self, vendor: str, week_number: [str, None] = None, kassa: float = None) -> float:
@@ -513,10 +560,6 @@ class Driver(User):
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
 
-    @staticmethod
-    def save_driver_status(status):
-        driver = Driver.objects.create(driver_status=status)
-        driver.save()
 
     @staticmethod
     def get_by_chat_id(chat_id):
@@ -545,24 +588,18 @@ class ParkStatus(models.Model):
         ordering = ['-created_at']
 
 
-class StatusChange(models.Model):
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255, verbose_name='Назва статусу')
-    start_time = models.DateTimeField(auto_now_add=True)
-    end_time = models.DateTimeField(null=True, blank=True)
-    duration = models.DurationField(null=True, blank=True)
-
-
 class RentInformation(models.Model):
-    driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True)
-    driver_name = models.CharField(max_length=50, blank=True)
+    driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    driver_name = models.CharField(max_length=50, blank=True, verbose_name='ПІ Водія')
     rent_time = models.DurationField(null=True, blank=True, verbose_name='Час оренди')
     rent_distance = models.DecimalField(null=True, blank=True, max_digits=6,
                                         decimal_places=2, verbose_name='Орендована дистанція')
-    created_at = models.DateTimeField(editable=False, auto_now_add=True)
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
 
     class Meta:
-        verbose_name_plural = 'Інформація по оренді'
+        verbose_name = 'Інформація по оренді'
+        verbose_name_plural = 'Інформація по орендах'
 
 
 class Fleet(PolymorphicModel):
@@ -597,32 +634,6 @@ class Client(User):
             client = Client.objects.get(chat_id=chat_id)
             return client
         except Client.DoesNotExist:
-            return None
-
-
-# class Partner(User):
-#     fleet = models.OneToOneField(Fleet,  blank=True, null=True, on_delete=models.SET_NULL)
-#     driver = models.ManyToManyField(Driver,  blank=True)
-#     role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.PARTNER)
-
-
-class DriverManager(User):
-    driver_id = models.ManyToManyField(Driver, blank=True, verbose_name='Driver')
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
-
-    class Meta:
-        verbose_name = 'Менеджер водія'
-        verbose_name_plural = 'Менеджер водіїв'
-
-    def __str__(self):
-        return f'{self.name} {self.second_name}'
-
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        try:
-            driver_manager = DriverManager.objects.get(chat_id=chat_id)
-            return driver_manager
-        except DriverManager.DoesNotExist:
             return None
 
 
@@ -731,6 +742,7 @@ class Vehicle(models.Model):
     gps_imei = models.CharField(max_length=100, default='')
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Водій')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
@@ -786,20 +798,33 @@ class Vehicle(models.Model):
             return None
 
 
-class Fleets_drivers_vehicles_rate(models.Model):
-    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE)
+class StatusChange(models.Model):
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
-    driver_external_id = models.CharField(max_length=255)
-    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0)
-    created_at = models.DateTimeField(editable=False, auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-    pay_cash = models.BooleanField(default=False)
-    withdraw_money = models.BooleanField(default=False)
+    vehicle = models.ForeignKey(Vehicle, null=True, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, verbose_name='Назва статусу')
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    duration = models.DurationField(null=True, blank=True)
+
+class Fleets_drivers_vehicles_rate(models.Model):
+    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, verbose_name='Автомобіль')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0, verbose_name='Рейтинг')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
+    pay_cash = models.BooleanField(default=False, verbose_name='Оплата готівкою')
+    withdraw_money = models.BooleanField(default=False, verbose_name='Зняття готівкі')
 
     def __str__(self) -> str:
         return ''
+
+    class Meta:
+        verbose_name = 'Рейтинг водія в автопарку'
+        verbose_name_plural = 'Рейтинг водіїв в автопарках'
 
 
 class DriverRateLevels(models.Model):
@@ -891,7 +916,6 @@ class WeeklyReportFile(models.Model):
         return converted_list
 
     def save_weekly_reports_to_db(self):
-
         for file in csv_list:
             rows = []
             try:
@@ -1104,6 +1128,7 @@ class Comment(models.Model):
     comment = models.TextField(verbose_name='Відгук')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='ID в чаті')
     processed = models.BooleanField(default=False, verbose_name='Опрацьовано')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
     created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
@@ -1125,27 +1150,35 @@ class Order(models.Model):
     CANCELED = 'Скасовано клієнтом'
     ON_TIME = 'На певний час'
 
-    from_address = models.CharField(max_length=255)
-    latitude = models.CharField(max_length=10)
-    longitude = models.CharField(max_length=10)
-    to_the_address = models.CharField(max_length=255, blank=True, null=True)
-    to_latitude = models.CharField(max_length=10, null=True)
-    to_longitude = models.CharField(max_length=10, null=True)
-    phone_number = models.CharField(max_length=13)
-    chat_id_client = models.CharField(max_length=10, blank=True, null=True)
-    driver_message_id = models.CharField(max_length=10, blank=True, null=True)
-    client_message_id = models.CharField(max_length=10, blank=True, null=True)
-    car_delivery_price = models.IntegerField(default=0)
-    sum = models.IntegerField(default=0)
+    from_address = models.CharField(max_length=255, verbose_name='Місце посадки')
+    latitude = models.CharField(max_length=10, verbose_name='Широта місця посадки')
+    longitude = models.CharField(max_length=10, verbose_name='Довгота місця посадки')
+    to_the_address = models.CharField(max_length=255, blank=True, null=True, verbose_name='Місце висадки')
+    to_latitude = models.CharField(max_length=10, null=True, verbose_name='Широта місця висадки')
+    to_longitude = models.CharField(max_length=10, null=True, verbose_name='Довгота місця висадки')
+    phone_number = models.CharField(max_length=13, verbose_name='Номер телефона клієнта')
+    chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор чату клієнта')
+    driver_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення водія')
+    client_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення клієнта')
+    car_delivery_price = models.CharField(max_length=30, blank=True, null=True, verbose_name='Сума за подачу автомобіля')
+    sum = models.CharField(max_length=30, verbose_name='Загальна сума')
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
-    payment_method = models.CharField(max_length=70)
-    status_order = models.CharField(max_length=70)
-    distance_gps = models.CharField(max_length=10, blank=True, null=True)
-    distance_google = models.CharField(max_length=10)
-    driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT)
-    created_at = models.DateTimeField(editable=False, auto_now_add=True)
-    comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL)
-    checked = models.BooleanField(default=False)
+    payment_method = models.CharField(max_length=70, verbose_name='Спосіб оплати')
+    status_order = models.CharField(max_length=70, verbose_name='Статус замовлення')
+    distance_gps = models.CharField(max_length=10, blank=True, null=True, verbose_name='Дистанція по GPS')
+    distance_google = models.CharField(max_length=10, verbose_name='Дистанція Google')
+    driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Виконувач')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
+    comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL, verbose_name='Відгук')
+    checked = models.BooleanField(default=False, verbose_name='Перевірено')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    class Meta:
+        verbose_name = 'Замовлення'
+        verbose_name_plural = 'Замовлення'
+
+    def __str__(self):
+        return f'Замовлення №{self.pk}'
 
     @staticmethod
     def get_order(chat_id_client, phone, status_order):
@@ -1159,7 +1192,6 @@ class Order(models.Model):
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
     image = models.ImageField(upload_to='.', verbose_name='Фото')
-
     created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
@@ -1176,7 +1208,7 @@ class Event(models.Model):
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     status_event = models.BooleanField(default=False, verbose_name='Працює')
 
-    created_at = models.DateTimeField(editable=False, verbose_name='Створено')
+    created_at = models.DateTimeField(auto_now_add=True, editable=False, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
@@ -1312,6 +1344,7 @@ class ParkSettings(models.Model):
     key = models.CharField(max_length=255, verbose_name='Ключ')
     value = models.CharField(max_length=255, verbose_name='Значення')
     description = models.CharField(max_length=255, null=True, verbose_name='Опиc')
+    park = models.ForeignKey(Park, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автопарк')
 
     class Meta:
         verbose_name = 'Налаштування автопарка'
@@ -1338,929 +1371,26 @@ class Service(PolymorphicModel):
         verbose_name = 'Сервіс'
         verbose_name_plural = 'Сервіси'
 
-    @staticmethod
-    def get_value(key, default=None):
+    @classmethod
+    def get_value(cls, key, default=None):
         try:
-            setting = Service.objects.get(key=key)
-        except Service.DoesNotExist:
+            setting = cls.objects.get(key=key)
+        except ObjectDoesNotExist:
             return default
         return setting.value
 
 
 class BoltService(Service):
-    @staticmethod
-    def get_value(key, default=None):
-        try:
-            setting = bolt_states[key][0]
-        except BoltService.DoesNotExist:
-            return default
-        return setting
+    pass
 
 
 class NewUklonService(Service):
-    @staticmethod
-    def get_value(key, default=None):
-        try:
-            setting = newuklon_states[key][0]
-        except KeyError:
-            return default
-        return setting
+    pass
 
 
 class UaGpsService(Service):
-    @staticmethod
-    def get_value(key, default=None):
-        try:
-            setting = uagps_states[key][0]
-        except KeyError:
-            return default
-        return setting
+    pass
 
 
 class UberService(Service):
-    @staticmethod
-    def get_value(key, default=None):
-        try:
-            setting = uber_states[key][0]
-        except KeyError:
-            return default
-        return setting
-
-
-def clickandclear(element):
-    element.click()
-    element.clear()
-
-
-class SeleniumTools:
-    def __init__(self, session, fleet=None, partner="Ninja", week_number=None, profile=None):
-        self.session_file_name = session
-        self.fleet = fleet
-        self.partner = partner
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-        self.logger = logging.getLogger(__name__)
-        if week_number:
-            self.current_date = pendulum.parse(week_number, tz="Europe/Kiev")
-        else:
-            self.current_date = pendulum.now().start_of('week').subtract(days=3)
-        self.profile = 'Profile 1' if profile is None else profile
-
-    def report_file_name(self, pattern):
-        filenames = os.listdir(os.curdir)
-        for file in filenames:
-            if re.search(pattern, file):
-                return file
-
-    def payments_order_file_name(self, fleet, partner, day=None):
-        return self.report_file_name(self.file_pattern(fleet, partner, day=day))
-
-    def file_pattern(self, fleet, partner, day=None):
-        start = self.start_report_interval(day=day)
-        end = self.end_report_interval(day=day)
-
-        sd, sy, sm = start.strftime("%d"), start.strftime("%Y"), start.strftime("%m")
-        ed, ey, em = end.strftime("%d"), end.strftime("%Y"), end.strftime("%m")
-        return f'{fleet} {sy}{sm}{sd}-{ey}{em}{ed}-{partner}.csv'
-
-    def week_number(self):
-        return f'{self.start_of_week().strftime("%W")}'
-
-    def start_report_interval(self, day=None):
-        """
-
-        :return: report interval depends on type report (use in Bolt)
-        """
-        if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").start_of("day")
-        return self.current_date.start_of('week')
-
-    def end_report_interval(self, day=None):
-        if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").end_of("day")
-        return self.current_date.end_of('week')
-
-    def start_of_week(self):
-        return self.current_date.start_of('week')
-
-    def end_of_week(self):
-        return self.current_date.end_of('week')
-
-    def remove_session(self):
-        os.remove(self.session_file_name)
-
-    # def retry(self, fun, headless=False):
-    #     for i in range(2):
-    #         try:
-    #            time.sleep(0.3)
-    #            return fun(headless)
-    #         except Exception:
-    #             try:
-    #                 self.remove_session()
-    #                 return fun(headless)
-    #             except FileNotFoundError:
-    #                 return fun(headless)
-    #             continue
-
-    def build_driver(self, headless=True):
-        options = Options()
-        options = webdriver.ChromeOptions()
-        options.add_experimental_option("prefs", {
-            "download.default_directory": os.path.join(os.getcwd(), "LastDownloads"),
-            "download.prompt_for_download": False,
-            "download.directory_upgrade": True,
-            "safebrowsing_for_trusted_sources_enabled": False,
-        })
-        options.add_argument("--disable-infobars")
-        options.add_argument("--enable-file-cookies")
-        options.add_argument('--allow-profiles-outside-user-dir')
-        options.add_argument('--enable-profile-shortcut-manager')
-        options.add_argument(f'user-data-dir={os.path.join(os.getcwd(), "_SeleniumChromeUsers", self.profile)}')
-
-        if headless:
-            options.add_argument('--headless=new')
-            options.add_argument('--disable-gpu')
-            options.add_argument("--no-sandbox")
-            options.add_argument("--screen-size=1920,1080")
-            options.add_argument("--window-size=1920,1080")
-            options.add_argument("--start-maximized")
-            options.add_argument("--disable-extensions")
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument(
-                "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
-
-        driver = webdriver.Chrome(options=options, port=9514)
-        return driver
-
-    def build_remote_driver(self, headless=True):
-
-        options = Options()
-        options.add_argument("--disable-infobars")
-        options.add_argument("--enable-file-cookies")
-        options.add_argument('--allow-profiles-outside-user-dir')
-        options.add_argument('--enable-profile-shortcut-manager')
-        options.add_argument(f'--user-data-dir=home/seluser/{self.profile}')
-        options.add_argument(f'--profile-directory={self.profile}')
-        # if headless:
-        #     options.add_argument('--headless')
-        options.add_argument('--disable-gpu')
-        options.add_argument("--no-sandbox")
-        options.add_argument("--start-maximized")
-        options.add_argument("--disable-extensions")
-        options.add_argument('--disable-dev-shm-usage')
-        # options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
-
-        driver = webdriver.Remote(
-            os.environ['SELENIUM_HUB_HOST'],
-            desired_capabilities=DesiredCapabilities.CHROME,
-            options=options
-        )
-        return driver
-
-    def get_target_page_or_login(self, url, xpath, login):
-        try:
-            self.driver.get(url)
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-            self.logger.info(f'Got the page without authorization {url}')
-        except TimeoutException:
-            login()
-            self.driver.get(url)
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-            self.logger.info(f'Got the page using authorization {url}')
-
-    def get_downloaded_files(self, driver):
-        if not self.driver.current_url.startswith("chrome://downloads"):
-            self.driver.get("chrome://downloads/")
-
-        return self.driver.execute_script( \
-            "return  document.querySelector('downloads-manager')  "
-            " .shadowRoot.querySelector('#downloadsList')         "
-            " .items.filter(e => e.state === 'COMPLETE')          "
-            " .map(e => e.filePath || e.file_path || e.fileUrl || e.file_url); ")
-
-    def get_file_content(self, path):
-        try:
-            elem = self.driver.execute_script( \
-                "var input = window.document.createElement('INPUT'); "
-                "input.setAttribute('type', 'file'); "
-                "input.hidden = true; "
-                "input.onchange = function (e) { e.stopPropagation() }; "
-                "return window.document.documentElement.appendChild(input); ")
-            elem._execute('sendKeysToElement', {'value': [path], 'text': path})
-            result = self.driver.execute_async_script( \
-                "var input = arguments[0], callback = arguments[1]; "
-                "var reader = new FileReader(); "
-                "reader.onload = function (ev) { callback(reader.result) }; "
-                "reader.onerror = function (ex) { callback(ex.message) }; "
-                "reader.readAsDataURL(input.files[0]); "
-                "input.remove(); "
-                , elem)
-            if not result.startswith('data:'):
-                raise Exception("Failed to get file content: %s" % result)
-            return base64.b64decode(result[result.find('base64,') + 7:])
-        finally:
-            pass
-
-    def get_last_downloaded_file_frome_remote(self, save_as=None):
-        try:
-            files = WebDriverWait(self.driver, 30, 1).until(lambda driver: self.get_downloaded_files(driver))
-        except TimeoutException:
-            return
-        content = self.get_file_content(files[0])
-        if len(files):
-            fname = os.path.basename(files[0]) if save_as is None else save_as
-            with open(os.path.join(os.getcwd(), fname), 'wb') as f:
-                f.write(content)
-
-    def get_last_downloaded_file(self, save_as=None):
-        folder = os.path.join(os.getcwd(), "LastDownloads")
-        files = [os.path.join(folder, f) for f in os.listdir(folder)]  # add path to each file
-        files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-        if len(files):
-            fname = os.path.basename(files[0]) if save_as is None else save_as
-            shutil.copyfile(files[0], os.path.join(os.getcwd(), fname))
-        for filename in files:
-            if '.csv' in filename:
-                file_path = os.path.join(folder, filename)
-                os.remove(file_path)
-
-    def quit(self):
-        if hasattr(self, 'driver'):
-            self.driver.quit()
-            self.driver = None
-
-
-class Uber(SeleniumTools):
-    def __init__(self, week_number=None, driver=True, sleep=3, headless=False, fleet="Uber",
-                 base_url=f"{UberService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('uber', week_number=week_number, fleet=fleet, profile=profile)
-        self.sleep = sleep
-        if driver:
-            if remote:
-                self.driver = self.build_remote_driver(headless)
-            else:
-                self.driver = self.build_driver(headless)
-        self.remote = remote
-        self.base_url = base_url
-
-    def quit(self):
-        self.driver.quit()
-        self.driver = None
-
-    def login_v2(self, link=f"{UberService.get_value('UBER_LOGIN_V2_1')}"):
-        self.driver.get(link)
-        self.login_form(UberService.get_value('UBER_LOGIN_V2_2.1'), UberService.get_value('UBER_LOGIN_V2_2.2'), By.ID)
-        self.force_opt_form()
-        self.otp_code_v2()
-        # self.otp_code_v1()
-        self.password_form(UberService.get_value('UBER_LOGIN_V2_3.1'), UberService.get_value('UBER_LOGIN_V2_3.2'),
-                           By.ID)
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def login_v3(self, link=f"{UberService.get_value('UBER_LOGIN_V3_1')}"):
-        self.driver.get(link)
-        self.login_form(UberService.get_value('UBER_LOGIN_V3_2.1'), UberService.get_value('UBER_LOGIN_V3_2.2'), By.ID)
-        try:
-            self.password_form_v3()
-        except TimeoutException:
-            try:
-                el = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.ID, UberService.get_value('UBER_LOGIN_V3_3'))))
-                el.click()
-                self.password_form_v3()
-            except TimeoutException:
-                self.otp_code_v2()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def password_form_v3(self):
-        el = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_1'))))
-        el.clear()
-        el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
-        el = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_2'))))
-        el.click()
-
-    # def login(self, link=f"{UberService.get_value('UBER_LOGIN_1')}"):
-    #     self.driver.get(link)
-    #     self.login_form(UberService.get_value('UBER_LOGIN_2.1'), UberService.get_value('UBER_LOGIN_2.2'), By.CLASS_NAME)
-    #     self.otp_code_v1()
-    #     self.password_form(UberService.get_value('UBER_LOGIN_3.1'), UberService.get_value('UBER_LOGIN_3.2'),
-    #                        By.CLASS_NAME)
-    #     if self.sleep:
-    #         time.sleep(self.sleep)
-
-    def click_uber_calendar(self, month, year, day):
-        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
-        self.driver.find_element(By.XPATH,
-                                 f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{month}")]]').click()
-        self.driver.find_element(By.XPATH, UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_13")).click()
-        self.driver.find_element(By.XPATH,
-                                 f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_12")}{year}")]]').click()
-        self.driver.find_element(By.XPATH,
-                                 f'{UberService.get_value("UBER_GENERATE_PAYMENTS_ORDER_9")}{day}]').click()
-
-    def generate_payments_order(self, day=None):
-        url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"
-        xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')}"
-        self.get_target_page_or_login(url, xpath, self.login_v3)
-        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-        try:
-            xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3')}"
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-            self.driver.find_element(By.XPATH, xpath).click()
-        except Exception:
-            try:
-                xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3')}"
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                self.driver.find_element(By.XPATH, xpath).click()
-            except Exception:
-                xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4')}"
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                self.driver.find_element(By.XPATH, xpath).click()
-        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_5')).click()
-        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_6')).click()
-        self.click_uber_calendar(self.start_report_interval(day=day).strftime("%B"),
-                                 self.start_report_interval(day=day).strftime("%Y"),
-                                 self.start_report_interval(day=day).day)
-        self.click_uber_calendar(self.end_report_interval(day=day).strftime("%B"),
-                                 self.end_report_interval(day=day).strftime("%Y"),
-                                 self.end_report_interval(day=day).day)
-        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
-        return f'{self.payments_order_file_name(self.fleet, self.partner, day=day)}'
-
-    def download_payments_order(self, day=None):
-        if os.path.exists(f"{self.payments_order_file_name(self.fleet, self.partner, day=day)}"):
-            print('Report already downloaded')
-            return
-
-        self.generate_payments_order(day=day)
-        download_button = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_1')}"
-        try:
-            in_progress_text = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_2')}"
-            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, in_progress_text)))
-            WebDriverWait(self.driver, 600).until_not(EC.presence_of_element_located((By.XPATH, in_progress_text)))
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, download_button)))
-            WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
-            time.sleep(self.sleep)
-            if self.remote:
-                self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, self.partner, day=day))
-            else:
-                self.get_last_downloaded_file(self.file_pattern(self.fleet, self.partner, day=day))
-
-        except Exception as e:
-            self.logger.error(str(e))
-            pass
-
-    def save_report(self, day=None):
-        if self.sleep:
-            time.sleep(self.sleep)
-        items = []
-
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
-        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
-            try:
-                with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
-                    reader = csv.reader(file)
-                    next(reader)  # Advance past the header
-                    for row in reader:
-                        if row[3] == "":
-                            continue
-                        if row[3] is None:
-                            continue
-                        order = UberPaymentsOrder(
-                            report_from=self.start_report_interval(day=day),
-                            report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
-                            driver_uuid=row[0],
-                            first_name=row[1],
-                            last_name=row[2],
-                            total_amount=row[3],
-                            total_clean_amout=row[4] or 0,
-                            returns=row[5] or 0,
-                            total_amount_cach=row[6] or 0,
-                            transfered_to_bank=row[7] or 0,
-                            tips=row[8] or 0)
-                        try:
-                            order.save()
-                        except IntegrityError:
-                            pass
-                        items.append(order)
-
-                    if not items:
-                        order = UberPaymentsOrder(
-                            report_from=self.start_report_interval(day=day),
-                            report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
-                            driver_uuid='00000000-0000-0000-0000-000000000000',
-                            first_name='',
-                            last_name='',
-                            total_amount=0,
-                            total_clean_amout=0,
-                            returns=0,
-                            total_amount_cach=0,
-                            transfered_to_bank=0,
-                            tips=0)
-                        try:
-                            order.save()
-                        except IntegrityError:
-                            pass
-            except FileNotFoundError:
-                pass
-        return items
-
-    def wait_opt_code(self):
-        r = redis.Redis.from_url(os.environ["REDIS_URL"])
-        p = r.pubsub()
-        p.subscribe('code')
-        p.ping()
-        otpa = []
-        while True:
-            try:
-                otp = p.get_message()
-                if otp:
-                    otpa = list(f'{otp["data"]}')
-                    otpa = list(filter(lambda d: d.isdigit(), otpa))
-                    digits = [s.isdigit() for s in otpa]
-                    if not (digits) or (not all(digits)) or len(digits) != 4:
-                        continue
-                    break
-            except redis.ConnectionError as e:
-                self.logger.error(str(e))
-                p = r.pubsub()
-                p.subscribe('code')
-            time.sleep(1)
-        return otpa
-
-    def otp_code_v2(self):
-        while True:
-            if not self.wait_code_form('PHONE_SMS_OTP-0'):
-                break
-            otp = self.wait_opt_code()
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_1')).send_keys(otp[0])
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_2')).send_keys(otp[1])
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_3')).send_keys(otp[2])
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_4')).send_keys(otp[3])
-            # self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_5')).click()
-            break
-
-    def wait_code_form(self, id):
-        try:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-            self.driver.find_element(By.ID, id)
-            self.driver.get_screenshot_as_file(f'{id}.png')
-            return True
-        except Exception as e:
-            self.logger.error(str(e))
-            self.driver.get_screenshot_as_file(f'{id}_error.png')
-            return False
-
-    def otp_code_v1(self):
-        while True:
-            if not self.wait_code_form('verificationCode'):
-                break
-            otp = self.wait_opt_code()
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V1_1')).send_keys(otp)
-            self.driver.find_element(By.CLASS_NAME, UberService.get_value('UBER_OTP_CODE_V1_2')).click()
-            break
-
-    def force_opt_form(self):
-        try:
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.ID, UberService.get_value('UBER_FORCE_OPT_FORM'))))
-            self.driver.find_element(By.ID, UberService.get_value('UBER_FORCE_OPT_FORM')).click()
-        except Exception as e:
-            # self.logger.error(str(e))
-            pass
-
-    def password_form(self, id, button, selector):
-        try:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-            el = self.driver.find_element(By.ID, id)
-            el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
-            self.driver.find_element(selector, button).click()
-        except Exception as e:
-            self.logger.error(str(e))
-
-    def login_form(self, id, button, selector):
-        element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-        element.send_keys(ParkSettings.get_value("UBER_NAME"))
-        e = self.driver.find_element(selector, button)
-        e.click()
-
-    def add_driver(self, phone_number, email, name, second_name):
-        url = UberService.get_value('UBER_ADD_DRIVER_1')
-        self.driver.get(f"{url}")
-        if self.sleep:
-            time.sleep(self.sleep)
-        add_driver = self.driver.find_element(By.XPATH, UberService.get_value('UBER_ADD_DRIVER_2'))
-        add_driver.click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        data = self.driver.find_element(By.XPATH, UberService.get_value('UBER_ADD_DRIVER_3'))
-        data.click()
-        data.send_keys(
-            f'{phone_number[4:]}' + Keys.TAB + Keys.TAB + f'{email}' + Keys.TAB + f'{name}' + Keys.TAB + f'{second_name}')
-        send_data = self.driver.find_element(By.XPATH, UberService.get_value('UBER_ADD_DRIVER_4'))
-        send_data.click()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-
-class Bolt(SeleniumTools):
-    def __init__(self, week_number=None, driver=True, sleep=3, headless=False, fleet="Bolt",
-                 base_url=f"{BoltService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('bolt', week_number=week_number, fleet=fleet, profile=profile)
-        self.sleep = sleep
-        if driver:
-            if remote:
-                self.driver = self.build_remote_driver(headless)
-            else:
-                self.driver = self.build_driver(headless)
-        self.remote = remote
-        self.base_url = base_url
-
-    def quit(self):
-        self.driver.quit()
-        self.driver = None
-
-    def login(self):
-        self.driver.get(f"{BoltService.get_value('BOLT_LOGIN_1')}")
-        if self.sleep:
-            time.sleep(self.sleep)
-        element = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_2'))))
-        element.clear()
-        element.send_keys(ParkSettings.get_value("BOLT_NAME"))
-        element = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_3'))))
-        element.clear()
-        element.send_keys(ParkSettings.get_value("BOLT_PASSWORD"))
-        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_4')).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def download_payments_order(self, day=None, interval=None):
-        url = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')
-        xpath = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')
-        self.get_target_page_or_login(url, xpath, self.login)
-        try:
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, BoltService.get_value('BOLTS_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
-        except:
-            pass
-        if day:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
-                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
-            xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_4')}[{interval}]"
-            date = self.driver.find_element(By.XPATH, xpath)
-            if date.text != 'нд':
-                date.click()
-            else:
-                self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_8')).click()
-                xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_4')}[{interval}]"
-                self.driver.find_element(By.XPATH, xpath).click()
-            self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_5')).click()
-        else:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
-                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')))).click()
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
-                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_6')))).click()
-        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_7')).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
-        else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
-
-    def save_report(self, day=None):
-        if self.sleep:
-            time.sleep(self.sleep)
-        items = []
-
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
-
-        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
-            with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
-                reader = csv.reader(file)
-                next(reader)
-                for row in reader:
-                    if row[0] == "":
-                        break
-                    if row[0] is None:
-                        break
-                    if row[1] == "":
-                        continue
-                    order = BoltPaymentsOrder(
-                        report_from=self.start_report_interval(day=day),
-                        report_to=self.end_report_interval(day=day),
-                        report_file_name=file.name,
-                        driver_full_name=row[0][:24],
-                        mobile_number='',
-                        range_string='',
-                        total_amount=float(row[1].replace(',', '.')),
-                        cancels_amount=float(row[9].replace(',', '.')),
-                        autorization_payment=0,
-                        autorization_deduction=0,
-                        additional_fee=0,
-                        fee=float(row[1].replace(',', '.')) - float(row[4].replace(',', '.')),
-                        total_amount_cach=float(row[5].replace(',', '.')),
-                        discount_cash_trips=0,
-                        driver_bonus=float(row[7].replace(',', '.')),
-                        compensation=float(str(row[8] or 0).replace(',', '.')),
-                        refunds=float(row[14].replace(',', '.')),
-                        tips=float(row[6].replace(',', '.')),
-                        weekly_balance=0)
-                    try:
-                        order.save()
-                    except IntegrityError:
-                        pass
-                    items.append(order)
-        else:
-            order = BoltPaymentsOrder(
-                report_from=self.start_report_interval(day=day),
-                report_to=self.end_report_interval(day=day),
-                report_file_name='',
-                driver_full_name='',
-                mobile_number='',
-                range_string='',
-                total_amount=0,
-                cancels_amount=0,
-                autorization_payment=0,
-                autorization_deduction=0,
-                additional_fee=0,
-                fee=0,
-                total_amount_cach=0,
-                discount_cash_trips=0,
-                driver_bonus=0,
-                compensation=0,
-                refunds=0,
-                tips=0,
-                weekly_balance=0)
-            try:
-                order.save()
-            except IntegrityError:
-                pass
-
-        return items
-
-
-class NewUklon(SeleniumTools):
-    def __init__(self, week_number=None, driver=True, fleet="Uklon", sleep=5, headless=False,
-                 base_url=f"{NewUklonService.get_value('BASE_URL')}", remote=False, profile=None):
-        super().__init__('nuklon', week_number=week_number, fleet=fleet, profile=profile)
-        self.sleep = sleep
-        if driver:
-            if remote:
-                self.driver = self.build_remote_driver(headless)
-            else:
-                self.driver = self.build_driver(headless)
-        self.remote = remote
-        self.base_url = base_url
-
-    def login(self):
-        self.driver.get(NewUklonService.get_value('NEWUKLON_LOGIN_1'))
-        if self.sleep:
-            time.sleep(self.sleep)
-        login = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_2'))
-        login.send_keys(ParkSettings.get_value("UKLON_NAME"))
-        password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
-        password.send_keys('')
-        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD"))
-
-        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def download_payments_order(self, day=None):
-        url = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_1')
-        xpath = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_2')
-        self.get_target_page_or_login(url, xpath, self.login)
-        self.driver.find_element(By.XPATH, xpath).click()
-        if day:
-            if self.sleep:
-                time.sleep(self.sleep)
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
-            input_data = WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_4'))))
-            input_data.click()
-            input_data.send_keys(day + Keys.TAB + day)
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_5')))).click()
-        else:
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_6')))).click()
-
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_7')).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
-        else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
-
-    def save_report(self, day=None):
-        if self.sleep:
-            time.sleep(self.sleep)
-        items = []
-
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
-
-        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
-            with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
-                reader = csv.reader(file)
-                next(reader)
-                for row in reader:
-                    order = NewUklonPaymentsOrder(
-                        report_from=self.start_report_interval(day=day),
-                        report_to=self.end_report_interval(day=day),
-                        report_file_name=file.name,
-                        full_name=row[0],
-                        signal=row[1],
-                        total_rides=float((row[2] or '0').replace(',', '')),
-                        total_distance=float((row[3] or '0').replace(',', '')),
-                        total_amount_cach=float((row[4] or '0').replace(',', '')),
-                        total_amount_cach_less=float((row[5] or '0').replace(',', '')),
-                        total_amount_on_card=float((row[6] or '0').replace(',', '')),
-                        total_amount=float((row[7] or '0').replace(',', '')),
-                        tips=float((row[8] or '0').replace(',', '')),
-                        bonuses=float((row[9] or '0').replace(',', '')),
-                        fares=float((row[10] or '0').replace(',', '')),
-                        comission=float((row[11] or '0').replace(',', '')),
-                        total_amount_without_comission=float((row[12] or '0').replace(',', '')))
-                    try:
-                        order.save()
-                    except IntegrityError:
-                        pass
-                    items.append(order)
-
-        else:
-            order = NewUklonPaymentsOrder(
-                report_from=self.start_report_interval(day=day),
-                report_to=self.end_report_interval(day=day),
-                report_file_name='',
-                full_name='',
-                signal='',
-                total_rides=0,
-                total_distance=0,
-                total_amount_cach=0,
-                total_amount_cach_less=0,
-                total_amount_on_card=0,
-                total_amount=0,
-                tips=0,
-                bonuses=0,
-                fares=0,
-                comission=0,
-                total_amount_without_comission=0)
-            try:
-                order.save()
-            except IntegrityError:
-                pass
-
-        return items
-
-    def wait_otp_code(self, user):
-        r = redis.Redis.from_url(os.environ["REDIS_URL"])
-        p = r.pubsub()
-        p.subscribe(f'{user.phone_number} code')
-        p.ping()
-        otpa = []
-        start = time.time()
-        while True:
-            try:
-                if time.time() - start >= 180:
-                    break
-                otp = p.get_message()
-                if otp:
-                    otpa = list(f'{otp["data"]}')
-                    otpa = list(filter(lambda d: d.isdigit(), otpa))
-                    digits = [s.isdigit() for s in otpa]
-                    if not (digits) or (not all(digits)) or len(digits) != 4:
-                        continue
-                    break
-            except redis.ConnectionError as e:
-                self.logger.error(str(e))
-                p = r.pubsub()
-                p.subscribe(f'{user.phone_number} code')
-            time.sleep(1)
-        return otpa
-
-
-class Privat24(SeleniumTools):
-    def __init__(self, card=None, sum=None, driver=True, sleep=3, headless=False, base_url='https://next.privat24.ua/'):
-        self.sleep = sleep
-        self.card = card
-        self.sum = sum
-        if driver:
-            self.driver = self.build_driver(headless)
-        self.base_url = base_url
-
-    def quit(self):
-        self.driver.quit()
-
-    def login(self):
-        self.driver.get(self.base_url)
-        if self.sleep:
-            time.sleep(self.sleep)
-        e = self.driver.find_element(By.XPATH, '//div/button')
-        e.click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        login = self.driver.find_element(By.XPATH, '//div[3]/div[1]/input')
-        ActionChains(self.driver).move_to_element(login).send_keys(os.environ["PRIVAT24_NAME"]).perform()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def password(self):
-        password = self.driver.find_element(By.XPATH, '//input')
-        ActionChains(self.driver).move_to_element(password).send_keys('').perform()
-        ActionChains(self.driver).move_to_element(password).send_keys('PRIVAT24_PASSWORD').perform()
-        ActionChains(self.driver).move_to_element(password).send_keys(Keys.TAB + Keys.TAB + Keys.ENTER).perform()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def money_transfer(self):
-        if self.sleep:
-            time.sleep(25)
-        url = f'{self.base_url}money-transfer/card'
-        self.driver.get(url)
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.get_screenshot_as_file(f'privat_1.png')
-        e = self.driver.find_element(By.XPATH, '//div[2]/div/div[1]/div[2]/div/div[2]')
-        e.click()
-        card = self.driver.find_element(By.XPATH, '//div[1]/div[2]/input')
-        card.click()
-        self.driver.get_screenshot_as_file(f'privat_2.png')
-        card.send_keys(f"{self.card}" + Keys.TAB + f'{self.sum}')
-        self.driver.get_screenshot_as_file(f'privat_3.png')
-        button = self.driver.find_element(By.XPATH, '//div[4]/div/button')
-        button.click()
-
-    def transfer_confirmation(self):
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, '//div[3]/div[3]/button').click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        try:
-            xpath = '//div/div[4]/div[2]/button'
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-        except TimeoutException:
-            pass
-        finally:
-            if self.sleep:
-                time.sleep(self.sleep)
-            self.driver.find_element(By.XPATH, '//div[2]/div[2]/div/div[2]/button').click()
-
-    @staticmethod
-    def card_validator(card):
-        pattern = '^([0-9]{4}[- ]?){3}[0-9]{4}$'
-        result = re.match(pattern, card)
-        if True:
-            return result
-        else:
-            return None
-
-
-class UaGps(SeleniumTools):
-    def __init__(self, driver=True, sleep=5, headless=False, base_url=f"{UaGpsService.get_value('BASE_URL')}",
-                 remote=False, profile=None):
-        super().__init__('uagps', profile=profile)
-        self.sleep = sleep
-        if driver:
-            if remote:
-                self.driver = self.build_remote_driver(headless)
-            else:
-                self.driver = self.build_driver(headless)
-        self.remote = remote
-        self.base_url = base_url
-
-    def quit(self):
-        self.driver.quit()
-        self.driver = None
-
-    def login(self):
-        self.driver.get(self.base_url)
-        time.sleep(self.sleep)
-        user_field = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, UaGpsService.get_value('UAGPS_LOGIN_1'))))
-        clickandclear(user_field)
-        user_field.send_keys(ParkSettings.get_value("UAGPS_LOGIN"))
-        pass_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_2'))
-        clickandclear(pass_field)
-        pass_field.send_keys(ParkSettings.get_value("UAGPS_PASSWORD"))
-        self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
-        time.sleep(self.sleep)
+    pass

@@ -16,14 +16,14 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    Bolt, NewUklon, Uber, UaGps, NinjaPaymentsOrder, UseOfCars, \
-    Fleets_drivers_vehicles_rate, NinjaFleet
+     NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
 from auto.celery import app
 from auto.fleet_synchronizer import BoltSynchronizer, UklonSynchronizer, UberSynchronizer, UaGpsSynchronizer
+from auto.drivers import Bolt, NewUklon, Uber, UaGps
 
 BOLT_CHROME_DRIVER = None
 UKLON_CHROME_DRIVER = None
@@ -89,7 +89,7 @@ def download_daily_report(self):
         format_day = day.format("DD.MM.YYYY")
         download_reports(day=format_day, interval=1)
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @contextmanager
@@ -154,7 +154,7 @@ def update_driver_status(self):
                 logger.info('passed')
 
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -177,18 +177,20 @@ def send_on_job_application_on_driver(self, job_id):
         candidate = JobApplication.objects.get(id=job_id)
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
         BoltSynchronizer(BOLT_CHROME_DRIVER.driver).try_to_execute('add_driver', candidate)
-        print('The job application has been sent')
+        logger.info('The job application has been sent')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
 def get_rent_information(self):
     try:
         UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('get_rent_distance')
-        print('write rent report in uagps')
+        logger.info('write rent report in uagps')
+        UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('no_uber_rent_distance')
+        logger.info('uber removed in rent')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -196,13 +198,25 @@ def withdraw_uklon(self):
     try:
         UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('withdraw_money')
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def download_uber_trips(self):
+    try:
+        day = pendulum.now().start_of('day').subtract(days=1)
+        format_day = day.format("DD.MM.YYYY")
+        UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('download_trips', 'Trips', day=format_day)
+    except Exception as e:
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
 def send_daily_into_group(self):
     try:
         total_values = {}
+        day_values = {}
+        report_values = {}
         today = pendulum.now().weekday()
         if today > 0:
             for i in range(today):
@@ -210,14 +224,21 @@ def send_daily_into_group(self):
                 format_day = day.format("DD.MM.YYYY")
                 report = download_reports(day=format_day, interval=i*2 + 1)[2]
                 for key, value in report.items():
+                    if not i:
+                        day_values[key] = day_values.get(key, 0) + value
                     total_values[key] = total_values.get(key, 0) + value
         else:
+            day = pendulum.now().start_of('day').subtract(days=1)
+            format_day = day.format("DD.MM.YYYY")
+            day_values = download_reports(day=format_day, interval=1)[2]
             total_values = download_reports()[2]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
-        message = [f'{k}: %.2f' % v for k, v in sort_report.items()]
+        for key in sort_report:
+            report_values[key] = "Всього: {:.2f} Учора: (+{:.2f})".format(sort_report[key], day_values.get(key, 0))
+        message = [f'{k}:\n{v}' for k, v in report_values.items()]
         return message
     except Exception as e:
-        logger.info(e)
+        logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -344,10 +365,11 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=10, hour='*/1'), get_rent_information.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
                              queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
 
 
 def init_chrome_driver():
