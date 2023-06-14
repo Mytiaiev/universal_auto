@@ -1,3 +1,40 @@
+var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi, taxiMarkers = [];
+var circle, intervalId, intervalTime, intervalTaxiMarker;
+
+const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
+const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH || 0);
+const TARIFF_OUTSIDE_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_OUTSIDE_DISPATCH || 0);
+const TARIFF_IN_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_IN_THE_CITY || 0);
+const TARIFF_OUTSIDE_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_OUTSIDE_THE_CITY || 0);
+const CENTRE_CITY_LAT = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LAT || 0);
+const CENTRE_CITY_LNG = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LNG || 0);
+const CENTRE_CITY_RADIUS = parseInt(parkSettings && parkSettings.CENTRE_CITY_RADIUS || 0);
+const SEND_TIME_ORDER_MIN = parseInt(parkSettings && parkSettings.SEND_TIME_ORDER_MIN || 0);
+const MINIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MINIMUM_PRICE_RADIUS || 0);
+const MAXIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MAXIMUM_PRICE_RADIUS || 0);
+const TIMER = parseInt(parkSettings && parkSettings.SEARCH_TIME || 0);
+const userLanguage = navigator.language || navigator.userLanguage;
+
+const city_boundaries = function () {
+  return [
+    [50.482433, 30.758250], [50.491685, 30.742045], [50.517374, 30.753721], [50.529704, 30.795370],
+    [50.537806, 30.824810], [50.557504, 30.816837], [50.579778, 30.783808], [50.583684, 30.766494],
+    [50.590833, 30.717995], [50.585827, 30.721184], [50.575221, 30.709590], [50.555702, 30.713665],
+    [50.534572, 30.653589], [50.572107, 30.472565], [50.571557, 30.464734], [50.584574, 30.464120],
+    [50.586367, 30.373054], [50.573406, 30.373049], [50.570661, 30.307423], [50.557272, 30.342127],
+    [50.554324, 30.298128], [50.533394, 30.302445], [50.423057, 30.244148], [50.446055, 30.348753],
+    [50.381271, 30.442675], [50.372075, 30.430830], [50.356963, 30.438040], [50.360358, 30.468252],
+    [50.333520, 30.475291], [50.302393, 30.532814], [50.213270, 30.593929], [50.226755, 30.642478],
+    [50.291609, 30.590369], [50.335279, 30.628839], [50.389522, 30.775925], [50.394966, 30.776293],
+    [50.397798, 30.790669], [50.392594, 30.806395], [50.404878, 30.825881], [50.458385, 30.742751],
+    [50.481657, 30.748158], [50.482454, 30.758345]
+  ].map(function ([lat, lng]) {
+    return {
+      lat, lng
+    }
+  });
+};
+
 function toRadians(degrees) {
   return degrees * Math.PI / 180;
 }
@@ -69,15 +106,12 @@ function hidePaymentButtons() {
 
 function addMarker(obj) {
   const marker = new google.maps.Marker(obj);
-  markersTaxi.push(marker)
-  return marker;
-}
-
-function removeAllMarkers() {
-  for (const m in markersTaxi) {
-    markersTaxi[m].setMap(null);
+  if (Array.isArray(markersTaxi)) {
+    markersTaxi.push(marker);
+  } else {
+    markersTaxi = [marker];
   }
-  markersTaxi = [];
+  return marker;
 }
 
 function setAutoCenter(map) {
@@ -88,48 +122,131 @@ function setAutoCenter(map) {
   map.fitBounds(bounds);
 }
 
-var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi = [];
-var circle, intervalId, intervalTime, intervalTaxiMarker;
-
-const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
-const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH || 0);
-const TARIFF_OUTSIDE_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_OUTSIDE_DISPATCH || 0);
-const TARIFF_IN_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_IN_THE_CITY || 0);
-const TARIFF_OUTSIDE_THE_CITY = parseInt(parkSettings && parkSettings.TARIFF_OUTSIDE_THE_CITY || 0);
-const CENTRE_CITY_LAT = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LAT || 0);
-const CENTRE_CITY_LNG = parseFloat(parkSettings && parkSettings.CENTRE_CITY_LNG || 0);
-const CENTRE_CITY_RADIUS = parseInt(parkSettings && parkSettings.CENTRE_CITY_RADIUS || 0);
-const SEND_TIME_ORDER_MIN = parseInt(parkSettings && parkSettings.SEND_TIME_ORDER_MIN || 0);
-const MINIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MINIMUM_PRICE_RADIUS || 0);
-const MAXIMUM_PRICE_RADIUS = parseInt(parkSettings && parkSettings.MAXIMUM_PRICE_RADIUS || 0);
-const TIMER = parseInt(parkSettings && parkSettings.SEARCH_TIME || 0);
-const userLanguage = navigator.language || navigator.userLanguage;
-
-const city_boundaries = function () {
-  return [
-    [50.482433, 30.758250], [50.491685, 30.742045], [50.517374, 30.753721], [50.529704, 30.795370],
-    [50.537806, 30.824810], [50.557504, 30.816837], [50.579778, 30.783808], [50.583684, 30.766494],
-    [50.590833, 30.717995], [50.585827, 30.721184], [50.575221, 30.709590], [50.555702, 30.713665],
-    [50.534572, 30.653589], [50.572107, 30.472565], [50.571557, 30.464734], [50.584574, 30.464120],
-    [50.586367, 30.373054], [50.573406, 30.373049], [50.570661, 30.307423], [50.557272, 30.342127],
-    [50.554324, 30.298128], [50.533394, 30.302445], [50.423057, 30.244148], [50.446055, 30.348753],
-    [50.381271, 30.442675], [50.372075, 30.430830], [50.356963, 30.438040], [50.360358, 30.468252],
-    [50.333520, 30.475291], [50.302393, 30.532814], [50.213270, 30.593929], [50.226755, 30.642478],
-    [50.291609, 30.590369], [50.335279, 30.628839], [50.389522, 30.775925], [50.394966, 30.776293],
-    [50.397798, 30.790669], [50.392594, 30.806395], [50.404878, 30.825881], [50.458385, 30.742751],
-    [50.481657, 30.748158], [50.482454, 30.758345]
-  ].map(function ([lat, lng]) {
-    return {
-      lat, lng
-    }
-  });
-}
-
 function getMarkerIcon(type) {
   return {
     url: 'static/app/images/icon_' + type + '.png',
     scaledSize: new google.maps.Size(32, 32),
   };
+}
+
+function createMap(address, to_address) {
+  var modal = document.createElement('div');
+  modal.id = 'order-modal';
+  modal.innerHTML = '<div id="map"></div>';
+
+  document.body.appendChild(modal);
+
+  var mapCanvas = document.getElementById("map");
+  var mapOpts = {
+    zoom: 10,
+    center: new google.maps.LatLng(50.4546600, 30.5238000)
+  };
+  map = new google.maps.Map(mapCanvas, mapOpts);
+
+  // Додати from_address маркер
+  addMarker({
+    position: address[0].geometry.location,
+    map,
+    title: address[0].formatted_address,
+    icon: getMarkerIcon('address'),
+    animation: google.maps.Animation.DROP
+  });
+
+  // Додати to_address маркер
+  addMarker({
+    position: to_address[0].geometry.location,
+    map,
+    title: to_address[0].formatted_address,
+    icon: getMarkerIcon('to_address'),
+    animation: google.maps.Animation.DROP
+  });
+
+  var directionsService = new google.maps.DirectionsService();
+  var request = {
+    origin: address[0].formatted_address,
+    destination: to_address[0].formatted_address,
+    travelMode: google.maps.TravelMode.DRIVING
+  };
+  directionsService.route(request, function (result, status) {
+    if (status == google.maps.DirectionsStatus.OK) {
+      // Отримати відстань між точками
+      var distanceInMeters = result.routes[0].legs[0]['steps'];
+
+      var allPathsAddress = getAllPath(distanceInMeters)
+
+      var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
+      var inCity = inCitOrOutCityAddress[0]
+      var outOfCity = inCitOrOutCityAddress[1]
+
+      var inCityCoords = getPathCoords(inCity)
+      var outOfCityCoords = getPathCoords(outOfCity)
+
+
+      let inCityDistance = calculateDistance(inCityCoords)
+      let outOfCityDistance = calculateDistance(outOfCityCoords)
+
+      var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
+      setCookie('sumOder', tripAmount, 1)
+      setAutoCenter(map);
+
+      // Додати текст та таймер до елементу costDiv
+      var costText = gettext("Оберіть метод оплати.");
+      var costDiv = document.createElement('div');
+      costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
+        '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
+      map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
+
+      // Додати кнопки оплати на карту
+      var paymentDiv = document.createElement('div');
+      var button1 = gettext('Готівка');
+      var button2 = gettext('Картка');
+      var button3 = gettext('Відмовитись');
+      paymentDiv.innerHTML =
+        "<div class='mb-3'>" +
+        "<button class='order-confirm btn btn-primary'>" + button1 + "</button>" +
+        // "<button class='order-confirm btn btn-primary ml-3'>" + button2 + "</button>" +
+        "<button class='order-reject btn btn-danger ml-3'>" + button3 + "</button>" +
+        "</div>";
+
+      map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
+
+      if (getCookie('idOrder') != null) {
+        orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
+        var Text = gettext("Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
+        costDiv = document.createElement('div');
+        costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
+          '<h6 class="alert-heading alert-message mb-0">' + Text + '</h6><div id="timer"></div></div>';
+        map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
+        intervalTaxiMarker = setInterval(updateTaxiMarkers, 10000);
+        orderConfirm.remove()
+        startTimer();
+
+        // Додати обробник події для кнопки "Відмовитись" для перенаправлення на домашню сторінку
+        orderReject = paymentDiv.getElementsByClassName('order-reject')[0];
+        orderReject.addEventListener("click", onOrderReject);
+      } else {
+        // Додати обробник події для кнопки "Готівка" для відправлення POST-запиту до views.py
+        orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
+        orderConfirm.addEventListener("click", function () {
+        costText = gettext("Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
+        costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
+          '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
+        map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
+        map.controls[google.maps.ControlPosition.BOTTOM_CENTER].clear();
+        map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
+        onOrderPayment('Готівка');
+        hidePaymentButtons();
+        startTimer();
+      });
+
+      // Додати обробник події для кнопки "Відмовитись" для перенаправлення на домашню сторінку
+      orderReject = paymentDiv.getElementsByClassName('order-reject')[0];
+      orderReject.addEventListener("click", onOrderReject);
+      }
+    }
+  });
 }
 
 function orderUpdate(id_order) {
@@ -364,117 +481,28 @@ function consentTrip() {
   }, 5000);
 }
 
-
-function createMap(address, to_address, taxiArr) {
-  var modal = document.createElement('div');
-  modal.id = 'order-modal';
-  modal.innerHTML = '<div id="map"></div>';
-
-  document.body.appendChild(modal);
-
-  var mapCanvas = document.getElementById("map");
-  var mapOpts = {
-    zoom: 10,
-    center: new google.maps.LatLng(50.4546600, 30.5238000)
-  };
-  map = new google.maps.Map(mapCanvas, mapOpts);
-
-  // Додати from_address маркер
-  addMarker({
-    position: address[0].geometry.location,
-    map,
-    title: address[0].formatted_address,
-    icon: getMarkerIcon('address'),
-    animation: google.maps.Animation.DROP
-  });
-
-  // Додати to_address маркер
-  addMarker({
-    position: to_address[0].geometry.location,
-    map,
-    title: to_address[0].formatted_address,
-    icon: getMarkerIcon('to_address'),
-    animation: google.maps.Animation.DROP
-  });
-
-  var directionsService = new google.maps.DirectionsService();
-  var request = {
-    origin: address[0].formatted_address,
-    destination: to_address[0].formatted_address,
-    travelMode: google.maps.TravelMode.DRIVING
-  };
-  directionsService.route(request, function (result, status) {
-    if (status == google.maps.DirectionsStatus.OK) {
-      // Отримати відстань між точками
-      var distanceInMeters = result.routes[0].legs[0]['steps'];
-
-      var allPathsAddress = getAllPath(distanceInMeters)
-
-      var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
-      var inCity = inCitOrOutCityAddress[0]
-      var outOfCity = inCitOrOutCityAddress[1]
-
-      var inCityCoords = getPathCoords(inCity)
-      var outOfCityCoords = getPathCoords(outOfCity)
-
-
-      let inCityDistance = calculateDistance(inCityCoords)
-      let outOfCityDistance = calculateDistance(outOfCityCoords)
-
-      var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
-      setCookie('sumOder', tripAmount, 1)
-      setAutoCenter(map);
-
-      // Додати текст та таймер до елементу costDiv
-      var costText = gettext("Оберіть метод оплати.");
-      var costDiv = document.createElement('div');
-      costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert"><h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
-      map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
-
-      // Додати кнопки оплати на карту
-      var paymentDiv = document.createElement('div');
-      var button1 = gettext('Готівка');
-      var button2 = gettext('Картка');
-      var button3 = gettext('Відмовитись');
-      paymentDiv.innerHTML =
-        "<div class='mb-3'>" +
-        "<button class='order-confirm btn btn-primary'>" + button1 + "</button>" +
-        // "<button class='order-confirm btn btn-primary ml-3'>" + button2 + "</button>" +
-        "<button class='order-reject btn btn-danger ml-3'>" + button3 + "</button>" +
-        "</div>";
-
-      map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
-
-      // Додати обробник події для кнопки "Готівка" для відправлення POST-запиту до views.py
-      orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
-      orderConfirm.addEventListener("click", function () {
-        costText = gettext("Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
-        costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
-          '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6></div>';
-        map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
-        map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
-        onOrderPayment('Готівка');
-        hidePaymentButtons();
-        startTimer();
-      });
-
-      // Додати обробник події для кнопки "Відмовитись" для перенаправлення на домашню сторінку
-      orderReject = paymentDiv.getElementsByClassName('order-reject')[0];
-      orderReject.addEventListener("click", onOrderReject);
-    }
-  });
-}
-
 function startTimer() {
-  var startTime = Date.now();
+  // var startTime = Date.now();
   var duration = TIMER * 1000; // 3 хвилини
   // var duration = 10 * 1000; // 3 хвилини
 
-  var timerElement = document.createElement('div');
-  timerElement.id = 'timer';
+  document.addEventListener('DOMContentLoaded', function() {
+    var timerElement = document.createElement('div');
+    timerElement.id = 'timer';
 
-  var costDiv = document.getElementsByClassName('alert alert-primary mt-2')[0];
-  costDiv.appendChild(timerElement);
+    var costDiv = document.getElementsByClassName('alert alert-primary mt-2')[0];
+    costDiv.appendChild(timerElement);
+  });
+
+  // Отримати збережений час початку таймера
+  var startTime = getCookie('timerStartTime');
+  if (startTime) {
+    startTime = parseInt(startTime);
+  } else {
+    startTime = Date.now();
+    // Зберегти час початку таймера в куках
+    setCookie('timerStartTime', startTime, 1);
+  }
 
   // Зупинити попередній таймер, якщо він вже запущений
   clearInterval(intervalTime);
@@ -486,7 +514,10 @@ function startTimer() {
     // Перевірити, чи таймер закінчився
     if (remainingTime <= 0) {
       clearInterval(intervalTime);
-      $('#timer').remove();
+      var timerElement = document.getElementById('timer');
+      if (timerElement) {
+        timerElement.remove();
+      }
 
       var modalContent = document.createElement('div');
       modalContent.innerHTML = '<div id="timer-modal" class="modal">\n' +
@@ -539,7 +570,10 @@ function startTimer() {
     var seconds = Math.floor((remainingTime % 60000) / 1000);
 
     // Відобразити таймер у форматі "хвилини:секунди"
-    timerElement.innerHTML = 'Приблизний час пошуку: ' + minutes + ' хв ' + seconds + ' сек';
+    timerElement = document.getElementById('timer');
+    if (timerElement) {
+      timerElement.innerHTML = 'Приблизний час пошуку: ' + minutes + ' хв ' + seconds + ' сек';
+    }
   }, 1000);
 }
 
@@ -740,7 +774,7 @@ $(document).ready(function () {
                 var taxiArr = JSON.parse(response.data);
 
                 if (taxiArr.length > 0) {
-                  createMap(fromGeocoded, toGeocoded, taxiArr);
+                  createMap(fromGeocoded, toGeocoded);
                   intervalTaxiMarker = setInterval(updateTaxiMarkers, 10000);
                 } else {
                   var text3 = gettext('Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою замовлення на інший час!')
@@ -772,9 +806,6 @@ $(document).ready(function () {
     }
   });
 });
-
-// Declare the taxiMarkers variable as an empty array
-var taxiMarkers = [];
 
 function updateTaxiMarkers() {
   $.ajax({
