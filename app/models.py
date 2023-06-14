@@ -404,6 +404,7 @@ class User(models.Model):
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
     email = models.EmailField(blank=True, max_length=254, verbose_name='Електрона пошта')
+    role = models.CharField(max_length=25, default=Role.CLIENT, choices=Role.choices)
     phone_number = models.CharField(blank=True, max_length=13, verbose_name='Номер телефона')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
@@ -482,7 +483,6 @@ class User(models.Model):
 
 
 class DriverManager(User):
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.DRIVER_MANAGER)
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
@@ -622,7 +622,6 @@ class Client(User):
     # support_manager_id: ManyToManyField already exists in SupportManager
     # we have to delete this
     support_manager_id = models.ManyToManyField('SupportManager', blank=True)
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.CLIENT)
 
     class Meta:
         verbose_name = 'Клієнт'
@@ -640,7 +639,6 @@ class Client(User):
 class ServiceStationManager(User):
     car_id = models.ManyToManyField('Vehicle', blank=True)
     fleet_id = models.ManyToManyField(Fleet, blank=True)
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.SERVICE_STATION_MANAGER)
     service_station = models.OneToOneField('ServiceStation', on_delete=models.RESTRICT, verbose_name='Сервісний центр')
 
     class Meta:
@@ -667,7 +665,6 @@ class ServiceStationManager(User):
 class SupportManager(User):
     client_id = models.ManyToManyField(Client, blank=True)
     driver_id = models.ManyToManyField(Driver, blank=True)
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.SUPPORT_MANAGER)
 
     class Meta:
         verbose_name = 'Менеджер служби підтримки'
@@ -683,7 +680,6 @@ class SupportManager(User):
 
 
 class Owner(User):
-    role = models.CharField(max_length=50, choices=User.Role.choices, default=User.Role.OWNER)
 
     class Meta:
         verbose_name = 'Власник'
@@ -806,18 +802,25 @@ class StatusChange(models.Model):
     end_time = models.DateTimeField(null=True, blank=True)
     duration = models.DurationField(null=True, blank=True)
 
+
 class Fleets_drivers_vehicles_rate(models.Model):
+    class Schema(models.TextChoices):
+        RENT = 'RENT', 'Схема оренди'
+        HALF = 'HALF', 'Схема 50/50'
+        BUYER = 'BUYER', 'Схема під викуп'
+
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, verbose_name='Автомобіль')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
-    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0, verbose_name='Рейтинг')
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Рейтинг')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
     pay_cash = models.BooleanField(default=False, verbose_name='Оплата готівкою')
-    withdraw_money = models.BooleanField(default=False, verbose_name='Зняття готівкі')
+    withdraw_money = models.BooleanField(default=False, verbose_name='Зняття готівки')
+    schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
 
     def __str__(self) -> str:
         return ''

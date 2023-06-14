@@ -877,7 +877,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['fleet', 'driver', 'vehicle',
+            return ['fleet', 'driver', 'schema', 'vehicle',
                     'driver_external_id', 'rate',
                     'created_at', 'pay_cash',
                     'withdraw_money',
@@ -886,7 +886,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
-                ('Деталі',                     {'fields': ['fleet', 'driver',
+                ('Деталі',                     {'fields': ['fleet', 'driver', 'schema',
                                                            'vehicle', 'driver_external_id',
                                                            'rate', 'pay_cash', 'withdraw_money',
                                                            'partner',
@@ -894,7 +894,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
             ]
         else:
             fieldsets = [
-                ('Деталі',                     {'fields': ['fleet', 'driver',
+                ('Деталі',                     {'fields': ['fleet', 'driver', 'schema',
                                                            'vehicle', 'driver_external_id',
                                                            'rate', 'pay_cash', 'withdraw_money'
                                                            ]}),
@@ -911,6 +911,16 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
                 kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        schema_field = form.cleaned_data.get('schema')
+
+        if schema_field == 'HALF':
+            obj.rate = 0.5
+        else:
+            obj.rate = 0
+
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Comment)
