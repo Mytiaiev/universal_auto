@@ -240,7 +240,7 @@ def send_order_to_driver(sender=None, **kwargs):
                         continue
             time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180)) / 3)
             count += 1
-            if count == 3:
+            if count == 3 and order.chat_id_client:
                 try:
                     bot.delete_message(chat_id=order.chat_id_client, message_id=msg)
                     bot.delete_message(chat_id=order.chat_id_client, message_id=msg_1)
@@ -487,7 +487,7 @@ def notify_driver(sender=None, **kwargs):
     if sender == send_time_order:
         accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
         for order in accepted_orders:
-            if timezone.localtime() < order.order_time + datetime.timedelta(minutes=int(
+            if order.order_time < timezone.localtime() + datetime.timedelta(minutes=int(
                     ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10))):
                 markup = inline_time_order_kb(order.id)
                 text = order_info(order.pk, order.from_address, order.to_the_address,
@@ -546,6 +546,7 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
                 logger.error(msg=str(e))
                 time.sleep(30)
         else:
-            context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
-            context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
+            if order.chat_id_client:
+                context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
+                context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
             break

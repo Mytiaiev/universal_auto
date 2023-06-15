@@ -12,11 +12,11 @@ function getCookie(key) {
 }
 
 
-function setCookie(key, value, daysToLive){
-    var date = new Date()
-    date.setTime(date.getTime() + (daysToLive * 24 * 60 * 60 * 1000))
-    var expires = `expires=${date.toUTCString()}`
-    document.cookie = `${key}=${value}; ${expires}`
+function setCookie(key, value, daysToLive) {
+  var date = new Date()
+  date.setTime(date.getTime() + (daysToLive * 24 * 60 * 60 * 1000))
+  var expires = `expires=${date.toUTCString()}`
+  document.cookie = `${key}=${value}; ${expires}`
 }
 
 function checkCookies() {
@@ -26,17 +26,17 @@ function checkCookies() {
   var phone = getCookie('phone');
 
   if (idOrder) {
-     $.ajax({
-        url: ajaxGetUrl,
-        method: 'GET',
-        data: {
-          "action": "active_vehicles_locations"
-        },
-        success: function(response) {
-          var taxiArr = JSON.parse(response.data);
-          createMap(address, to_address, taxiArr);
-        }
-      });
+    $.ajax({
+      url: ajaxGetUrl,
+      method: 'GET',
+      data: {
+        "action": "active_vehicles_locations"
+      },
+      success: function (response) {
+        var taxiArr = JSON.parse(response.data);
+        createMap(address, to_address, taxiArr);
+      }
+    });
     orderUpdate(idOrder);
   } else {
     if (address && to_address && phone) {
@@ -46,7 +46,7 @@ function checkCookies() {
         data: {
           "action": "active_vehicles_locations"
         },
-        success: function(response) {
+        success: function (response) {
           console.log(response.data)
           var taxiArr = JSON.parse(response.data);
           createMap(address, to_address, taxiArr);
@@ -55,7 +55,6 @@ function checkCookies() {
     }
   }
 }
-
 
 
 function deleteAllCookies() {
