@@ -1,4 +1,5 @@
-var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi, taxiMarkers = [];
+var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi,
+  taxiMarkers = [];
 var circle, intervalId, intervalTime, intervalTaxiMarker;
 
 const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
@@ -229,21 +230,21 @@ function createMap(address, to_address) {
         // Додати обробник події для кнопки "Готівка" для відправлення POST-запиту до views.py
         orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
         orderConfirm.addEventListener("click", function () {
-        costText = gettext("Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
-        costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
-          '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
-        map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
-        map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
-        map.controls[google.maps.ControlPosition.BOTTOM_CENTER].clear();
-        map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
-        onOrderPayment('Готівка');
-        hidePaymentButtons();
-        startTimer();
-      });
+          costText = gettext("Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
+          costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
+            '<h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
+          map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
+          map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
+          map.controls[google.maps.ControlPosition.BOTTOM_CENTER].clear();
+          map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(paymentDiv);
+          onOrderPayment('Готівка');
+          hidePaymentButtons();
+          startTimer();
+        });
 
-      // Додати обробник події для кнопки "Відмовитись" для перенаправлення на домашню сторінку
-      orderReject = paymentDiv.getElementsByClassName('order-reject')[0];
-      orderReject.addEventListener("click", onOrderReject);
+        // Додати обробник події для кнопки "Відмовитись" для перенаправлення на домашню сторінку
+        orderReject = paymentDiv.getElementsByClassName('order-reject')[0];
+        orderReject.addEventListener("click", onOrderReject);
       }
     }
   });
@@ -495,7 +496,7 @@ function startTimer() {
     setCookie('timerStartTime', startTime, 1);
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     var timer = document.createElement('div');
     timer.id = 'timer';
 
@@ -648,7 +649,7 @@ function intlTelInit(phoneEl) {
 }
 
 $(document).ready(function () {
-  if (csrfToken) setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
+  // if (csrfToken) setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
 
   $('#delivery_time').mask("dd:dd", {placeholder: gettext("00:00 (Вкажіть час)")});
   intlTelInit('#phone');
@@ -746,23 +747,74 @@ $(document).ready(function () {
           setCookie('orderData', JSON.stringify(orderData));
 
           if (form.has('order_time')) {
-            var text2 = gettext('Дякую за замовлення. Очікуйте на автомобіль!');
-            var modal = $('<div class="modal">' +
-              '<div class="modal-content">' +
-              '<h3>' + text2 + '</h3>' +
-              '</div>' +
-              '</div>');
+            // Отримання координат з куків
+            var fromLat = parseFloat(getCookie("fromLat"));
+            var fromLon = parseFloat(getCookie("fromLon"));
+            var toLat = parseFloat(getCookie("toLat"));
+            var toLon = parseFloat(getCookie("toLon"));
 
-            $('body').prepend(modal);
+            // Створення об'єктів google.maps.LatLng на основі координат з куків
+            var fromLocation = new google.maps.LatLng(fromLat, fromLon);
+            var toLocation = new google.maps.LatLng(toLat, toLon);
 
-            setTimeout(function () {
-              modal.remove();
-              window.location.reload();
-            }, 5000);
+            // Створення об'єкту запиту для DirectionsService
+            var request = {
+              origin: fromLocation,
+              destination: toLocation,
+              travelMode: google.maps.TravelMode.DRIVING
+            };
 
-            onOrderPayment().then(function () {
-              deleteAllCookies();
-            })
+            // Виклик DirectionsService для отримання маршруту та відстані
+            var directionsService = new google.maps.DirectionsService();
+            directionsService.route(request, function (result, status) {
+              if (status === google.maps.DirectionsStatus.OK) {
+                var distanceInMeters = result.routes[0].legs[0]['steps'];
+
+                var allPathsAddress = getAllPath(distanceInMeters)
+
+                var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
+                var inCity = inCitOrOutCityAddress[0]
+                var outOfCity = inCitOrOutCityAddress[1]
+
+                var inCityCoords = getPathCoords(inCity)
+                var outOfCityCoords = getPathCoords(outOfCity)
+
+
+                let inCityDistance = calculateDistance(inCityCoords)
+                let outOfCityDistance = calculateDistance(outOfCityCoords)
+
+                var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
+                setCookie('sumOder', tripAmount, 1)
+
+                var text2 = gettext('Дякуємо за замовлення. Очікуйте на автомобіль! Ваша вартість поїздки: ') +
+                  '<span class="trip-amount">' + tripAmount + '</span>' + gettext(' грн.');
+                var modal = $('<div class="modal">' +
+                  '<div class="modal-content rounded">' +
+                  '<h3 class="modal-title">' + text2 + '</h3>' +
+                  '<div class="buttons-container">' +
+                  '<button class="order-confirm btn btn-primary">Погодитися</button>' +
+                  '<button class="order-reject btn btn-danger">Відмовитись</button>' +
+                  '</div>' +
+                  '</div>' +
+                  '</div>');
+
+                $('body').prepend(modal);
+
+                modal.find('.order-confirm').on('click', function () {
+                  onOrderPayment().then(function () {
+                    deleteAllCookies();
+                  });
+                  modal.remove();
+                  window.location.reload();
+                });
+
+                modal.find('.order-reject').on('click', function () {
+                  modal.remove();
+                  deleteAllCookies();
+                  window.location.reload();
+                });
+              }
+            });
           } else {
             $.ajax({
               url: ajaxGetUrl,
