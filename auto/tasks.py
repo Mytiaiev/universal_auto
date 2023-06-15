@@ -183,6 +183,15 @@ def send_on_job_application_on_driver(self, job_id):
 
 
 @app.task(bind=True, queue='non_priority')
+def detaching_the_driver_from_the_car(self, licence_plate=None):
+    try:
+        UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('detaching_the_driver_from_the_car', licence_plate)
+        logger.info(f'Car {licence_plate} was detached')
+    except Exception as e:
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
 def get_rent_information(self):
     try:
         UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('get_rent_distance')

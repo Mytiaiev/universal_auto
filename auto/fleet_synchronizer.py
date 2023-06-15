@@ -631,6 +631,27 @@ class UklonSynchronizer(Synchronizer, NewUklon):
         except Exception as err:
             print(err)
 
+    def detaching_the_driver_from_the_car(self, licence_plate=None):
+        self.driver.get('https://fleets.uklon.com.ua/workspace/vehicles')
+        time.sleep(self.sleep)
+        self.driver.get_screenshot_as_file('error.png')
+        l = 'AA4491YA'
+        k = '//*[@id="mat-input-5"]'
+        el = self.driver.find_element(By.XPATH, k)
+        el.click()
+        self.driver.get_screenshot_as_file('error2.png')
+        el.clear()
+        el.send_keys(l)
+        self.driver.get_screenshot_as_file('error3.png')
+
+        xpath = '//*[@id="mat-tab-content-15-0"]/div/upf-vehicles-wrap/section[2]/upf-vehicle-list/cdk-table/cdk-row/cdk-cell[1]/div[2]/div[1]/a'
+
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.XPATH, xpath))).click()
+        '//*[@id="mat-tab-content-2-0"]/div/upf-vehicles-wrap/section[2]/upf-vehicle-list/cdk-table/cdk-row/cdk-cell[8]/div/div[2]/button/span[1]'
+
+        self.driver.get_screenshot_as_file('error4.png')
+
 
 class UberSynchronizer(Synchronizer, Uber):
 
