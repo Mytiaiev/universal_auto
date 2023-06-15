@@ -1717,29 +1717,93 @@ body .btn-one {
 }
 
 
-.loader {
-    -webkit-perspective: 700px;
-    perspective: 700px;
-}
+/*.loader {*/
+/*    -webkit-perspective: 700px;*/
+/*    perspective: 700px;*/
+/*}*/
 
-.loader > span {
-    font-size: 130px;
-    font-family: "franklin gothic medium", sans-serif;
-    display: inline-block;
-    animation: flip 2.6s infinite linear;
-    transform-origin: 0 70%;
-    transform-style: preserve-3d;
-    -webkit-transform-style: preserve-3d;
-}
+/*.loader > span {*/
+/*    font-size: 130px;*/
+/*    font-family: "franklin gothic medium", sans-serif;*/
+/*    display: inline-block;*/
+/*    animation: flip 2.6s infinite linear;*/
+/*    transform-origin: 0 70%;*/
+/*    transform-style: preserve-3d;*/
+/*    -webkit-transform-style: preserve-3d;*/
+/*}*/
 
-@keyframes flip {
-    35% {
-        transform: rotateX(360deg);
-    }
-    100% {
-        transform: rotatex(360deg);
-    }
-}
+/*@keyframes flip {*/
+/*    35% {*/
+/*        transform: rotateX(360deg);*/
+/*    }*/
+/*    100% {*/
+/*        transform: rotatex(360deg);*/
+/*    }*/
+/*}*/
+
+/*.loader {*/
+/*    text-transform: uppercase;*/
+/*    font-family: 'Source Sans Pro', sans-serif;*/
+/*    font-weight: 700;*/
+/*    font-style: italic;*/
+/*    background-color: #a8c465;*/
+/*    padding: 0;*/
+/*    margin: 0;*/
+/*    height: 100vh;*/
+/*    width: 100vw;*/
+/*    display: flex;*/
+/*    align-items: center;*/
+/*    justify-content: center;*/
+/*    position: fixed;*/
+/*    left: 0;*/
+/*    top: 0;*/
+/*    z-index: 8040;*/
+/*}*/
+
+/*.word-spacing {*/
+/*    white-space: pre;*/
+/*}*/
+
+
+/*.loader > span:nth-child(odd) {*/
+/*    color: #E96F24;*/
+/*}*/
+
+/*.loader > span:nth-child(even) {*/
+/*    color: white;*/
+/*}*/
+
+/*.loader > span:nth-child(2) {*/
+/*    animation-delay: 0.3s;*/
+/*}*/
+
+/*.loader > span:nth-child(3) {*/
+/*    animation-delay: 0.6s;*/
+/*}*/
+
+/*.loader > span:nth-child(4) {*/
+/*    animation-delay: 0.9s;*/
+/*}*/
+
+/*.loader > span:nth-child(5) {*/
+/*    animation-delay: 1.2s;*/
+/*}*/
+
+/*.loader > span:nth-child(6) {*/
+/*    animation-delay: 1.5s*/
+/*}*/
+
+/*.loader > span:nth-child(7) {*/
+/*    animation-delay: 1.8s*/
+/*}*/
+
+/*.loader > span:nth-child(8) {*/
+/*    animation-delay: 2s*/
+/*}*/
+
+/*.loader > span:nth-child(9) {*/
+/*    animation-delay: 2.3s*/
+/*}*/
 
 .loader {
     text-transform: uppercase;
@@ -1758,12 +1822,32 @@ body .btn-one {
     left: 0;
     top: 0;
     z-index: 8040;
+    overflow: hidden; /* Додайте цей стиль, щоб обрізати вміст, який не поміщається в контейнер */
+}
+
+.loader > span {
+    font-size: 10vw; /* Змініть на відсоток від ширини екрану */
+    font-family: "franklin gothic medium", sans-serif;
+    display: inline-block;
+    animation: flip 2.6s infinite linear;
+    transform-origin: 0 70%;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    white-space: nowrap; /* Заборонити перенесення рядків */
+}
+
+@keyframes flip {
+    35% {
+        transform: rotateX(360deg);
+    }
+    100% {
+        transform: rotatex(360deg);
+    }
 }
 
 .word-spacing {
     white-space: pre;
 }
-
 
 .loader > span:nth-child(odd) {
     color: #E96F24;
@@ -1803,6 +1887,19 @@ body .btn-one {
 
 .loader > span:nth-child(9) {
     animation-delay: 2.3s
+}
+
+@media (max-width: 768px) {
+    .loader > span {
+        font-size: 15vw; /* Змініть на відсоток від ширини екрану */
+    }
+}
+
+/* Адаптація для пристроїв з шириною екрану менше або рівно 480px */
+@media (max-width: 480px) {
+    .loader > span {
+        font-size: 20vw; /* Змініть на відсоток від ширини екрану */
+    }
 }
 
 #timer {
