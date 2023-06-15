@@ -29,7 +29,7 @@ class MainOrderForm(ModelForm):
         fields = (
             'from_address', 'to_the_address', 'phone_number',
             'order_time', 'latitude', 'longitude', 'to_latitude',
-            'to_longitude', 'status_order', 'sum'
+            'to_longitude', 'status_order', 'sum', 'distance_google',
         )
 
         widgets = {

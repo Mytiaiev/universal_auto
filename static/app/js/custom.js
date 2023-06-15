@@ -183,11 +183,13 @@ function createMap(address, to_address) {
       var outOfCityCoords = getPathCoords(outOfCity)
 
 
-      let inCityDistance = calculateDistance(inCityCoords)
-      let outOfCityDistance = calculateDistance(outOfCityCoords)
+      let inCityDistance = parseInt(calculateDistance(inCityCoords));
+      let outOfCityDistance = parseInt(calculateDistance(outOfCityCoords));
+      let totalDistance = inCityDistance + outOfCityDistance;
 
       var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
       setCookie('sumOder', tripAmount, 1)
+      setCookie('distanceGoogle', totalDistance, 1)
       setAutoCenter(map);
 
       // Додати текст та таймер до елементу costDiv
@@ -356,7 +358,8 @@ function onOrderPayment(paymentMethod) {
   }
 
   var orderData = JSON.parse(savedOrderData);
-  orderData.sum = getCookie('sumOder') || 0;
+  orderData.sum = getCookie('sumOder');
+  orderData.distance_google= getCookie('distanceGoogle');
   orderData.latitude = getCookie('fromLat');
   orderData.longitude = getCookie('fromLon');
   orderData.to_latitude = getCookie('toLat');
@@ -780,11 +783,15 @@ $(document).ready(function () {
                 var outOfCityCoords = getPathCoords(outOfCity)
 
 
-                let inCityDistance = calculateDistance(inCityCoords)
-                let outOfCityDistance = calculateDistance(outOfCityCoords)
+                let inCityDistance = parseInt(calculateDistance(inCityCoords));
+                let outOfCityDistance = parseInt(calculateDistance(outOfCityCoords));
+                let totalDistance = inCityDistance + outOfCityDistance;
+
 
                 var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
                 setCookie('sumOder', tripAmount, 1)
+                setCookie('distanceGoogle', totalDistance, 1)
+
 
                 var text2 = gettext('Дякуємо за замовлення. Очікуйте на автомобіль! Ваша вартість поїздки: ') +
                   '<span class="trip-amount">' + tripAmount + '</span>' + gettext(' грн.');

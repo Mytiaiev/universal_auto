@@ -487,7 +487,7 @@ def notify_driver(sender=None, **kwargs):
     if sender == send_time_order:
         accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
         for order in accepted_orders:
-            if timezone.localtime() < order.order_time + datetime.timedelta(minutes=int(
+            if order.order_time < timezone.localtime() + datetime.timedelta(minutes=int(
                     ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10))):
                 markup = inline_time_order_kb(order.id)
                 text = order_info(order.pk, order.from_address, order.to_the_address,
