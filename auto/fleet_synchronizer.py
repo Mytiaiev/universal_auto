@@ -173,22 +173,22 @@ class Synchronizer:
             try:
                 driver = self.get_driver_by_name(kwargs['second_name'], kwargs['name'])
             except Driver.DoesNotExist:
-                t_name, t_second_name = self.split_name(
-                    self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'uk'))
-                try:
-                    driver = self.get_driver_by_name(t_name, t_second_name)
-                except Driver.DoesNotExist:
-                    try:
-                        driver = self.get_driver_by_name(t_second_name, t_name)
-                    except Driver.DoesNotExist:
-                        t_name, t_second_name = self.split_name(
-                            self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'ru'))
-                        try:
-                            driver = self.get_driver_by_name(t_name, t_second_name)
-                        except Driver.DoesNotExist:
-                            try:
-                                driver = self.get_driver_by_name(t_second_name, t_name)
-                            except Driver.DoesNotExist:
+                # t_name, t_second_name = self.split_name(
+                #     self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'uk'))
+                # try:
+                #     driver = self.get_driver_by_name(t_name, t_second_name)
+                # except Driver.DoesNotExist:
+                #     try:
+                #         driver = self.get_driver_by_name(t_second_name, t_name)
+                #     except Driver.DoesNotExist:
+                #         t_name, t_second_name = self.split_name(
+                #             self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'ru'))
+                #         try:
+                #             driver = self.get_driver_by_name(t_name, t_second_name)
+                #         except Driver.DoesNotExist:
+                #             try:
+                #                 driver = self.get_driver_by_name(t_second_name, t_name)
+                #             except Driver.DoesNotExist:
                                 try:
                                     driver = self.get_driver_by_phone_or_email(kwargs['phone_number'], kwargs['email'])
                                 except Driver.DoesNotExist:
@@ -201,11 +201,11 @@ class Synchronizer:
                                     driver.save()
         return driver
 
-    def translate_text(self, text, to_lang):
-        try:
-            return tss.google(text, to_language=to_lang, if_use_cn_host=False)
-        except Exception:
-            return text
+    # def translate_text(self, text, to_lang):
+    #     try:
+    #         return tss.google(text, to_language=to_lang, if_use_cn_host=False)
+    #     except Exception:
+    #         return text
 
     def split_name(self, name):
         name_list = [x for x in name.split(' ') if len(x) > 0]
@@ -917,14 +917,13 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                 rent.rent_distance -= Decimal(distance_in_trips)
                 rent.save()
 
-    def total_per_day(self, day):
-        totals = {}
-        for vehicle in Vehicle.objects.all().only('licence_plate'):
+    def total_per_day(self, driver, day):
+        vehicle = Vehicle.objects.filter(driver=driver).first()
+        if vehicle:
             distance = self.generate_report(self.start_report_interval(day),
                                             self.end_report_interval(day),
                                             vehicle.licence_plate)[0]
-            totals[vehicle.licence_plate] = distance
-        return totals
+            return distance
 
 
 

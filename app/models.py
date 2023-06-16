@@ -201,20 +201,14 @@ class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     def report_text(self, name=None, rate=0.35):
         return f'Uklon: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
-    def total_drivers_amount(self, rate=0.35):
-        return -(self.kassa()) * rate
-
     def vendor(self):
         return 'new_uklon'
 
     def total_drivers_amount(self, rate=0.35):
-        return self.kassa() * (1 - rate) - float(self.total_amount_cach)
+        return self.kassa() * rate - float(self.total_amount_cach)
 
-    def total_owner_amount(self, rate=0.35):
-        return -self.total_drivers_amount(rate)
-
-    def kassa(self, fleet_rate=0.81):
-        return float(self.total_amount) * fleet_rate + float(self.tips) + float(self.bonuses)
+    def kassa(self):
+        return float(self.total_amount_without_comission)
 
 
 class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
@@ -269,11 +263,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return 'bolt'
 
     def kassa(self):
-        return float(self.total_amount) - float(self.fee) + float(self.cancels_amount) + float(
-            self.driver_bonus) + float(self.autorization_payment) + float(self.tips)
-
-    def total_owner_amount(self, rate=0.65):
-        return self.kassa() * (1 - rate) - self.total_drivers_amount(rate)
+        return float(self.total_amount) - float(self.fee)
 
 
 class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
@@ -316,9 +306,6 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     def vendor(self):
         return 'uber'
 
-    def total_owner_amount(self, rate=0.65):
-        return self.kassa() * (1 - rate) - self.total_drivers_amount(rate)
-
     def kassa(self):
         return float(self.total_amount)
 
@@ -336,7 +323,6 @@ class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
-
 
     vendor_name = 'Ninja'
 
@@ -356,13 +342,7 @@ class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         return f'Ninja: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cash)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
     def total_drivers_amount(self, rate=0.5):
-        return -(self.kassa()) * rate
-
-    def total_drivers_amount(self, rate=0.5):
         return self.kassa() * (1 - rate) - float(self.total_amount_cash)
-
-    def total_owner_amount(self, rate=0.5):
-        return -self.total_drivers_amount(rate)
 
     def vendor(self):
         return 'ninja'
@@ -421,8 +401,8 @@ class User(models.Model):
     def full_name(self):
         return f'{self.name} {self.second_name}'
 
-    @staticmethod
-    def get_by_chat_id(chat_id):
+    @classmethod
+    def get_by_chat_id(cls, chat_id):
         """
         Returns user by chat_id
         :param chat_id: chat_id by which we need to find the user
@@ -430,9 +410,9 @@ class User(models.Model):
         :return: user object or None if a user with such ID does not exist
         """
         try:
-            user = User.objects.get(chat_id=chat_id)
+            user = cls.objects.get(chat_id=chat_id)
             return user
-        except User.DoesNotExist:
+        except cls.DoesNotExist:
             return None
 
     @staticmethod
@@ -492,13 +472,6 @@ class DriverManager(User):
     def __str__(self):
         return f'{self.name} {self.second_name}'
 
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        try:
-            driver_manager = DriverManager.objects.get(chat_id=chat_id)
-            return driver_manager
-        except DriverManager.DoesNotExist:
-            return None
 
 
 class Driver(User):
@@ -508,10 +481,20 @@ class Driver(User):
     OFFLINE = 'Не працюю'
     RENT = 'Орендую авто'
 
+    class Schema(models.TextChoices):
+        RENT = 'RENT', 'Схема оренди'
+        HALF = 'HALF', 'Схема 50/50'
+        BUYER = 'BUYER', 'Схема під викуп'
+        CUSTOM = 'CUSTOM', 'Індивідуальна схема'
+
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
+    schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
+    plan = models.IntegerField(default=12000, verbose_name='План водія')
+    rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
 
     class Meta:
         verbose_name = 'Водій'
@@ -523,13 +506,6 @@ class Driver(User):
                                                             deleted_at=None).driver_external_id
         except Fleets_drivers_vehicles_rate.DoesNotExist:
             return ''
-
-    def get_rate(self, vendor: str) -> float:
-        try:
-            return float(Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor.capitalize(), driver=self,
-                                                                  deleted_at=None).rate)
-        except Fleets_drivers_vehicles_rate.DoesNotExist:
-            return 0
 
     def get_kassa(self, vendor: str, week_number: [str, None] = None) -> float:
         driver_external_id = self.get_driver_external_id(vendor)
@@ -560,20 +536,6 @@ class Driver(User):
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
 
-
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        """
-        Returns user by chat_id
-        :param chat_id: chat_id by which we need to find the driver
-        :type chat_id: str
-        :return: driver object or None if a driver with such ID does not exist
-        """
-        try:
-            driver = Driver.objects.get(chat_id=chat_id)
-            return driver
-        except Driver.DoesNotExist:
-            return None
 
 
 class ParkStatus(models.Model):
@@ -627,13 +589,6 @@ class Client(User):
         verbose_name = 'Клієнт'
         verbose_name_plural = 'Клієнти'
 
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        try:
-            client = Client.objects.get(chat_id=chat_id)
-            return client
-        except Client.DoesNotExist:
-            return None
 
 
 class ServiceStationManager(User):
@@ -653,14 +608,6 @@ class ServiceStationManager(User):
         service = ServiceStationManager.objects.create(name_of_service_station=name_of_service_station)
         service.save()
 
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        try:
-            manager = ServiceStationManager.objects.get(chat_id=chat_id)
-            return manager
-        except ServiceStationManager.DoesNotExist:
-            return None
-
 
 class SupportManager(User):
     client_id = models.ManyToManyField(Client, blank=True)
@@ -670,28 +617,12 @@ class SupportManager(User):
         verbose_name = 'Менеджер служби підтримки'
         verbose_name_plural = 'Менеджери служби підтримки'
 
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        try:
-            support_manager = SupportManager.objects.get(chat_id=chat_id)
-            return support_manager
-        except SupportManager.DoesNotExist:
-            return None
-
 
 class Owner(User):
 
     class Meta:
         verbose_name = 'Власник'
         verbose_name_plural = 'Власники'
-
-    @staticmethod
-    def get_by_chat_id(chat_id):
-        try:
-            owner = Owner.objects.get(chat_id=chat_id)
-            return owner
-        except Owner.DoesNotExist:
-            return None
 
 
 class BoltFleet(Fleet):
@@ -804,23 +735,16 @@ class StatusChange(models.Model):
 
 
 class Fleets_drivers_vehicles_rate(models.Model):
-    class Schema(models.TextChoices):
-        RENT = 'RENT', 'Схема оренди'
-        HALF = 'HALF', 'Схема 50/50'
-        BUYER = 'BUYER', 'Схема під викуп'
 
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, verbose_name='Автомобіль')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
-    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Рейтинг')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
     pay_cash = models.BooleanField(default=False, verbose_name='Оплата готівкою')
-    withdraw_money = models.BooleanField(default=False, verbose_name='Зняття готівки')
-    schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
 
     def __str__(self) -> str:
         return ''
@@ -1332,7 +1256,8 @@ class CarEfficiency(models.Model):
     start_report = models.DateTimeField(verbose_name='Звіт з')
     end_report = models.DateTimeField(verbose_name='Звіт по')
     driver = models.CharField(null=True, max_length=25, verbose_name='Водій авто')
-    efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність грн/км')
+    mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
+    efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
 
     class Meta:
         verbose_name = 'Ефективність автомобіля'
