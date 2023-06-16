@@ -4,7 +4,8 @@ from django.http import JsonResponse, HttpResponse
 from django.forms.models import model_to_dict
 
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
-from taxi_service.utils import active_vehicles_gps, update_order_sum_or_status, order_confirm
+from taxi_service.utils import \
+    active_vehicles_gps, update_order_sum_or_status, order_confirm, restart_order
 
 
 class PostRequestHandler:
@@ -40,10 +41,17 @@ class PostRequestHandler:
 
     def handle_update_order(self, request):
         id_order = request.POST.get('idOrder')
-        sum_value = request.POST.get('sum')
         action = request.POST.get('action')
 
-        update_order_sum_or_status(id_order, sum_value, action)
+        update_order_sum_or_status(id_order, action)
+
+        return JsonResponse({}, status=200)
+
+    def handler_restarting_order(self, request):
+        id_order = request.POST.get('idOrder')
+        car_delivery_price = request.POST.get('carDeliveryPrice', 0)
+        action = request.POST.get('action')
+        restart_order(id_order, car_delivery_price, action)
 
         return JsonResponse({}, status=200)
 
