@@ -215,7 +215,7 @@ function createMap(address, to_address) {
 
       if (getCookie('idOrder') != null) {
         orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
-        var Text = gettext("Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
+        var Text = gettext("Зачекайте поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
         costDiv = document.createElement('div');
         costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
           '<h6 class="alert-heading alert-message mb-0">' + Text + '</h6><div id="timer"></div></div>';
