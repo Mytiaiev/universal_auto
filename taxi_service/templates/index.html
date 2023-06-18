@@ -231,7 +231,7 @@
 								style="background-image: url({% static 'app/images/vod-ruk.webp' %})"
 								class="cover">
 							<i>
-								<img src="https://live.themewild.com/taxica/assets/img/icon/taxi-booking-1.svg" alt="icon">
+								<img src="{% static 'app/images/taxi-booking-1.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Ваш персональний водій" %}</h4>
@@ -250,7 +250,7 @@
 								style="background-image: url({% static 'app/images/deti-voditel.webp' %})"
 								class="cover">
 							<i>
-								<img src="https://live.themewild.com/taxica/assets/img/icon/business.svg" alt="icon">
+								<img src="{% static 'app/images/business.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Персональний водій для Вашої дитини" %}</h4>
@@ -272,7 +272,7 @@
 								style="background-image: url({% static 'app/images/thumb.webp' %})"
 								class="cover">
 							<i>
-								<img src="https://live.themewild.com/taxica/assets/img/icon/city-taxi.svg" alt="icon">
+								<img src="{% static 'app/images/city-taxi.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Доставка цінних речей в сейфі машини" %}</h4>
@@ -294,7 +294,7 @@
 								style="background-image: url({% static 'app/images/time.webp' %})"
 								class="cover">
 							<i>
-								<img src="https://live.themewild.com/taxica/assets/img/icon/taxi-2.svg" alt="icon">
+								<img src="{% static 'app/images/taxi-2.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Передзамовлення машини на певний час" %}</h4>
@@ -384,8 +384,8 @@
 					</div>
 					<div class="col-md-6">
 						<div class="video-box">
-							<iframe width="100%" height="315" src="https://www.youtube.com/embed/GCf8iURnec8" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>
-							<iframe width="100%" height="315" src="https://www.youtube.com/embed/2Iyx-fbETsA" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>
+							<iframe width="100%" height="315" src="https://www.youtube.com/embed/GCf8iURnec8" style="border: none; border-radius: 25px" allowfullscreen loading="lazy"></iframe>
+							<iframe width="100%" height="315" src="https://www.youtube.com/embed/2Iyx-fbETsA" style="border: none; border-radius: 25px" allowfullscreen loading="lazy"></iframe>
 						</div>
 					</div>
 				</div>
@@ -405,13 +405,13 @@
 						<ol class="carousel-indicators">
 							<li data-target="#carouselExample2Controls" data-slide-to="0"
 									class="active">
-								<img src="{% static 'app/images/c1.webp' %}" alt="">
+								<img src="{% static 'app/images/c1.webp' %}" width="60" height="60" alt="">
 							</li>
 							<li data-target="#carouselExample2Controls" data-slide-to="1">
-								<img src="{% static 'app/images/c2.webp' %}" alt="">
+								<img src="{% static 'app/images/c2.webp' %}" width="60" height="60" alt="">
 							</li>
 							<li data-target="#carouselExample2Controls" data-slide-to="2">
-								<img src="{% static 'app/images/c3.webp' %}" alt="">
+								<img src="{% static 'app/images/c3.webp' %}" width="60" height="60" alt="">
 							</li>
 						</ol>
 						<div class="carousel-inner">
@@ -487,17 +487,16 @@
     parkSettings = JSON.parse('{{ parkSettings | safe }}');
   {% endif %}
   var apiGoogle = '{{ google_api }}';
-  var csrfToken = '{% csrf_token %}';
   var ajaxPostUrl = "{% url 'post_request' %}";
   var ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 
-<script src="{% static 'app/js/jquery-3.4.1.min.js' %}"></script>
-<script src="{% static 'app/js/bootstrap.js' %}"></script>
-<script src="{% static 'app/js/defer-google-maps.js' %}"></script>
-<script src="{% static 'app/js/cookies.js' %}"></script>
-<script src="{% static 'app/js/jquery.mask.min.js' %}"></script>
-<script defer src="{% static 'app/js/custom.js' %}"></script>
+<script src="{% static 'app/js/jquery-3.4.1.min.js' %}" defer></script>
+<script src="{% static 'app/js/bootstrap.js' %}" defer></script>
+<script src="{% static 'app/js/defer-google-maps.js' %}" defer></script>
+<script src="{% static 'app/js/cookies.js' %}" defer></script>
+<script src="{% static 'app/js/jquery.mask.min.js' %}" defer></script>
+<script src="{% static 'app/js/custom.js' %}" defer></script>
 
 </body>
 </html>

@@ -652,7 +652,6 @@ function intlTelInit(phoneEl) {
 }
 
 $(document).ready(function () {
-  // if (csrfToken) setCookie("csrfToken", $.parseHTML(csrfToken)[0].value);
 
   $('#delivery_time').mask("dd:dd", {placeholder: gettext("00:00 (Вкажіть час)")});
   intlTelInit('#phone');

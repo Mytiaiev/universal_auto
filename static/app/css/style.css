@@ -1,5 +1,5 @@
 body {
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   color: #040000;
   background-color: #ffffff;
   font-size: 18px;
@@ -25,7 +25,7 @@ html, body {
 
 .heading_container h2 {
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   color: #E96F24;
@@ -220,7 +220,7 @@ a:focus {
 
 .slider_section .detail-box h1 {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   padding-right: 30px;
@@ -539,7 +539,7 @@ header button start
 }
 
 .client_section .carousel-indicators li.active {
-  width: 90px;
+  width: 60px;
   height: 90px;
 }
 
@@ -774,7 +774,7 @@ header button start
   position: relative;
   margin-bottom: 20px;
   color: #ffffff;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
 }
@@ -1017,7 +1017,7 @@ label {
   font-size: 36px;
   margin: 20px 0 40px;
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
@@ -1029,7 +1029,7 @@ label {
   font-size: 20px;
   margin: 20px 0 40px;
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
@@ -1101,12 +1101,12 @@ label {
 }
 
 .services-grid__item i {
-  right: 20px;
-  bottom: -45px;
-  background: #FFB300;
+  right: 0;
+  bottom: -35px;
+  background: #ff8c00;
   border-radius: 50%;
   position: absolute;
-  width: 90px;
+  width: 70px;
 }
 
 .services-grid__item i:before {
@@ -1129,7 +1129,7 @@ label {
 .services-grid__item h4 {
   padding: 20px 20px 0;
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
 }
@@ -1199,7 +1199,7 @@ label {
 
 .hero-banner-one .hero-heading {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   letter-spacing: -1px;
@@ -1495,7 +1495,7 @@ label {
 
 .inner-title {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   padding-right: 30px;
@@ -1573,7 +1573,7 @@ label {
 
 .main-title {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   margin: 0;
@@ -1639,7 +1639,7 @@ body .btn-one {
 
 .post-title {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   margin-top: 20px;
@@ -1719,7 +1719,7 @@ body .btn-one {
 
 .loader {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   background-color: #a8c465;
@@ -1739,7 +1739,9 @@ body .btn-one {
 
 .loader > span {
   font-size: 10vw;
-  font-family: "franklin gothic medium", sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 700;
+  font-style: italic;
   display: inline-block;
   animation: flip 2.6s infinite linear;
   transform-origin: 0 70%;
