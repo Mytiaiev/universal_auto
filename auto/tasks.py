@@ -4,14 +4,10 @@ import pendulum
 from contextlib import contextmanager
 import datetime
 
+import pytz
 from _decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
-
-try:
-    import zoneinfo
-except ImportError:
-    from backports import zoneinfo
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
@@ -54,7 +50,7 @@ def raw_gps_handler(id):
         return f'{Vehicle.DoesNotExist}: gps_imei={raw.imei}'
     try:
         date_time = datetime.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = date_time.replace(tzinfo=zoneinfo.ZoneInfo(settings.TIME_ZONE))
+        date_time = pytz.timezone(settings.TIME_ZONE).localize(date_time)
     except ValueError as err:
         return f'{ValueError} {err}'
     try:
@@ -250,7 +246,7 @@ def send_daily_into_group(self):
         message = [f'{k}:\n{v}' for k, v in report_values.items()]
         for k, v in sorted_effective_driver.items():
             effective_report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
-        effect_message = [f'З{k}:\n' + ''.join(v) for k, v in effective_report.items()]
+        effect_message = [f'{k}:\n' + ''.join(v) for k, v in effective_report.items()]
         return message, effect_message
     except Exception as e:
         logger.error(e)
@@ -419,7 +415,6 @@ def get_car_efficiency(driver, day=None):
             format_day = day.format("DD.MM.YYYY")
             total_km = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('total_per_day', driver, format_day)
             total_kasa = download_reports(day=format_day, interval=1)[2]
-            print(f'{total_km}')
             if total_km and total_kasa.get(driver.full_name()):
                 result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
                 CarEfficiency.objects.create(start_report=day.start_of('day'),
