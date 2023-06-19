@@ -23,14 +23,13 @@
 												<p class="header-carousel-text col-lg-11 px-0">
 													{% trans "Кожен наш електромобіль працює на «чистій» енергії, що знижує викиди шкідливих вуглецевих газів і мінімізує негативний вплив на довкілля. Ми віримо, що збереження нашої планети починається з наших дій, і ви можете бути впевнені, що кожна поїздка з Ninja Taxi допомагає зменшити екологічне навантаження." %}
 												</p>
-												<a href="">
-													{% trans "Дізнатися більше" %}
+												<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}</a>
 												</a>
 											</div>
 										</div>
 										<div class="col-md-6">
 											<div class="img-box">
-												<img src="{% static 'app/images/slider-img-1.webp' %}" alt="" width="500" height="500">
+												<img src="{% static 'app/images/slider-img-1.webp' %}" height="552" width="552" alt="">
 											</div>
 										</div>
 									</div>
@@ -47,12 +46,12 @@
 												<p class="header-carousel-text col-lg-11 px-0">
 													{% trans "Завдяки електрокарам, Ваша поїздка буде тиха, приємна та м'яка. Ви заслуговуєте на найкраще, тому наші електрокари готові забезпечити Вам незабутній досвід комфорту під час кожної поїздки." %}
 												</p>
-												<a href="">{% trans "Дізнатися більше" %}</a>
+												<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}</a>
 											</div>
 										</div>
 										<div class="col-md-6">
 											<div class="img-box">
-												<img src="{% static 'app/images/slider-img-2.webp' %}" alt="" width="500" height="500">
+												<img src="{% static 'app/images/slider-img-2.webp' %}" alt="">
 											</div>
 										</div>
 									</div>
@@ -69,14 +68,13 @@
 												<p class="header-carousel-text col-lg-11 px-0">
 													{% trans "Наші таксі мають особливу ліцензію, що дозволяє нам використовувати смуги громадського транспорту, забезпечуючи вам неперевершену швидкість руху по місту, оскільки нам не треба стояти в заторах." %}
 												</p>
-												<a href="">
-													{% trans "Дізнатися більше" %}
+												<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}
 												</a>
 											</div>
 										</div>
 										<div class="col-md-6">
 											<div class="img-box">
-												<img src="{% static 'app/images/slider-img-3.webp' %}" alt="" width="500" height="500">
+												<img src="{% static 'app/images/slider-img-3.webp' %}" alt="">
 											</div>
 										</div>
 									</div>
@@ -189,7 +187,7 @@
 				<div class="row">
 					<div class="col-md-6">
 						<div class="img-box-uk">
-							<img src="{% static 'app/images/about-img-uk.webp' %}" alt="" width="471" height="388">
+							<img src="{% static 'app/images/about-img-uk.webp' %}" alt="" width="552" height="456">
 						</div>
 						<div class="img-box-en hidden">
 							<img src="{% static 'app/images/about-img-en.webp' %}" alt="" width="471" height="388">
@@ -209,8 +207,7 @@
 								{% trans "Ми зосереджені на екологічній стороні таксі, тому використовуємо електрокари, що дозволять нам зменшити викиди шкідливих речовин та допомогти зберегти наше середовище." %}
 								{% trans "Таким чином Ви можете насолоджуватися комфортом і тишею під час поїздки, знаючи, що це не забруднює повітря довкола." %}
 							</p>
-							<a href="">
-								{% trans "Дізнатися більше" %}
+							<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}
 							</a>
 						</div>
 					</div>
@@ -224,7 +221,7 @@
 
 		<section class="services">
 			<div class="container">
-				<h2 class="services-title">{% trans "НАШІ ПОСЛУГИ" %}</h2>
+				<h3 class="services-title">{% trans "НАШІ ПОСЛУГИ" %}</h3>
 				<div class="services-grid">
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
@@ -243,7 +240,7 @@
 							{% trans "Зосередьтеся на своїх справах, відпочинку або важливих зустрічах, знімаючи будь-які турботи про дорогу." %}
 							{% trans "Наші персональні водії забезпечать вам приємну і безпечну поїздку, де ви будете мати повний контроль над своїм часом." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
@@ -265,7 +262,7 @@
 							{% trans "Тому наші ninja-водії гнучкі і готові адаптуватись до вашого графіку і вимог." %}
 							{% trans "Ви можете бути впевнені, що наш водій буде на місці вчасно, а дитина доставлена у пункт призначення без зайвих затримок." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
@@ -287,7 +284,7 @@
 							{% trans "Вони поважатимуть ваші особисті речі та надаватимуть максимальну увагу до їх безпеки." %}
 							{% trans "Ви можете мати повну впевненість, що ваші цінності будуть під надійним наглядом під час усієї поїздки." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
@@ -310,7 +307,7 @@
 							{% trans "Вони орієнтовані на ваші потреби, добре знайомі з місцевими дорогами та забезпечують безпечну та зручну поїздку." %}
 							{% trans "Ви можете спокійно розраховувати на їх професіоналізм та доброзичливий сервіс." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 				</div>
 			</div>
@@ -384,8 +381,8 @@
 					</div>
 					<div class="col-md-6">
 						<div class="video-box">
-							<iframe width="100%" height="315" src="https://www.youtube.com/embed/GCf8iURnec8" style="border: none; border-radius: 25px" allowfullscreen loading="lazy"></iframe>
-							<iframe width="100%" height="315" src="https://www.youtube.com/embed/2Iyx-fbETsA" style="border: none; border-radius: 25px" allowfullscreen loading="lazy"></iframe>
+							<iframe width="100%" height="315" src="https://www.youtube.com/embed/GCf8iURnec8" style="border: none; border-radius: 25px" allowfullscreen loading="lazy" title="invest-1"></iframe>
+							<iframe width="100%" height="315" src="https://www.youtube.com/embed/2Iyx-fbETsA" style="border: none; border-radius: 25px" allowfullscreen loading="lazy" title="invest-2"></iframe>
 						</div>
 					</div>
 				</div>
@@ -417,8 +414,8 @@
 						<div class="carousel-inner">
 							<div class="carousel-item active">
 								<div class="detail-box">
-									<h5>{% trans "Юлія" %}</h5>
-									<h6>46 {% trans "поїздок" %}</h6>
+									<h3>{% trans "Юлія" %}</h3>
+									<h4>46 {% trans "поїздок" %}</h4>
 									<p>
 										<i class="fa fa-quote-left" aria-hidden="true"></i>
 										{% trans "Я була приємно здивована електротаксі - комфорт, тиша та екологічність відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити." %}
@@ -435,8 +432,8 @@
 							</div>
 							<div class="carousel-item">
 								<div class="detail-box">
-									<h5>{% trans "Євгеній" %}</h5>
-									<h6>127 {% trans "поїздок" %}</h6>
+									<h3>{% trans "Євгеній" %}</h3>
+									<h4>127 {% trans "поїздок" %}</h4>
 									<p>
 										<i class="fa fa-quote-left" aria-hidden="true"></i>
 										{% trans "Я був приємно здивований, коли вперше використав електротаксі - це було так комфортно та тихо. Я відчував себе більш екологічно свідомими, використовуючи таксі, що не виділяє викидів." %}
@@ -453,8 +450,8 @@
 							</div>
 							<div class="carousel-item">
 								<div class="detail-box">
-									<h5>{% trans "Ліза" %}</h5>
-									<h6>8 {% trans "поїздок" %}</h6>
+									<h3>{% trans "Ліза" %}</h3>
+									<h4>8 {% trans "поїздок" %}</h4>
 									<p>
 										<i class="fa fa-quote-left" aria-hidden="true"></i>
 										{% trans "Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно приємним додатком до мого досвіду використання таксі. Я би, безперечно, рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних альтернатив." %}
@@ -494,8 +491,8 @@
 <script src="{% static 'app/js/jquery-3.4.1.min.js' %}" defer></script>
 <script src="{% static 'app/js/bootstrap.js' %}" defer></script>
 <script src="{% static 'app/js/defer-google-maps.js' %}" defer></script>
-<script src="{% static 'app/js/cookies.js' %}" defer></script>
 <script src="{% static 'app/js/jquery.mask.min.js' %}" defer></script>
+<script src="{% static 'app/js/cookies.js' %}" defer></script>
 <script src="{% static 'app/js/custom.js' %}" defer></script>
 
 </body>

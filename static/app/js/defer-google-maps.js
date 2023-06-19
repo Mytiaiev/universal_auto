@@ -82,7 +82,7 @@ var loadGoogleMaps = (function($, window) {
       $.ajax({
         dataType: 'script',
         data: params,
-        url: '//maps.googleapis.com/maps/api/js'
+        url: 'https://maps.googleapis.com/maps/api/js'
       });
 
     }
