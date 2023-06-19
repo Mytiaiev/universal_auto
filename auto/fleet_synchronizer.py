@@ -90,20 +90,15 @@ class Synchronizer:
                 vehicle=self.get_or_create_vehicle(**kwargs),
                 driver_external_id=kwargs['driver_external_id'],
                 pay_cash=kwargs['pay_cash'],
-                withdraw_money=kwargs['withdraw_money'],
             )
             fleets_drivers_vehicles_rate.save()
             self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
             self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
         else:
             for fleets_drivers_vehicles_rate in drivers:
-                if any([
-                    fleets_drivers_vehicles_rate.pay_cash != kwargs['pay_cash'],
-                    fleets_drivers_vehicles_rate.withdraw_money != kwargs['withdraw_money']
-                ]):
+                if fleets_drivers_vehicles_rate.pay_cash != kwargs['pay_cash']:
                     fleets_drivers_vehicles_rate.pay_cash = kwargs['pay_cash']
-                    fleets_drivers_vehicles_rate.withdraw_money = kwargs['withdraw_money']
-                    fleets_drivers_vehicles_rate.save(update_fields=['pay_cash', 'withdraw_money'])
+                    fleets_drivers_vehicles_rate.save(update_fields=['pay_cash'])
                 self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
                 self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
 
@@ -272,7 +267,6 @@ class BoltSynchronizer(Synchronizer, Bolt):
                     'phone_number': self.validate_phone_number(phone_number),
                     'driver_external_id': full_name,
                     'pay_cash': pay_cash,
-                    'withdraw_money': False,
                     'licence_plate': '',
                     'vehicle_name': '',
                     'vin_code': '',
@@ -445,10 +439,10 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_8')
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
                 xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_9')
-                withdraw_money = 'true' in WebDriverWait(self.driver, self.sleep).until(
+                pay_cash = 'true' in WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("aria-checked")
             except TimeoutException:
-                withdraw_money = False
+                pay_cash = False
             licence_plate = ''
             vehicle_name = ''
             vin_code = ''
@@ -477,8 +471,7 @@ class UklonSynchronizer(Synchronizer, NewUklon):
                 'email': self.validate_email(email),
                 'phone_number': self.validate_phone_number(phone_number),
                 'driver_external_id': driver_external_id,
-                'pay_cash': False,
-                'withdraw_money': withdraw_money,
+                'pay_cash': pay_cash,
                 'licence_plate': licence_plate,
                 'vehicle_name': vehicle_name,
                 'vin_code': vin_code,
@@ -724,7 +717,6 @@ class UberSynchronizer(Synchronizer, Uber):
                 'phone_number': self.validate_phone_number(phone_number),
                 'driver_external_id': driver_external_id,
                 'pay_cash': False,
-                'withdraw_money': False,
                 'licence_plate': licence_plate,
                 'vehicle_name': vehicle_name,
                 'vin_code': vin_code,
@@ -821,13 +813,14 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
         """
         xpath = UaGpsService.get_value('UAGPSS_GENERATE_REPORT_1')
         self.get_target_page_or_login(self.base_url, xpath, self.login)
-        self.driver.find_element(By.XPATH, xpath).click()
+        WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
         unit = WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_2'))))
         unit.click()
         try:
-            self.driver.find_element(By.XPATH,
-                                     f'{UaGpsService.get_value("UAGPSS_GENERATE_REPORT_3")} "{report_object}")]').click()
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((
+                    By.XPATH, f'{UaGpsService.get_value("UAGPSS_GENERATE_REPORT_3")} "{report_object}")]'))).click()
         except:
             return 0, datetime.timedelta()
         from_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_4'))
@@ -843,9 +836,11 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
             EC.element_to_be_clickable((By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_6')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        road_distance = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_7')).text
+        road_distance = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_7')))).text
         rent_distance = float(road_distance.split(' ')[0])
-        roadtimestr = self.driver.find_element(By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_8')).text
+        roadtimestr = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.XPATH, UaGpsService.get_value('UAGPSS_GENERATE_REPORT_8')))).text
         roadtime = [int(i) for i in roadtimestr.split(':')]
         rent_time = datetime.timedelta(hours=roadtime[0], minutes=roadtime[1], seconds=roadtime[2])
         time.sleep(1)
@@ -916,6 +911,13 @@ class UaGpsSynchronizer(Synchronizer, UaGps):
                 rent.rent_distance -= Decimal(distance_in_trips)
                 rent.save()
 
+    def total_per_day(self, driver, day):
+        vehicle = Vehicle.objects.filter(driver=driver).first()
+        if vehicle:
+            distance = self.generate_report(self.start_report_interval(day),
+                                            self.end_report_interval(day),
+                                            vehicle.licence_plate)[0]
+            return distance
 
 
 
