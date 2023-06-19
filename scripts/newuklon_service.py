@@ -5,17 +5,19 @@ from scripts.selector_services import newuklon_states
 
 def init_service_newuklon():
     for key, value in newuklon_states.items():
+        newuklon_service = NewUklonService.objects.filter(key=key).first()
         if not NewUklonService.objects.filter(key=key):
-            newuklon_service = NewUklonService(
-                key=key,
-                value=value[0],
-                description=value[1])
+            new_key = NewUklonService(key=key,
+                                      value=value[0],
+                                      description=value[1])
             try:
-                newuklon_service.save()
+                new_key.save()
             except IntegrityError:
                 pass
         else:
-            continue
+            if newuklon_service.value != value[0]:
+                newuklon_service.value = value[0]
+                newuklon_service.save()
 
 
 def run():

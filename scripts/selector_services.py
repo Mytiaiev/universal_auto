@@ -162,8 +162,7 @@ uber_states = {
     'UBER_ADD_DRIVER_4': ('//div[5]/div[2]/button', 'XPATH'),
     'UBERS_GET_ALL_VEHICLES_1': ('https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/vehicles', 'url'),
     'UBERS_GET_ALL_VEHICLES_2': ('//div[@data-testid="paginated-table"]', 'xpath'),
-    'UBERS_GET_ALL_VEHICLES_3': (
-        '//div[@data-testid="paginated-table"]//div[@data-tracking-name="vehicle-table-row"]', 'xpath'),
+    'UBERS_GET_ALL_VEHICLES_3': ('//div[@data-tracking-name="vehicle-table-row"]', 'xpath'),
     'UBERS_GET_ALL_VEHICLES_4': ('div/div/div[@data-testid="vehicle-info"]', 'xpath'),
     'UBERS_GET_ALL_VEHICLES_5': ('div[3]/div/div[1]', 'xpath'),
     'UBERS_GET_ALL_VEHICLES_6': ('div[3]/div/div[2]', 'xpath'),
