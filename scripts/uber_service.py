@@ -5,17 +5,19 @@ from scripts.selector_services import uber_states
 
 def init_service_uber():
     for key, value in uber_states.items():
-        if not UberService.objects.filter(key=key):
-            uber_service = UberService(
-                key=key,
-                value=value[0],
-                description=value[1])
+        uber_service = UberService.objects.filter(key=key).first()
+        if not uber_service:
+            new_key = UberService(key=key,
+                                  value=value[0],
+                                  description=value[1])
             try:
-                uber_service.save()
+                new_key.save()
             except IntegrityError:
                 pass
         else:
-            continue
+            if uber_service.value != value[0]:
+                uber_service.value = value[0]
+                uber_service.save()
 
 
 def run():
