@@ -398,7 +398,7 @@ def download_reports(day=None, interval=None):
         logger.info(e)
 
 
-def get_car_efficiency(driver, day=None):
+def get_car_efficiency(driver, interval, day=None):
     efficiency = CarEfficiency.objects.filter(start_report=day.start_of('day'),
                                               end_report=day.end_of('day'),
                                               driver=driver)
@@ -406,7 +406,7 @@ def get_car_efficiency(driver, day=None):
         try:
             format_day = day.format("DD.MM.YYYY")
             total_km = UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('total_per_day', driver, format_day)
-            total_kasa = download_reports(day=format_day, interval=1)[2]
+            total_kasa = download_reports(day=format_day, interval=interval)[2]
             if total_km and total_kasa.get(driver.full_name()):
                 result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
                 CarEfficiency.objects.create(start_report=day.start_of('day'),
@@ -430,7 +430,8 @@ def calculate_efficiency(driver):
         today = 7
     for i in range(today):
         day = pendulum.now().start_of('day').subtract(days=i + 1)
-        get_car_efficiency(driver, day)
+        interval = i * 2 + 1
+        get_car_efficiency(driver, interval, day)
     start_period = pendulum.now().start_of('day').subtract(days=today)
     end_period = pendulum.now().start_of('day').subtract(days=1)
     all_objects = CarEfficiency.objects.filter(start_report__range=[start_period, end_period],
