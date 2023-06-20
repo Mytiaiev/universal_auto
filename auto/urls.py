@@ -17,9 +17,9 @@ Including another URLconf
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
-from django.views.decorators.csrf import csrf_exempt
 from app.views import *
 from auto import settings
+from scripts.bot import webhook
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -31,7 +31,7 @@ urlpatterns = [
     path('cars/', gps_cars, name='map'),
     path('dashboard/', dashboard, name='app/dashboard'),
     path('', include('taxi_service.urls')),
-    path('webhook/', csrf_exempt(TelegramBotWebhookView.as_view())),
+    path('webhook/', webhook),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
