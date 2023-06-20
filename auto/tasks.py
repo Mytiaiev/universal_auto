@@ -4,20 +4,17 @@ import pendulum
 from contextlib import contextmanager
 import datetime
 
+import pytz
+from _decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
-
-try:
-    import zoneinfo
-except ImportError:
-    from backports import zoneinfo
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-     NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet
-from django.db.models import Sum, IntegerField, FloatField
+    NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency
+from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
@@ -53,7 +50,7 @@ def raw_gps_handler(id):
         return f'{Vehicle.DoesNotExist}: gps_imei={raw.imei}'
     try:
         date_time = datetime.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = date_time.replace(tzinfo=zoneinfo.ZoneInfo(settings.TIME_ZONE))
+        date_time = pytz.timezone(settings.TIME_ZONE).localize(date_time)
     except ValueError as err:
         return f'{ValueError} {err}'
     try:
@@ -226,6 +223,8 @@ def send_daily_into_group(self):
         total_values = {}
         day_values = {}
         report_values = {}
+        effective_driver = {}
+        effective_report = {}
         today = pendulum.now().weekday()
         if today > 0:
             for i in range(today):
@@ -244,8 +243,20 @@ def send_daily_into_group(self):
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
         for key in sort_report:
             report_values[key] = "Всього: {:.2f} Учора: (+{:.2f})".format(sort_report[key], day_values.get(key, 0))
+        for driver in Driver.objects.filter(vehicle__isnull=False):
+            effect = calculate_efficiency(driver)
+            effective_driver[driver.full_name()] = {'Середня ефективність(грн/км)': effect[0],
+                                                    'Ефективність(грн/км)': effect[1],
+                                                    'КМ за тиждень': effect[2],
+                                                    'КМ учора': effect[3]}
+        sorted_effective_driver = dict(sorted(effective_driver.items(),
+                                       key=lambda x: x[1]['Середня ефективність(грн/км)'],
+                                       reverse=True))
         message = [f'{k}:\n{v}' for k, v in report_values.items()]
-        return message
+        for k, v in sorted_effective_driver.items():
+            effective_report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
+        effect_message = [f'{k}:\n' + ''.join(v) for k, v in effective_report.items()]
+        return message, effect_message
     except Exception as e:
         logger.error(e)
 
@@ -293,71 +304,35 @@ def save_report_to_ninja_payment(day=None):
 
     start_date, end_date = str(start_date).replace('T', ' '), str(end_date).replace('T', ' ')
     # Pulling notes for the rest of the week and grouping behind the chat_id field
-    records = Order.objects.filter(driver__chat_id__isnull=False,
-                                   created_at__date__range=(start_date.split()[0], end_date.split()[0])).values(
-        'driver__chat_id')
-    if records:
-        for record in records:
-            chat_id = record['driver__chat_id']
-            total_rides = Order.objects.filter(driver__chat_id=chat_id,
-                                               created_at__date__range=(start_date.split()[0], end_date.split()[0]),
-                                               status_order=Order.COMPLETED).count()
-
-            total_distance = Order.objects.filter(driver__chat_id=chat_id,
-                                                  created_at__date__range=(start_date.split()[0], end_date.split()[0]),
-                                                  status_order=Order.COMPLETED).aggregate(
-                total=Sum(Coalesce(Cast('distance_gps', FloatField()),
-                                   Cast('distance_google', FloatField()),
-                                   output_field=FloatField()))).get('total', 0)
-
-            total_amount_cash = Order.objects.filter(
-                driver__chat_id=chat_id,
-                payment_method='Готівка',
-                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
-                status_order=Order.COMPLETED
-            ).aggregate(
-                total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
-
-            total_amount_card = Order.objects.filter(
-                driver__chat_id=chat_id,
-                payment_method='Картка',
-                created_at__date__range=(start_date.split()[0], end_date.split()[0]),
-                status_order=Order.COMPLETED
-            ).aggregate(
-                total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
-
-            total_amount = total_amount_cash + total_amount_card
-            driver = Driver.get_by_chat_id(chat_id)
-            report = NinjaPaymentsOrder(
-                report_from=start_date,
-                report_to=end_date,
-                full_name=str(driver),
-                chat_id=chat_id,
-                total_rides=total_rides,
-                total_distance=total_distance,
-                total_amount_cash=total_amount_cash,
-                total_amount_on_card=total_amount_card,
-                total_amount=total_amount)
-            try:
-                report.save()
-            except IntegrityError:
-                pass
-    else:
+    for driver in Driver.objects.exclude(chat_id=''):
+        records = Order.objects.filter(driver__chat_id=driver.chat_id,
+                                       status_order=Order.COMPLETED,
+                                       created_at__date__range=(start_date.split()[0], end_date.split()[0]))
+        total_rides = records.count()
+        result = records.aggregate(
+            total=Sum(Coalesce(Cast('distance_gps', FloatField()),
+                               Cast('distance_google', FloatField()),
+                               output_field=FloatField())))
+        total_distance = result['total'] if result['total'] is not None else 0.0
+        total_amount_cash = records.filter(payment_method='Готівка').aggregate(
+            total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
+        total_amount_card = records.filter(payment_method='Картка').aggregate(
+            total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
+        total_amount = total_amount_cash + total_amount_card
         report = NinjaPaymentsOrder(
             report_from=start_date,
             report_to=end_date,
-            full_name='',
-            chat_id='',
-            total_rides=0,
-            total_distance=0.0,
-            total_amount_cash=0,
-            total_amount_on_card=0,
-            total_amount=0)
+            full_name=str(driver),
+            chat_id=driver.chat_id,
+            total_rides=total_rides,
+            total_distance=total_distance,
+            total_amount_cash=total_amount_cash,
+            total_amount_on_card=total_amount_card,
+            total_amount=total_amount)
         try:
             report.save()
         except IntegrityError:
             pass
-
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
@@ -412,22 +387,78 @@ def download_reports(day=None, interval=None):
             if r:
                 r = r[0]
                 name = rate.driver.full_name()
-                reports[name] = reports.get(name, '') + r.report_text(name, float(rate.rate)) + '\n'
+                reports[name] = reports.get(name, '') + r.report_text(name, float(rate.driver.rate)) + '\n'
                 totals[name] = totals.get(name, 0) + r.kassa()
-                salary[name] = salary.get(name, 0) + r.total_drivers_amount(float(rate.rate))
-                owner["Fleet Owner"] += r.total_owner_amount(float(rate.rate))
+                salary[name] = salary.get(name, 0) + r.total_drivers_amount(float(rate.driver.rate))
 
         totals = {k: v for k, v in totals.items() if v != 0.0}
         plan = dict(totals)
         totals = {k: f'Загальна каса {k}: %.2f\n' % v for k, v in totals.items()}
         totals = {k: v + reports[k] for k, v in totals.items()}
         for k, v in totals.items():
-            if plan[k] > int(ParkSettings.get_value("DRIVER_PLAN", 10000)):
-                totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
-            else:
-                incomplete = (int(ParkSettings.get_value("DRIVER_PLAN", 10000)) - plan[k]) / 2
-                totals[
-                    k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + "-" * 39
+            for driver in Driver.objects.all():
+                if driver.full_name() == k and driver.schema == 'RENT':
+                    totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - Оренда ({'%.2f' % -driver.rental}) = {'%.2f' % (salary[k] - driver.rental)}\n" + "-" * 39
+                    owner["Fleet Owner"] += driver.rental
+                elif driver.full_name() == k and driver.schema == 'HALF':
+                    if plan[k] < driver.plan:
+                        owner["Fleet Owner"] += driver.rental
+                        incomplete = (driver.plan - plan[k]) * float(1 - driver.rate)
+                        totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + "-" * 39
+                    else:
+                        owner["Fleet Owner"] += plan[k] * float(1 - driver.rate)
+                        totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
+                else:
+                    pass
         return owner, totals, plan
     except Exception as e:
         logger.info(e)
+
+
+def get_car_efficiency(driver, day=None):
+    efficiency = CarEfficiency.objects.filter(start_report=day.start_of('day'),
+                                              end_report=day.end_of('day'),
+                                              driver=driver)
+    if not efficiency:
+        try:
+            format_day = day.format("DD.MM.YYYY")
+            total_km = UaGpsSynchronizer(UAGPS_CHROME_DRIVER.driver).try_to_execute('total_per_day', driver, format_day)
+            total_kasa = download_reports(day=format_day, interval=1)[2]
+            if total_km and total_kasa.get(driver.full_name()):
+                result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
+                CarEfficiency.objects.create(start_report=day.start_of('day'),
+                                             end_report=day.end_of('day'),
+                                             driver=driver,
+                                             mileage=total_km,
+                                             efficiency=result)
+            else:
+                CarEfficiency.objects.create(start_report=day.start_of('day'),
+                                             end_report=day.end_of('day'),
+                                             driver=driver,
+                                             mileage=total_km or 0,
+                                             efficiency=0)
+        except Exception as e:
+            logger.info(e)
+
+
+def calculate_efficiency(driver):
+    today = pendulum.now().weekday()
+    if not today:
+        today = 7
+    for i in range(today):
+        day = pendulum.now().start_of('day').subtract(days=i + 1)
+        get_car_efficiency(driver, day)
+    start_period = pendulum.now().start_of('day').subtract(days=today)
+    end_period = pendulum.now().start_of('day').subtract(days=1)
+    all_objects = CarEfficiency.objects.filter(start_report__range=[start_period, end_period],
+                                               driver=driver)
+    efficiency_objects = all_objects.exclude(efficiency=0)
+    yesterday_efficiency = CarEfficiency.objects.filter(start_report=end_period,
+                                                        driver=driver).first()
+    efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 1
+    distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 1
+    average_efficiency = efficiency_objects.aggregate(avg_efficiency=Avg('efficiency'))['avg_efficiency']
+    total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
+    formatted_efficiency = float('{:.2f}'.format(average_efficiency)) if average_efficiency is not None else 0.00
+    formatted_distance = float('{:.2f}'.format(total_distance)) if total_distance is not None else 0.00
+    return formatted_efficiency, efficiency, formatted_distance, distance

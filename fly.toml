@@ -2,101 +2,65 @@ app = "snowy-wood-371"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
-
 [deploy]
   strategy = "bluegreen"
   release_command = "python3 manage.py migrate --noinput"
-
 [env]
   DEBUG = 0
   ECHO_PORT = "44300"
   PORT = "80"
-
 [experimental]
   allowed_public_ports = []
   auto_rollback = true
   cmd = []
   entrypoint = []
   exec = []
-
+[processes]
+  app    = "bash ./entrypoint.sh"
+  worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q non_priority"
+  gps    = "python3 manage.py runscript async_gps_server"
+  bot    = "python3 manage.py runscript bot"
+  beat   = "celery -A auto beat -l INFO"
 [[services]]
   http_checks = []
   internal_port = 80
   processes = ["app"]
-  cmd = "bash ./entrypoint.sh"
   protocol = "tcp"
   script_checks = []
   [services.concurrency]
     hard_limit = 25
     soft_limit = 20
     type = "requests"
-
   [[services.ports]]
     force_https = true
     handlers = ["http"]
     port = 80
-
   [[services.ports]]
     handlers = ["tls", "http"]
     port = 443
-
   [[services.tcp_checks]]
     grace_period = "1s"
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
-
-
-[[services]]
-  processes = ["worker1"]
-  cmd = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q non_priority"
-  http_checks = []
-  internal_port = 44301
-  protocol = "udp"
-  [services.concurrency]
-    hard_limit = 10
-    soft_limit = 5
-    type = "connections"
-  [[services.ports]]
-    handlers = []
-    port = 44301
-
-[[services]]
-  processes = ["worker2"]
-  cmd = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q priority"
-  http_checks = []
-  internal_port = 44302
-  protocol = "tcp"
-  [services.concurrency]
-    hard_limit = 10
-    soft_limit = 5
-    type = "connections"
-  [[services.ports]]
-    handlers = []
-    port = 44302
-
-[[services]]
-  processes = ["beat"]
-  cmd = "celery -A auto beat -l INFO"
-  http_checks = []
-  internal_port = 44303
-  protocol = "tcp"
-  [services.concurrency]
-    hard_limit = 10
-    soft_limit = 5
-    type = "connections"
-  [services.dependencies]
-    worker1 = { process = "worker1", type = "process" }
-    worker2 = { process = "worker2", type = "process" }
-  [[services.ports]]
-    handlers = []
-    port = 44303
-
 [[services]]
   http_checks = []
   internal_port = 44300
   processes = ['gps']
-  cmd = "python3 manage.py runscript async_gps_server"
+  protocol = "udp"
+  script_checks = []
+  tcp_checks = []
+  [services.concurrency]
+    hard_limit = 10
+    soft_limit = 5
+    type = "connections"
+  [[services.ports]]
+    handlers = []
+    port = 44300
+[[services]]
+  http_checks = []
+  internal_port = 44300
+  processes = ['gps']
   protocol = "tcp"
   script_checks = []
   tcp_checks = []
@@ -104,27 +68,9 @@ processes = []
     hard_limit = 10
     soft_limit = 5
     type = "connections"
-
   [[services.ports]]
     handlers = []
     port = 44300
-
-#[[services]]
-#  http_checks = []
-#  internal_port = 44300
-#  processes = ['gps']
-#  protocol = "udp"
-#  script_checks = []
-#  tcp_checks = []
-#  [services.concurrency]
-#    hard_limit = 10
-#    soft_limit = 5
-#    type = "connections"
-#
-#  [[services.ports]]
-#    handlers = []
-#    port = 44300
-
 [[statics]]
   cache_key = "_static___app_public"
   guest_path = "/app/static"
