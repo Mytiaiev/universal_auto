@@ -1014,6 +1014,39 @@ $(document).ready(function () {
     const $currentBlock = $(this);
     $currentBlock.animate({marginTop: 0}, 300);
   });
+
+  // video-youtube
+  let videos = $('a[data-youtube]');
+  videos.each(function() {
+    let video = $(this);
+    let href = video.attr('href');
+    let id = new URL(href).searchParams.get('v');
+
+    video.attr('data-youtube', id);
+    video.attr('role', 'button');
+
+    video.html(`
+      <img alt="" src="https://img.youtube.com/vi/${id}/maxresdefault.jpg"><br>
+      ${video.text()}
+    `);
+  });
+
+  function clickHandler(event) {
+    let link = $(event.target).closest('a[data-youtube]');
+    if (!link) return;
+
+    event.preventDefault();
+
+    let id = link.attr('data-youtube');
+    let player = $(`
+      <div>
+        <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    `);
+    link.replaceWith(player);
+  }
+
+  $(document).on('click', 'a[data-youtube]', clickHandler);
 });
 
 $(window).on('load', function () {
