@@ -8,6 +8,11 @@ html, body {
   overflow-x: hidden;
 }
 
+img{
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
 
 * {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
@@ -1215,6 +1220,14 @@ label {
   color: white;
 }
 
+.main-illustration {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  margin: 0 auto;
+  width: auto !important
+}
+
 .hero-banner-one form {
   height: 55px;
   max-width: 570px;
@@ -1222,14 +1235,6 @@ label {
   background: #fff;
   position: relative;
   display: flex;
-}
-
-.main-illustration {
-  max-width: 100%;
-  max-height: 100%;
-  display: block;
-  margin: 0 auto;
-  width: auto !important
 }
 
 .hero-banner-one form input {
@@ -1240,7 +1245,7 @@ label {
   background: 0 0;
   outline: 0 none;
   height: 100%;
-  flex: 1
+  flex: 1;
 }
 
 .hero-banner-one form button {
@@ -1251,6 +1256,30 @@ label {
   color: #ffffff;
   border-radius: 25px;
 }
+
+/* Додано медіа-запити для адаптації під різні розміри екрану */
+
+@media (max-width: 768px) {
+  .hero-banner-one form {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero-banner-one form {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .hero-banner-one form input {
+    margin-bottom: 10px;
+  }
+
+  .hero-banner-one form button {
+    flex-basis: 100%;
+  }
+}
+
 
 .hero-banner-one .pr-info span {
   font-size: 1.6em;
