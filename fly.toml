@@ -19,7 +19,6 @@ processes = []
   app    = "bash ./entrypoint.sh"
   worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q non_priority"
   gps    = "python3 manage.py runscript async_gps_server"
-  bot    = "python3 manage.py runscript bot"
   beat   = "celery -A auto beat -l INFO"
 [[services]]
   http_checks = []
