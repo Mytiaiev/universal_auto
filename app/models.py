@@ -473,7 +473,6 @@ class DriverManager(User):
         return f'{self.name} {self.second_name}'
 
 
-
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
@@ -668,7 +667,7 @@ class Vehicle(models.Model):
     vin_code = models.CharField(max_length=17)
     gps_imei = models.CharField(max_length=100, default='')
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
-    driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Водій')
+    driver = models.ManyToManyField(Driver, through='VehicleAssignment', related_name='drivers', verbose_name='Водій')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
@@ -723,6 +722,12 @@ class Vehicle(models.Model):
             return gps_imei.upper()
         else:
             return None
+
+
+class VehicleAssignment(models.Model):
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+    assigned_date = models.DateTimeField(auto_now_add=True)
 
 
 class StatusChange(models.Model):
