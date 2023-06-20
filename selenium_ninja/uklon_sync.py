@@ -41,7 +41,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
     def download_payments_order(self, day=None):
         url = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_1')
         xpath = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_2')
-        self.get_target_page_or_login(url, xpath, self.login, ParkSettings.get_value("UKLON_NAME"))
+        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
         self.driver.find_element(By.XPATH, xpath).click()
         if day:
             if self.sleep:

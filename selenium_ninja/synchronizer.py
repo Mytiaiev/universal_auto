@@ -65,12 +65,9 @@ class Synchronizer:
                         self.driver.add_cookie(cookie)
                     time.sleep(self.sleep)
                     self.driver.get(url)
-                    time.sleep(self.sleep)
-                    self.driver.get_screenshot_as_file(f'{cookies_name}.png')
                     WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                     self.logger.info(f'Got the page using cookie {url}')
-                except (TimeoutException, FileNotFoundError)as e:
-                    print(e)
+                except:
                     self.login()
                     try:
                         WebDriverWait(self.driver, self.sleep).until(

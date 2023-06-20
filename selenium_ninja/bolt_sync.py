@@ -39,7 +39,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
     def download_payments_order(self, day=None, interval=None):
         url = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')
         xpath = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')
-        self.get_target_page_or_login(url, xpath, self.login, ParkSettings.get_value("BOLT_NAME"))
+        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
         try:
             WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable(

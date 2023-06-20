@@ -156,28 +156,6 @@ class SeleniumTools:
         )
         return driver
 
-    def get_target_page_or_login(self, url, xpath, login, cookies_name):
-        try:
-            self.driver.get(url)
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-            self.logger.info(f'Got the page without authorization {url}')
-        except TimeoutException:
-            try:
-                for cookie in pickle.load(open(os.path.join(os.getcwd(), "cookies",
-                                                            f'{cookies_name}_cookies'), 'rb')):
-                    self.driver.add_cookie(cookie)
-                time.sleep(self.sleep)
-                self.driver.get(url)
-                time.sleep(self.sleep)
-                self.driver.get_screenshot_as_file(f'{cookies_name}1.png')
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                self.logger.info(f'Got the page using cookie {url}')
-            except (TimeoutException, FileNotFoundError):
-                login()
-                self.driver.get(url)
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                self.logger.info(f'Got the page using authorization {url}')
-
     def get_downloaded_files(self, driver):
         if not self.driver.current_url.startswith("chrome://downloads"):
             self.driver.get("chrome://downloads/")

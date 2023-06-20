@@ -168,13 +168,12 @@ uber_states = {
     'UBERS_GET_ALL_VEHICLES_6': ('div[3]/div/div[2]', 'xpath'),
     'UBERS_GET_DRIVERS_TABLE_1': ('https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/drivers', 'url'),
     'UBERS_GET_DRIVERS_TABLE_2': ('//div[@data-testid="paginated-table"]', 'XPATH'),
-    'UBERS_GET_DRIVERS_TABLE_3': (
-        '//div[@data-testid="paginated-table"]//div[@data-tracking-name="driver-table-row"]', 'XPATH'),
+    'UBERS_GET_DRIVERS_TABLE_3': ('//div[@data-tracking-name="driver-table-row"]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_4': ('div[1]/div[2]/div[1]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_5': ('div[4]/div/div[2]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_6': ('div[4]/div/div[1]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_7': ('//div[@data-tracking-name="search"]', 'XPATH'),
-    'UBERS_GET_DRIVERS_TABLE_8': ('div[3]', 'XPATH'),
+    'UBERS_GET_DRIVERS_TABLE_8': ('div[3]/span/div/div/div/div', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_9': ('//div[@data-baseweb="popover"]//div[@data-testid="vehicle-search-row"][1]', 'XPATH'),
     'UBERS_GET_DRIVER_STATUS_1': (
         'https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/livemap', 'XPATH'),

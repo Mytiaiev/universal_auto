@@ -85,7 +85,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
     def generate_payments_order(self, report_en, report_ua, pattern, day):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"
         xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')}"
-        self.get_target_page_or_login(url, xpath, self.login_v3, ParkSettings.get_value("UBER_NAME"))
+        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UBER_NAME"))
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
         try:
             xpath = report_en
