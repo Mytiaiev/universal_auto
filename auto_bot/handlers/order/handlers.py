@@ -4,6 +4,7 @@ import threading
 import time
 
 from celery.signals import task_postrun
+from django.db.models import F
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings
@@ -182,15 +183,17 @@ def order_create(update, context):
         sum=distance_price[0],
         distance_google=round(distance_price[1], 2))
     if context.user_data.get('time_order'):
-        order.status_order = Order.ON_TIME
-        order.order_time = context.user_data['time_order']
-        order.save()
+        Order.objects.filter(id=order.pk).update(
+            status_order=Order.ON_TIME,
+            order_time=context.user_data['time_order']
+        )
         query.edit_message_text(
             f'Замовлення прийняте, сума замовлення {order.sum} грн\n '
             f'Очікуйте водія о {order.order_time.time()}')
     else:
-        order.status_order = Order.WAITING
-        order.save()
+        Order.objects.filter(id=order.pk).update(
+            status_order=Order.WAITING,
+        )
         bot.delete_message(chat_id=user.chat_id, message_id=query.message.message_id)
 
 
@@ -202,8 +205,7 @@ def send_order_to_driver(sender=None, **kwargs):
                                        order.payment_method, order.phone_number, order.sum,
                                        increase=order.car_delivery_price)
         count = 0
-        order.checked = True
-        order.save()
+        Order.objects.filter(id=order.pk).update(checked=True)
         msg = text_to_client(order, client_msg)
         while count < 3:
             if count == 1:
@@ -267,12 +269,18 @@ def increase_order_price(update, context):
     query = update.callback_query
     chat_id = query.from_user.id
     context.bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
-    order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.WAITING).last()
+    order = Order.objects.filter(
+                        chat_id_client=chat_id,
+                        status_order=Order.WAITING
+                                ).last()
     if query.data != "Continue_search":
-        order.car_delivery_price += int(query.data)
-        order.sum += int(query.data)
-    order.checked = False
-    order.save()
+        order.update(
+            car_delivery_price=F('car_delivery_price') + int(query.data),
+            sum=F('sum') + int(query.data),
+        )
+    order.update(
+        checked=False
+    )
 
 
 def time_order(update, context):
@@ -284,24 +292,28 @@ def time_order(update, context):
 
 
 def order_on_time(update, context):
-    context.user_data['state'] = None
-    pattern = r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
-    user_time = update.message.text
-    user = User.get_by_chat_id(update.message.chat.id)
+    context.user_data['state'], pattern = None, r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$',
+    user_time, user = update.message.text, User.get_by_chat_id(update.message.chat.id)
+
     if re.match(pattern, user_time):
         format_time = timezone.datetime.strptime(user_time, '%H:%M').time()
         min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(
-            ParkSettings.get_value('TIME_ORDER_MIN', 60)))
+                                                                       ParkSettings.get_value('TIME_ORDER_MIN', 60)))
         conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
+
         if min_time <= conv_time:
             if context.user_data.get('time_order') is not None:
                 context.user_data['time_order'] = conv_time
                 from_address(update, context)
             else:
                 order = Order.objects.filter(chat_id_client=user.chat_id,
-                                             status_order=Order.WAITING).last()
-                order.status_order, order.order_time, order.checked = Order.ON_TIME, conv_time, False
-                order.save()
+                                             status_order=Order.WAITING
+                                             ).last()
+                order.update(
+                        status_order=Order.ON_TIME,
+                        order_time=conv_time,
+                        checked=False,
+                )
                 update.message.reply_text(order_complete)
         else:
             update.message.reply_text(small_time_delta)
@@ -314,23 +326,34 @@ def order_on_time(update, context):
 @task_postrun.connect
 def send_time_orders(sender=None, **kwargs):
     if sender == check_time_order:
-        timeorder = Order.objects.filter(id=kwargs.get('retval'), checked=False, status_order=Order.ON_TIME).first()
-        message = order_info(timeorder.pk, timeorder.from_address, timeorder.to_the_address,
-                             timeorder.payment_method, timeorder.phone_number,
-                             time=timezone.localtime(timeorder.order_time).time())
-        group_msg = bot.send_message(chat_id=-863882769, text=message,
+        timeorder = Order.objects.only('pk', 'from_address', 'to_the_address', 'payment_method', 'phone_number',
+                                       'order_time').filter(
+            id=kwargs.get('retval'),
+            checked=False,
+            status_order=Order.ON_TIME
+        ).first()
+        message = order_info(timeorder.pk,
+                             timeorder.from_address,
+                             timeorder.to_the_address,
+                             timeorder.payment_method,
+                             timeorder.phone_number,
+                             time=timezone.localtime(timeorder.order_time).time()
+                             )
+        group_msg = bot.send_message(chat_id=-863882769,
+                                     text=message,
                                      reply_markup=inline_markup_accept(timeorder.pk),
                                      parse_mode=ParseMode.HTML)
-        timeorder.driver_message_id, timeorder.checked = group_msg.message_id, True
-        timeorder.save()
+        timeorder.update(
+            driver_message_id=group_msg.message_id,
+            checked=True
+        )
 
 
 def client_reject_order(update, context):
     query = update.callback_query
-    data = query.data.split(' ')
-    order = Order.objects.filter(pk=int(data[1])).first()
-    order.status_order = Order.CANCELED
-    order.save()
+    order = Order.objects.filter(pk=int(query.data.split(' ')[1])).first().update(
+        status_order=Order.CANCELED,
+    )
     try:
         for i in range(3):
             context.bot.delete_message(chat_id=order.chat_id_client, message_id=query.message.message_id + i)
@@ -346,8 +369,9 @@ def handle_callback_order(update, context):
     order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] in ("Accept_order", "Start_route"):
         if data[0] == "Start_route":
-            order.status_order = Order.IN_PROGRESS
-            order.save()
+            order.update(
+                status_order=Order.IN_PROGRESS
+            )
         record = UseOfCars.objects.filter(user_vehicle=driver,
                                           created_at__date=timezone.now().date(),
                                           end_at=None).last()
@@ -522,7 +546,7 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
     if order.chat_id_client:
         lat, long = get_location_from_db(licence_plate)
         context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
-        m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=600)
+        m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
     context.user_data['flag'] = True
     while True:
         if context.user_data.get('running'):

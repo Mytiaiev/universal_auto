@@ -740,8 +740,9 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         else:
             return ['id', 'name', 'second_name',
                     'email', 'phone_number', 'chat_id',
-                    'schema', 'plan', 'rental'
-                    'driver_status', 'manager', 'created_at',
+                    'schema', 'plan', 'rental',
+                    'driver_status', 'manager', 'vehicle',
+                    'created_at',
                     ]
 
     def get_fieldsets(self, request, obj=None):
@@ -751,7 +752,7 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                      ('chat_id', 'schema', 'plan', 'rental', 'rate'),
 
                                                      )}),
-                ('Додатково',            {'fields': ['partner', 'manager', 'driver_status'
+                ('Додатково',            {'fields': ['partner', 'manager', 'vehicle', 'driver_status'
                                                      ]}),
             )
 
@@ -761,14 +762,14 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                      ('chat_id', 'schema', 'plan', 'rental', 'rate'),
 
                                                      )}),
-                ('Додатково',            {'fields': ['driver_status', 'manager'
+                ('Додатково',            {'fields': ['driver_status', 'manager',  'vehicle'
                                                      ]}),
             )
 
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'manager':
+        if db_field.name in ('manager', 'vehicle'):
             kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
@@ -813,7 +814,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Особисті дані авто', {'fields': ['vin_code', 'gps_imei',
                                                    'car_status',
                                                    ]}),
-                ('Додатково', {'fields': ['driver', 'partner',
+                ('Додатково', {'fields': ['partner',
                                           ]}),
             ]
 
