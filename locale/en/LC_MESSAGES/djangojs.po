@@ -94,7 +94,7 @@ msgstr "Approximate search time: "
 
 #: static/app/js/custom.js:581
 msgid " хв "
-msgstr " min"
+msgstr " min "
 
 #: static/app/js/custom.js:581
 msgid " сек"
