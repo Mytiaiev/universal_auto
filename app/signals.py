@@ -6,29 +6,28 @@ from app.models import Driver, Order, StatusChange, JobApplication, RentInformat
 from auto_bot.main import bot
 
 
-# @receiver(pre_save, sender=Driver)
-# def create_status_change(sender, instance, **kwargs):
-#     try:
-#         old_instance = Driver.objects.get(pk=instance.pk)
-#     except Driver.DoesNotExist:
-#         # new instance, ignore
-#         return
-#     vehicle = Vehicle.objects.filter(driver=instance).first()
-#     if old_instance.driver_status != instance.driver_status:
-#         # update the end time of the previous status change
-#         prev_status_change = StatusChange.objects.filter(driver=instance, end_time=None).first()
-#         if prev_status_change:
-#             prev_status_change.end_time = timezone.now()
-#             prev_status_change.duration = prev_status_change.end_time - prev_status_change.start_time
-#             prev_status_change.save()
-#         # driver_status has changed, create new status change
-#         status_change = StatusChange(
-#             driver=instance,
-#             name=instance.driver_status,
-#             vehicle=vehicle,
-#             start_time=timezone.now(),
-#         )
-#         status_change.save()
+@receiver(pre_save, sender=Driver)
+def create_status_change(sender, instance, **kwargs):
+    try:
+        old_instance = Driver.objects.get(pk=instance.pk)
+    except Driver.DoesNotExist:
+        # new instance, ignore
+        return
+    if old_instance.driver_status != instance.driver_status:
+        # update the end time of the previous status change
+        prev_status_change = StatusChange.objects.filter(driver=instance, end_time=None).first()
+        if prev_status_change:
+            prev_status_change.end_time = timezone.now()
+            prev_status_change.duration = prev_status_change.end_time - prev_status_change.start_time
+            prev_status_change.save()
+        # driver_status has changed, create new status change
+        status_change = StatusChange(
+            driver=instance,
+            name=instance.driver_status,
+            vehicle=instance.vehicle,
+            start_time=timezone.now(),
+        )
+        status_change.save()
 
 
 @receiver(post_save, sender=JobApplication)
