@@ -125,7 +125,7 @@ function setAutoCenter(map) {
 
 function getMarkerIcon(type) {
   return {
-    url: 'static/app/images/icon_' + type + '.png',
+    url: 'static/app/images/icon_' + type + '.webp',
     scaledSize: new google.maps.Size(32, 32),
   };
 }
