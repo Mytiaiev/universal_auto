@@ -524,17 +524,21 @@ function startTimer() {
       // }
 
       var modalContent = document.createElement('div');
+      var text = gettext('Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?');
+      var buttonTextIncrease = gettext('Підвищити');
+      var buttonTextSearch = gettext('Шукати далі');
+      var buttonTextDecline = gettext('Відмовитись');
       modalContent.innerHTML = '<div id="timer-modal" class="modal">\n' +
         '  <div class="modal-content">\n' +
-        '    <p>Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?</p>\n' +
+        '    <p>'+ text +'</p>\n' +
         '    <div class="slider-container">\n' +
         '      <input type="range" id="price-range" min="' + MINIMUM_PRICE_RADIUS + '" max="' + MAXIMUM_PRICE_RADIUS + '" step="1" value="' + MINIMUM_PRICE_RADIUS + '" class="price-range">\n' +
         '      <span id="slider-value">30 ₴</span>\n' +
         '    </div>\n' +
         '    <div class="button-group">\n' +
-        '      <button class="btn btn-primary">Підвищити</button>\n' +
-        '      <button class="btn btn-primary">Шукати далі</button>\n' +
-        '      <button class="btn btn-danger">Відмовитись</button>\n' +
+        '      <button class="btn btn-primary">'+ buttonTextIncrease +'</button>\n' +
+        '      <button class="btn btn-primary">'+ buttonTextSearch +'</button>\n' +
+        '      <button class="btn btn-danger">'+ buttonTextDecline +'</button>\n' +
         '    </div>\n' +
         '  </div>\n' +
         '</div>';
@@ -573,11 +577,11 @@ function startTimer() {
     var minutes = Math.floor(remainingTime / 60000);
     var seconds = Math.floor((remainingTime % 60000) / 1000);
 
-    // Відобразити таймер у форматі "хвилини:секунди"
     var timerElements = document.getElementById('timer');
-    if (timerElements) {
-      timerElements.innerHTML = 'Приблизний час пошуку: ' + minutes + ' хв ' + seconds + ' сек';
-    }
+    var timerText = gettext('Приблизний час пошуку: ') + minutes + gettext(' хв ') + seconds + gettext(' сек');
+      if (timerElements) {
+        timerElements.innerHTML = timerText;
+      }
   }, 1000);
 }
 
@@ -798,8 +802,8 @@ $(document).ready(function () {
                   '<div class="modal-content rounded">' +
                   '<h3 class="modal-title">' + text2 + '</h3>' +
                   '<div class="buttons-container">' +
-                  '<button class="order-confirm btn btn-primary">Погодитися</button>' +
-                  '<button class="order-reject btn btn-danger">Відмовитись</button>' +
+                  '<button class="order-confirm btn btn-primary">' + gettext('Погодитись') + '</button>' +
+                  '<button class="order-reject btn btn-danger">' + gettext('Відмовитись') + '</button>' +
                   '</div>' +
                   '</div>' +
                   '</div>');

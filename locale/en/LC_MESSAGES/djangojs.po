@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-06-06 12:31+0300\n"
+"POT-Creation-Date: 2023-06-21 11:40+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,87 +18,121 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: static/app/js/custom.js:243
-msgid "Ціна поїздки:"
-msgstr "Trip price:"
-
-#: static/app/js/custom.js:243
-msgid " грн. Приблизний час прибуття авто: "
-msgstr " UAH Approximate time of arrival of the car: "
-
-#: static/app/js/custom.js:245
-msgid "Погодитись"
-msgstr "To agree"
-
-#: static/app/js/custom.js:314
-msgid "Коментар про відмову від поїздки"
-msgstr "Comment about the cancellation of the trip"
-
-#: static/app/js/custom.js:315
-msgid "Відправити"
-msgstr "Send"
-
-#: static/app/js/custom.js:323
-msgid "Залишіть, будь ласка, відгук"
-msgstr "Please leave a review"
-
-#: static/app/js/custom.js:381
-msgid "Ваша заявка прийнята. Очікуйте на автомобіль!"
-msgstr "Your application has been accepted. Wait for the car!"
-
-#: static/app/js/custom.js:451
+#: static/app/js/custom.js:196
 msgid "Оберіть метод оплати."
 msgstr "Choose a payment method."
 
-#: static/app/js/custom.js:458
+#: static/app/js/custom.js:204
 msgid "Готівка"
 msgstr "Cash"
 
-#: static/app/js/custom.js:459
+#: static/app/js/custom.js:205
 msgid "Картка"
 msgstr "Card"
 
-#: static/app/js/custom.js:460
+#: static/app/js/custom.js:206 static/app/js/custom.js:530
+#: static/app/js/custom.js:806
 msgid "Відмовитись"
 msgstr "Refuse"
 
-#: static/app/js/custom.js:473
-msgid "Заждіть поки ми підберемо вам автомобіль."
+#: static/app/js/custom.js:218
+msgid "Зачекайте поки ми підберемо вам автомобіль. Ваша ціна складає "
 msgstr "Wait until we pick up a car for you."
 
-#: static/app/js/custom.js:513
+#: static/app/js/custom.js:218 static/app/js/custom.js:235
+#: static/app/js/custom.js:800
+msgid " грн."
+msgstr " UAH"
+
+#: static/app/js/custom.js:235
+msgid "Заждіть поки ми підберемо вам автомобіль. Ваша ціна складає "
+msgstr "Wait until we pick up a car for you. Your price is "
+
+#: static/app/js/custom.js:339
+msgid "Ціна поїздки: "
+msgstr "Trip price: "
+
+#: static/app/js/custom.js:339
+msgid " грн. Приблизний час прибуття авто: "
+msgstr " UAH Approximate time of arrival of the car: "
+
+#: static/app/js/custom.js:341 static/app/js/custom.js:805
+msgid "Погодитись"
+msgstr "To agree"
+
+#: static/app/js/custom.js:412
+msgid "Коментар про відмову від поїздки"
+msgstr "Comment about the cancellation of the trip"
+
+#: static/app/js/custom.js:413
+msgid "Відправити"
+msgstr "Send"
+
+#: static/app/js/custom.js:421
+msgid "Залишіть, будь ласка, відгук"
+msgstr "Please leave a review"
+
+#: static/app/js/custom.js:467
+msgid "Ваша заявка прийнята. Очікуйте на автомобіль!"
+msgstr "Your application has been accepted. Wait for the car!"
+
+#: static/app/js/custom.js:527
+msgid "Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?"
+msgstr "Now there is an increased demand, want to increase the price to speed up the search?"
+
+#: static/app/js/custom.js:528
+msgid "Підвищити"
+msgstr "Increase"
+
+#: static/app/js/custom.js:529
+msgid "Шукати далі"
+msgstr "Search further"
+
+#: static/app/js/custom.js:581
+msgid "Приблизний час пошуку: "
+msgstr "Approximate search time: "
+
+#: static/app/js/custom.js:581
+msgid " хв "
+msgstr " min"
+
+#: static/app/js/custom.js:581
+msgid " сек"
+msgstr " sec"
+
+#: static/app/js/custom.js:660
 msgid "00:00 (Вкажіть час)"
 msgstr "00:00 (Indicate the time)"
 
-#: static/app/js/custom.js:551
+#: static/app/js/custom.js:698
 msgid "Номер телефону обов'язковий"
 msgstr "Phone number is required"
 
-#: static/app/js/custom.js:552 static/app/js/custom.js:553
+#: static/app/js/custom.js:699 static/app/js/custom.js:700
 msgid "Адреса обов'язкова"
 msgstr "Address is required"
 
-#: static/app/js/custom.js:554
+#: static/app/js/custom.js:701
 msgid "Час замовлення обов'язково"
 msgstr "Order time is required"
 
-#: static/app/js/custom.js:575
+#: static/app/js/custom.js:722
 msgid "Виберіть час не менше ніж через "
 msgstr "Choose a time not less than after "
 
-#: static/app/js/custom.js:576
+#: static/app/js/custom.js:723
 msgid " хвилин"
 msgstr " minutes"
 
-#: static/app/js/custom.js:589 static/app/js/custom.js:594
+#: static/app/js/custom.js:736 static/app/js/custom.js:741
 msgid "Некоректна адреса"
 msgstr "Incorrect address"
 
-#: static/app/js/custom.js:609
-msgid "Дякую за замовлення. Очікуйте на автомобіль!"
-msgstr "Thank you for the order. Wait for the car!"
+#: static/app/js/custom.js:799
+msgid "Дякуємо за замовлення. Очікуйте на автомобіль! Ваша вартість поїздки: "
+msgstr "Thank you for your order. Wait for the car! Your trip cost: "
 
-#: static/app/js/custom.js:639
+#: static/app/js/custom.js:842
 msgid ""
 "Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою "
 "замовлення на інший час!"
@@ -106,14 +140,14 @@ msgstr ""
 "Sorry, but unfortunately there are no free drivers. Use our service order "
 "for another time!"
 
-#: static/app/js/custom.js:715
+#: static/app/js/custom.js:962
 msgid "Будь ласка, введіть коректну адресу"
 msgstr "Please enter a valid address"
 
-#: static/app/js/custom.js:736
+#: static/app/js/custom.js:983
 msgid "Читайте менше <"
 msgstr "Read less <"
 
-#: static/app/js/custom.js:739
+#: static/app/js/custom.js:986
 msgid "Читати далі >"
 msgstr "Read more >"
