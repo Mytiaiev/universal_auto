@@ -1,0 +1,41 @@
+{
+  "name": "Ninja Taxi",
+  "short_name": "Ninja Taxi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "icon/favicon.webp",
+      "sizes": "46x50",
+      "type": "image/webp"
+    },
+    {
+      "src": "icon/logo_transparent.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "splash_pages": {
+    "icons": [
+      {
+        "src": "icon/logo.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  },
+  "scope": "/",
+  "orientation": "any",
+  "description": "Premium taxi service in Kyiv",
+  "lang": "uk-UA",
+  "related_applications": [],
+  "prefer_related_applications": false
+}

@@ -20,18 +20,16 @@
 												<h1>
 													{% trans "Екологічно чисті" %}
 												</h1>
-												<p class="col-lg-11 px-0">
+												<p class="header-carousel-text col-lg-11 px-0">
 													{% trans "Кожен наш електромобіль працює на «чистій» енергії, що знижує викиди шкідливих вуглецевих газів і мінімізує негативний вплив на довкілля. Ми віримо, що збереження нашої планети починається з наших дій, і ви можете бути впевнені, що кожна поїздка з Ninja Taxi допомагає зменшити екологічне навантаження." %}
 												</p>
-												<a href="">
-													{% trans "Дізнатися більше" %}
+												<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}</a>
 												</a>
 											</div>
 										</div>
 										<div class="col-md-6">
 											<div class="img-box">
-												<img src="{% static 'app/images/slider-img-1.png' %}"
-														 alt="">
+												<img src="{% static 'app/images/slider-img-1.webp' %}" height="552" width="552" alt="">
 											</div>
 										</div>
 									</div>
@@ -45,16 +43,15 @@
 												<h1>
 													{% trans "Комфорт" %}
 												</h1>
-												<p class="col-lg-11 px-0">
+												<p class="header-carousel-text col-lg-11 px-0">
 													{% trans "Завдяки електрокарам, Ваша поїздка буде тиха, приємна та м'яка. Ви заслуговуєте на найкраще, тому наші електрокари готові забезпечити Вам незабутній досвід комфорту під час кожної поїздки." %}
 												</p>
-												<a href="">{% trans "Дізнатися більше" %}</a>
+												<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}</a>
 											</div>
 										</div>
 										<div class="col-md-6">
 											<div class="img-box">
-												<img src="{% static 'app/images/slider-img-2.png' %}"
-														 alt="">
+												<img src="{% static 'app/images/slider-img-2.webp' %}" alt="">
 											</div>
 										</div>
 									</div>
@@ -68,18 +65,16 @@
 												<h1>
 													{% trans "Швидкість" %}
 												</h1>
-												<p class="col-lg-11 px-0">
+												<p class="header-carousel-text col-lg-11 px-0">
 													{% trans "Наші таксі мають особливу ліцензію, що дозволяє нам використовувати смуги громадського транспорту, забезпечуючи вам неперевершену швидкість руху по місту, оскільки нам не треба стояти в заторах." %}
 												</p>
-												<a href="">
-													{% trans "Дізнатися більше" %}
+												<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}
 												</a>
 											</div>
 										</div>
 										<div class="col-md-6">
 											<div class="img-box">
-												<img src="{% static 'app/images/slider-img-3.png' %}"
-														 alt="">
+												<img src="{% static 'app/images/slider-img-3.webp' %}" alt="">
 											</div>
 										</div>
 									</div>
@@ -192,10 +187,10 @@
 				<div class="row">
 					<div class="col-md-6">
 						<div class="img-box-uk">
-							<img src="{% static 'app/images/about-img-uk.png' %}" alt="">
+							<img src="{% static 'app/images/about-img-uk.webp' %}" alt="" width="552" height="456">
 						</div>
 						<div class="img-box-en hidden">
-							<img src="{% static 'app/images/about-img-en.png' %}" alt="">
+							<img src="{% static 'app/images/about-img-en.webp' %}" alt="" width="471" height="388">
 						</div>
 					</div>
 					<div class="col-md-6">
@@ -212,8 +207,7 @@
 								{% trans "Ми зосереджені на екологічній стороні таксі, тому використовуємо електрокари, що дозволять нам зменшити викиди шкідливих речовин та допомогти зберегти наше середовище." %}
 								{% trans "Таким чином Ви можете насолоджуватися комфортом і тишею під час поїздки, знаючи, що це не забруднює повітря довкола." %}
 							</p>
-							<a href="">
-								{% trans "Дізнатися більше" %}
+							<a href="#" data-page="/coming-soon">{% trans "Дізнатися більше" %}
 							</a>
 						</div>
 					</div>
@@ -227,16 +221,14 @@
 
 		<section class="services">
 			<div class="container">
-				<h2 class="services-title">{% trans "НАШІ ПОСЛУГИ" %}</h2>
+				<h3 class="services-title">{% trans "НАШІ ПОСЛУГИ" %}</h3>
 				<div class="services-grid">
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
-								style="background-image: url({% static 'app/images/vod-ruk.png' %})"
+								style="background-image: url({% static 'app/images/vod-ruk.webp' %})"
 								class="cover">
 							<i>
-								<img
-										src="https://live.themewild.com/taxica/assets/img/icon/taxi-booking-1.svg"
-										alt="icon">
+								<img src="{% static 'app/images/taxi-booking-1.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Ваш персональний водій" %}</h4>
@@ -248,16 +240,14 @@
 							{% trans "Зосередьтеся на своїх справах, відпочинку або важливих зустрічах, знімаючи будь-які турботи про дорогу." %}
 							{% trans "Наші персональні водії забезпечать вам приємну і безпечну поїздку, де ви будете мати повний контроль над своїм часом." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
-								style="background-image: url({% static 'app/images/deti-voditel.png' %})"
+								style="background-image: url({% static 'app/images/deti-voditel.webp' %})"
 								class="cover">
 							<i>
-								<img
-										src="https://live.themewild.com/taxica/assets/img/icon/business.svg"
-										alt="icon">
+								<img src="{% static 'app/images/business.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Персональний водій для Вашої дитини" %}</h4>
@@ -272,16 +262,14 @@
 							{% trans "Тому наші ninja-водії гнучкі і готові адаптуватись до вашого графіку і вимог." %}
 							{% trans "Ви можете бути впевнені, що наш водій буде на місці вчасно, а дитина доставлена у пункт призначення без зайвих затримок." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
-								style="background-image: url({% static 'app/images/thumb.png' %})"
+								style="background-image: url({% static 'app/images/thumb.webp' %})"
 								class="cover">
 							<i>
-								<img
-										src="https://live.themewild.com/taxica/assets/img/icon/city-taxi.svg"
-										alt="icon">
+								<img src="{% static 'app/images/city-taxi.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Доставка цінних речей в сейфі машини" %}</h4>
@@ -296,16 +284,14 @@
 							{% trans "Вони поважатимуть ваші особисті речі та надаватимуть максимальну увагу до їх безпеки." %}
 							{% trans "Ви можете мати повну впевненість, що ваші цінності будуть під надійним наглядом під час усієї поїздки." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 					<div class="services-grid__item col-md-6 col-lg-4">
 						<figure
-								style="background-image: url({% static 'app/images/slider-img.png' %})"
+								style="background-image: url({% static 'app/images/time.webp' %})"
 								class="cover">
 							<i>
-								<img
-										src="https://live.themewild.com/taxica/assets/img/icon/taxi-2.svg"
-										alt="icon">
+								<img src="{% static 'app/images/taxi-2.svg' %}" alt="icon">
 							</i>
 						</figure>
 						<h4 class="services-title-index">{% trans "Передзамовлення машини на певний час" %}</h4>
@@ -321,7 +307,7 @@
 							{% trans "Вони орієнтовані на ваші потреби, добре знайомі з місцевими дорогами та забезпечують безпечну та зручну поїздку." %}
 							{% trans "Ви можете спокійно розраховувати на їх професіоналізм та доброзичливий сервіс." %}
 						</p>
-						<a class="btn btn-primary">{% trans "Читати далі >" %}</a>
+						<button class="btn btn-primary">{% trans "Читати далі >" %}</button>
 					</div>
 				</div>
 			</div>
@@ -385,9 +371,7 @@
 									{% trans "Ваш вклад допоможе нам розширити нашу мережу електромобілів та покриття послуг по всьому місту." %}
 									{% trans "Не пропустіть шанс стати інвестором у Ninja Taxi!" %}
 								</p>
-								<div class="button-container">
-									<a href="{% url 'investment' %}"
-										 class="btn btn-primary">{% trans "Дізнатися більше" %}</a>
+								<div class="button-container"><a href="{% url 'investment' %}" class="btn btn-primary">{% trans "Дізнатися більше про інвестиції" %}</a>
 								</div>
 							</div>
 							<p></p>
@@ -395,8 +379,8 @@
 					</div>
 					<div class="col-md-6">
 						<div class="video-box">
-							<iframe width="100%" height="315" src="https://www.youtube.com/embed/i0FLM-wyDHc" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>
-							<iframe width="100%" height="315" src="https://www.youtube.com/embed/95PFE8cp1A0" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>
+							<a data-youtube href="https://www.youtube.com/watch?v=GCf8iURnec8"></a>
+							<a data-youtube href="https://www.youtube.com/watch?v=2Iyx-fbETsA"></a>
 						</div>
 					</div>
 				</div>
@@ -416,20 +400,20 @@
 						<ol class="carousel-indicators">
 							<li data-target="#carouselExample2Controls" data-slide-to="0"
 									class="active">
-								<img src="{% static 'app/images/c1.jpg' %}" alt="">
+								<img src="{% static 'app/images/c1.webp' %}" width="60" height="60" alt="">
 							</li>
 							<li data-target="#carouselExample2Controls" data-slide-to="1">
-								<img src="{% static 'app/images/c2.jpg' %}" alt="">
+								<img src="{% static 'app/images/c2.webp' %}" width="60" height="60" alt="">
 							</li>
 							<li data-target="#carouselExample2Controls" data-slide-to="2">
-								<img src="{% static 'app/images/c3.jpg' %}" alt="">
+								<img src="{% static 'app/images/c3.webp' %}" width="60" height="60" alt="">
 							</li>
 						</ol>
 						<div class="carousel-inner">
 							<div class="carousel-item active">
 								<div class="detail-box">
-									<h5>{% trans "Юлія" %}</h5>
-									<h6>46 {% trans "поїздок" %}</h6>
+									<h3>{% trans "Юлія" %}</h3>
+									<h4>46 {% trans "поїздок" %}</h4>
 									<p>
 										<i class="fa fa-quote-left" aria-hidden="true"></i>
 										{% trans "Я була приємно здивована електротаксі - комфорт, тиша та екологічність відчувається з перших хвилин поїздки. Це дорожче, ніж традиційні таксі, але я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити." %}
@@ -446,8 +430,8 @@
 							</div>
 							<div class="carousel-item">
 								<div class="detail-box">
-									<h5>{% trans "Євгеній" %}</h5>
-									<h6>127 {% trans "поїздок" %}</h6>
+									<h3>{% trans "Євгеній" %}</h3>
+									<h4>127 {% trans "поїздок" %}</h4>
 									<p>
 										<i class="fa fa-quote-left" aria-hidden="true"></i>
 										{% trans "Я був приємно здивований, коли вперше використав електротаксі - це було так комфортно та тихо. Я відчував себе більш екологічно свідомими, використовуючи таксі, що не виділяє викидів." %}
@@ -464,8 +448,8 @@
 							</div>
 							<div class="carousel-item">
 								<div class="detail-box">
-									<h5>{% trans "Ліза" %}</h5>
-									<h6>8 {% trans "поїздок" %}</h6>
+									<h3>{% trans "Ліза" %}</h3>
+									<h4>8 {% trans "поїздок" %}</h4>
 									<p>
 										<i class="fa fa-quote-left" aria-hidden="true"></i>
 										{% trans "Я була дуже вражена тихістю та чистотою в електротаксі. Це було дійсно приємним додатком до мого досвіду використання таксі. Я би, безперечно, рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних альтернатив." %}
@@ -498,17 +482,16 @@
     parkSettings = JSON.parse('{{ parkSettings | safe }}');
   {% endif %}
   var apiGoogle = '{{ google_api }}';
-  var csrfToken = '{% csrf_token %}';
   var ajaxPostUrl = "{% url 'post_request' %}";
   var ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 
-<script src="{% static 'app/js/jquery-3.4.1.min.js' %}"></script>
-<script src="{% static 'app/js/bootstrap.js' %}"></script>
-<script src="{% static 'app/js/defer-google-maps.js' %}"></script>
-<script src="{% static 'app/js/cookies.js' %}"></script>
-<script src="{% static 'app/js/jquery.mask.min.js' %}"></script>
-<script defer src="{% static 'app/js/custom.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js"></script>
+<script src="{% static 'app/js/defer-google-maps.js' %}" defer></script>
+<script src="{% static 'app/js/jquery.mask.min.js' %}" defer></script>
+<script src="{% static 'app/js/cookies.js' %}" defer></script>
+<script src="{% static 'app/js/custom.js' %}" defer></script>
 
 </body>
 </html>
