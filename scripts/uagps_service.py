@@ -5,17 +5,20 @@ from scripts.selector_services import uagps_states
 
 def init_service_newuklon():
     for key, value in uagps_states.items():
-        if not UaGpsService.objects.filter(key=key):
-            uagps_service = UaGpsService(
-                key=key,
-                value=value[0],
-                description=value[1])
+        uagps_service = UaGpsService.objects.filter(key=key).first()
+        if not uagps_service:
+            new_key = UaGpsService(key=key,
+                                   value=value[0],
+                                   description=value[1])
             try:
-                uagps_service.save()
+                new_key.save()
             except IntegrityError:
                 pass
         else:
-            continue
+            if uagps_service.value != value[0]:
+                uagps_service.value = value[0]
+                uagps_service.save()
+
 
 
 def run():
