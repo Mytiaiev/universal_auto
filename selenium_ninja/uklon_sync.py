@@ -277,6 +277,25 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         except WebDriverException as err:
             self.logger.error(err)
 
+    def disable_cash(self, name, second_name, disable):
+        url = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_1')
+        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_2')
+        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
+        xpath = f'{NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_1")}{second_name} {name} "]'
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.XPATH, xpath))).click()
+        WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located((By.XPATH,
+                                            NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_8")))).click()
+        check_cash = WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_9"))))
+        if disable and 'true' in check_cash.get_attribute("aria-checked"):
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.XPATH,
+                                                NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_2")))).click()
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_3")))).click()
+
     def withdraw_money(self):
         url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')
         xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
@@ -290,9 +309,11 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         sum_remain = WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_4'))))
         clickandclear(sum_remain)
-        sum_remain.send_keys(ParkSettings.get_value("Залишок Uklon", 150))
+        sum_remain.send_keys(ParkSettings.get_value("WITHDRAW_UKLON"))
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_5')))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_6')))).click()
 

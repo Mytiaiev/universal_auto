@@ -6,7 +6,6 @@ from app.models import ParkSettings
 settings = {
     'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
     'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
-    'DRIVER_PLAN': ('10000', 'План водія (грн)'),
     'TARIFF_IN_THE_CITY': ('15', 'Тариф в місті (грн)'),
     'TARIFF_OUTSIDE_THE_CITY': ('30', 'Тариф за містом (грн)'),
     'TARIFF_CAR_DISPATCH': ('7', 'Тариф за доставку авто за км (грн)'),
@@ -33,7 +32,7 @@ settings = {
     'UAGPS_PASSWORD': ('Enter password for Uagps', 'Пароль Uagps'),
     'MOBIZON_DOMAIN': ('https://api.mobizon.ua/service/message/sendsmsmessage', 'Домен для смс розсилки'),
     'MOBIZON_API_KEY': ('Enter api key', 'API KEY для розсилки смс'),
-    'Залишок Uklon': ('150', 'Залишок грн на карті водія Uklon'),
+    'WITHDRAW_UKLON': ('150', 'Залишок на карті водія Uklon (грн)'),
     'DRIVERS_CHAT': ('-863882769', 'Чат водіїв'),
     'SEND_DISPATCH_MESSAGE': ('0.3', 'Повідомити про подачу (км)'),
     'MESSAGE_APPEAR': ('30', 'Час до зникнення замовлення у водія (с)'),

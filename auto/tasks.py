@@ -191,6 +191,22 @@ def get_rent_information(self):
 
 
 @app.task(bind=True, queue='non_priority')
+def fleets_cash_trips(self, name, second_name, disable):
+    try:
+        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('disable_cash', name, second_name, disable)
+        logger.info('disable_uklon_cash')
+        BoltSynchronizer(CHROME_DRIVER.driver, 'Bolt').try_to_execute('disable_cash', name, second_name, disable)
+        logger.info('disable_bolt_cash')
+    except Exception as e:
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def manager_paid_weekly(self):
+    return logger.info('send message to manager')
+
+
+@app.task(bind=True, queue='non_priority')
 def withdraw_uklon(self):
     try:
         UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('withdraw_money')
@@ -324,6 +340,7 @@ def save_report_to_ninja_payment(day=None):
             report.save()
         except IntegrityError:
             pass
+
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):

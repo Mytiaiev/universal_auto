@@ -7,3 +7,17 @@ F_UKLON, F_UBER, F_BOLT = 'Uklon', 'Uber', 'Bolt'
 not_manager_text = "Зареєструйтесь, як менеджер водіїв"
 SEND_JOB = 'Подати заявку'
 DECLINE_JOB = 'Відхилити заявку'
+paid_inline_buttons = (
+    "\u2705 Так",
+    "\u274c Ні"
+)
+
+
+def ask_driver_paid(driver):
+    message = f"Чи розрахувався водій {driver} за минулий тиждень?"
+    return message
+
+
+def remove_cash_text(driver):
+    message = f"Розрахунок готівкою водію {driver} вимкнено"
+    return message

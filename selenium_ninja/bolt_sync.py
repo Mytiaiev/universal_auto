@@ -17,18 +17,18 @@ from selenium_ninja.synchronizer import Synchronizer
 class BoltSynchronizer(Synchronizer, SeleniumTools):
 
     def login(self):
-        self.driver.get(f"{BoltService.get_value('BOLT_LOGIN_1')}")
+        self.driver.get(f"{BoltService.get_value('BOLT_LOGIN_URL')}")
         if self.sleep:
             time.sleep(self.sleep)
         element = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_2'))))
+            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_1'))))
         element.clear()
         element.send_keys(ParkSettings.get_value("BOLT_NAME"))
         element = WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_3'))))
+            EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_2'))))
         element.clear()
         element.send_keys(ParkSettings.get_value("BOLT_PASSWORD"))
-        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_4')).click()
+        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_3')).click()
         if self.sleep:
             time.sleep(self.sleep)
         cookie_filename = f'{ParkSettings.get_value("BOLT_NAME")}_cookie'
@@ -37,33 +37,33 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         pickle.dump(self.driver.get_cookies(), open(cookie_filepath, 'wb'))
 
     def download_payments_order(self, day=None, interval=None):
-        url = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')
-        xpath = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')
+        url = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_URL')
+        xpath = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')
         self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
         try:
             WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable(
-                    (By.XPATH, BoltService.get_value('BOLTS_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
+                    (By.XPATH, BoltService.get_value('BOLT_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
         except:
             pass
         if day:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
-                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
-            xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_4')}[{interval}]"
+                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')))).click()
+            xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_3')}[{interval}]"
             date = self.driver.find_element(By.XPATH, xpath)
             if date.text != 'нд':
                 date.click()
             else:
-                self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_8')).click()
-                xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_4')}[{interval}]"
+                self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_7')).click()
+                xpath = f"{BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_3')}[{interval}]"
                 self.driver.find_element(By.XPATH, xpath).click()
-            self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_5')).click()
+            self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_4')).click()
         else:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
-                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')))).click()
+                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')))).click()
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located(
-                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_6')))).click()
-        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_7')).click()
+                (By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_5')))).click()
+        self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_6')).click()
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
@@ -144,25 +144,25 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
 
     def get_drivers_table(self):
         drivers = []
-        url = BoltService.get_value('BOLTS_GET_DRIVERS_TABLE_1')
-        xpath = BoltService.get_value('BOLTS_GET_DRIVERS_TABLE_2')
+        url = BoltService.get_value('BOLT_DRIVERS_URL')
+        xpath = BoltService.get_value('BOLT_GET_DRIVERS_TABLE_1')
         self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
         # self.driver.get_screenshot_as_file('BoltSynchronizer.png')
         i_table = 0
         while True:
             i_table += 1
             try:
-                xpath = f'{BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_3")}[{i_table}]'
+                xpath = f'{BoltService.get_value("BOLT_GET_DRIVERS_TABLE_2")}[{i_table}]'
                 driver_row = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath)))
-                name = driver_row.find_element(By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_4"))
+                name = driver_row.find_element(By.XPATH, BoltService.get_value("BOLT_GET_DRIVERS_TABLE_3"))
                 full_name = name.text
                 name.click()
                 email = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_5")))).text
+                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLT_GET_DRIVERS_TABLE_4")))).text
                 phone_number = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_6")))).text
-                elements = self.driver.find_elements(By.XPATH, BoltService.get_value("BOLTS_GET_DRIVERS_TABLE_7"))
+                    EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLT_GET_DRIVERS_TABLE_5")))).text
+                elements = self.driver.find_elements(By.XPATH, BoltService.get_value("BOLT_GET_DRIVERS_TABLE_6"))
                 pay_cash = (len(elements) == 2)
                 self.driver.back()
                 s_name = self.split_name(full_name)
@@ -188,11 +188,11 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         try:
             WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located(
-                    (By.XPATH, BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_1")))).click()
+                    (By.XPATH, BoltService.get_value("BOLT_GET_DRIVER_STATUS_FROM_MAP_1")))).click()
         except:
             pass
         try:
-            xpath = f'{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]/div'
+            xpath = f'{BoltService.get_value("BOLT_GET_DRIVER_STATUS_FROM_MAP_2")}[{search_text}]/div'
             element_count = WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, xpath)))
             if element_count.text[-1] == '-':
@@ -204,8 +204,8 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         while i < int(element_count.text[-1]):
             i += 1
             try:
-                el = BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_3")
-                xpath = f'{el}{i}{BoltService.get_value("BOLTS_GET_DRIVER_STATUS_FROM_MAP_3.1")}'
+                el = BoltService.get_value("BOLT_GET_DRIVER_STATUS_FROM_MAP_3")
+                xpath = f'{el}{i}{BoltService.get_value("BOLT_GET_DRIVER_STATUS_FROM_MAP_3.1")}'
                 driver_name = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
@@ -222,8 +222,8 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
 
     def get_driver_status(self):
         try:
-            url = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_1')
-            xpath = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_2')
+            url = BoltService.get_value('BOLT_MAP_URL')
+            xpath = BoltService.get_value('BOLT_GET_DRIVER_STATUS_1')
             self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
             return {
                 'width_client': self.get_driver_status_from_map('1'),
@@ -245,15 +245,31 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         except Exception as err:
             print(err)
 
+    def disable_cash(self, name, second_name, disable):
+        url = BoltService.get_value('BOLT_DRIVERS_URL')
+        xpath = BoltService.get_value('BOLT_GET_DRIVERS_TABLE_1')
+        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
+        xpath = f'{BoltService.get_value("BOLT_DISABLE_CASH_1")}{name} {second_name}"]'
+        WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
+        time.sleep(self.sleep)
+        elements = self.driver.find_elements(By.XPATH, BoltService.get_value("BOLT_GET_DRIVERS_TABLE_6"))
+        if disable and len(elements) == 2:
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLT_DISABLE_CASH_2")))).click()
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLT_DISABLE_CASH_3")))).click()
+
+
+
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:
-            url = BoltService.get_value('BOLT_ADD_DRIVER_1')
-            self.get_target_element_of_page(url, BoltService.get_value('BOLT_ADD_DRIVER_2.1'),
+            url = BoltService.get_value('BOLT_DRIVERS_URL')
+            self.get_target_element_of_page(url, BoltService.get_value('BOLT_ADD_DRIVER_1'),
                                             ParkSettings.get_value("BOLT_NAME"))
             WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_2.1')))).click()
+                EC.presence_of_element_located((By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_1')))).click()
             form_email = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_ADD_DRIVER_2.2'))))
+                EC.presence_of_element_located((By.ID, BoltService.get_value('BOLT_ADD_DRIVER_2'))))
             clickandclear(form_email)
             form_email.send_keys(jobapplication.email)
             form_phone_number = WebDriverWait(self.driver, self.sleep).until(
