@@ -1,11 +1,11 @@
 from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup
 from app.models import Owner
-from auto.drivers import Privat24
 from app.portmone.generate_link import Portmone
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 from auto_bot.handlers.owner.keyboards import payments_buttons, data_buttons, commission_buttons
 from auto_bot.handlers.owner.static_text import *
 from scripts.driversrating import DriversRatingMixin
+from selenium_ninja.driver import Privat24
 
 
 # Transfer money
