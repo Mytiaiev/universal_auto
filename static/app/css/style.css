@@ -83,7 +83,13 @@ iframe {
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 9999;
+  z-index: 1;
+}
+.content {
+  padding-top: 75px;
+}
+.investment_section {
+  padding-top: 90px;
 }
 
 .navbar-nav {
@@ -143,7 +149,6 @@ a:focus {
   transition: all 0.3s;
   position: relative;
   border-radius: 5px;
-  transition: all 0.3s;
 }
 
 .custom_nav-container .navbar-toggler span::before, .custom_nav-container .navbar-toggler span::after {
