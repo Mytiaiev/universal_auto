@@ -79,6 +79,11 @@ iframe {
 
 .header_section {
   background-color: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
 }
 
 .navbar-nav {
@@ -701,12 +706,6 @@ header button start
   margin-top: 10px;
 }
 
-.info_section_header .text-danger {
-  font-size: 65%;
-  padding-right: 5px;
-  /*padding-top: 5px;*/
-}
-
 .text-danger {
   display: flex;
   justify-content: center; /* Выравнивание по горизонтали */
@@ -721,16 +720,19 @@ header button start
   margin-left: -5%;
 }
 
-.info_section_header .info_form input {
-  width: 150px;
-  border: none;
-  margin-bottom: 0px;
-  background-color: #eaeaea;
-  outline: none;
-  color: #101010;
-  padding: 0px;
-  padding-left: 25px;
-  border-radius: 25px;
+.info_section_header .info_form form {
+  display: inline-flex;
+  margin-right: 5%;
+  margin-left: -5%;
+}
+
+.info_section_header .info_form .text-danger {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+  position: absolute;
+  margin-top: -20px;
+  margin-left: -7px;
 }
 
 .info_section_header .info_form button,

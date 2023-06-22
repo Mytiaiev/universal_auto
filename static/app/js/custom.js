@@ -1030,7 +1030,7 @@ $(document).ready(function () {
     video.attr('role', 'button');
 
     video.html(`
-      <img alt="" src="https://img.youtube.com/vi/${id}/maxresdefault.jpg"><br>
+      <img alt="" src="https://img.youtube.com/vi/${id}/maxresdefault.jpg" width="552" height="310"><br>
       ${video.text()}
     `);
   });
