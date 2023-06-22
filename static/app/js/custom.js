@@ -373,7 +373,7 @@ function onOrderPayment(paymentMethod) {
       method: 'POST',
       data: orderData,
       headers: {
-        'X-CSRF-Token': $('input[name="csrfmiddlewaretoken"]').val()
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
       },
       success: function (response) {
         var idOrder = JSON.parse(response.data)
