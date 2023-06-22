@@ -68,3 +68,9 @@ function deleteAllCookies() {
 function deleteCookie(key) {
   document.cookie = key + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 }
+
+document.cookie = "LAST_RESULT_ENTRY_KEY=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.www.youtube.com; SameSite=None; Secure";
+document.cookie = "TESTCOOKIESENABLED=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/embed; domain=www.youtube.com; SameSite=None; Secure";
+document.cookie = "remote_sid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.youtube.com; SameSite=Lax";
+document.cookie = "PREF=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.youtube.com; SameSite=Lax";
+document.cookie = "requests=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.www.youtube.com; SameSite=Lax";

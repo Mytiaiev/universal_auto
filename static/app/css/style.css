@@ -1,8 +1,26 @@
 body {
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   color: #040000;
   background-color: #ffffff;
   font-size: 18px;
+}
+html, body {
+  overflow-x: hidden;
+}
+
+img{
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  margin-bottom: 20px;
+  border-radius: 25px;
+}
+
+iframe {
+	aspect-ratio: 16 / 9;
+	height: 100%;
+	width: 100%;
+  border-radius: 25px;
 }
 
 * {
@@ -21,15 +39,11 @@ body {
 
 .heading_container h2 {
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   color: #E96F24;
   margin-top: 10px;
-}
-
-.investment {
-  font-size: 20px;
 }
 
 .about-section {
@@ -65,6 +79,11 @@ body {
 
 .header_section {
   background-color: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
 }
 
 .navbar-nav {
@@ -220,7 +239,7 @@ a:focus {
 
 .slider_section .detail-box h1 {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   padding-right: 30px;
@@ -486,6 +505,7 @@ header button start
 
 .investment_section .detail-box .heading_container p {
   color: #fff;
+  font-size: 20px;
 }
 
 .investment_section .detail-box .btn-box {
@@ -498,7 +518,7 @@ header button start
 }
 
 .investment_section .detail-box a {
-  width: 175px;
+  width: 250px;
   margin: 5px;
 }
 
@@ -538,7 +558,7 @@ header button start
 }
 
 .client_section .carousel-indicators li.active {
-  width: 90px;
+  width: 60px;
   height: 90px;
 }
 
@@ -546,8 +566,13 @@ header button start
   text-align: center;
 }
 
-.client_section .detail-box h5 {
+.client_section .detail-box h3 {
   font-weight: 600;
+  font-size: 24px;
+}
+
+.client_section .detail-box h4 {
+  font-size: 20px;
 }
 
 .client_section .detail-box p {
@@ -681,12 +706,6 @@ header button start
   margin-top: 10px;
 }
 
-.info_section_header .text-danger {
-  font-size: 65%;
-  padding-right: 5px;
-  /*padding-top: 5px;*/
-}
-
 .text-danger {
   display: flex;
   justify-content: center; /* Выравнивание по горизонтали */
@@ -701,16 +720,19 @@ header button start
   margin-left: -5%;
 }
 
-.info_section_header .info_form input {
-  width: 150px;
-  border: none;
-  margin-bottom: 0px;
-  background-color: #eaeaea;
-  outline: none;
-  color: #101010;
-  padding: 0px;
-  padding-left: 25px;
-  border-radius: 25px;
+.info_section_header .info_form form {
+  display: inline-flex;
+  margin-right: 5%;
+  margin-left: -5%;
+}
+
+.info_section_header .info_form .text-danger {
+  display: block;
+  font-size: 0.875rem;
+  text-align: left;
+  position: absolute;
+  margin-top: -20px;
+  margin-left: -7px;
 }
 
 .info_section_header .info_form button,
@@ -773,7 +795,7 @@ header button start
   position: relative;
   margin-bottom: 20px;
   color: #ffffff;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
 }
@@ -924,15 +946,19 @@ header button start
 
 
 .modal-content-taxi {
-  background-color: #fefefe;
-  margin: 10% auto;
+  background-color: #829F3D;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   padding: 20px;
   border: 1px solid #888;
   width: 80%;
   max-width: 600px;
-  color: #829F3D;
+  color: #fefefe;
   font-size: 18px;
   line-height: 1.5;
+  border-radius: 25px;
 }
 
 .hidden {
@@ -1016,7 +1042,7 @@ label {
   font-size: 36px;
   margin: 20px 0 40px;
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
@@ -1028,7 +1054,7 @@ label {
   font-size: 20px;
   margin: 20px 0 40px;
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
@@ -1100,12 +1126,12 @@ label {
 }
 
 .services-grid__item i {
-  right: 20px;
-  bottom: -45px;
-  background: #FFB300;
+  right: 0;
+  bottom: -35px;
+  background: #ff8c00;
   border-radius: 50%;
   position: absolute;
-  width: 90px;
+  width: 70px;
 }
 
 .services-grid__item i:before {
@@ -1128,7 +1154,7 @@ label {
 .services-grid__item h4 {
   padding: 20px 20px 0;
   position: relative;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
 }
@@ -1198,7 +1224,7 @@ label {
 
 .hero-banner-one .hero-heading {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   letter-spacing: -1px;
@@ -1207,6 +1233,14 @@ label {
   margin-bottom: 0.5rem;
   text-align: left;
   color: white;
+}
+
+.main-illustration {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  margin: 0 auto;
+  width: auto !important
 }
 
 .hero-banner-one form {
@@ -1218,14 +1252,6 @@ label {
   display: flex;
 }
 
-.main-illustration {
-  max-width: 100%;
-  max-height: 100%;
-  display: block;
-  margin: 0 auto;
-  width: auto !important
-}
-
 .hero-banner-one form input {
   font-size: 15px;
   font-weight: 500;
@@ -1234,7 +1260,7 @@ label {
   background: 0 0;
   outline: 0 none;
   height: 100%;
-  flex: 1
+  flex: 1;
 }
 
 .hero-banner-one form button {
@@ -1245,6 +1271,30 @@ label {
   color: #ffffff;
   border-radius: 25px;
 }
+
+/* Додано медіа-запити для адаптації під різні розміри екрану */
+
+@media (max-width: 768px) {
+  .hero-banner-one form {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero-banner-one form {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .hero-banner-one form input {
+    margin-bottom: 10px;
+  }
+
+  .hero-banner-one form button {
+    flex-basis: 100%;
+  }
+}
+
 
 .hero-banner-one .pr-info span {
   font-size: 1.6em;
@@ -1494,7 +1544,7 @@ label {
 
 .inner-title {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   padding-right: 30px;
@@ -1572,7 +1622,7 @@ label {
 
 .main-title {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   margin: 0;
@@ -1638,7 +1688,7 @@ body .btn-one {
 
 .post-title {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   margin-top: 20px;
@@ -1718,7 +1768,7 @@ body .btn-one {
 
 .loader {
   text-transform: uppercase;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
   font-weight: 700;
   font-style: italic;
   background-color: #a8c465;
@@ -1738,7 +1788,9 @@ body .btn-one {
 
 .loader > span {
   font-size: 10vw;
-  font-family: "franklin gothic medium", sans-serif;
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 700;
+  font-style: italic;
   display: inline-block;
   animation: flip 2.6s infinite linear;
   transform-origin: 0 70%;
@@ -1870,6 +1922,10 @@ body .btn-one {
 
 .video-box {
   padding: 20px 0 20px 0;
+}
+
+.video-box a[data-youtube] {
+  margin-bottom: 20px;
 }
 
 .modal-content {
