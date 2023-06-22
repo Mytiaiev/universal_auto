@@ -8,7 +8,7 @@ from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from app.models import ParkSettings, BoltService, BoltPaymentsOrder
+from app.models import ParkSettings, BoltService, BoltPaymentsOrder, Fleets_drivers_vehicles_rate, Fleet
 from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
@@ -249,17 +249,40 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         url = BoltService.get_value('BOLT_DRIVERS_URL')
         xpath = BoltService.get_value('BOLT_GET_DRIVERS_TABLE_1')
         self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
-        xpath = f'{BoltService.get_value("BOLT_DISABLE_CASH_1")}{name} {second_name}"]'
-        WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
+        driver = self.get_driver_by_name(name=name, second_name=second_name)
+        fleet = Fleet.objects.get(name=self.fleet)
+        try:
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, BoltService.get_value('BOLT_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
+        except:
+            pass
+        try:
+            xpath = f'{BoltService.get_value("BOLT_DISABLE_CASH_1")}{name} {second_name}")]'
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
+        except TimeoutException:
+            try:
+                xpath = f'{BoltService.get_value("BOLT_DISABLE_CASH_1")}{second_name}")]'
+                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
+            except TimeoutException:
+                self.logger.error(f"No driver {driver} in {fleet}")
         time.sleep(self.sleep)
         elements = self.driver.find_elements(By.XPATH, BoltService.get_value("BOLT_GET_DRIVERS_TABLE_6"))
         if disable and len(elements) == 2:
             WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLT_DISABLE_CASH_2")))).click()
+            time.sleep(self.sleep)
             WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLT_DISABLE_CASH_3")))).click()
-
-
+        if not disable and len(elements) != 2:
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located((By.XPATH, BoltService.get_value("BOLT_DISABLE_CASH_2")))).click()
+        new_elements = self.driver.find_elements(By.XPATH, BoltService.get_value("BOLT_GET_DRIVERS_TABLE_6"))
+        if len(new_elements) == 2:
+            pay_cash = True
+        else:
+            pay_cash = False
+        Fleets_drivers_vehicles_rate.objects.filter(driver=driver, fleet=fleet).update(pay_cash=pay_cash)
 
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:

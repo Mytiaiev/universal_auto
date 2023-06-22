@@ -40,7 +40,7 @@ bolt_states = {
     'BOLT_GET_DRIVER_STATUS_FROM_MAP_3': (
         '//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][', 'XPATH'),
     'BOLT_GET_DRIVER_STATUS_FROM_MAP_3.1': (']/div/div/div[1]/span/span', 'XPATH'),
-    'BOLT_DISABLE_CASH_1': ('//tr[@role="row"]//p[text()="', 'XPATH'),
+    'BOLT_DISABLE_CASH_1': ('//tr[@role="row"]//p[contains(text(), "', 'XPATH'),
     'BOLT_DISABLE_CASH_2': ('//div[@class="my-auto"]', 'XPATH'),
     'BOLT_DISABLE_CASH_3': ('//div[contains(@class, "max-w-md")]//button[contains(@class, "text-key-light")]', 'XPATH'),
 
@@ -96,7 +96,7 @@ newuklon_states = {
     'NEWUKLONS_WITHDRAW_MONEY_4': ('//input[@formcontrolname="remaining"]', 'XPATH'),
     'NEWUKLONS_WITHDRAW_MONEY_5': ('//div[contains (@class, "tw-col-span-5")]/button[1]', 'XPATH'),
     'NEWUKLONS_WITHDRAW_MONEY_6': ('//button[@data-cy="transfer-btn"]', 'XPATH'),
-    'NEWUKLONS_DISABLE_CASH_1': ('//a[@data-cy="link" and text()=" ', 'XPATH'),
+    'NEWUKLONS_DISABLE_CASH_1': ('//a[@data-cy="link" and contains(text(), "', 'XPATH'),
     'NEWUKLONS_DISABLE_CASH_2': ('//div[contains(@class, "restriction-group__item")][3]//label/span', 'XPATH'),
     'NEWUKLONS_DISABLE_CASH_3': ('//button[@type="button"]/span[@class="mat-button-wrapper"]', 'XPATH')
 }

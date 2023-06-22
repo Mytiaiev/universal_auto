@@ -12,7 +12,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from app.models import NewUklonService, ParkSettings, NewUklonPaymentsOrder, NewUklonFleet
+from app.models import NewUklonService, ParkSettings, NewUklonPaymentsOrder, NewUklonFleet, \
+    Fleets_drivers_vehicles_rate, Fleet
 from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
@@ -281,20 +282,39 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         url = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_1')
         xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_2')
         self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
-        xpath = f'{NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_1")}{second_name} {name} "]'
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH, xpath))).click()
+        driver = self.get_driver_by_name(name=name, second_name=second_name)
+        fleet = Fleet.objects.get(name=self.fleet)
+        try:
+            xpath = f'{NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_1")}{second_name} {name}")]'
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))).click()
+        except TimeoutException:
+            try:
+                xpath = f'{NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_1")}{second_name}")]'
+                WebDriverWait(self.driver, self.sleep).until(
+                    EC.element_to_be_clickable((By.XPATH, xpath))).click()
+            except TimeoutException:
+                self.logger.error(f'No_driver {driver} in {fleet}')
         WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.XPATH,
                                             NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_8")))).click()
         check_cash = WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_9"))))
-        if disable and 'true' in check_cash.get_attribute("aria-checked"):
+        if ((disable and 'true' in check_cash.get_attribute("aria-checked")) or
+                (not disable and 'false' in check_cash.get_attribute("aria-checked"))):
+            time.sleep(self.sleep)
             WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH,
                                                 NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_2")))).click()
             WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_3")))).click()
+        new_check = WebDriverWait(self.driver, self.sleep).until(
+            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_9"))))
+        if 'true' in new_check.get_attribute("aria-checked"):
+            pay_cash = True
+        else:
+            pay_cash = False
+        Fleets_drivers_vehicles_rate.objects.filter(driver=driver, fleet=fleet).update(pay_cash=pay_cash)
 
     def withdraw_money(self):
         url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')

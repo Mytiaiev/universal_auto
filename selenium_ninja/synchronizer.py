@@ -72,7 +72,7 @@ class Synchronizer:
                     try:
                         WebDriverWait(self.driver, self.sleep).until(
                             EC.element_to_be_clickable(
-                                (By.XPATH, BoltService.get_value('BOLTS_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
+                                (By.XPATH, BoltService.get_value('BOLT_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
                     except:
                         pass
                     self.driver.get(url)
