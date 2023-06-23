@@ -1,12 +1,12 @@
 import json
-import os
 
 from django.shortcuts import render
 from django.views.generic import View, TemplateView
+from django.core.paginator import Paginator
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-
+from taxi_service.utils import get_all_drivers
 from app.models import ParkSettings
 
 
@@ -75,9 +75,24 @@ class GetRequestView(View):
             return handler.handle_unknown_action(request)
 
 
+class InvestmentView(View):
+    def get(self, request):
+        return render(request, 'investment.html', {'subscribe_form': SubscriberForm()})
 
-def investment(request):
-    return render(request, 'investment.html', {'subscribe_form': SubscriberForm()})
+
+class DriversView(TemplateView):
+    template_name = 'drivers.html'
+    paginate_by = 8
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        drivers = get_all_drivers()
+        paginator = Paginator(drivers, self.paginate_by)
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context['subscribe_form'] = SubscriberForm()
+        context['page_obj'] = page_obj
+        return context
 
 
 def blog(request):
