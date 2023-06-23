@@ -66,10 +66,10 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_6')).click()
         if self.sleep:
             time.sleep(self.sleep)
-        if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
-        else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+        # if self.remote:
+        self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+        # else:
+        #     self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
 
     def save_report(self, day=None):
         if self.sleep:

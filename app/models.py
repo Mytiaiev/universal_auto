@@ -7,7 +7,7 @@ import pendulum
 from django.core.exceptions import ObjectDoesNotExist
 
 from scripts.selector_services import *
-from django.db import models, IntegrityError
+from django.db import models, IntegrityError, ProgrammingError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
 from django.utils.safestring import mark_safe
@@ -458,8 +458,6 @@ class User(models.Model):
             elif len(phone_number) == 11:
                 valid_phone_number = f'+3{phone_number}'
                 return valid_phone_number
-        else:
-            return None
 
 
 class DriverManager(User):
@@ -471,7 +469,6 @@ class DriverManager(User):
 
     def __str__(self):
         return f'{self.name} {self.second_name}'
-
 
 
 class Driver(User):
@@ -1317,7 +1314,7 @@ class Service(PolymorphicModel):
     def get_value(cls, key, default=None):
         try:
             setting = cls.objects.get(key=key)
-        except ObjectDoesNotExist:
+        except (ProgrammingError, ObjectDoesNotExist):
             return default
         return setting.value
 

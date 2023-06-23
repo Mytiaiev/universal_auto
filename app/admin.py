@@ -1,18 +1,13 @@
 from django.contrib import admin
 from django.contrib.admin import AdminSite
 from django.forms import BaseInlineFormSet
+from django.utils import timezone
 
 from .models import *
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
-group1, created = Group.objects.get_or_create(name='Partner')
-
-for user in group1.user_set.all():
-    for permission in group1.permissions.all():
-        user.user_permissions.add(permission)
 
 
 def assign_model_permissions(group):
@@ -42,7 +37,14 @@ def assign_model_permissions(group):
                 group.permissions.add(permission_obj)
 
 
-assign_model_permissions(group1)
+try:
+    group1, created = Group.objects.get_or_create(name='Partner')
+    for user in group1.user_set.all():
+        for permission in group1.permissions.all():
+            user.user_permissions.add(permission)
+    assign_model_permissions(group1)
+except ProgrammingError:
+    pass
 
 
 @receiver(post_save, sender=Group)
@@ -255,7 +257,7 @@ class VehicleGPSAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('name', 'second_name', 'email', 'phone_number', 'created_at')
+    list_display = ('name', 'second_name', 'email', 'phone_number', 'created_at', 'role')
     list_display_links = ('name', 'second_name')
     list_filter = ['created_at']
     search_fields = ('name', 'second_name')
@@ -263,7 +265,7 @@ class UserAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['name', 'second_name', 'email', 'phone_number']}),
+        (None, {'fields': ['name', 'second_name', 'email', 'phone_number', 'role']}),
     ]
 
 
@@ -688,7 +690,7 @@ class UberPaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmi
 
 @admin.register(DriverManager)
 @add_partner_on_save_model(DriverManager)
-class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class DriverManagerAdmin(filter_queryset_by_group('Partner')(UserAdmin)):
     search_fields = ('name', 'second_name')
     ordering = ('name', 'second_name')
     list_per_page = 25

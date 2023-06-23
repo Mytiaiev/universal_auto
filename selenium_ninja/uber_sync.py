@@ -131,10 +131,9 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             EC.presence_of_element_located((By.XPATH, download_button)))
         WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
         time.sleep(self.sleep)
-        if self.remote:
-            self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
-        else:
-            self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
+        self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
+        # else:
+        #     self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
 
     def save_report(self, day=None):
         if self.sleep:

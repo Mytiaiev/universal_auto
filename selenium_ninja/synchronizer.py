@@ -27,18 +27,18 @@ class Synchronizer:
             self.driver = chrome_driver
 
     def try_to_execute(self, func_name, *args, **kwargs):
-        if not self.driver.service.is_connectable():
-            print('###################### Driver recreating... ########################')
-            self.driver = self.build_driver()
-            time.sleep(self.sleep)
-        try:
-            WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH, '//div')))
-        except InvalidSessionIdException:
-            print('###################### Session recreating... ########################')
-            self.driver = self.build_driver()
-            time.sleep(self.sleep)
-        except TimeoutException:
-            pass
+        # if not self.driver.service.is_connectable():
+        #     print('###################### Driver recreating... ########################')
+        #     self.driver = self.build_driver()
+        #     time.sleep(self.sleep)
+        # try:
+        #     WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH, '//div')))
+        # except InvalidSessionIdException:
+        #     print('###################### Session recreating... ########################')
+        #     self.driver = self.build_driver()
+        #     time.sleep(self.sleep)
+        # except TimeoutException:
+        #     pass
         return getattr(self, func_name)(*args, **kwargs)
 
     @staticmethod
@@ -61,7 +61,7 @@ class Synchronizer:
             except (TimeoutException, FileNotFoundError):
                 try:
                     for cookie in pickle.load(open(os.path.join(os.getcwd(), "cookies",
-                                                                f'{cookies_name}_cookies'), 'rb')):
+                                                                f'{cookies_name}_cookie'), 'rb')):
                         self.driver.add_cookie(cookie)
                     time.sleep(self.sleep)
                     self.driver.get(url)

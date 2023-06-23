@@ -364,7 +364,7 @@ def setup_periodic_tasks(sender, **kwargs):
 
 def init_chrome_driver():
     global CHROME_DRIVER
-    CHROME_DRIVER = SeleniumTools(session='Ninja', week_number=None, driver=True, remote=False,
+    CHROME_DRIVER = SeleniumTools(session='Ninja', week_number=None, driver=True, remote=True,
                                   sleep=5, headless=True, profile='Tasks')
 
 

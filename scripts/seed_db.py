@@ -174,7 +174,6 @@ def init_models():
                                  driver=driver,
                                  vehicle=vehicle,
                                  driver_external_id=rate['driver_external_id'],
-                                 rate=rate['rate']
                                  )
     for item in DRIVERS_MAP['driver_rate_levels']:
         get_or_create_object(DriverRateLevels, ['fleet', 'threshold_value']

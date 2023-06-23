@@ -3,7 +3,7 @@ from django.db import IntegrityError
 from scripts.selector_services import uagps_states
 
 
-def init_service_newuklon():
+def init_service_uagps():
     for key, value in uagps_states.items():
         uagps_service = UaGpsService.objects.filter(key=key).first()
         if not uagps_service:
@@ -22,5 +22,5 @@ def init_service_newuklon():
 
 
 def run():
-    init_service_newuklon()
+    init_service_uagps()
     print('Script UaGpsService done')
