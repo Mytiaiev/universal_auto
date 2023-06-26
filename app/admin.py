@@ -28,6 +28,7 @@ def assign_model_permissions(group):
         'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
         'Fleets_drivers_vehicles_rate': {'view': True, 'add': True, 'change': True, 'delete': True},
         'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
+        'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     }
 
     for model, permissions in models.items():
@@ -405,12 +406,6 @@ class CarEfficiencyAdmin(admin.ModelAdmin):
     list_display = ['driver', 'efficiency', 'mileage', 'start_report', 'end_report']
     readonly_fields = ['driver', 'efficiency', 'mileage', 'start_report', 'end_report']
 
-
-@admin.register(ParkSettings)
-class ParkSettingsAdmin(admin.ModelAdmin):
-    list_display = ['description', 'value', ]
-    list_display_links = ['description', 'value', ]
-    exclude = ('key',)
 
 
 @admin.register(BoltService)
@@ -953,3 +948,47 @@ class CommentAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             ]
 
         return fieldsets
+
+
+@admin.register(Park)
+class ParkAdmin(admin.ModelAdmin):
+    list_display = ('name', 'partner')
+
+
+@admin.register(ParkSettings)
+class ParkSettingsAdmin(admin.ModelAdmin):
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            qs = qs.filter(park__partner__user=request.user)
+        return qs
+
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['value', 'description',
+                    ]
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Деталі',                      {'fields': ['key', 'value',
+                                                            'description', 'park',
+                                                            ]}),
+            ]
+        else:
+            fieldsets = [
+                ('Деталі',                      {'fields': ['description', 'value',
+                                                            ]}),
+
+            ]
+
+        return fieldsets
+
+
+
+
+
+

@@ -37,8 +37,8 @@ class Park(models.Model):
     partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        verbose_name = 'Автопарк'
-        verbose_name_plural = 'Автопарки'
+        verbose_name = 'Автопарк партнера'
+        verbose_name_plural = 'Автопарки партнерів'
 
     def __str__(self):
         return self.name
@@ -537,7 +537,6 @@ class Vehicle(models.Model):
             return gps_imei.upper()
         else:
             return None
-
 
 
 
@@ -1303,6 +1302,7 @@ class ParkSettings(models.Model):
         except ParkSettings.DoesNotExist:
             return default
         return setting.value
+
 
 
 class Service(PolymorphicModel):
