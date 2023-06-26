@@ -10,6 +10,7 @@
 				<ul class="breadcrumb-menu">
 					<li>
 						<a href="{% url 'index' %}">Ninja Taxi</a>
+						<i class="fa fa-angle-double-right"></i>
 					</li>
 					<li class="active">Водії</li>
 				</ul>
@@ -29,22 +30,21 @@
 				<div class="row">
 					<div class="teams">
 						{% for driver in page_obj %}
-							<div class="team-item wow fadeInUp" data-wow-delay=".25s"
-									 style=" visibility: visible; animation-delay: 0.25s; animation-name: fadeInUp;">
+							<div class="team-item wow fadeInUp" data-block="1">
 								<div class="team-img">
-									<img src="{% static 'app/images/assets/img-2.webp' %}" alt="thumb"/>
+									<img src="{% static 'app/images/slider-img-1.webp' %}" width="236" height="236" alt="thumb"/>
 								</div>
 								<div class="team-content">
 									<div class="team-bio">
 										<h5>
 											<span>{{ driver.name }} {{ driver.second_name }}</span>
 										</h5>
-										<span>Експертний водій</span>
+										<span style="color: #FFB300;">Експертний водій</span>
 									</div>
 								</div>
 								<div class="team-experience">
-									<p><i class="fa fa-car"></i> Кількість поїздок: 97{{ driver.trip_count }}</p>
-									<p><i class="fa fa-star"></i> Рейтинг: 9.8{{ driver.rating }}</p>
+									<p><i class="fa fa-car" style="color: #7aa343"></i> Кількість поїздок: 97{{ driver.trip_count }}</p>
+									<p><i class="fa fa-star" style="color: #FFD700"></i> Рейтинг: 9.8{{ driver.rating }}</p>
 								</div>
 							</div>
 						{% endfor %}
@@ -53,15 +53,19 @@
 				<div class="pagination">
 					<span class="step-links">
 						{% if page_obj.has_previous %}
-							<a href="?page=1">&laquo; </a>
-							<a href="?page={{ page_obj.previous_page_number }}">попередня</a>
+							<a href="?page=1"><i class="fa fa-angle-double-left"></i></a>
 						{% endif %}
 
-						<span class="current-page">{{ page_obj.number }}</span>
+						{% for num in page_obj.paginator.page_range %}
+							{% if num == page_obj.number %}
+								<span class="current-page">{{ num }}</span>
+							{% else %}
+								<a href="?page={{ num }}">{{ num }}</a>
+							{% endif %}
+						{% endfor %}
 
 						{% if page_obj.has_next %}
-							<a href="?page={{ page_obj.next_page_number }}">наступна</a>
-							<a href="?page={{ page_obj.paginator.num_pages }}"> &raquo;</a>
+							<a href="?page={{ page_obj.paginator.num_pages }}"><i class="fa fa-angle-double-right"></i></a>
 						{% endif %}
 					</span>
 				</div>
