@@ -1304,7 +1304,6 @@ class ParkSettings(models.Model):
         return setting.value
 
 
-
 class Service(PolymorphicModel):
     key = models.CharField(max_length=255, verbose_name='Ключ')
     value = models.CharField(max_length=255, verbose_name='Значення')
