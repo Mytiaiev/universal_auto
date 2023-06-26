@@ -28,6 +28,10 @@ iframe {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 
+.header_section .info_form #sub_email {
+  margin-right: 10px;
+}
+
 .heading_container {
   display: -webkit-box;
   display: -ms-flexbox;
