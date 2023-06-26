@@ -382,7 +382,8 @@ def handle_callback_order(update, context):
         markup = inline_spot_keyboard(order.latitude,
                                       order.longitude,
                                       pk=order.id)
-        order.update(driver=driver)
+        order.driver = driver
+        order.save()
         if order.status_order == Order.ON_TIME:
             context.bot.delete_message(chat_id=-ParkSettings.get_value('DRIVERS_CHAT'),
                                        message_id=int(order.driver_message_id))
