@@ -2136,7 +2136,6 @@ body .btn-one {
 }
 
 .team-item {
-  width: calc(25% - 20px);
   margin: 10px 10px 20px;
   padding: 0 20px 20px;
   text-align: center;
@@ -2215,4 +2214,4 @@ body .btn-one {
 	font-weight: bold;
 }
 
-/*end block site header*/
+/*end Drivers page*/
