@@ -86,7 +86,7 @@ def to_the_address(update, context):
         if addresses is not None:
             for no, key in enumerate(addresses.keys(), 1):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'From_address {no}')])
-            buttons.append([InlineKeyboardButton(timeorder_inline_buttons[1], callback_data="Call_taxi")])
+            buttons.append([InlineKeyboardButton(order_inline_buttons[7], callback_data="Call_taxi")])
             reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_first'] = addresses
             context.bot.send_message(chat_id=chat_id, text=from_address_search, reply_markup=ReplyKeyboardRemove())
@@ -112,7 +112,7 @@ def payment_method(update, context):
         if addresses is not None:
             for no, key in enumerate(addresses.keys(), 1):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'To_the_address {no}')])
-            buttons.append([InlineKeyboardButton(timeorder_inline_buttons[1], callback_data="Wrong_place")])
+            buttons.append([InlineKeyboardButton(order_inline_buttons[7], callback_data="Wrong_place")])
             reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_second'] = addresses
             context.bot.send_message(chat_id=chat_id,
@@ -183,15 +183,15 @@ def order_create(update, context):
                                  distance_google=round(distance_price[1], 2))
 
     if context.user_data.get('time_order'):
-        Order.objects.filter(id=order.pk).update(
-            status_order=Order.ON_TIME,
-            order_time=context.user_data['time_order'])
+        order.status_order = Order.ON_TIME
+        order.order_time = context.user_data['time_order']
+        order.save()
         query.edit_message_text(
             f'Замовлення прийняте, сума замовлення {order.sum} грн\n '
             f'Очікуйте водія о {order.order_time.time()}')
     else:
-        Order.objects.filter(id=order.pk).update(
-            status_order=Order.WAITING)
+        order.status_order = Order.WAITING
+        order.save()
         bot.delete_message(chat_id=user.chat_id,
                            message_id=query.message.message_id)
 
@@ -207,7 +207,8 @@ def send_order_to_driver(sender=None, **kwargs):
                                        order.sum,
                                        increase=order.car_delivery_price)
         count = 0
-        order.update(checked=True)
+        order.checked = True
+        order.save()
         msg = text_to_client(order, client_msg)
         while count < 3:
             if count == 1:
@@ -284,7 +285,8 @@ def increase_order_price(update, context):
             car_delivery_price=F('car_delivery_price') + int(query.data),
             sum=F('sum') + int(query.data),
         )
-    order.update(checked=False)
+    order.checked = False
+    order.save()
 
 
 def time_order(update, context):
@@ -312,9 +314,8 @@ def order_on_time(update, context):
             else:
                 order = Order.objects.filter(chat_id_client=user.chat_id,
                                              status_order=Order.WAITING).last()
-                order.update(status_order=Order.ON_TIME,
-                             order_time=conv_time,
-                             checked=False)
+                order.status_order, order.order_time, order.checked = Order.ON_TIME, conv_time, False
+                order.save()
                 update.message.reply_text(order_complete)
         else:
             update.message.reply_text(small_time_delta)
@@ -347,8 +348,8 @@ def send_time_orders(sender=None, **kwargs):
                                      text=message,
                                      reply_markup=inline_markup_accept(timeorder.pk),
                                      parse_mode=ParseMode.HTML)
-        timeorder.update(driver_message_id=group_msg.message_id,
-                         checked=True)
+        timeorder.driver_message_id, timeorder.checked = group_msg.message_id, True
+        timeorder.save()
 
 
 def client_reject_order(update, context):
@@ -383,7 +384,7 @@ def handle_callback_order(update, context):
                                       pk=order.id)
         order.update(driver=driver)
         if order.status_order == Order.ON_TIME:
-            context.bot.delete_message(chat_id=-863882769,
+            context.bot.delete_message(chat_id=-ParkSettings.get_value('DRIVERS_CHAT'),
                                        message_id=int(order.driver_message_id))
             context.bot.send_message(chat_id=driver.chat_id,
                                      text=time_order_accepted)
@@ -434,9 +435,8 @@ def handle_callback_order(update, context):
                                               message_id=order.client_message_id,
                                               reply_markup=None)
         text_to_client(order, driver_cancel)
-        order.update(status_order=Order.WAITING,
-                     driver=None,
-                     checked=False)
+        order.status_order, order.driver, order.checked = Order.WAITING, None, False
+        order.save()
 
     elif data[0] == "Client_on_site":
         if not context.user_data.get('recheck'):
