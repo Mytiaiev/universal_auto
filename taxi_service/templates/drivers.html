@@ -1,0 +1,78 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load i18n %}
+<!-- investment section -->
+{% block content %}
+	<section class="drivers_section">
+		<div class="site-breadcrumb" style="background: #a8c465">
+			<div class="container">
+				<h2 class="breadcrumb-title">{%  trans 'Наші Водії' %}</h2>
+				<ul class="breadcrumb-menu">
+					<li>
+						<a href="{% url 'index' %}">Ninja Taxi</a>
+						<i class="fa fa-angle-double-right"></i>
+					</li>
+					<li class="active">{%  trans 'Водії' %}</li>
+				</ul>
+			</div>
+		</div>
+		<div class="team-area py-120">
+			<div class="container">
+				<div class="row">
+					<div class="col-lg-6 mx-auto">
+						<div class="site-heading text-center">
+							<span class="site-title-tagline">{%  trans 'Водії' %}</span>
+							<h2 class="site-title">{%  trans 'Наші досвідчені водії' %}</h2>
+							<div class="heading-divider"></div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="teams">
+						{% for driver in page_obj %}
+							<div class="team-item" data-block="1">
+								<div class="team-img">
+									<img src="{% static 'app/images/slider-img-1.webp' %}" width="236" height="236" alt="thumb"/>
+								</div>
+								<div class="team-content">
+									<div class="team-bio">
+										<h5>
+											<span>{{ driver.name }} {{ driver.second_name }}</span>
+										</h5>
+										<span style="color: #FFB300;">{%  trans 'Експертний водій' %}</span>
+									</div>
+								</div>
+								<div class="team-experience">
+									<p><i class="fa fa-car" style="color: #7aa343"></i> {%  trans 'Кількість поїздок: ' %}97{{ driver.trip_count }}</p>
+									<p><i class="fa fa-star" style="color: #FFD700"></i> {%  trans 'Рейтинг: ' %}9.8{{ driver.rating }}</p>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+				<div class="pagination">
+					<span class="step-links">
+						{% if page_obj.has_previous %}
+							<a href="?page=1"><i class="fa fa-angle-double-left"></i></a>
+						{% endif %}
+
+						{% for num in page_obj.paginator.page_range %}
+							{% if num == page_obj.number %}
+								<span class="current-page">{{ num }}</span>
+							{% else %}
+								<a href="?page={{ num }}">{{ num }}</a>
+							{% endif %}
+						{% endfor %}
+
+						{% if page_obj.has_next %}
+							<a href="?page={{ page_obj.paginator.num_pages }}"><i class="fa fa-angle-double-right"></i></a>
+						{% endif %}
+					</span>
+				</div>
+			</div>
+		</div>
+	</section>
+{% endblock %}
+
+</main>
+</html>
