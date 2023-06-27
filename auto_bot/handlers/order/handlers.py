@@ -281,10 +281,8 @@ def increase_order_price(update, context):
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order=Order.WAITING).last()
     if query.data != "Continue_search":
-        order.update(
-            car_delivery_price=F('car_delivery_price') + int(query.data),
-            sum=F('sum') + int(query.data),
-        )
+        order.car_delivery_price += int(query.data)
+        order.sum += int(query.data)
     order.checked = False
     order.save()
 
@@ -355,7 +353,8 @@ def send_time_orders(sender=None, **kwargs):
 def client_reject_order(update, context):
     query = update.callback_query
     order = Order.objects.filter(pk=int(query.data.split(' ')[1])).first()
-    order.update(status_order=Order.CANCELED)
+    order.status_order = Order.CANCELED
+    order.save()
     try:
         for i in range(3):
             context.bot.delete_message(chat_id=order.chat_id_client,
@@ -374,7 +373,8 @@ def handle_callback_order(update, context):
     order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] in ("Accept_order", "Start_route"):
         if data[0] == "Start_route":
-            order.update(status_order=Order.IN_PROGRESS)
+            order.status_order = Order.IN_PROGRESS
+            order.save()
         record = UseOfCars.objects.filter(user_vehicle=driver,
                                           created_at__date=timezone.now().date(),
                                           end_at=None).last()
@@ -409,9 +409,9 @@ def handle_callback_order(update, context):
                                                   order.sum)
             client_msg = text_to_client(order, report_for_client,
                                         button=inline_reject_order(order.pk))
-            order.update(status_order=Order.IN_PROGRESS,
-                         driver_message_id=query.message.message_id,
-                         client_message_id=client_msg)
+            order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
+            order.client_message_id = client_msg
+            order.save()
             try:
                 context.user_data['running'] = True
                 r = threading.Thread(target=send_map_to_client,
@@ -429,7 +429,8 @@ def handle_callback_order(update, context):
     elif data[0] == 'Reject_order':
         context.user_data['running'] = False
         query.edit_message_text(text="Ви <<Відмовились від замовлення>>")
-        driver.update(driver_status=Driver.ACTIVE)
+        driver.driver_status = Driver.ACTIVE
+        driver.save()
         ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
 
         context.bot.edit_message_reply_markup(chat_id=order.chat_id_client,
@@ -517,8 +518,8 @@ def handle_callback_order(update, context):
         #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
         # else:
         context.user_data.clear()
-        order.update(status_order=Order.COMPLETED)
-
+        order.status_order = Order.COMPLETED
+        order.save()
 
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
     title = 'Послуга особистого водія'
