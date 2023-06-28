@@ -6,7 +6,7 @@ DRIVERS_MAP = {
     'fleets': [
         {'name': 'Uber', 'model': UberFleet, 'min_fee': 3000},
         {'name': 'Bolt', 'model': BoltFleet, 'min_fee': 4000},
-        {'name': 'NewUklon', 'model': NewUklonFleet, 'min_fee': 6000},
+        {'name': 'Uklon', 'model': NewUklonFleet, 'min_fee': 6000},
         {'name': 'Ninja', 'model': NinjaFleet, 'min_fee': 6000},
     ],
     'drivers': [
@@ -18,7 +18,7 @@ DRIVERS_MAP = {
                 [
                     {'fleet': 'Uber', 'driver_external_id': '775f8943-b0ca-4079-90d3-c81d6563d0f1', 'rate': 0.50},
                     {'fleet': 'Bolt', 'driver_external_id': '+380661891408', 'rate': 0.50},
-                    {'fleet': 'NewUklon', 'driver_external_id': '512322', 'rate': 0.5},
+                    {'fleet': 'Uklon', 'driver_external_id': '512322', 'rate': 0.5},
                 ]
         },
         {
@@ -29,7 +29,7 @@ DRIVERS_MAP = {
                 [
                     {'fleet': 'Uber', 'driver_external_id': '9a182345-fd18-490f-a908-94f520a9d2d1', 'rate': 0.6},
                     {'fleet': 'Bolt', 'driver_external_id': '+380936503350', 'rate': 0.6}, 
-                    {'fleet': 'NewUklon', 'driver_external_id': '519154', 'rate': 0.4},
+                    {'fleet': 'Uklon', 'driver_external_id': '519154', 'rate': 0.4},
                 ]
         },
         {
@@ -40,7 +40,7 @@ DRIVERS_MAP = {
                 [
                     {'fleet': 'Uber', 'driver_external_id': 'cd725b41-9e47-4fd0-8a1f-3514ddf6238a', 'rate': 0.50},
                     {'fleet': 'Bolt', 'driver_external_id': '+380668914200', 'rate': 0.50},
-                    {'fleet': 'NewUklon', 'driver_external_id': '512329', 'rate': 0.5},
+                    {'fleet': 'Uklon', 'driver_external_id': '512329', 'rate': 0.5},
                 ]
         },
         {
@@ -51,7 +51,7 @@ DRIVERS_MAP = {
                 [
                     {'fleet': 'Uber', 'driver_external_id': 'd303a6c5-56f7-4ebf-a341-9cfa7c759388', 'rate': 0.65},
                     {'fleet': 'Bolt', 'driver_external_id': '+380671887096', 'rate': 0.65},
-                    {'fleet': 'NewUklon', 'driver_external_id': '512875', 'rate': 0.35},
+                    {'fleet': 'Uklon', 'driver_external_id': '512875', 'rate': 0.35},
                 ]
         },
         {
@@ -62,7 +62,7 @@ DRIVERS_MAP = {
                 [
                     {'fleet': 'Uber', 'driver_external_id': '49dffc54-e8d9-47bd-a1e5-52ce16241cb6', 'rate': 0.65},
                     {'fleet': 'Bolt', 'driver_external_id': '+380502428878', 'rate': 0.65},
-                    {'fleet': 'NewUklon', 'driver_external_id': '512357', 'rate': 0.35},
+                    {'fleet': 'Uklon', 'driver_external_id': '512357', 'rate': 0.35},
                 ]
         },
         {
@@ -73,7 +73,7 @@ DRIVERS_MAP = {
                 [
                     {'fleet': 'Uber', 'driver_external_id': '3b4ff5f9-ae59-465e-8e19-f00970963876', 'rate': 0.60},
                     {'fleet': 'Bolt', 'driver_external_id': '+380669692591', 'rate': 0.60},
-                    {'fleet': 'NewUklon', 'driver_external_id': '517489', 'rate': 0.4},
+                    {'fleet': 'Uklon', 'driver_external_id': '517489', 'rate': 0.4},
                 ]
         },
         {
@@ -94,7 +94,7 @@ DRIVERS_MAP = {
                 
                     {'fleet': 'Uber', 'driver_external_id': 'fd19c311-523d-45fd-967f-b4c6408a9500', 'rate': 0.5},
                     {'fleet': 'Bolt', 'driver_external_id': '+380631694021', 'rate': 0.5},
-                    {'fleet': 'NewUklon', 'driver_external_id': '549340', 'rate': 0.5},
+                    {'fleet': 'Uklon', 'driver_external_id': '549340', 'rate': 0.5},
                 ]
         },  
         {
@@ -113,7 +113,7 @@ DRIVERS_MAP = {
             'fleets_drivers_vehicles_rate':
                 [
                     {'fleet': 'Bolt', 'driver_external_id': '+380964415614', 'rate': 0.65},
-                    {'fleet': 'NewUklon', 'driver_external_id': '544788', 'rate': 0.35},
+                    {'fleet': 'Uklon', 'driver_external_id': '544788', 'rate': 0.35},
                 ]
         },  
 
@@ -125,11 +125,11 @@ DRIVERS_MAP = {
         {'fleet': 'Bolt', 'threshold_value': 10500, 'rate_delta': -0.05},
         {'fleet': 'Bolt', 'threshold_value': 9000, 'rate_delta': -0.05},
         {'fleet': 'Bolt', 'threshold_value': 7000, 'rate_delta': -0.05},
-        {'fleet': 'NewUklon', 'threshold_value': 10500, 'rate_delta': -0.05},
-        {'fleet': 'NewUklon', 'threshold_value': 9000, 'rate_delta': -0.05},
-        {'fleet': 'NewUklon', 'threshold_value': 7000, 'rate_delta': -0.05},
-        {'fleet': 'NewUklon', 'threshold_value': 5000, 'rate_delta': -0.05},
-        {'fleet': 'NewUklon', 'threshold_value': 3000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 10500, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 9000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 7000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 5000, 'rate_delta': -0.05},
+        {'fleet': 'Uklon', 'threshold_value': 3000, 'rate_delta': -0.05},
     ],
 
 }

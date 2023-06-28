@@ -3,6 +3,10 @@ import datetime
 import os
 import pickle
 import time
+
+import pendulum
+import requests
+import redis
 from django.db import IntegrityError
 from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
@@ -11,7 +15,152 @@ from selenium.webdriver.support import expected_conditions as EC
 from app.models import ParkSettings, BoltService, BoltPaymentsOrder
 from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
-from selenium_ninja.synchronizer import Synchronizer
+from selenium_ninja.synchronizer import Synchronizer, RequestSynchronizer
+
+class BoltRequest(RequestSynchronizer):
+    def __init__(self, fleet='Bolt', base_url=BoltService.get_value('REQUEST_BOLT_LOGIN_URL')):
+        self.params = {"language": "uk-ua",
+                       "version": "FO.2.61"}
+        super().__init__(fleet=fleet, base_url=base_url)
+
+    def get_login_token(self):
+        payload = {
+            'username': ParkSettings.get_value("BOLT_NAME"),
+            'password': ParkSettings.get_value("BOLT_PASSWORD"),
+            'device_name': "Chrome",
+            'device_os_version': "NT 10.0",
+            "device_uid": "6439b6c1-37c2-4736-b898-cb2a8608e6e2"
+        }
+        response = requests.post(url=f'{self.base_url}startAuthentication', params=self.params, json=payload)
+        self.redis.set(f"{self.fleet}_refresh", response.json()["data"]["refresh_token"])
+        return response.json()
+
+    def get_access_token(self):
+        token = self.redis.get(f"{self.fleet}_refresh")
+        access_payload = {
+            "refresh_token": token.decode(),
+            "company": {"company_id": "58225",
+                        "company_type": "fleet_company"}
+        }
+        response = requests.post(url=f'{self.base_url}getAccessToken',
+                                 params=self.params, json=access_payload)
+        if not response.json()['code']:
+            self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+        else:
+            self.get_login_token()
+            new_token = self.redis.get(f"{self.fleet}_refresh")
+            new_payload = {
+                "refresh_token": new_token.decode(),
+                "company": {"company_id": "58225",
+                            "company_type": "fleet_company"}
+            }
+            response = requests.post(url=f'{self.base_url}getAccessToken',
+                                     params=self.params, json=new_payload)
+            self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+
+    def get_target_url(self, url, params):
+        self.get_access_token()
+        new_token = self.redis.get(f"{self.fleet}_token")
+        headers = {'Authorization': f'Bearer {new_token.decode()}'}
+        response = requests.get(url, params=params, headers=headers)
+        return response.json()
+
+    @staticmethod
+    def start_report_interval(start_date):
+        date = pendulum.from_format(start_date, "YYYY-MM-DD")
+        return date.in_timezone("Europe/Kiev").start_of("day")
+
+    @staticmethod
+    def end_report_interval(end_date):
+        date = pendulum.from_format(end_date, "YYYY-MM-DD")
+        return date.in_timezone("Europe/Kiev").end_of("day")
+
+    def download_report(self, start, end):
+        report = BoltPaymentsOrder.objects.filter(report_from=self.start_report_interval(start),
+                                                  report_to=self.end_report_interval(end))
+        return list(report)
+
+    def save_report(self, start, end):
+        if not self.download_report(start, end):
+            return self.download_report(start, end)
+        # date format str yyyy-mm-dd
+        self.params.update({"start_date": start,
+                            "end_date": end,
+                            "offset": 0,
+                            "limit": 50})
+        report = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', self.params)
+        for driver in report['data']['drivers']:
+            order = BoltPaymentsOrder(
+                report_from=self.start_report_interval(start),
+                report_to=self.end_report_interval(end),
+                driver_full_name=driver['name'],
+                mobile_number=driver['id'],
+                range_string='',
+                total_amount=driver['gross_revenue'],
+                cancels_amount=driver['cancellation_fees'],
+                autorization_payment=0,
+                autorization_deduction=0,
+                additional_fee=0,
+                fee=float(driver['gross_revenue']) - float(driver['net_earnings']),
+                total_amount_cach=driver['cash_in_hand'],
+                discount_cash_trips=0,
+                driver_bonus=driver['bonuses'],
+                compensation=driver['compensations'],
+                refunds=driver['expense_refunds'],
+                tips=driver['tips'],
+                weekly_balance=0)
+            try:
+                order.save()
+            except IntegrityError:
+                pass
+        return self.download_report(start, end)
+
+    def get_drivers_table(self):
+        driver_list = []
+        start = end = pendulum.now().strftime('%Y-%m-%d')
+        params = {"start_date": start,
+                  "end_date": end,
+                  "offset": 0,
+                  "limit": 25}
+        params.update(self.params)
+        report = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', params)
+        drivers = report['data']['rows']
+        for driver in drivers:
+            driver_params = self.params.copy()
+            driver_params['id'] = driver['id']
+            driver_info = self.get_target_url(f'{self.base_url}getDriver', driver_params)
+            driver_list.append({
+                'fleet_name': self.fleet,
+                'name': driver_info['data']['first_name'],
+                'second_name': driver_info['data']['last_name'],
+                'email': driver_info['data']['email'],
+                'phone_number': driver_info['data']['phone'],
+                'driver_external_id': driver_info['data']['id'],
+                'pay_cash': driver_info['data']['has_cash_payment'],
+                'licence_plate': '',
+                'vehicle_name': '',
+                'vin_code': '',
+
+            })
+            time.sleep(1)
+        return driver_list
+
+    def get_drivers_status(self):
+        with_client = []
+        wait = []
+        report = self.get_target_url(f'{self.base_url}getDriversForLiveMap', self.params)
+        drivers = report['data']['list']
+        if drivers:
+            for driver in drivers:
+                name, second_name = driver['name'].split(' ')
+                if driver['state'] == 'waiting_orders':
+                    wait.append((name, second_name))
+                    wait.append((second_name, name))
+                else:
+                    with_client.append((name, second_name))
+                    with_client.append((second_name, name))
+        return {'wait': wait,
+                'with_client': with_client}
 
 
 class BoltSynchronizer(Synchronizer, SeleniumTools):
@@ -167,7 +316,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
                 self.driver.back()
                 s_name = self.split_name(full_name)
                 drivers.append({
-                    'fleet_name': 'Bolt',
+                    'fleet_name': self.fleet,
                     'name': s_name[0],
                     'second_name': s_name[1],
                     'email': self.validate_email(email),

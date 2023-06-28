@@ -408,7 +408,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 break
             s_name = self.split_name(name)
             drivers.append({
-                'fleet_name': 'Uber',
+                'fleet_name': self.fleet,
                 'name': s_name[0],
                 'second_name': s_name[1],
                 'email': self.validate_email(email),

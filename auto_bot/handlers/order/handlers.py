@@ -413,11 +413,12 @@ def handle_callback_order(update, context):
         ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
         if context.user_data['recheck'] == "Off_route":
             query.edit_message_text(text=calc_price_text)
-            record = UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date())
-            licence_plate = (list(record))[-1].licence_plate
+            record = UseOfCars.objects.filter(user_vehicle=driver,
+                                              created_at__date=timezone.now().date(), end_at=None).last()
+            vehicle = Vehicle.objects.filter(licence_plate=record.licence_plate)
             status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
-            s, e = timezone.localtime(status_driver.created_at), timezone.localtime(timezone.localtime())
-            get_distance_trip.delay(data[1], query.message.message_id, s, e, licence_plate)
+            s, e = int(timezone.localtime(status_driver.created_at).timestamp()), int(timezone.localtime().timestamp())
+            get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)
         else:
             message = driver_complete_text(order.sum)
             query.edit_message_text(text=message)
