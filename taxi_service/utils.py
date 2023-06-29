@@ -58,3 +58,8 @@ def restart_order(id_order, car_delivery_price, action):
         order = Order.objects.get(id=id_order)
         order.checked = False
         order.save()
+
+
+def get_all_drivers():
+    drivers = Driver.objects.all()
+    return drivers

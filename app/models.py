@@ -473,7 +473,6 @@ class DriverManager(User):
         return f'{self.name} {self.second_name}'
 
 
-
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
@@ -535,7 +534,6 @@ class Driver(User):
 
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
-
 
 
 class ParkStatus(models.Model):
