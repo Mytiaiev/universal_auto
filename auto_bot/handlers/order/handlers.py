@@ -415,7 +415,7 @@ def handle_callback_order(update, context):
             query.edit_message_text(text=calc_price_text)
             record = UseOfCars.objects.filter(user_vehicle=driver,
                                               created_at__date=timezone.now().date(), end_at=None).last()
-            vehicle = Vehicle.objects.filter(licence_plate=record.licence_plate)
+            vehicle = Vehicle.objects.filter(licence_plate=record.licence_plate).first()
             status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
             s, e = int(timezone.localtime(status_driver.created_at).timestamp()), int(timezone.localtime().timestamp())
             get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)

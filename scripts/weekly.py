@@ -1,13 +1,9 @@
-import os
-
-import redis
-import requests
-from requests.auth import HTTPBasicAuth
-
-from selenium_ninja.bolt_sync import BoltRequest
+from auto.tasks import download_weekly_report
 
 
-def run():
-    bolt = BoltRequest()
-    bolt.save_report('2023-06-19', '2023-06-25')
-
+def run(*args):
+    if args:
+        week_number = f"2022W{args[0]}5"
+    else:
+        week_number = None
+    print(download_weekly_report.delay())

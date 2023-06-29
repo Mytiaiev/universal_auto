@@ -81,7 +81,7 @@ class BoltRequest(RequestSynchronizer):
         return list(report)
 
     def save_report(self, start, end):
-        if not self.download_report(start, end):
+        if self.download_report(start, end):
             return self.download_report(start, end)
         # date format str yyyy-mm-dd
         self.params.update({"start_date": start,

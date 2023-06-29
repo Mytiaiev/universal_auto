@@ -1,6 +1,7 @@
 import json
 import time
 import datetime
+from urllib.parse import urlencode
 
 import pendulum
 import requests
@@ -19,12 +20,14 @@ class UaGpsSynchronizer:
 
         params = {
             'svc': 'token/login',
-            'params': {"token": f"{ParkSettings.get_value('UAGPS_TOKEN')}"}
+            'params': json.dumps({"token": f"{ParkSettings.get_value('UAGPS_TOKEN')}"})
         }
         login = requests.get(self.url, params=params)
         return login.json()['eid']
 
     def generate_report(self, start_time, end_time, vehicle_id):
+        rent_distance = 0
+        rent_time = datetime.timedelta()
         parametrs = {
             "reportResourceId": 66281,
             "reportObjectId": vehicle_id,
@@ -43,13 +46,15 @@ class UaGpsSynchronizer:
             'sid': self.session,
             'params': f'{json.dumps(parametrs)}'
         }
-
-        report = requests.get(self.url, params=params)
-        raw_time = report.json()['reportResult']['stats'][4][1]
-        clean_time = [int(i) for i in raw_time.split(':')]
-        rent_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
-        raw_distance = report.json()['reportResult']['stats'][5][1]
-        rent_distance = float(raw_distance.split(' ')[0])
+        try:
+            report = requests.get(self.url, params=params)
+            raw_time = report.json()['reportResult']['stats'][4][1]
+            clean_time = [int(i) for i in raw_time.split(':')]
+            rent_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
+            raw_distance = report.json()['reportResult']['stats'][5][1]
+            rent_distance = float(raw_distance.split(' ')[0])
+        except:
+            pass
         return rent_distance, rent_time
 
     @staticmethod
