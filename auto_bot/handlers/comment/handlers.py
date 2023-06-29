@@ -36,7 +36,9 @@ def save_comment(update, context):
                                  created_at__date=timezone.now().date()).last()
     user_comment = Comment.objects.create(
         comment=mark,
-        chat_id=update.effective_chat.id) # need default Ninja partner add
+        chat_id=update.effective_chat.id)           # need default Ninja partner add
     if order:
-        order.update(comment=user_comment, partner=order.driver.partner)
+        order.comment = user_comment
+        order.partner = order.driver.partner
+        order.save()
     context.user_data['state'] = None

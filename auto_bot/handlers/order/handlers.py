@@ -4,7 +4,6 @@ import threading
 import time
 
 from celery.signals import task_postrun
-from django.db.models import F
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings
@@ -86,7 +85,7 @@ def to_the_address(update, context):
         if addresses is not None:
             for no, key in enumerate(addresses.keys(), 1):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'From_address {no}')])
-            buttons.append([InlineKeyboardButton(order_inline_buttons[7], callback_data="Call_taxi")])
+            buttons.append([InlineKeyboardButton(order_inline_buttons[6], callback_data="Call_taxi")])
             reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_first'] = addresses
             context.bot.send_message(chat_id=chat_id, text=from_address_search, reply_markup=ReplyKeyboardRemove())
@@ -112,7 +111,7 @@ def payment_method(update, context):
         if addresses is not None:
             for no, key in enumerate(addresses.keys(), 1):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'To_the_address {no}')])
-            buttons.append([InlineKeyboardButton(order_inline_buttons[7], callback_data="Wrong_place")])
+            buttons.append([InlineKeyboardButton(order_inline_buttons[6], callback_data="Wrong_place")])
             reply_markup = InlineKeyboardMarkup(buttons)
             context.user_data['addresses_second'] = addresses
             context.bot.send_message(chat_id=chat_id,
@@ -385,7 +384,7 @@ def handle_callback_order(update, context):
         order.driver = driver
         order.save()
         if order.status_order == Order.ON_TIME:
-            context.bot.delete_message(chat_id=-ParkSettings.get_value('DRIVERS_CHAT'),
+            context.bot.delete_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'),
                                        message_id=int(order.driver_message_id))
             context.bot.send_message(chat_id=driver.chat_id,
                                      text=time_order_accepted)
