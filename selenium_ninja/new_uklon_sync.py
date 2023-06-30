@@ -182,7 +182,7 @@ class Uklon(Synchronizer_V2):
                 'driver_external_id': driver['signal'],
                 'pay_cash': pay_cash,
                 'licence_plate': self.find_value_str(driver, *('selected_vehicle', 'license_plate')),
-                'vehicle_name': vehicle_name.upper(),
+                'vehicle_name': vehicle_name,
                 'vin_code': vin_code,
             })
 
