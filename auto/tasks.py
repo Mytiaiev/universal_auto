@@ -278,9 +278,8 @@ def check_order(self, order_id):
 
 @app.task(bind=True, queue='non_priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
-    start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
-    start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
-    format_end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    start = datetime.datetime.strptime(str(start_trip_with_client), '%Y-%m-%d %H:%M:%S.%f%z')
+    format_end = datetime.datetime.strptime(str(end), '%Y-%m-%d %H:%M:%S.%f%z')
     delta = format_end - start
     try:
         result = UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('generate_report', start,

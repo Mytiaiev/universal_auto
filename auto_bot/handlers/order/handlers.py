@@ -580,7 +580,7 @@ def change_sum_trip(sender=None, **kwargs):
     if sender == get_distance_trip:
         rep = kwargs.get("retval")
         order_id, query_id, minutes_of_trip, distance = rep
-        order = Order.objects.filter(pk=int(order_id)).first()
+        order = Order.objects.filter(pk=order_id).first()
         order.distance_gps = distance
         price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
                             int(ParkSettings.get_value('COST_PER_KM'))) / 60
