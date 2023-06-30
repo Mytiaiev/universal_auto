@@ -16,9 +16,9 @@ ac = i.active()
 class DriversRatingMixin:
 
     def get_rating(self, start=None, end=None):
-        current_date = pendulum.now().start_of('week').subtract(days=3)
+        current_date = pendulum.now().start_of('week').subtract(weeks=1)
         if not start:
-            start = current_date.start_of('week')
+            start = current_date
         if not end:
             end = current_date.end_of('week')
 

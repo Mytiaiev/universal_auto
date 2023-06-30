@@ -636,18 +636,17 @@ class UberFleet(Fleet):
 
 
 class NinjaFleet(Fleet):
-    def start_report_interval(self, day=None):
-        current_date = pendulum.now().start_of('week').subtract(days=3)
+    @staticmethod
+    def start_report_interval(day=None):
         if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").start_of("day")
-        return current_date.start_of('week')
+            return day.in_timezone("Europe/Kiev").start_of("day")
+        return pendulum.now().start_of('week').subtract(weeks=1)
 
-    def end_report_interval(self, day=None):
-        current_date = pendulum.now().start_of('week').subtract(days=3)
+    @staticmethod
+    def end_report_interval(day=None):
+        current_date = pendulum.now().start_of('week').subtract(weeks=1)
         if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").end_of("day")
+            return day.in_timezone("Europe/Kiev").end_of("day")
         return current_date.end_of('week')
 
     def download_report(self, day=None):

@@ -6,7 +6,6 @@ from app.models import ParkSettings
 settings = {
     'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
     'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
-    'DRIVER_PLAN': ('10000', 'План водія (грн)'),
     'TARIFF_IN_THE_CITY': ('15', 'Тариф в місті (грн)'),
     'TARIFF_OUTSIDE_THE_CITY': ('30', 'Тариф за містом (грн)'),
     'TARIFF_CAR_DISPATCH': ('7', 'Тариф за доставку авто за км (грн)'),

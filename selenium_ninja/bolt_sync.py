@@ -17,6 +17,7 @@ from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer, RequestSynchronizer
 
+
 class BoltRequest(RequestSynchronizer):
     def __init__(self, fleet='Bolt', base_url=BoltService.get_value('REQUEST_BOLT_LOGIN_URL')):
         self.params = {"language": "uk-ua",
@@ -37,32 +38,43 @@ class BoltRequest(RequestSynchronizer):
 
     def get_access_token(self):
         token = self.redis.get(f"{self.fleet}_refresh")
-        access_payload = {
-            "refresh_token": token.decode(),
-            "company": {"company_id": "58225",
-                        "company_type": "fleet_company"}
-        }
-        response = requests.post(url=f'{self.base_url}getAccessToken',
-                                 params=self.params, json=access_payload)
-        if not response.json()['code']:
-            self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
-        else:
-            self.get_login_token()
-            new_token = self.redis.get(f"{self.fleet}_refresh")
-            new_payload = {
-                "refresh_token": new_token.decode(),
+        if token:
+            access_payload = {
+                "refresh_token": token.decode(),
                 "company": {"company_id": "58225",
                             "company_type": "fleet_company"}
             }
             response = requests.post(url=f'{self.base_url}getAccessToken',
-                                     params=self.params, json=new_payload)
-            self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+                                     params=self.params, json=access_payload)
+            if not response.json()['code']:
+                self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+            else:
+                self.get_login_token()
+                new_token = self.redis.get(f"{self.fleet}_refresh")
+                new_payload = {
+                    "refresh_token": new_token.decode(),
+                    "company": {"company_id": "58225",
+                                "company_type": "fleet_company"}
+                }
+                response = requests.post(url=f'{self.base_url}getAccessToken',
+                                         params=self.params, json=new_payload)
+                self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+        else:
+            self.get_login_token()
+            self.get_access_token()
 
     def get_target_url(self, url, params):
         self.get_access_token()
         new_token = self.redis.get(f"{self.fleet}_token")
         headers = {'Authorization': f'Bearer {new_token.decode()}'}
         response = requests.get(url, params=params, headers=headers)
+        return response.json()
+
+    def post_target_url(self, url, params, json):
+        self.get_access_token()
+        new_token = self.redis.get(f"{self.fleet}_token")
+        headers = {'Authorization': f'Bearer {new_token.decode()}'}
+        response = requests.post(url, json=json, params=params, headers=headers)
         return response.json()
 
     @staticmethod
@@ -142,7 +154,7 @@ class BoltRequest(RequestSynchronizer):
                 'vin_code': '',
 
             })
-            time.sleep(1)
+            time.sleep(0.5)
         return driver_list
 
     def get_drivers_status(self):
@@ -178,17 +190,11 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         element.clear()
         element.send_keys(ParkSettings.get_value("BOLT_PASSWORD"))
         self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_4')).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        cookie_filename = f'{ParkSettings.get_value("BOLT_NAME")}_cookie'
-        cookie_filepath = os.path.join(os.getcwd(), "cookies", cookie_filename)
-
-        pickle.dump(self.driver.get_cookies(), open(cookie_filepath, 'wb'))
 
     def download_payments_order(self, day=None, interval=None):
         url = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_1')
         xpath = BoltService.get_value('BOLT_DOWNLOAD_PAYMENTS_ORDER_2')
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
+        self.get_target_element_of_page(url, xpath)
         try:
             WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable(
@@ -295,8 +301,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         drivers = []
         url = BoltService.get_value('BOLTS_GET_DRIVERS_TABLE_1')
         xpath = BoltService.get_value('BOLTS_GET_DRIVERS_TABLE_2')
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
-        # self.driver.get_screenshot_as_file('BoltSynchronizer.png')
+        self.get_target_element_of_page(url, xpath)
         i_table = 0
         while True:
             i_table += 1
@@ -373,7 +378,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
         try:
             url = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_1')
             xpath = BoltService.get_value('BOLTS_GET_DRIVER_STATUS_2')
-            self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
+            self.get_target_element_of_page(url, xpath)
             return {
                 'width_client': self.get_driver_status_from_map('1'),
                 'wait': self.get_driver_status_from_map('2')
@@ -392,13 +397,12 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
                     report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             return list(report)
         except Exception as err:
-            print(err)
+            self.logger.error(err)
 
     def add_driver(self, jobapplication):
         if not jobapplication.status_bolt:
             url = BoltService.get_value('BOLT_ADD_DRIVER_1')
-            self.get_target_element_of_page(url, BoltService.get_value('BOLT_ADD_DRIVER_2.1'),
-                                            ParkSettings.get_value("BOLT_NAME"))
+            self.get_target_element_of_page(url, BoltService.get_value('BOLT_ADD_DRIVER_2.1'))
             WebDriverWait(self.driver, self.sleep).until(
                 EC.presence_of_element_located((By.XPATH, BoltService.get_value('BOLT_ADD_DRIVER_2.1')))).click()
             form_email = WebDriverWait(self.driver, self.sleep).until(

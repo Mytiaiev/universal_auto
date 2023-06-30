@@ -159,8 +159,8 @@ def update_driver_data(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
-                BoltRequest().synchronize()
-                UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
+                # BoltRequest().synchronize()
+                # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
                 UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
             else:
                 logger.info('passed')
@@ -203,8 +203,7 @@ def withdraw_uklon(self):
 def download_uber_trips(self):
     try:
         day = pendulum.now().start_of('day').subtract(days=1)
-        format_day = day.format("DD.MM.YYYY")
-        UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day=format_day)
+        UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
     except Exception as e:
         logger.error(e)
 
@@ -221,16 +220,14 @@ def send_daily_into_group(self):
         if today > 0:
             for i in range(today):
                 day = pendulum.now().start_of('day').subtract(days=i + 1)
-                format_day = day.format("DD.MM.YYYY")
-                report = download_reports(day=format_day)[2]
+                report = download_reports(day=day)[2]
                 for key, value in report.items():
                     if not i:
                         day_values[key] = day_values.get(key, 0) + value
                     total_values[key] = total_values.get(key, 0) + value
         else:
             day = pendulum.now().start_of('day').subtract(days=1)
-            format_day = day.format("DD.MM.YYYY")
-            day_values = download_reports(day=format_day)[2]
+            day_values = download_reports(day=day)[2]
             total_values = download_reports()[2]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
         for key in sort_report:
@@ -284,13 +281,11 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
 @app.task(queue='non_priority')
 def save_report_to_ninja_payment(day=None):
     if day:
-        day = pendulum.now().start_of('day').subtract(days=1)
-        start_date = day.start_of("day")
-        end_date = day.end_of("day")
+        start_date = pendulum.now().start_of('day').subtract(days=1)
+        end_date = start_date.end_of("day")
     else:
-        week = pendulum.now().start_of('week').subtract(days=3)
-        start_date = week.start_of('week')
-        end_date = week.end_of('week')
+        start_date = pendulum.now().start_of('week').subtract(weeks=1)
+        end_date = start_date.end_of('week')
 
     start_date, end_date = str(start_date).replace('T', ' '), str(end_date).replace('T', ' ')
     # Pulling notes for the rest of the week and grouping behind the chat_id field
@@ -351,16 +346,11 @@ def init_chrome_driver():
 
 def get_start_end(day=None):
     if day:
-        date = pendulum.from_format(day, "DD.MM.YYYY")
-        start = end = date.format("YYYY-MM-DD")
+        start = end = day.format("YYYY-MM-DD")
     else:
-        now = pendulum.now()  # Get the current datetime in the local timezone
-        start_of_week = now.start_of("week")
-        end_of_week = now.end_of("week")
-        previous_week_start = start_of_week.subtract(weeks=1)
-        previous_week_end = end_of_week.subtract(weeks=1)
-        start = previous_week_start.format("YYYY-MM-DD")
-        end = previous_week_end.format("YYYY-MM-DD")
+        week = pendulum.now().start_of('week').subtract(weeks=1)
+        start = week.format("YYYY-MM-DD")
+        end = week.end_of('week').format("YYYY-MM-DD")
     return start, end
 
 
@@ -418,9 +408,8 @@ def get_car_efficiency(driver, day=None):
                                               driver=driver)
     if not efficiency:
         try:
-            format_day = day.format("DD.MM.YYYY")
-            total_km = UaGpsSynchronizer().total_per_day(driver, format_day)
-            total_kasa = download_reports(day=format_day)[2]
+            total_km = UaGpsSynchronizer().total_per_day(driver, day)
+            total_kasa = download_reports(day)[2]
             if total_km and total_kasa.get(driver.full_name()):
                 result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
                 CarEfficiency.objects.create(start_report=day.start_of('day'),

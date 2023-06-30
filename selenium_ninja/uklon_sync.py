@@ -29,19 +29,12 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
         password.send_keys('')
         password.send_keys(ParkSettings.get_value("UKLON_PASSWORD"))
-
         self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        cookie_filename = f'{ParkSettings.get_value("UKLON_NAME")}_cookie'
-        cookie_filepath = os.path.join(os.getcwd(), "cookies", cookie_filename)
-
-        pickle.dump(self.driver.get_cookies(), open(cookie_filepath, 'wb'))
 
     def download_payments_order(self, day=None):
         url = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_1')
         xpath = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_2')
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
+        self.get_target_element_of_page(url, xpath)
         self.driver.find_element(By.XPATH, xpath).click()
         if day:
             if self.sleep:
@@ -51,8 +44,9 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
             input_data = WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_4'))))
+            format_day = day.format('DD.MM.YYYY')
             input_data.click()
-            input_data.send_keys(day + Keys.TAB + day)
+            input_data.send_keys(format_day + Keys.TAB + format_day)
             WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable(
                     (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_5')))).click()
@@ -161,8 +155,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         drivers = []
         url = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_1')
         xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_2')
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
-        # self.driver.get_screenshot_as_file('UklonSynchronizer.png')
+        self.get_target_element_of_page(url, xpath)
         driver_urls = []
         i = 0
         while True:
@@ -177,7 +170,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         for url in driver_urls:
             self.driver.get(url)
             xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_4')
-            self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
+            self.get_target_element_of_page(url, xpath)
             name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
             xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_5')
             email = WebDriverWait(self.driver, self.sleep).until(
@@ -205,7 +198,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("href")
                 self.driver.get(vehicle_url)
                 xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_11')
-                self.get_target_element_of_page(vehicle_url, xpath, ParkSettings.get_value("UKLON_NAME"))
+                self.get_target_element_of_page(vehicle_url, xpath)
                 licence_plate = WebDriverWait(self.driver, self.sleep).until(
                     EC.presence_of_element_located((By.XPATH, xpath))).text
                 xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_12')
@@ -269,7 +262,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
             url = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_1')
             xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_2')
 
-            self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
+            self.get_target_element_of_page(url, xpath)
             return {
                 'width_client': self.get_driver_status_from_map('1'),
                 'wait': self.get_driver_status_from_map('2')
@@ -280,7 +273,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
     def withdraw_money(self):
         url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')
         xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UKLON_NAME"))
+        self.get_target_element_of_page(url, xpath)
         WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')))).click()
         if self.sleep:
@@ -298,8 +291,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
 
     def add_driver(self, jobapplication):
         url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
-        self.get_target_element_of_page(url, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_2'),
-                                        ParkSettings.get_value("UKLON_NAME"))
+        self.get_target_element_of_page(url, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_2'))
         WebDriverWait(self.driver, self.sleep).until(
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_2')))).click()
         WebDriverWait(self.driver, self.sleep).until(
@@ -376,4 +368,4 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             return list(report)
         except Exception as err:
-            print(err)
+            self.logger.error(err)

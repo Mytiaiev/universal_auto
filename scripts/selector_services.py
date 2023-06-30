@@ -2,22 +2,11 @@
 
 bolt_states = {
     'REQUEST_BOLT_LOGIN_URL': ('https://fleetownerportal.live.boltsvc.net/fleetOwnerPortal/', 'url'),
-
-
-
     'BASE_URL': ('https://fleets.bolt.eu', 'url'),
     'BOLT_LOGIN_1': ('https://fleets.bolt.eu/v2/login', 'url'),
     'BOLT_LOGIN_2': ('email', 'ID'),
     'BOLT_LOGIN_3': ('current-password', 'ID'),
     'BOLT_LOGIN_4': ('//button[@type="submit"]', 'XPATH'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_1': ('https://fleets.bolt.eu/v2/58225/reports', 'url'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_2': ('//div[contains(@class, "max-w-[240px]")]//button', 'xpath'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_3': ('//div[contains(@class, "react-datepicker-wrapper")]//input', 'XPATH'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_4': ('//div[@tabindex="0" and @role="option"]/preceding::div', 'XPATH'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_5': ('//div[@tabindex="0" and @role="option"]', 'XPATH'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_6': ('//li[@role="menuitem"][3]', 'XPATH'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_7': ('//div[contains(@class, "justify-end")]/button', 'XPATH'),
-    'BOLT_DOWNLOAD_PAYMENTS_ORDER_8': ('//button[@aria-label="Previous month"]', 'XPATH'),
     'BOLT_ADD_DRIVER_1': ('https://fleets.bolt.eu/v2/58225/drivers', 'url'),
     'BOLT_ADD_DRIVER_2.1': ('//div[@role="tablist"]/preceding-sibling::div//button', 'XPATH'),
     'BOLT_ADD_DRIVER_2.2': ('email', 'ID'),
@@ -32,20 +21,6 @@ bolt_states = {
     'BOLT_ADD_DRIVER_11': ('//label[contains(@class, "file-upload")]', 'XPATH'),
     'BOLT_ADD_DRIVER_12': ("./input", 'XPATH'),
     'BOLT_ADD_DRIVER_13': ("//button[@type='submit']", 'XPATH'),
-    'BOLTS_GET_DRIVERS_TABLE_1': ('https://fleets.bolt.eu/v2/58225/drivers', 'url'),
-    'BOLTS_GET_DRIVERS_TABLE_2': ('//table[@role="grid"]', 'XPATH'),
-    'BOLTS_GET_DRIVERS_TABLE_3': ('//table[@role="grid"]//tr[@tabindex="-1"]', 'XPATH'),
-    'BOLTS_GET_DRIVERS_TABLE_4': ('.//button', 'XPATH'),
-    'BOLTS_GET_DRIVERS_TABLE_5': ('//div[contains (@class, "leading-6")]//div[4]//p', 'XPATH'),
-    'BOLTS_GET_DRIVERS_TABLE_6': ('//div[contains (@class, "leading-6")]//div[5]//p', 'XPATH'),
-    'BOLTS_GET_DRIVERS_TABLE_7': ('//span[contains (@class, "truncate")]', 'XPATH'),
-    'BOLTS_GET_DRIVER_STATUS_1': ('https://fleets.bolt.eu/v2/58225/liveMap', 'url'),
-    'BOLTS_GET_DRIVER_STATUS_2': ('//div[contains(@class, "map-overlay")]', 'XPATH'),
-    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_1': ("//button[@aria-label='Close']", 'XPATH'),
-    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_2': ('//div[@role="tab"]', 'XPATH'),
-    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_3': (
-        '//div[contains(@class, "map-overlay")]/div/div/div[@role="button"][', 'XPATH'),
-    'BOLTS_GET_DRIVER_STATUS_FROM_MAP_3.1': (']/div/div/div[1]/span/span', 'XPATH'),
 }
 
 newuklon_states = {
@@ -101,18 +76,7 @@ newuklon_states = {
 }
 
 uagps_states = {
-    'BASE_URL': ('https://uagps.net/', 'url'),
-    'UAGPS_LOGIN_1': ('user', 'ID'),
-    'UAGPS_LOGIN_2': ('passw', 'ID'),
-    'UAGPS_LOGIN_3': ('submit', 'ID'),
-    'UAGPSS_GENERATE_REPORT_1': ("//div[@menu_id='hb_mi_reports_ctl']", 'xpath'),
-    'UAGPSS_GENERATE_REPORT_2': ("//input[@id='report_templates_filter_units']", 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_3': ('//div[starts-with(text(),', 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_4': ("time_from_report_templates_filter_time", 'ID'),
-    'UAGPSS_GENERATE_REPORT_5': ("time_to_report_templates_filter_time", 'ID'),
-    'UAGPSS_GENERATE_REPORT_6': ('//input[@dir="execute"]', 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_7': ("//tr[@pos='5']/td[2]", 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_8': ("//tr[@pos='4']/td[2]", 'XPATH'),
+    'BASE_URL': ('https://uagps.net/wialon/ajax.html', 'url'),
 }
 
 uber_states = {
@@ -171,7 +135,7 @@ uber_states = {
     'UBERS_GET_ALL_VEHICLES_5': ('div[3]/div/div[1]', 'xpath'),
     'UBERS_GET_ALL_VEHICLES_6': ('div[3]/div/div[2]', 'xpath'),
     'UBERS_GET_DRIVERS_TABLE_1': ('https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/drivers', 'url'),
-    'UBERS_GET_DRIVERS_TABLE_2': ('//div[@data-testid="paginated-table"]', 'XPATH'),
+    'UBERS_GET_DRIVERS_TABLE_2': ('//div[@data-tracking-name="drivers"]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_3': ('//div[@data-tracking-name="driver-table-row"]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_4': ('div[1]/div[2]/div[1]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_5': ('div[4]/div/div[2]', 'XPATH'),

@@ -147,7 +147,7 @@ class Synchronizer:
             file.write(response.content)
         return local_path
 
-    def get_target_element_of_page(self, url, xpath, cookies_name):
+    def get_target_element_of_page(self, url, xpath):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
         except TimeoutException:
@@ -157,25 +157,11 @@ class Synchronizer:
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 self.logger.info(f'Got the page without authorization {url}')
             except (TimeoutException, FileNotFoundError):
-                try:
-                    for cookie in pickle.load(open(os.path.join(os.getcwd(), "cookies",
-                                                                f'{cookies_name}_cookies'), 'rb')):
-                        self.driver.add_cookie(cookie)
-                    time.sleep(self.sleep)
-                    self.driver.get(url)
-                    WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                    self.logger.info(f'Got the page using cookie {url}')
-                except:
-                    self.login()
-                    try:
-                        WebDriverWait(self.driver, self.sleep).until(
-                            EC.element_to_be_clickable(
-                                (By.XPATH, BoltService.get_value('BOLTS_GET_DRIVER_STATUS_FROM_MAP_1')))).click()
-                    except:
-                        pass
-                    self.driver.get(url)
-                    WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                    self.logger.info(f'Got the page using authorization {url}')
+                self.login()
+                time.sleep(self.sleep)
+                self.driver.get(url)
+                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                self.logger.info(f'Got the page using authorization {url}')
 
     def create_driver(self, **kwargs):
         fleet = Fleet.objects.get(name=self.fleet)

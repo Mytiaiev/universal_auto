@@ -1,9 +1,5 @@
 import json
-import time
 import datetime
-from urllib.parse import urlencode
-
-import pendulum
 import requests
 from _decimal import Decimal
 from django.utils import timezone
@@ -12,7 +8,7 @@ from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange
 
 class UaGpsSynchronizer:
 
-    def __init__(self, url='https://uagps.net/wialon/ajax.html'):
+    def __init__(self, url=f'{UaGpsService.get_value("BASE_URL")}'):
         self.url = url
         self.session = self.get_session()
 
@@ -62,13 +58,11 @@ class UaGpsSynchronizer:
         return int(timeframe.timestamp())
 
     def start_day(self, day):
-        date = pendulum.from_format(day, "DD.MM.YYYY")
-        start_of_day = date.in_timezone("Europe/Kiev").start_of("day")
+        start_of_day = day.in_timezone("Europe/Kiev").start_of("day")
         return self.get_timestamp(start_of_day)
 
     def end_day(self, day):
-        date = pendulum.from_format(day, "DD.MM.YYYY")
-        end_of_day = date.in_timezone("Europe/Kiev").end_of("day")
+        end_of_day = day.in_timezone("Europe/Kiev").end_of("day")
         return self.get_timestamp(end_of_day)
 
     def get_rent_distance(self):
@@ -131,7 +125,8 @@ class UaGpsSynchronizer:
             if driver_id and rent:
                 vehicle = Vehicle.objects.filter(driver=driver).first()
                 trips = UberTrips.objects.filter(driver_external_id=driver_id,
-                                                 created_at__date=timezone.localtime().date())
+                                                 created_at__date=timezone.localtime().date(),
+                                                 end_trip__isnull=False)
                 for trip in trips:
                     trip_distance = self.generate_report(self.get_timestamp(timezone.localtime(trip.start_trip)),
                                                          self.get_timestamp(timezone.localtime(trip.end_trip)),
