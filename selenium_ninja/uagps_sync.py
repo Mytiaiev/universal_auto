@@ -83,8 +83,7 @@ class UaGpsSynchronizer(Synchronizer, SeleniumTools):
                 rent_distance = 0
                 rent_time = datetime.timedelta()
                 # car that have worked at that day
-                split_driver = str(_driver).split()
-                vehicle = Driver.objects.filter(name=split_driver[0], second_name=split_driver[1]).first()
+                vehicle = _driver.vehicle
                 if vehicle:
                     rent_statuses = StatusChange.objects.filter(driver=_driver.id,
                                                                 vehicle=vehicle,
