@@ -180,6 +180,15 @@ def send_on_job_application_on_driver(self, job_id):
 
 
 @app.task(bind=True, queue='non_priority')
+def detaching_the_driver_from_the_car(self, licence_plate):
+    try:
+        UklonSynchronizer(UKLON_CHROME_DRIVER.driver).try_to_execute('detaching_the_driver_from_the_car', licence_plate)
+        logger.info(f'Car {licence_plate} was detached')
+    except Exception as e:
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
 def get_rent_information(self):
     try:
         UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('get_rent_distance')
@@ -269,9 +278,8 @@ def check_order(self, order_id):
 
 @app.task(bind=True, queue='non_priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
-    start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
-    start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
-    format_end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+    start = datetime.datetime.strptime(str(start_trip_with_client), '%Y-%m-%d %H:%M:%S.%f%z')
+    format_end = datetime.datetime.strptime(str(end), '%Y-%m-%d %H:%M:%S.%f%z')
     delta = format_end - start
     try:
         result = UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('generate_report', start,

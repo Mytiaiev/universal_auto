@@ -37,8 +37,8 @@ class Park(models.Model):
     partner = models.OneToOneField(Partner, on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        verbose_name = 'Автопарк'
-        verbose_name_plural = 'Автопарки'
+        verbose_name = 'Автопарк партнера'
+        verbose_name_plural = 'Автопарки партнерів'
 
     def __str__(self):
         return self.name
@@ -473,6 +473,72 @@ class DriverManager(User):
         return f'{self.name} {self.second_name}'
 
 
+class Vehicle(models.Model):
+    ELECTRO = 'Електро'
+
+    name = models.CharField(max_length=255, verbose_name='Назва')
+    model = models.CharField(max_length=50, verbose_name='Модель')
+    type = models.CharField(max_length=20, default=ELECTRO, verbose_name='Тип')
+    licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
+    vin_code = models.CharField(max_length=17)
+    gps_imei = models.CharField(max_length=100, default='')
+    car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
+
+    class Meta:
+        verbose_name = 'Автомобіль'
+        verbose_name_plural = 'Автомобілі'
+
+    def __str__(self) -> str:
+        return f'{self.licence_plate}'
+
+    @staticmethod
+    def get_by_numberplate(licence_plate):
+        try:
+            vehicle = Vehicle.objects.get(licence_plate=licence_plate)
+            return vehicle
+        except Vehicle.DoesNotExist:
+            return None
+
+    @staticmethod
+    def name_validator(name):
+        if len(name) <= 255:
+            return name.title()
+        else:
+            return None
+
+    @staticmethod
+    def model_validator(model):
+        if len(model) <= 50:
+            return model.title()
+        else:
+            return None
+
+    @staticmethod
+    def licence_plate_validator(licence_plate):
+        if len(licence_plate) <= 24:
+            return licence_plate.upper()
+        else:
+            return None
+
+    @staticmethod
+    def vin_code_validator(vin_code):
+        if len(vin_code) <= 17:
+            return vin_code.upper()
+        else:
+            return None
+
+    @staticmethod
+    def gps_imei_validator(gps_imei):
+        if len(gps_imei) <= 100:
+            return gps_imei.upper()
+        else:
+            return None
+
+
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
@@ -488,7 +554,9 @@ class Driver(User):
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
-    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
+    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, blank=True,
+                                verbose_name='Менеджер водіїв')
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
     schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
     plan = models.IntegerField(default=12000, verbose_name='План водія')
@@ -654,73 +722,6 @@ class NinjaFleet(Fleet):
         report = NinjaPaymentsOrder.objects.filter(report_from=self.start_report_interval(day=day),
                                                    report_to=self.end_report_interval(day=day))
         return list(report)
-
-
-class Vehicle(models.Model):
-    ELECTRO = 'Електро'
-
-    name = models.CharField(max_length=255, verbose_name='Назва')
-    model = models.CharField(max_length=50, verbose_name='Модель')
-    type = models.CharField(max_length=20, default=ELECTRO, verbose_name='Тип')
-    licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
-    vin_code = models.CharField(max_length=17)
-    gps_imei = models.CharField(max_length=100, default='')
-    car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
-    driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Водій')
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
-    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
-    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
-
-    class Meta:
-        verbose_name = 'Автомобіль'
-        verbose_name_plural = 'Автомобілі'
-
-    def __str__(self) -> str:
-        return f'{self.licence_plate}'
-
-    @staticmethod
-    def get_by_numberplate(licence_plate):
-        try:
-            vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-            return vehicle
-        except Vehicle.DoesNotExist:
-            return None
-
-    @staticmethod
-    def name_validator(name):
-        if len(name) <= 255:
-            return name.title()
-        else:
-            return None
-
-    @staticmethod
-    def model_validator(model):
-        if len(model) <= 50:
-            return model.title()
-        else:
-            return None
-
-    @staticmethod
-    def licence_plate_validator(licence_plate):
-        if len(licence_plate) <= 24:
-            return licence_plate.upper()
-        else:
-            return None
-
-    @staticmethod
-    def vin_code_validator(vin_code):
-        if len(vin_code) <= 17:
-            return vin_code.upper()
-        else:
-            return None
-
-    @staticmethod
-    def gps_imei_validator(gps_imei):
-        if len(gps_imei) <= 100:
-            return gps_imei.upper()
-        else:
-            return None
 
 
 class StatusChange(models.Model):

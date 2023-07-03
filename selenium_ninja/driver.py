@@ -217,6 +217,7 @@ class SeleniumTools:
             self.driver.quit()
             self.driver = None
 
+
 class Privat24(SeleniumTools):
     def __init__(self, card=None, sum=None, driver=True, sleep=3, headless=False, base_url='https://next.privat24.ua/'):
         self.card = card
