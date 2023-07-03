@@ -75,7 +75,7 @@ class UaGpsSynchronizer:
                 rent_distance = 0
                 rent_time = datetime.timedelta()
                 # car that have worked at that day
-                vehicle = Vehicle.objects.filter(driver=_driver).first()
+                vehicle = _driver.vehicle
                 if vehicle:
                     rent_statuses = StatusChange.objects.filter(driver=_driver.id,
                                                                 vehicle=vehicle,

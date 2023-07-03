@@ -1,6 +1,7 @@
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode
 from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus
+from auto.tasks import detaching_the_driver_from_the_car
 from auto_bot.handlers.driver.static_text import V_ID
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
 from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard, correct_keyboard
@@ -87,6 +88,7 @@ def finish_job_main(update, context):
         ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
         query.edit_message_text(finish_job)
         context.user_data.clear()
+        detaching_the_driver_from_the_car.delay(record.licence_plate)
     else:
         query.edit_message_text(already_finish_job)
 

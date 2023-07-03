@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 import pendulum
@@ -158,8 +157,8 @@ def update_driver_data(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
-                # BoltRequest().synchronize()
-                # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
+                BoltRequest().synchronize()
+                UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
                 UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
             else:
                 logger.info('passed')
@@ -174,6 +173,15 @@ def send_on_job_application_on_driver(self, job_id):
         UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('add_driver', candidate)
         BoltRequest().add_driver(candidate)
         logger.info('The job application has been sent')
+    except Exception as e:
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def detaching_the_driver_from_the_car(self, licence_plate):
+    try:
+        UklonSynchronizer(CHROME_DRIVER.driver).try_to_execute('detaching_the_driver_from_the_car', licence_plate)
+        logger.info(f'Car {licence_plate} was detached')
     except Exception as e:
         logger.error(e)
 

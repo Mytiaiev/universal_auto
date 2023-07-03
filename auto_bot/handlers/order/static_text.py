@@ -76,14 +76,14 @@ price_inline_buttons = (
 
 
 def price_info(in_city, out_city):
-    message = f"Наші тарифи:\nВ місті {in_city} грн/км, " + \
-                 f"за містом - {out_city} грн/км"
+    message = f"Наші тарифи:\nВ місті - {in_city} грн/км\n" + \
+              f"За містом - {out_city} грн/км"
     return message
 
 
 def order_info(number, address, to_address, payment, phone, price=None, distance=None, time=None):
     time_message = f"<u>Замовлення на певний час {number}:</u>\n" \
-                  f"<b>Час подачі:{time}</b>\n"
+                   f"<b>Час подачі:{time}</b>\n"
     now_message = f"Отримано нове замовлення {number}:\n"
     message = f"Адреса посадки: {address}\n" \
               f"Місце прибуття: {to_address}\n" \

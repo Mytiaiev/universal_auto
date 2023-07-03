@@ -14,8 +14,7 @@ def comment(update, context):
         query.edit_message_text(text='Поставте оцінку або напишіть відгук')
         query.edit_message_reply_markup(reply_markup=inline_comment_kb())
         if order.status_order == Order.WAITING:
-            order.status_order = Order.CANCELED
-            order.save()
+            order.update(status_order=Order.CANCELED)
     else:
         query.edit_message_text(text='Напишіть відгук або пропозицію, будь ласка')
     context.user_data['state'] = COMMENT
@@ -37,8 +36,9 @@ def save_comment(update, context):
                                  created_at__date=timezone.now().date()).last()
     user_comment = Comment.objects.create(
         comment=mark,
-        chat_id=update.effective_chat.id)
+        chat_id=update.effective_chat.id)           # need default Ninja partner add
     if order:
         order.comment = user_comment
+        order.partner = order.driver.partner
         order.save()
     context.user_data['state'] = None

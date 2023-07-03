@@ -99,6 +99,10 @@ newuklon_states = {
     'NEWUKLONS_WITHDRAW_MONEY_4': ('//input[@formcontrolname="remaining"]', 'XPATH'),
     'NEWUKLONS_WITHDRAW_MONEY_5': ('//div[contains (@class, "tw-col-span-5")]/button[1]', 'XPATH'),
     'NEWUKLONS_WITHDRAW_MONEY_6': ('//button[@data-cy="transfer-btn"]', 'XPATH'),
+    'NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_1': ('https://fleets.uklon.com.ua/workspace/vehicles', 'XPATH'),
+    'NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_2': ('//input', 'XPATH'),
+    'NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_3': ('//div/div[2]/button/span[1]', 'XPATH'),
+    'NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_4': ('//div/div[4]/button[2]/span[1]', 'XPATH'),
     'NEWUKLONS_DISABLE_CASH_1': ('//a[@data-cy="link" and contains(text(), "', 'XPATH'),
     'NEWUKLONS_DISABLE_CASH_2': ('//div[contains(@class, "restriction-group__item")][3]//label/span', 'XPATH'),
     'NEWUKLONS_DISABLE_CASH_3': ('//button[@type="button"]/span[@class="mat-button-wrapper"]', 'XPATH')
