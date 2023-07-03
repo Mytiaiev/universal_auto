@@ -1,6 +1,9 @@
 # States [key its NameService+Func in class]
 
 bolt_states = {
+    'REQUEST_BOLT_LOGIN_URL': ('https://fleetownerportal.live.boltsvc.net/fleetOwnerPortal/', 'url'),
+    'R_BOLT_ADD_DRIVER_1': ("https://node.taxify.eu/fleet-registration/driverPortal/", 'url'),
+    'BASE_URL': ('https://fleets.bolt.eu', 'url'),
     'BOLT_LOGIN_URL': ('https://fleets.bolt.eu/v2/login', 'url'),
     'BOLT_DOWNLOAD_PAYMENTS_ORDER_URL': ('https://fleets.bolt.eu/v2/58225/reports', 'url'),
     'BOLT_DRIVERS_URL': ('https://fleets.bolt.eu/v2/58225/drivers', 'url'),
@@ -102,18 +105,7 @@ newuklon_states = {
 }
 
 uagps_states = {
-    'BASE_URL': ('https://uagps.net/', 'url'),
-    'UAGPS_LOGIN_1': ('user', 'ID'),
-    'UAGPS_LOGIN_2': ('passw', 'ID'),
-    'UAGPS_LOGIN_3': ('submit', 'ID'),
-    'UAGPSS_GENERATE_REPORT_1': ("//div[@menu_id='hb_mi_reports_ctl']", 'xpath'),
-    'UAGPSS_GENERATE_REPORT_2': ("//input[@id='report_templates_filter_units']", 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_3': ('//div[starts-with(text(),', 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_4': ("time_from_report_templates_filter_time", 'ID'),
-    'UAGPSS_GENERATE_REPORT_5': ("time_to_report_templates_filter_time", 'ID'),
-    'UAGPSS_GENERATE_REPORT_6': ('//input[@dir="execute"]', 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_7': ("//tr[@pos='5']/td[2]", 'XPATH'),
-    'UAGPSS_GENERATE_REPORT_8': ("//tr[@pos='4']/td[2]", 'XPATH'),
+    'BASE_URL': ('https://uagps.net/wialon/ajax.html', 'url'),
 }
 
 uber_states = {
@@ -172,7 +164,7 @@ uber_states = {
     'UBERS_GET_ALL_VEHICLES_5': ('div[3]/div/div[1]', 'xpath'),
     'UBERS_GET_ALL_VEHICLES_6': ('div[3]/div/div[2]', 'xpath'),
     'UBERS_GET_DRIVERS_TABLE_1': ('https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/drivers', 'url'),
-    'UBERS_GET_DRIVERS_TABLE_2': ('//div[@data-testid="paginated-table"]', 'XPATH'),
+    'UBERS_GET_DRIVERS_TABLE_2': ('//div[@data-tracking-name="drivers"]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_3': ('//div[@data-tracking-name="driver-table-row"]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_4': ('div[1]/div[2]/div[1]', 'XPATH'),
     'UBERS_GET_DRIVERS_TABLE_5': ('div[4]/div/div[2]', 'XPATH'),

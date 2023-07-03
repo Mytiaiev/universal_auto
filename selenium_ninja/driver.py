@@ -41,7 +41,7 @@ class SeleniumTools:
         if week_number:
             self.current_date = pendulum.parse(week_number, tz="Europe/Kiev")
         else:
-            self.current_date = pendulum.now().start_of('week').subtract(days=3)
+            self.current_date = pendulum.now().start_of('week').subtract(weeks=1)
 
     def report_file_name(self, pattern):
         filenames = os.listdir(os.curdir)
@@ -61,28 +61,16 @@ class SeleniumTools:
         return f'{fleet} {sy}{sm}{sd}-{ey}{em}{ed}-{partner}.csv'
 
     def week_number(self):
-        return f'{self.start_of_week().strftime("%W")}'
+        return f'{self.current_date.strftime("%W")}'
 
     def start_report_interval(self, day=None):
-        """
-
-        :return: report interval depends on type report (use in Bolt)
-        """
         if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").start_of("day")
-        return self.current_date.start_of('week')
+            return day.in_timezone("Europe/Kiev").start_of("day")
+        return self.current_date
 
     def end_report_interval(self, day=None):
         if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").end_of("day")
-        return self.current_date.end_of('week')
-
-    def start_of_week(self):
-        return self.current_date.start_of('week')
-
-    def end_of_week(self):
+            return day.in_timezone("Europe/Kiev").end_of("day")
         return self.current_date.end_of('week')
 
     def remove_session(self):
@@ -102,7 +90,6 @@ class SeleniumTools:
     #             continue
 
     def build_driver(self, headless=True):
-        options = Options()
         options = webdriver.ChromeOptions()
         options.add_experimental_option("prefs", {
             "download.default_directory": os.path.join(os.getcwd(), "LastDownloads"),

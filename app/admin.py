@@ -813,7 +813,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Інформація про машину', {'fields': ['name', 'model', 'type',
                                                       ]}),
                 ('Особисті дані авто', {'fields': ['vin_code', 'gps_imei',
-                                                   'car_status',
+                                                   'car_status', 'gps_id',
                                                    ]}),
                 ('Додатково', {'fields': ['driver', 'partner',
                                           ]}),

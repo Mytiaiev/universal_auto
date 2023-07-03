@@ -1,4 +1,5 @@
 import csv
+import datetime
 import json
 import os
 import pickle
@@ -6,6 +7,7 @@ import time
 
 import redis
 from django.db import IntegrityError
+from django.utils import timezone
 from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -27,12 +29,6 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         # self.otp_code_v1()
         self.password_form(UberService.get_value('UBER_LOGIN_V2_3.1'), UberService.get_value('UBER_LOGIN_V2_3.2'),
                            By.ID)
-        if self.sleep:
-            time.sleep(self.sleep)
-        cookie_filename = f'{ParkSettings.get_value("UBER_NAME")}_cookie'
-        cookie_filepath = os.path.join(os.getcwd(), "cookies", cookie_filename)
-
-        pickle.dump(self.driver.get_cookies(), open(cookie_filepath, 'wb'))
 
     def login_v3(self, link=f"{UberService.get_value('UBER_LOGIN_V3_1')}"):
         self.driver.get(link)
@@ -47,12 +43,6 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 self.password_form_v3()
             except TimeoutException:
                 self.otp_code_v2()
-        if self.sleep:
-            time.sleep(self.sleep)
-        cookie_filename = f'{ParkSettings.get_value("UBER_NAME")}_cookie'
-        cookie_filepath = os.path.join(os.getcwd(), "cookies", cookie_filename)
-
-        pickle.dump(self.driver.get_cookies(), open(cookie_filepath, 'wb'))
 
     def password_form_v3(self):
         el = WebDriverWait(self.driver, self.sleep).until(
@@ -85,7 +75,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
     def generate_payments_order(self, report_en, report_ua, pattern, day):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}"
         xpath = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')}"
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UBER_NAME"))
+        self.get_target_element_of_page(url, xpath)
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
         try:
             xpath = report_en
@@ -202,26 +192,29 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     reader = csv.reader(file)
                     next(reader)  # Advance past the header
                     for row in reader:
-                        order = UberTrips(
+                        start = timezone.make_aware(datetime.datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S"))
+                        trip = UberTrips(
                             report_file_name=self.payments_order_file_name(self.fleet, pattern, day),
                             driver_external_id=row[1],
                             license_plate=row[5],
-                            start_trip=row[7],
-                            end_trip=row[8]
+                            start_trip=start
                         )
+                        if row[8] != '':
+                            end = timezone.make_aware(datetime.datetime.strptime(row[8], "%Y-%m-%d %H:%M:%S"))
+                            trip.end_trip = end
                         try:
-                            order.save()
+                            trip.save()
                         except IntegrityError:
                             pass
-                        items.append(order)
+                        items.append(trip)
                     if not items:
-                        order = UberTrips(
+                        trip = UberTrips(
                             report_file_name=self.payments_order_file_name(self.fleet, pattern, day),
                             driver_external_id='00000000-0000-0000-0000-000000000000',
                             license_plate=''
                         )
                         try:
-                            order.save()
+                            trip.save()
                         except IntegrityError:
                             pass
 
@@ -335,8 +328,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         vehicles = {}
         url = UberService.get_value('UBERS_GET_ALL_VEHICLES_1')
         xpath = UberService.get_value('UBERS_GET_ALL_VEHICLES_2')
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UBER_NAME"))
-        # self.driver.get_screenshot_as_file('UberSynchronizer.png')
+        self.get_target_element_of_page(url, xpath)
         i = 0
         while True:
             i += 1
@@ -344,7 +336,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 xpath = f'{UberService.get_value("UBERS_GET_ALL_VEHICLES_3")}[{i}]'
                 row = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 try:
-                    vehicleUUID = json.loads(row.get_attribute("data-tracking-payload"))['vehicleUUID']
+                    vehicle_uuid = json.loads(row.get_attribute("data-tracking-payload"))['vehicleUUID']
                 except Exception:
                     continue
                 xpath = UberService.get_value('UBERS_GET_ALL_VEHICLES_4')
@@ -357,7 +349,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     EC.presence_of_element_located((By.XPATH, xpath))).text
             except TimeoutException:
                 break
-            vehicles[vehicleUUID] = {'licence_plate': licence_plate, 'vin_code': vin_code, 'vehicle_name': vehicle_name}
+            vehicles[vehicle_uuid] = {'licence_plate': licence_plate, 'vin_code': vin_code, 'vehicle_name': vehicle_name}
         return vehicles
 
     def get_drivers_table(self):
@@ -366,13 +358,14 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             vehicles = self.get_all_vehicles()
             url = UberService.get_value('UBERS_GET_DRIVERS_TABLE_1')
             xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_2')
-            self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UBER_NAME"))
+            self.get_target_element_of_page(url, xpath)
         except TimeoutException:
             return drivers
         i = 0
         while True:
             i += 1
             try:
+                time.sleep(self.sleep)
                 xpath = f'{UberService.get_value("UBERS_GET_DRIVERS_TABLE_3")}[{i}]'
                 row = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
                 xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_4')
@@ -397,17 +390,17 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     WebDriverWait(row, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
                     xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_9')
                     el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                    vehicleUUID = json.loads(el.get_attribute("data-tracking-payload"))['vehicleUUID']
-                    licence_plate = vehicles[vehicleUUID]['licence_plate']
-                    vehicle_name = vehicles[vehicleUUID]['vehicle_name']
-                    vin_code = vehicles[vehicleUUID]['vin_code']
+                    vehicle_uuid = json.loads(el.get_attribute("data-tracking-payload"))['vehicleUUID']
+                    licence_plate = vehicles[vehicle_uuid]['licence_plate']
+                    vehicle_name = vehicles[vehicle_uuid]['vehicle_name']
+                    vin_code = vehicles[vehicle_uuid]['vin_code']
                 except Exception:
                     pass
             except TimeoutException:
                 break
             s_name = self.split_name(name)
             drivers.append({
-                'fleet_name': 'Uber',
+                'fleet_name': self.fleet,
                 'name': s_name[0],
                 'second_name': s_name[1],
                 'email': self.validate_email(email),
@@ -459,7 +452,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             # url = f"https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/livemap"
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             xpath = UberService.get_value('UBERS_GET_DRIVER_STATUS_2')
-            self.get_target_element_of_page(url, xpath, ParkSettings.get_value("UBER_NAME"))
+            self.get_target_element_of_page(url, xpath)
             return {
                 'online': self.get_driver_status_from_map('ONLINE'),
                 'width_client': self.get_driver_status_from_map('IN_PROGRESS'),
@@ -481,7 +474,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
             return list(report)
         except Exception as err:
-            print(err.msg)
+            self.logger.error(err)
 
     def download_trips(self, pattern, day):
         report = UberTrips.objects.filter(report_file_name=self.file_pattern(self.fleet, pattern, day))
