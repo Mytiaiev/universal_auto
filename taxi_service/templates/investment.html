@@ -19,8 +19,6 @@
 					<div class="illustration-holder">
 						<img src="{% static 'app/images/assets/ils_01.webp' %}" alt=""
 								 class="lazy-img main-illustration w-100" style="">
-						<img src="{% static 'app/images/assets/shape_01.svg' %}" alt=""
-								 class="lazy-img shapes shape-one" style="">
 						<img src="{% static 'app/images/assets/shape_02.svg' %}" alt=""
 								 class="lazy-img shapes shape-two" style="">
 						<img src="{% static 'app/images/assets/shape_03.svg' %}" alt=""
@@ -69,7 +67,7 @@
 					<div class="services-grid__invest col-md-6 col-lg-4" data-block="3">
 						<figure style="background-image: url({% static 'app/images/assets/img-2.webp' %})" class="cover"></figure>
 						<h5 class="inner-title">{% trans "Досвідчені і кваліфіковані водії" %}</h5>
-						<a class="btn btn-primary" href="#">{% trans "Дізнатись більше" %}</a>
+						<a class="btn btn-primary" href="{% url 'drivers' %}">{% trans "Дізнатись більше" %}</a>
 					</div>
 				</div>
 			</div> <!-- /.inner-content -->

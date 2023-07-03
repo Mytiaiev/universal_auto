@@ -373,7 +373,7 @@ function onOrderPayment(paymentMethod) {
       method: 'POST',
       data: orderData,
       headers: {
-        'X-CSRF-Token': $('input[name="csrfmiddlewaretoken"]').val()
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
       },
       success: function (response) {
         var idOrder = JSON.parse(response.data)
@@ -1030,7 +1030,7 @@ $(document).ready(function () {
     video.attr('role', 'button');
 
     video.html(`
-      <img alt="" src="https://img.youtube.com/vi/${id}/maxresdefault.jpg"><br>
+      <img alt="" src="https://img.youtube.com/vi/${id}/maxresdefault.jpg" style="border-radius: 25px" width="552" height="310" loading="lazy"><br>
       ${video.text()}
     `);
   });

@@ -14,9 +14,8 @@ def active_vehicles_gps():
         if vehicle:
             vehicles = VehicleGPS.objects.filter(
                 vehicle__licence_plate=vehicle.licence_plate
-            ).values('vehicle__licence_plate', 'lat', 'lon')
-            for vehicle_gps in vehicles:
-                vehicles_gps.append(vehicle_gps)
+            ).values('vehicle__licence_plate', 'lat', 'lon').last()
+            vehicles_gps.append(vehicles)
     json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
     return json_data
 
@@ -59,3 +58,8 @@ def restart_order(id_order, car_delivery_price, action):
         order = Order.objects.get(id=id_order)
         order.checked = False
         order.save()
+
+
+def get_all_drivers():
+    drivers = Driver.objects.all()
+    return drivers

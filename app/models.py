@@ -539,7 +539,6 @@ class Vehicle(models.Model):
             return None
 
 
-
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'

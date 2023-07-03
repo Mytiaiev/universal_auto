@@ -33,7 +33,7 @@ msgstr "Card"
 #: static/app/js/custom.js:206 static/app/js/custom.js:530
 #: static/app/js/custom.js:806
 msgid "Відмовитись"
-msgstr "Refuse"
+msgstr "Reject"
 
 #: static/app/js/custom.js:218
 msgid "Зачекайте поки ми підберемо вам автомобіль. Ваша ціна складає "
@@ -58,7 +58,7 @@ msgstr " UAH Approximate time of arrival of the car: "
 
 #: static/app/js/custom.js:341 static/app/js/custom.js:805
 msgid "Погодитись"
-msgstr "To agree"
+msgstr "Confirm"
 
 #: static/app/js/custom.js:412
 msgid "Коментар про відмову від поїздки"
