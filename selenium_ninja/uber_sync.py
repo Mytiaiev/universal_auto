@@ -356,7 +356,6 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         drivers = []
         try:
             vehicles = self.get_all_vehicles()
-            print(vehicles)
             url = UberService.get_value('UBERS_GET_DRIVERS_TABLE_1')
             xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_2')
             self.get_target_element_of_page(url, xpath)
@@ -366,6 +365,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         while True:
             i += 1
             try:
+                self.driver.refresh()
                 time.sleep(self.sleep)
                 xpath = f'{UberService.get_value("UBERS_GET_DRIVERS_TABLE_3")}[{i}]'
                 row = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
@@ -380,28 +380,19 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     driver_external_id = json.loads(row.get_attribute("data-tracking-payload"))['driverUUID']
                 except Exception:
                     continue
-                licence_plate = ''
-                vehicle_name = ''
-                vin_code = ''
                 try:
-                    self.driver.get_screenshot_as_file(f'{i}.png')
-                    xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_7')
-                    WebDriverWait(self.driver, self.sleep).until(
-                        EC.element_to_be_clickable((By.XPATH, xpath))).click()
-                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                     xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_8')
                     WebDriverWait(row, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
                     xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_9')
                     el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                    self.driver.get_screenshot_as_file(f'{i}1.png')
-                    self.driver.execute_script("window.scrollTo(0, 0);")
                     vehicle_uuid = json.loads(el.get_attribute("data-tracking-payload"))['vehicleUUID']
                     licence_plate = vehicles[vehicle_uuid]['licence_plate']
                     vehicle_name = vehicles[vehicle_uuid]['vehicle_name']
                     vin_code = vehicles[vehicle_uuid]['vin_code']
-
-                except Exception as e:
-                    print(e)
+                except Exception:
+                    licence_plate = ''
+                    vehicle_name = ''
+                    vin_code = ''
             except TimeoutException:
                 break
             s_name = self.split_name(name)
