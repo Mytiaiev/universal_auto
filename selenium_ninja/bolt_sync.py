@@ -1,18 +1,18 @@
 import csv
 import datetime
-import os
-import pickle
+import io
+import mimetypes
 import time
+from urllib import parse
 
 import pendulum
 import requests
-import redis
 from django.db import IntegrityError
 from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from app.models import ParkSettings, BoltService, BoltPaymentsOrder
+from app.models import ParkSettings, BoltService, BoltPaymentsOrder, Driver, Fleets_drivers_vehicles_rate
 from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer, RequestSynchronizer
@@ -173,6 +173,107 @@ class BoltRequest(RequestSynchronizer):
                     with_client.append((second_name, name))
         return {'wait': wait,
                 'with_client': with_client}
+
+    def cash_restriction(self, pk, disable):
+        driver = Driver.objects.get(pk=pk)
+        driver_id = driver.get_driver_external_id(self.fleet)
+        payload = {
+            "driver_id": driver_id,
+            "has_cash_payment": disable
+        }
+        self.post_target_url(f'{self.base_url}driver/toggleCash', self.params, payload)
+        pay_cash = True if disable == 'true' else False
+        Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver).update(pay_cash=pay_cash)
+
+    def add_driver(self, job_application):
+        payload = {
+                        "email": f"{job_application.email}",
+                        "phone": f"{job_application.phone_number}",
+                        "referral_code": ""
+                }
+        response = self.post_target_url(f'{self.base_url}addDriverRegistration', self.params, payload)
+        payload_form = {
+            'hash': response['data']['hash'],
+            'last_step': 'step_2',
+            'first_name': f"{job_application.first_name}",
+            'last_name': f"{job_application.last_name}",
+            'email': f"{job_application.email}",
+            'phone': f"{job_application.phone_number}",
+            'birthday': '',
+            'terms_consent_accepted': '0',
+            'whatsapp_opt_in': '0',
+            'city_data': 'Kyiv|ua|uk|634|₴|158',
+            'city_id': '158',
+            'language': 'uk',
+            'referral_code': '',
+            'has_car': '0',
+            'allow_fleet_matching': '',
+            'personal_code': '',
+            'driver_license': '',
+            'has_taxi_license': '0',
+            'type': 'person',
+            'license_type_selection': '',
+            'company_name': '',
+            'address': '',
+            'reg_code': '',
+            'company_is_liable_to_vat': '0',
+            'vat_code': '',
+            'beneficiary_name': '',
+            'iban': '',
+            'swift': '',
+            'account_branch_code': '',
+            'remote_training_url': '',
+            'flow_id': '',
+            'web_marketing_data[fbp]': '',
+            'web_marketing_data[url]': f"{response['data']['registration_link']}/2",
+            'web_marketing_data[user_agent]': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'is_fleet_company': '1'
+        }
+
+        encoded_payload = parse.urlencode(payload_form)
+        params = {
+            'version': 'DP.11.89',
+        }
+        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', params=params, data=encoded_payload)
+        add_params = {'language': 'uk-ua',
+                      'hash': response['data']['hash']
+                      }
+        add_params.update(params)
+        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationDocumentsSet/', add_params)
+
+        file_paths = [
+            f"{settings.MEDIA_URL}{job_application.driver_license_front}",  # license_front
+            f"{settings.MEDIA_URL}{job_application.photo}",  # photo
+            f"{settings.MEDIA_URL}{job_application.car_documents}",  # car_document
+            f"{settings.MEDIA_URL}{job_application.insurance}"  # insurance
+        ]
+
+        payloads = [
+            {'hash': response['data']['hash'], 'expires': str(job_application.license_expired)},
+            {'hash': response['data']['hash']},
+            {'hash': response['data']['hash']},
+            {'hash': response['data']['hash'], 'expires': str(job_application.insurance_expired)}
+        ]
+
+        file_keys = [
+            'ua_drivers_license',
+            'ua_profile_pic',
+            'ua_technical_passport',
+            'ua_insurance_policy'
+        ]
+
+        for file_path, key, payload in zip(file_paths, file_keys, payloads):
+            files = {}
+            binary = requests.get(file_path).content
+            mime_type, _ = mimetypes.guess_type(file_path)
+            file_name = file_path.split('/')[-1]
+            files[key] = (file_name, binary, mime_type)
+            requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}uploadDriverRegistrationDocument/',
+                          params=params, data=payload, files=files)
+        payload_form['last_step'] = 'step_4'
+        payload_form['web_marketing_data[url]'] = f"{response['data']['registration_link']}/4"
+        encoded = parse.urlencode(payload_form)
+        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', params=params, data=encoded)
 
 
 class BoltSynchronizer(Synchronizer, SeleniumTools):

@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import pendulum
@@ -19,7 +20,7 @@ from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
 from auto.celery import app
-from selenium_ninja.bolt_sync import BoltSynchronizer, BoltRequest
+from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberSynchronizer
@@ -66,10 +67,9 @@ def raw_gps_handler(id):
             'height': float(data[8]),
             'raw_data': raw,
         }
+        VehicleGPS.objects.create(**kwa)
     except ValueError as err:
         return f'{ValueError} {err}'
-    obj = VehicleGPS.objects.create(**kwa)
-    return True
 
 
 @app.task(bind=True, queue='non_priority')
@@ -83,8 +83,7 @@ def download_daily_report(self):
     # Yesterday
     try:
         day = pendulum.now().start_of('day').subtract(days=1)
-        format_day = day.format("DD.MM.YYYY")
-        download_reports(day=format_day)
+        download_reports(day)
     except Exception as e:
         logger.error(e)
 
@@ -159,8 +158,8 @@ def update_driver_data(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
-                # BoltRequest().synchronize()
-                # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
+                BoltRequest().synchronize()
+                UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
                 UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
             else:
                 logger.info('passed')
@@ -173,7 +172,7 @@ def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
         UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('add_driver', candidate)
-        BoltSynchronizer(CHROME_DRIVER.driver, 'Bolt').try_to_execute('add_driver', candidate)
+        BoltRequest().add_driver(candidate)
         logger.info('The job application has been sent')
     except Exception as e:
         logger.error(e)
@@ -318,6 +317,7 @@ def save_report_to_ninja_payment(day=None):
             report.save()
         except IntegrityError:
             pass
+
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):

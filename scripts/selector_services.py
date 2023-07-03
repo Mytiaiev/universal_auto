@@ -2,6 +2,7 @@
 
 bolt_states = {
     'REQUEST_BOLT_LOGIN_URL': ('https://fleetownerportal.live.boltsvc.net/fleetOwnerPortal/', 'url'),
+    'R_BOLT_ADD_DRIVER_1': ("https://node.taxify.eu/fleet-registration/driverPortal/", 'url'),
     'BASE_URL': ('https://fleets.bolt.eu', 'url'),
     'BOLT_LOGIN_1': ('https://fleets.bolt.eu/v2/login', 'url'),
     'BOLT_LOGIN_2': ('email', 'ID'),
