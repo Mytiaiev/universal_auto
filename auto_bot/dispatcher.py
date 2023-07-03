@@ -160,7 +160,7 @@ def setup_dispatcher(dp):
 
     # Commands for Driver Managers
     dp.add_handler(CallbackQueryHandler(remove_cash_by_manager,
-                                        pattern=re.compile("^(Paid_driver|No_paid_driver) [0-9]+$")))
+                                        pattern=re.compile("^Paid_driver (true|false) [0-9]+$")))
     # Returns status cars
     dp.add_handler(CommandHandler("car_status", broken_car))
     # Viewing status driver

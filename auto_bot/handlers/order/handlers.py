@@ -351,35 +351,37 @@ def handle_callback_order(update, context):
         record = UseOfCars.objects.filter(user_vehicle=driver,
                                           created_at__date=timezone.now().date(),
                                           end_at=None).last()
-
-        vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-        markup = inline_spot_keyboard(order.latitude, order.longitude, pk=order.id)
-        order.driver = driver
-        order.save()
-        if order.status_order == Order.ON_TIME:
-            context.bot.delete_message(chat_id=int(ParkSettings.get_value('DRIVERS_CHAT')),
-                                       message_id=int(order.driver_message_id))
-            context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
-        else:
-            ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
-            message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
-                                 order.phone_number, order.sum, order.distance_google)
-            query.edit_message_text(text=message)
-            query.edit_message_reply_markup(reply_markup=markup)
-            report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
-                                                  driver.phone_number, order.sum)
-            client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
-            order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
-            order.client_message_id = client_msg
+        if record:
+            vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
+            markup = inline_spot_keyboard(order.latitude, order.longitude, pk=order.id)
+            order.driver = driver
             order.save()
-            try:
-                context.user_data['running'] = True
-                r = threading.Thread(target=send_map_to_client,
-                                     args=(update, context, order, query.message.message_id, vehicle, client_msg),
-                                     daemon=True)
-                r.start()
-            except:
-                pass
+            if order.status_order == Order.ON_TIME:
+                context.bot.delete_message(chat_id=int(ParkSettings.get_value('DRIVERS_CHAT')),
+                                           message_id=int(order.driver_message_id))
+                context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
+            else:
+                ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
+                message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
+                                     order.phone_number, order.sum, order.distance_google)
+                query.edit_message_text(text=message)
+                query.edit_message_reply_markup(reply_markup=markup)
+                report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
+                                                      driver.phone_number, order.sum)
+                client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
+                order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
+                order.client_message_id = client_msg
+                order.save()
+                try:
+                    context.user_data['running'] = True
+                    r = threading.Thread(target=send_map_to_client,
+                                         args=(update, context, order, query.message.message_id, vehicle, client_msg),
+                                         daemon=True)
+                    r.start()
+                except:
+                    pass
+        else:
+            context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
     elif data[0] == 'Reject_order':
         context.user_data['running'] = False
         query.edit_message_text(text=f"Ви <<Відмовились від замовлення>>")

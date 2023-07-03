@@ -122,9 +122,11 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'data/staticfiles'
 
-
-GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
-    os.path.join(BASE_DIR, "credentials.json"))
+try:
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+        os.path.join(BASE_DIR, "credentials.json"))
+except FileNotFoundError:
+    pass
 
 DEFAULT_FILE_STORAGE = "auto.gcloud.GoogleCloudMediaFileStorage"
 GS_PROJECT_ID = "ninja-taxi-9aa7d"

@@ -356,6 +356,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         drivers = []
         try:
             vehicles = self.get_all_vehicles()
+            print(vehicles)
             url = UberService.get_value('UBERS_GET_DRIVERS_TABLE_1')
             xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_2')
             self.get_target_element_of_page(url, xpath)
@@ -383,19 +384,24 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 vehicle_name = ''
                 vin_code = ''
                 try:
+                    self.driver.get_screenshot_as_file(f'{i}.png')
                     xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_7')
                     WebDriverWait(self.driver, self.sleep).until(
                         EC.element_to_be_clickable((By.XPATH, xpath))).click()
+                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                     xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_8')
                     WebDriverWait(row, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
                     xpath = UberService.get_value('UBERS_GET_DRIVERS_TABLE_9')
                     el = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                    self.driver.get_screenshot_as_file(f'{i}1.png')
+                    self.driver.execute_script("window.scrollTo(0, 0);")
                     vehicle_uuid = json.loads(el.get_attribute("data-tracking-payload"))['vehicleUUID']
                     licence_plate = vehicles[vehicle_uuid]['licence_plate']
                     vehicle_name = vehicles[vehicle_uuid]['vehicle_name']
                     vin_code = vehicles[vehicle_uuid]['vin_code']
-                except Exception:
-                    pass
+
+                except Exception as e:
+                    print(e)
             except TimeoutException:
                 break
             s_name = self.split_name(name)
@@ -406,7 +412,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 'email': self.validate_email(email),
                 'phone_number': self.validate_phone_number(phone_number),
                 'driver_external_id': driver_external_id,
-                'pay_cash': False,
+                'pay_cash': True,
                 'licence_plate': licence_plate,
                 'vehicle_name': vehicle_name,
                 'vin_code': vin_code,

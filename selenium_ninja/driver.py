@@ -185,7 +185,6 @@ class SeleniumTools:
                 "reader.readAsDataURL(input.files[0]); "
                 "input.remove(); "
                 , elem)
-            print(result)
             if not result.startswith('data:'):
                 raise Exception("Failed to get file content: %s" % result)
             return base64.b64decode(result[result.find('base64,') + 7:])
@@ -195,7 +194,6 @@ class SeleniumTools:
     def get_last_downloaded_file_frome_remote(self, save_as=None):
         try:
             files = WebDriverWait(self.driver, 30, 1).until(lambda driver: self.get_downloaded_files(driver))
-            print(files)
         except TimeoutException:
             return
         content = self.get_file_content(files[0])
@@ -219,6 +217,7 @@ class SeleniumTools:
         if hasattr(self, 'driver'):
             self.driver.quit()
             self.driver = None
+
 
 class Privat24(SeleniumTools):
     def __init__(self, card=None, sum=None, driver=True, sleep=3, headless=False, base_url='https://next.privat24.ua/'):

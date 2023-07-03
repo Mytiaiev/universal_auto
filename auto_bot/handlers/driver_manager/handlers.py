@@ -25,13 +25,9 @@ def remove_cash_driver(sender=None, **kwargs):
 def remove_cash_by_manager(update, context):
     query = update.callback_query
     data = query.data.split(' ')
-    driver = Driver.objects.filter(id=int(data[1])).first()
-    if data[0] == "No_paid_driver":
-        fleets_cash_trips.delay(driver.name, driver.second_name, disable=True)
-        query.edit_message_text(text=remove_cash_text(driver))
-    else:
-        fleets_cash_trips.delay(driver.name, driver.second_name, disable=False)
-        context.bot.delete_message(chat_id=ParkSettings.get_value("MANAGER_ID"), message_id=query.message.message_id)
+    driver = Driver.objects.filter(id=int(data[2])).first()
+    fleets_cash_trips.delay(int(data[2]), enable=data[1])
+    query.edit_message_text(text=remove_cash_text(driver, data[1]))
 
 
 # Add users and vehicle to db and others

@@ -85,7 +85,7 @@ class RequestSynchronizer:
     @staticmethod
     def get_or_create_vehicle(**kwargs):
         licence_plate = kwargs['licence_plate']
-        if len(licence_plate) == 0:
+        if not licence_plate:
             licence_plate = 'Unknown car'
         try:
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)

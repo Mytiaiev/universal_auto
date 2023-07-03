@@ -18,6 +18,9 @@ def ask_driver_paid(driver):
     return message
 
 
-def remove_cash_text(driver):
-    message = f"Розрахунок готівкою водію {driver} вимкнено"
+def remove_cash_text(driver, enable):
+    if enable == 'true':
+        message = f"Розрахунок готівкою водію {driver} увімкнено."
+    else:
+        message = f"Готівка вимкнена {driver}."
     return message

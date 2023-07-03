@@ -174,15 +174,15 @@ class BoltRequest(RequestSynchronizer):
         return {'wait': wait,
                 'with_client': with_client}
 
-    def cash_restriction(self, pk, disable):
+    def cash_restriction(self, pk, enable):
         driver = Driver.objects.get(pk=pk)
         driver_id = driver.get_driver_external_id(self.fleet)
         payload = {
             "driver_id": driver_id,
-            "has_cash_payment": disable
+            "has_cash_payment": enable
         }
         self.post_target_url(f'{self.base_url}driver/toggleCash', self.params, payload)
-        pay_cash = True if disable == 'true' else False
+        pay_cash = True if enable == 'true' else False
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver).update(pay_cash=pay_cash)
 
     def add_driver(self, job_application):

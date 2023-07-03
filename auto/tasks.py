@@ -158,8 +158,8 @@ def update_driver_data(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
-                BoltRequest().synchronize()
-                UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
+                # BoltRequest().synchronize()
+                # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
                 UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
             else:
                 logger.info('passed')
@@ -191,11 +191,11 @@ def get_rent_information(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def fleets_cash_trips(self, name, second_name, disable):
+def fleets_cash_trips(self, pk, enable):
     try:
-        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('disable_cash', name, second_name, disable)
+        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('disable_cash', pk, enable)
         logger.info('disable_uklon_cash')
-        BoltSynchronizer(CHROME_DRIVER.driver, 'Bolt').try_to_execute('disable_cash', name, second_name, disable)
+        BoltRequest().cash_restriction(pk, enable)
         logger.info('disable_bolt_cash')
     except Exception as e:
         logger.error(e)
@@ -357,7 +357,7 @@ def setup_periodic_tasks(sender, **kwargs):
 
 def init_chrome_driver():
     global CHROME_DRIVER
-    CHROME_DRIVER = SeleniumTools(session='Ninja', week_number=None, driver=True, remote=True,
+    CHROME_DRIVER = SeleniumTools(session='Ninja', week_number=None, driver=True, remote=False,
                                   sleep=5, headless=True, profile='Tasks')
 
 
