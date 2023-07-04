@@ -233,13 +233,15 @@ class BoltRequest(RequestSynchronizer):
         encoded_payload = parse.urlencode(payload_form)
         params = {
             'version': 'DP.11.89',
+            'hash': response['data']['hash'],
+            'language': 'uk-ua',
         }
-        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', params=params, data=encoded_payload)
-        add_params = {'language': 'uk-ua',
-                      'hash': response['data']['hash']
-                      }
-        add_params.update(params)
-        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationDocumentsSet/', add_params)
+        first_params = dict(list(params.items())[:2])
+        second_params = dict(list(params.items())[0])
+        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationLog/', params=first_params)
+        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/',
+                      params=second_params, data=encoded_payload)
+        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationDocumentsSet/', params)
 
         file_paths = [
             f"{settings.MEDIA_URL}{job_application.driver_license_front}",  # license_front

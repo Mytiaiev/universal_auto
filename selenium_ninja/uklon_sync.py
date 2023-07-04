@@ -60,10 +60,10 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_7')).click()
         if self.sleep:
             time.sleep(self.sleep)
-        self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
-        # if self.sleep:
-        #     time.sleep(self.sleep)
-        #     self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+        if self.remote:
+            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+        else:
+            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
 
     def save_report(self, day=None):
         if self.sleep:
