@@ -1294,9 +1294,9 @@ class ParkSettings(models.Model):
         return f'{self.value}'
 
     @staticmethod
-    def get_value(key, default=None):
+    def get_value(key, default=None, **kwargs):
         try:
-            setting = ParkSettings.objects.get(key=key)
+            setting = ParkSettings.objects.get(key=key, **kwargs)
         except ParkSettings.DoesNotExist:
             return default
         return setting.value

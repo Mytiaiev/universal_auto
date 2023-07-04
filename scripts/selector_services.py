@@ -180,3 +180,13 @@ uber_states = {
         'https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/livemap', 'XPATH'),
     'UBERS_GET_DRIVER_STATUS_2': ('//div[@data-tracking-name="livemap"]', 'XPATH'),
 }
+
+states = {
+    'UKLON_SESSION': ('https://fleets.uklon.com.ua/api/auth', 'url'),
+    'UKLON_1': ('https://fleets.uklon.com.ua/api/fleets/', 'url'),
+    'UKLON_2': ('/vehicles"]', 'url'),
+    'UKLON_3': ('https://fleets.uklon.com.ua/api/fleets/reports/', 'url'),
+    'UKLON_4': ('/orders', 'url'),
+    'UKLON_5': ('https://fleets.uklon.com.ua/api/geolocation/', 'url'),
+    'UKLON_6': ('/drivers', 'url'),
+}
