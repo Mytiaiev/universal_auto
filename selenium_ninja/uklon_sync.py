@@ -403,3 +403,22 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
             return list(report)
         except Exception as err:
             self.logger.error(err)
+
+    def detaching_the_driver_from_the_car(self, licence_plate):
+        self.driver.get(NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_1'))
+        search = WebDriverWait(self.driver, self.sleep).until(
+            EC.presence_of_element_located(
+                (By.XPATH, NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_2'))))
+        search.click()
+        search.clear()
+        search.send_keys(licence_plate)
+        time.sleep(self.sleep)
+        try:
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_3')))).click()
+            WebDriverWait(self.driver, self.sleep).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_4')))).click()
+        except Exception as err:
+            self.logger.error(err)
