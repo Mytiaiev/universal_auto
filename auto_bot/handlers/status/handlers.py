@@ -19,14 +19,19 @@ def status(update, context):
         event.save()
         context.bot.send_message(chat_id=chat_id, text=f"Ваш {event.event} завершено.")
     if len(vehicle) == 1:
-        UseOfCars.objects.create(
-            user_vehicle=driver,
-            chat_id=chat_id,
-            licence_plate=vehicle[0].licence_plate)
-        driver.driver_status = Driver.ACTIVE
-        driver.save()
-        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
-        query.edit_message_text(text=add_auto_to_driver_text)
+        if UseOfCars.objects.filter(chat_id=chat_id,
+                                    created_at__date=timezone.now().date(),
+                                    end_at=None):
+            query.edit_message_text(text=already_start_job)
+        else:
+            UseOfCars.objects.create(
+                user_vehicle=driver,
+                chat_id=chat_id,
+                licence_plate=vehicle[0].licence_plate)
+            driver.driver_status = Driver.ACTIVE
+            driver.save()
+            ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
+            query.edit_message_text(text=add_auto_to_driver_text)
     else:
         query.edit_message_text(text=add_many_auto_text)
 
@@ -85,7 +90,7 @@ def finish_job_main(update, context):
         context.user_data.clear()
         detaching_the_driver_from_the_car.delay(record.licence_plate)
     else:
-        query.edit_message_text(finish_job)
+        query.edit_message_text(already_finish_job)
 
 
 def correct_or_not_auto(update, context):

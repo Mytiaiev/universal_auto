@@ -158,7 +158,6 @@ def order_create(update, context):
     user = User.get_by_chat_id(update.effective_chat.id)
     destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
     destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
-
     if not context.user_data.get('from_address'):
         context.user_data['from_address'] = context.user_data['location_address']
     else:
@@ -377,54 +376,37 @@ def handle_callback_order(update, context):
         record = UseOfCars.objects.filter(user_vehicle=driver,
                                           created_at__date=timezone.now().date(),
                                           end_at=None).last()
-        vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-        markup = inline_spot_keyboard(order.latitude,
-                                      order.longitude,
-                                      pk=order.id)
-        order.driver = driver
-        order.save()
-        if order.status_order == Order.ON_TIME:
-            context.bot.delete_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'),
-                                       message_id=int(order.driver_message_id))
-            context.bot.send_message(chat_id=driver.chat_id,
-                                     text=time_order_accepted)
-        else:
-            ParkStatus.objects.create(driver=driver,
-                                      status=Driver.WAIT_FOR_CLIENT)
-            message = order_info(order.id,
-                                 order.from_address,
-                                 order.to_the_address,
-                                 order.payment_method,
-                                 order.phone_number,
-                                 order.sum,
-                                 order.distance_google)
-
-            query.edit_message_text(text=message)
-            query.edit_message_reply_markup(reply_markup=markup)
-            report_for_client = client_order_text(driver,
-                                                  vehicle.name,
-                                                  record.licence_plate,
-                                                  driver.phone_number,
-                                                  order.sum)
-            client_msg = text_to_client(order, report_for_client,
-                                        button=inline_reject_order(order.pk))
-            order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
-            order.client_message_id = client_msg
+        if record:
+            vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
+            markup = inline_spot_keyboard(order.latitude, order.longitude, pk=order.id)
+            order.driver = driver
             order.save()
-            try:
-                context.user_data['running'] = True
-                r = threading.Thread(target=send_map_to_client,
-                                     args=(update,
-                                           context,
-                                           order,
-                                           query.message.message_id,
-                                           vehicle,
-                                           client_msg),
-                                     daemon=True)
-                r.start()
-            except:
-                pass
-
+            if order.status_order == Order.ON_TIME:
+                context.bot.delete_message(chat_id=int(ParkSettings.get_value('DRIVERS_CHAT')),
+                                           message_id=int(order.driver_message_id))
+                context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
+            else:
+                ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
+                message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
+                                     order.phone_number, order.sum, order.distance_google)
+                query.edit_message_text(text=message)
+                query.edit_message_reply_markup(reply_markup=markup)
+                report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
+                                                      driver.phone_number, order.sum)
+                client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
+                order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
+                order.client_message_id = client_msg
+                order.save()
+                try:
+                    context.user_data['running'] = True
+                    r = threading.Thread(target=send_map_to_client,
+                                         args=(update, context, order, query.message.message_id, vehicle, client_msg),
+                                         daemon=True)
+                    r.start()
+                except:
+                    pass
+        else:
+            context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
     elif data[0] == 'Reject_order':
         context.user_data['running'] = False
         query.edit_message_text(text="Ви <<Відмовились від замовлення>>")
@@ -438,7 +420,6 @@ def handle_callback_order(update, context):
         text_to_client(order, driver_cancel)
         order.status_order, order.driver, order.checked = Order.WAITING, None, False
         order.save()
-
     elif data[0] == "Client_on_site":
         if not context.user_data.get('recheck'):
             context.user_data['running'] = False
@@ -457,12 +438,10 @@ def handle_callback_order(update, context):
                                            order.to_longitude,
                                            pk=order.id)
         query.edit_message_reply_markup(reply_markup=reply_markup)
-
     elif data[0] == "End_trip":
         reply_markup = inline_route_keyboard(order.id)
         query.edit_message_text(text=route_trip_text)
         query.edit_message_reply_markup(reply_markup=reply_markup)
-
     elif data[0] in ("Along_the_route", "Off_route"):
         context.user_data['recheck'] = data[0]
         message = order_info(order.id,
@@ -474,19 +453,17 @@ def handle_callback_order(update, context):
                              order.distance_google)
         query.edit_message_text(text=message)
         query.edit_message_reply_markup(reply_markup=inline_repeat_keyboard(order.id))
-
     elif data[0] == "Accept":
         ParkStatus.objects.create(driver=order.driver,
                                   status=Driver.ACTIVE)
         if context.user_data['recheck'] == "Off_route":
             query.edit_message_text(text=calc_price_text)
             record = UseOfCars.objects.filter(user_vehicle=driver,
-                                              created_at__date=timezone.now().date())
-            licence_plate = (list(record))[-1].licence_plate
-            status_driver = ParkStatus.objects.filter(driver=driver,
-                                                      status=Driver.WITH_CLIENT).first()
-            s, e = timezone.localtime(status_driver.created_at), timezone.localtime(timezone.localtime())
-            get_distance_trip.delay(data[1], query.message.message_id, s, e, licence_plate)
+                                              created_at__date=timezone.now().date(), end_at=None).last()
+            vehicle = Vehicle.objects.filter(licence_plate=record.licence_plate).first()
+            status_driver = ParkStatus.objects.filter(driver=driver, status=Driver.WITH_CLIENT).first()
+            s, e = int(timezone.localtime(status_driver.created_at).timestamp()), int(timezone.localtime().timestamp())
+            get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)
         else:
             message = driver_complete_text(order.sum)
             query.edit_message_text(text=message)
@@ -529,20 +506,10 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
     need_shipping_address = False
 
     # Sending a request for payment
-    context.bot.send_invoice(chat_id=chat_id_client,
-                             title=title,
-                             description=description,
-                             payload=payload,
-                             provider_token=provider_token,
-                             currency=currency,
-                             start_parameter=start_parameter,
-                             prices=prices,
-                             photo_url=url,
-                             need_shipping_address=need_shipping_address,
-                             photo_width=615,
-                             photo_height=512,
-                             photo_size=50000,
-                             is_flexible=False)
+    context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
+                             provider_token=provider_token, currency=currency, start_parameter=start_parameter,
+                             prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
+                             photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
 
 
 '''@task_postrun.connect
@@ -565,8 +532,8 @@ def notify_driver(sender=None, **kwargs):
     if sender == send_time_order:
         accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
         for order in accepted_orders:
-            if order.order_time < timezone.localtime() + datetime.timedelta(minutes=int(
-                    ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10))):
+            if order.order_time < (timezone.localtime() + datetime.timedelta(minutes=int(
+                    ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
                 markup = inline_time_order_kb(order.id)
                 text = order_info(order.pk, order.from_address, order.to_the_address,
                                   order.payment_method, order.phone_number,

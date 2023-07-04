@@ -1,18 +1,13 @@
 from django.contrib import admin
 from django.contrib.admin import AdminSite
 from django.forms import BaseInlineFormSet
+from django.utils import timezone
 
 from .models import *
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
-group1, created = Group.objects.get_or_create(name='Partner')
-
-for user in group1.user_set.all():
-    for permission in group1.permissions.all():
-        user.user_permissions.add(permission)
 
 
 def assign_model_permissions(group):
@@ -43,7 +38,14 @@ def assign_model_permissions(group):
                 group.permissions.add(permission_obj)
 
 
-assign_model_permissions(group1)
+try:
+    group1, created = Group.objects.get_or_create(name='Partner')
+    for user in group1.user_set.all():
+        for permission in group1.permissions.all():
+            user.user_permissions.add(permission)
+    assign_model_permissions(group1)
+except ProgrammingError:
+    pass
 
 
 @receiver(post_save, sender=Group)
@@ -810,7 +812,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Інформація про машину',       {'fields': ['name', 'model', 'type',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei',
-                                                            'car_status',
+                                                            'car_status', 'gps_id',
                                                             ]}),
                 ('Додатково',                   {'fields': ['partner',
                                                             ]}),
@@ -986,9 +988,3 @@ class ParkSettingsAdmin(admin.ModelAdmin):
             ]
 
         return fieldsets
-
-
-
-
-
-

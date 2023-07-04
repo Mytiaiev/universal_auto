@@ -1,7 +1,16 @@
-from telegram import KeyboardButton
+from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.models import Driver
 from auto_bot.handlers.driver_manager.static_text import *
+
+
+def inline_driver_paid_kb(pk):
+    keyboard = [
+        [InlineKeyboardButton(paid_inline_buttons[0], callback_data=f"Paid_driver true {pk}"),
+         InlineKeyboardButton(paid_inline_buttons[1], callback_data=f"Paid_driver false {pk}")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
 
 create_user_keyboard = [KeyboardButton(f'{CREATE_USER}'),
                         KeyboardButton(f'{CREATE_VEHICLE}')]
@@ -20,3 +29,4 @@ drivers_status_buttons = [[KeyboardButton(f'- {Driver.ACTIVE}')],
                           [KeyboardButton(f'- {Driver.WAIT_FOR_CLIENT}')],
                           [KeyboardButton(f'- {Driver.OFFLINE}')]
                    ]
+
