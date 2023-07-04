@@ -6,8 +6,8 @@ from auto_bot.handlers.driver_manager.static_text import *
 
 def inline_driver_paid_kb(pk):
     keyboard = [
-        [InlineKeyboardButton(paid_inline_buttons[0], callback_data=f"Paid_driver {pk}"),
-         InlineKeyboardButton(paid_inline_buttons[1], callback_data=f"No_paid_driver {pk}")]
+        [InlineKeyboardButton(paid_inline_buttons[0], callback_data=f"Paid_driver true {pk}"),
+         InlineKeyboardButton(paid_inline_buttons[1], callback_data=f"Paid_driver false {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
