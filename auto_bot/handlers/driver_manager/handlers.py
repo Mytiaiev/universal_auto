@@ -1,15 +1,33 @@
 # Create driver and other
+from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
 from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, NewUklonPaymentsOrder, \
-    BoltPaymentsOrder, UberPaymentsOrder, JobApplication
+    BoltPaymentsOrder, UberPaymentsOrder, JobApplication, ParkSettings
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
-    fleet_job_keyboard, drivers_status_buttons
+    fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
-from auto.tasks import send_on_job_application_on_driver
+from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips
+from auto_bot.main import bot
+
+
+@task_postrun.connect
+def remove_cash_driver(sender=None, **kwargs):
+    if sender == manager_paid_weekly:
+        for driver in Driver.objects.filter(vehicle__isnull=False):
+            bot.send_message(chat_id=ParkSettings.get_value("MANAGER_ID"), text=ask_driver_paid(driver),
+                             reply_markup=inline_driver_paid_kb(driver.id))
+
+
+def remove_cash_by_manager(update, context):
+    query = update.callback_query
+    data = query.data.split(' ')
+    driver = Driver.objects.filter(id=int(data[2])).first()
+    fleets_cash_trips.delay(int(data[2]), enable=data[1])
+    query.edit_message_text(text=remove_cash_text(driver, data[1]))
 
 
 # Add users and vehicle to db and others

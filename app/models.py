@@ -7,7 +7,7 @@ import pendulum
 from django.core.exceptions import ObjectDoesNotExist
 
 from scripts.selector_services import *
-from django.db import models, IntegrityError
+from django.db import models, IntegrityError, ProgrammingError
 from django.db.models import Sum, QuerySet
 from django.db.models.base import ModelBase
 from django.utils.safestring import mark_safe
@@ -251,7 +251,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
         unique_together = (('report_from', 'report_to', 'driver_full_name', 'mobile_number'))
 
     def driver_id(self):
-        return self.driver_full_name
+        return self.mobile_number
 
     def report_text(self, name=None, rate=0.65):
         return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
@@ -458,8 +458,6 @@ class User(models.Model):
             elif len(phone_number) == 11:
                 valid_phone_number = f'+3{phone_number}'
                 return valid_phone_number
-        else:
-            return None
 
 
 class DriverManager(User):
@@ -481,6 +479,7 @@ class Vehicle(models.Model):
     type = models.CharField(max_length=20, default=ELECTRO, verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
     vin_code = models.CharField(max_length=17)
+    gps_id = models.IntegerField(default=0)
     gps_imei = models.CharField(max_length=100, default='')
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
@@ -704,18 +703,18 @@ class UberFleet(Fleet):
 
 
 class NinjaFleet(Fleet):
-    def start_report_interval(self, day=None):
-        current_date = pendulum.now().start_of('week').subtract(days=3)
-        if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").start_of("day")
-        return current_date.start_of('week')
 
-    def end_report_interval(self, day=None):
-        current_date = pendulum.now().start_of('week').subtract(days=3)
+    @staticmethod
+    def start_report_interval(day=None):
         if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").end_of("day")
+            return day.in_timezone("Europe/Kiev").start_of("day")
+        return pendulum.now().start_of('week').subtract(weeks=1)
+
+    @staticmethod
+    def end_report_interval(day=None):
+        current_date = pendulum.now().start_of('week').subtract(weeks=1)
+        if day:
+            return day.in_timezone("Europe/Kiev").end_of("day")
         return current_date.end_of('week')
 
     def download_report(self, day=None):
@@ -1295,9 +1294,9 @@ class ParkSettings(models.Model):
         return f'{self.value}'
 
     @staticmethod
-    def get_value(key, default=None):
+    def get_value(key, default=None, **kwargs):
         try:
-            setting = ParkSettings.objects.get(key=key)
+            setting = ParkSettings.objects.get(key=key, **kwargs)
         except ParkSettings.DoesNotExist:
             return default
         return setting.value
@@ -1316,7 +1315,7 @@ class Service(PolymorphicModel):
     def get_value(cls, key, default=None):
         try:
             setting = cls.objects.get(key=key)
-        except ObjectDoesNotExist:
+        except (ProgrammingError, ObjectDoesNotExist):
             return default
         return setting.value
 
