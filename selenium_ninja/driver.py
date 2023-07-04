@@ -34,14 +34,14 @@ class SeleniumTools:
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
         if driver:
-            if remote:
+            if self.remote:
                 self.driver = self.build_remote_driver(headless)
             else:
                 self.driver = self.build_driver(headless)
         if week_number:
             self.current_date = pendulum.parse(week_number, tz="Europe/Kiev")
         else:
-            self.current_date = pendulum.now().start_of('week').subtract(days=3)
+            self.current_date = pendulum.now().start_of('week').subtract(weeks=1)
 
     def report_file_name(self, pattern):
         filenames = os.listdir(os.curdir)
@@ -61,28 +61,16 @@ class SeleniumTools:
         return f'{fleet} {sy}{sm}{sd}-{ey}{em}{ed}-{partner}.csv'
 
     def week_number(self):
-        return f'{self.start_of_week().strftime("%W")}'
+        return f'{self.current_date.strftime("%W")}'
 
     def start_report_interval(self, day=None):
-        """
-
-        :return: report interval depends on type report (use in Bolt)
-        """
         if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").start_of("day")
-        return self.current_date.start_of('week')
+            return day.in_timezone("Europe/Kiev").start_of("day")
+        return self.current_date
 
     def end_report_interval(self, day=None):
         if day:
-            date = pendulum.from_format(day, "DD.MM.YYYY")
-            return date.in_timezone("Europe/Kiev").end_of("day")
-        return self.current_date.end_of('week')
-
-    def start_of_week(self):
-        return self.current_date.start_of('week')
-
-    def end_of_week(self):
+            return day.in_timezone("Europe/Kiev").end_of("day")
         return self.current_date.end_of('week')
 
     def remove_session(self):
@@ -102,7 +90,6 @@ class SeleniumTools:
     #             continue
 
     def build_driver(self, headless=True):
-        options = Options()
         options = webdriver.ChromeOptions()
         options.add_experimental_option("prefs", {
             "download.default_directory": os.path.join(os.getcwd(), "LastDownloads"),
@@ -147,24 +134,39 @@ class SeleniumTools:
         options.add_argument("--start-maximized")
         options.add_argument("--disable-extensions")
         options.add_argument('--disable-dev-shm-usage')
-        # options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
+        options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
+        capabilities = DesiredCapabilities.CHROME.copy()
+        capabilities['acceptInsecureCerts'] = True
 
         driver = webdriver.Remote(
             os.environ['SELENIUM_HUB_HOST'],
-            desired_capabilities=DesiredCapabilities.CHROME,
+            desired_capabilities=capabilities,
             options=options
         )
         return driver
 
-    def get_downloaded_files(self, driver):
+    @staticmethod
+    def get_downloaded_files(driver):
+        if not driver.current_url.startswith("chrome://downloads"):
+            driver.get("chrome://downloads/")
+
+        return driver.execute_script("""
+        const downloadsManager = document.querySelector('downloads-manager');
+        const shadowRoot = downloadsManager.shadowRoot;
+        const items = shadowRoot.querySelector('#downloadsList').items;
+        const completedItems = Array.from(items).filter(e => e.state === 'COMPLETE');
+        return completedItems.map(e => e.filePath || e.file_path || e.fileUrl || e.file_url);
+    """)
+
+    def clear_downloads(self):
         if not self.driver.current_url.startswith("chrome://downloads"):
             self.driver.get("chrome://downloads/")
 
-        return self.driver.execute_script(
-            "return  document.querySelector('downloads-manager')  "
-            " .shadowRoot.querySelector('#downloadsList')         "
-            " .items.filter(e => e.state === 'COMPLETE')          "
-            " .map(e => e.filePath || e.file_path || e.fileUrl || e.file_url); ")
+        download_manager = self.driver.find_element(By.TAG_NAME, 'downloads-manager')
+        shadow_root = self.driver.execute_script('return arguments[0].shadowRoot', download_manager)
+        clear_button = WebDriverWait(shadow_root, self.sleep).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '#toolbar #clear-all-button')))
+        clear_button.click()
 
     def get_file_content(self, path):
         try:
@@ -195,10 +197,9 @@ class SeleniumTools:
         except TimeoutException:
             return
         content = self.get_file_content(files[0])
-        if len(files):
-            fname = os.path.basename(files[0]) if save_as is None else save_as
-            with open(os.path.join(os.getcwd(), fname), 'wb') as f:
-                f.write(content)
+        fname = os.path.basename(files[0]) if save_as is None else save_as
+        with open(os.path.join(os.getcwd(), fname), 'wb') as f:
+            f.write(content)
 
     def get_last_downloaded_file(self, save_as=None):
         folder = os.path.join(os.getcwd(), "LastDownloads")
@@ -216,6 +217,7 @@ class SeleniumTools:
         if hasattr(self, 'driver'):
             self.driver.quit()
             self.driver = None
+
 
 class Privat24(SeleniumTools):
     def __init__(self, card=None, sum=None, driver=True, sleep=3, headless=False, base_url='https://next.privat24.ua/'):

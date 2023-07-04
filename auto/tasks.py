@@ -19,7 +19,7 @@ from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
 from auto.celery import app
-from selenium_ninja.bolt_sync import BoltSynchronizer
+from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberSynchronizer
@@ -66,10 +66,9 @@ def raw_gps_handler(id):
             'height': float(data[8]),
             'raw_data': raw,
         }
+        VehicleGPS.objects.create(**kwa)
     except ValueError as err:
         return f'{ValueError} {err}'
-    obj = VehicleGPS.objects.create(**kwa)
-    return True
 
 
 @app.task(bind=True, queue='non_priority')
@@ -83,8 +82,7 @@ def download_daily_report(self):
     # Yesterday
     try:
         day = pendulum.now().start_of('day').subtract(days=1)
-        format_day = day.format("DD.MM.YYYY")
-        download_reports(day=format_day, interval=1)
+        download_reports(day)
     except Exception as e:
         logger.error(e)
 
@@ -106,7 +104,7 @@ def update_driver_status(self):
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
 
-                bolt_status = BoltSynchronizer(CHROME_DRIVER.driver, 'Bolt').try_to_execute('get_driver_status')
+                bolt_status = BoltRequest().get_drivers_status()
                 logger.info(f'Bolt {bolt_status}')
 
                 uklon_status = UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('get_driver_status')
@@ -116,13 +114,13 @@ def update_driver_status(self):
                 # logger.info(f'Uber {uber_status}')
 
                 status_online = set()
-                status_width_client = set()
+                status_with_client = set()
                 if bolt_status is not None:
                     status_online = status_online.union(set(bolt_status['wait']))
-                    status_width_client = status_width_client.union(set(bolt_status['width_client']))
+                    status_with_client = status_with_client.union(set(bolt_status['with_client']))
                 if uklon_status is not None:
                     status_online = status_online.union(set(uklon_status['wait']))
-                    status_width_client = status_width_client.union(set(uklon_status['width_client']))
+                    status_with_client = status_with_client.union(set(uklon_status['width_client']))
                 # if uber_status is not None:
                 #     status_online = status_online.union(set(uber_status['online']))
                 #     status_width_client = status_width_client.union(set(uber_status['width_client']))
@@ -138,7 +136,7 @@ def update_driver_status(self):
                         current_status = Driver.OFFLINE
                     if park_status and park_status.status != Driver.ACTIVE:
                         current_status = park_status.status
-                    if (driver.name, driver.second_name) in status_width_client:
+                    if (driver.name, driver.second_name) in status_with_client:
                         current_status = Driver.WITH_CLIENT
                     # if (driver.name, driver.second_name) in status['wait']:
                     #     current_status = Driver.ACTIVE
@@ -159,7 +157,7 @@ def update_driver_data(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
-                BoltSynchronizer(CHROME_DRIVER.driver, 'Bolt').try_to_execute('synchronize')
+                BoltRequest().synchronize()
                 UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
                 UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
             else:
@@ -173,8 +171,17 @@ def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
         UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('add_driver', candidate)
-        BoltSynchronizer(CHROME_DRIVER.driver, 'Bolt').try_to_execute('add_driver', candidate)
+        BoltRequest().add_driver(candidate)
         logger.info('The job application has been sent')
+    except Exception as e:
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def detaching_the_driver_from_the_car(self, licence_plate):
+    try:
+        UklonSynchronizer(CHROME_DRIVER.driver).try_to_execute('detaching_the_driver_from_the_car', licence_plate)
+        logger.info(f'Car {licence_plate} was detached')
     except Exception as e:
         logger.error(e)
 
@@ -182,12 +189,29 @@ def send_on_job_application_on_driver(self, job_id):
 @app.task(bind=True, queue='non_priority')
 def get_rent_information(self):
     try:
-        UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('get_rent_distance')
+        session = UaGpsSynchronizer()
+        session.get_rent_distance()
         logger.info('write rent report in uagps')
-        UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('no_uber_rent_distance')
+        session.no_uber_rent_distance()
         logger.info('uber removed in rent')
     except Exception as e:
         logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def fleets_cash_trips(self, pk, enable):
+    try:
+        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('disable_cash', pk, enable)
+        logger.info('disable_uklon_cash')
+        BoltRequest().cash_restriction(pk, enable)
+        logger.info('disable_bolt_cash')
+    except Exception as e:
+        logger.error(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def manager_paid_weekly(self):
+    return logger.info('send message to manager')
 
 
 @app.task(bind=True, queue='non_priority')
@@ -202,8 +226,7 @@ def withdraw_uklon(self):
 def download_uber_trips(self):
     try:
         day = pendulum.now().start_of('day').subtract(days=1)
-        format_day = day.format("DD.MM.YYYY")
-        UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day=format_day)
+        UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
     except Exception as e:
         logger.error(e)
 
@@ -220,16 +243,14 @@ def send_daily_into_group(self):
         if today > 0:
             for i in range(today):
                 day = pendulum.now().start_of('day').subtract(days=i + 1)
-                format_day = day.format("DD.MM.YYYY")
-                report = download_reports(day=format_day, interval=i*2 + 1)[2]
+                report = download_reports(day=day)[2]
                 for key, value in report.items():
                     if not i:
                         day_values[key] = day_values.get(key, 0) + value
                     total_values[key] = total_values.get(key, 0) + value
         else:
             day = pendulum.now().start_of('day').subtract(days=1)
-            format_day = day.format("DD.MM.YYYY")
-            day_values = download_reports(day=format_day, interval=1)[2]
+            day_values = download_reports(day=day)[2]
             total_values = download_reports()[2]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
         for key in sort_report:
@@ -268,14 +289,12 @@ def check_order(self, order_id):
 
 
 @app.task(bind=True, queue='non_priority')
-def get_distance_trip(self, order, query, start_trip_with_client, end, licence_plate):
-    start_trip_with_client, end = start_trip_with_client.replace('T', ' '), end.replace('T', ' ')
-    start = datetime.datetime.strptime(start_trip_with_client, '%Y-%m-%d %H:%M:%S.%f%z')
-    format_end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S.%f%z')
+def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
+    start = datetime.datetime.fromtimestamp(start_trip_with_client)
+    format_end = datetime.datetime.fromtimestamp(end)
     delta = format_end - start
     try:
-        result = UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('generate_report', start,
-                                                                        format_end, licence_plate)
+        result = UaGpsSynchronizer().generate_report(start_trip_with_client, end, gps_id)
         minutes = delta.total_seconds() // 60
         return order, query, minutes, result[0]
     except Exception as e:
@@ -285,13 +304,11 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, licence_p
 @app.task(queue='non_priority')
 def save_report_to_ninja_payment(day=None):
     if day:
-        day = pendulum.now().start_of('day').subtract(days=1)
-        start_date = day.start_of("day")
-        end_date = day.end_of("day")
+        start_date = pendulum.now().start_of('day').subtract(days=1)
+        end_date = start_date.end_of("day")
     else:
-        week = pendulum.now().start_of('week').subtract(days=3)
-        start_date = week.start_of('week')
-        end_date = week.end_of('week')
+        start_date = pendulum.now().start_of('week').subtract(weeks=1)
+        end_date = start_date.end_of('week')
 
     start_date, end_date = str(start_date).replace('T', ' '), str(end_date).replace('T', ' ')
     # Pulling notes for the rest of the week and grouping behind the chat_id field
@@ -325,6 +342,7 @@ def save_report_to_ninja_payment(day=None):
         except IntegrityError:
             pass
 
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global CHROME_DRIVER
@@ -342,6 +360,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
     sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(), queue='non_priority')
 
 
 def init_chrome_driver():
@@ -350,7 +369,18 @@ def init_chrome_driver():
                                   sleep=5, headless=True, profile='Tasks')
 
 
-def download_reports(day=None, interval=None):
+def get_start_end(day=None):
+    if day:
+        start = end = day.format("YYYY-MM-DD")
+    else:
+        week = pendulum.now().start_of('week').subtract(weeks=1)
+        start = week.format("YYYY-MM-DD")
+        end = week.end_of('week').format("YYYY-MM-DD")
+    return start, end
+
+
+def download_reports(day=None):
+    start, end = get_start_end(day=day)
     our_fleet = NinjaFleet()
     all_drivers_report = []
     owner = {"Fleet Owner": 0}
@@ -358,8 +388,7 @@ def download_reports(day=None, interval=None):
     totals = {}
     salary = {}
     try:
-        all_drivers_report += BoltSynchronizer(
-            CHROME_DRIVER.driver, 'Bolt').try_to_execute('download_weekly_report', day=day, interval=interval)
+        all_drivers_report += BoltRequest().save_report(start, end)
         all_drivers_report += UklonSynchronizer(
             CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day=day)
         all_drivers_report += UberSynchronizer(
@@ -398,15 +427,14 @@ def download_reports(day=None, interval=None):
         logger.info(e)
 
 
-def get_car_efficiency(driver, interval, day=None):
+def get_car_efficiency(driver, day=None):
     efficiency = CarEfficiency.objects.filter(start_report=day.start_of('day'),
                                               end_report=day.end_of('day'),
                                               driver=driver)
     if not efficiency:
         try:
-            format_day = day.format("DD.MM.YYYY")
-            total_km = UaGpsSynchronizer(CHROME_DRIVER.driver).try_to_execute('total_per_day', driver, format_day)
-            total_kasa = download_reports(day=format_day, interval=interval)[2]
+            total_km = UaGpsSynchronizer().total_per_day(driver, day)
+            total_kasa = download_reports(day)[2]
             if total_km and total_kasa.get(driver.full_name()):
                 result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
                 CarEfficiency.objects.create(start_report=day.start_of('day'),
@@ -430,8 +458,7 @@ def calculate_efficiency(driver):
         today = 7
     for i in range(today):
         day = pendulum.now().start_of('day').subtract(days=i + 1)
-        interval = i * 2 + 1
-        get_car_efficiency(driver, interval, day)
+        get_car_efficiency(driver, day)
     start_period = pendulum.now().start_of('day').subtract(days=today)
     end_period = pendulum.now().start_of('day').subtract(days=1)
     all_objects = CarEfficiency.objects.filter(start_report__range=[start_period, end_period],
@@ -439,8 +466,8 @@ def calculate_efficiency(driver):
     efficiency_objects = all_objects.exclude(efficiency=0)
     yesterday_efficiency = CarEfficiency.objects.filter(start_report=end_period,
                                                         driver=driver).first()
-    efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 1
-    distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 1
+    efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 0
+    distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 0
     average_efficiency = efficiency_objects.aggregate(avg_efficiency=Avg('efficiency'))['avg_efficiency']
     total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
     formatted_efficiency = float('{:.2f}'.format(average_efficiency)) if average_efficiency is not None else 0.00

@@ -2,8 +2,23 @@ from django.utils import timezone
 from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus, Vehicle
+from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus,\
+    Vehicle, Park
 from auto_bot.main import bot
+from scripts.settings_for_park import settings
+
+
+@receiver(post_save, sender=Park)
+def create_park_settings(sender, instance, created, **kwargs):
+    if created:
+        keys_to_save = ('UBER_NAME', 'UBER_PASSWORD',
+                        'BOLT_NAME', 'BOLT_PASSWORD',
+                        'UKLON_NAME', 'UKLON_PASSWORD',
+                        'UKLON_TOKEN', 'DRIVERS_CHAT')
+
+        for key in keys_to_save:
+            response = settings[key]
+            ParkSettings.objects.create(key=key, value=response[0], description=response[1], park=instance)
 
 
 @receiver(pre_save, sender=Driver)
@@ -13,7 +28,6 @@ def create_status_change(sender, instance, **kwargs):
     except Driver.DoesNotExist:
         # new instance, ignore
         return
-    vehicle = Vehicle.objects.filter(driver=instance).first()
     if old_instance.driver_status != instance.driver_status:
         # update the end time of the previous status change
         prev_status_change = StatusChange.objects.filter(driver=instance, end_time=None).first()
@@ -25,7 +39,7 @@ def create_status_change(sender, instance, **kwargs):
         status_change = StatusChange(
             driver=instance,
             name=instance.driver_status,
-            vehicle=vehicle,
+            vehicle=instance.vehicle,
             start_time=timezone.now(),
         )
         status_change.save()
@@ -37,17 +51,17 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
         send_on_job_application_on_driver.delay(instance.id)
 
 
-@receiver(post_save, sender=RentInformation)
-def send_day_rent(sender, instance, **kwargs):
-    try:
-        chat_id = instance.driver.chat_id
-        # if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
-        #     rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
-        #     message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
-        #      вартість оренди {rent_cost}грн"""
-        #     bot.send_message(chat_id=chat_id, text=message)
-    except:
-        pass
+# @receiver(post_save, sender=RentInformation)
+# def send_day_rent(sender, instance, **kwargs):
+#     try:
+#         chat_id = instance.driver.chat_id
+#         # if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
+#         #     rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
+#         #     message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
+#         #      вартість оренди {rent_cost}грн"""
+#         #     bot.send_message(chat_id=chat_id, text=message)
+#     except:
+#         pass
 
 
 @receiver(post_save, sender=Order)

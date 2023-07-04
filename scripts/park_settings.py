@@ -1,8 +1,3 @@
-from django.db import IntegrityError
-
-from app.models import ParkSettings
-
-
 settings = {
     'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
     'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
@@ -44,8 +39,10 @@ settings = {
     'CLIENT_ID': ('Enter ID', 'Payload з Uklon'),
     'CLIENT_SECRET': ('Enter Secret', 'Payload з Uklon'),
 }
-
-
+from app.models import ParkSettings, UberService, UaGpsService, BoltService, NewUklonService
+from django.db import IntegrityError
+from scripts.selector_services import uber_states, uagps_states, bolt_states, newuklon_states
+from scripts.settings_for_park import settings
 
 
 def init_park_settings():
@@ -67,8 +64,80 @@ def init_park_settings():
             continue
 
 
+def init_service_uber():
+    for key, value in uber_states.items():
+        uber_service = UberService.objects.filter(key=key).first()
+        if not uber_service:
+            new_key = UberService(key=key,
+                                  value=value[0],
+                                  description=value[1])
+            try:
+                new_key.save()
+            except IntegrityError:
+                pass
+        else:
+            if uber_service.value != value[0]:
+                uber_service.value = value[0]
+                uber_service.save()
+
+
+def init_service_uagps():
+    for key, value in uagps_states.items():
+        uagps_service = UaGpsService.objects.filter(key=key).first()
+        if not uagps_service:
+            new_key = UaGpsService(key=key,
+                                   value=value[0],
+                                   description=value[1])
+            try:
+                new_key.save()
+            except IntegrityError:
+                pass
+        else:
+            if uagps_service.value != value[0]:
+                uagps_service.value = value[0]
+                uagps_service.save()
+
+
+def init_service_bolt():
+    for key, value in bolt_states.items():
+        bolt_service = BoltService.objects.filter(key=key).first()
+        if not bolt_service:
+            new_key = BoltService(key=key,
+                                  value=value[0],
+                                  description=value[1])
+            try:
+                new_key.save()
+            except IntegrityError:
+                pass
+        else:
+            if bolt_service.value != value[0]:
+                bolt_service.value = value[0]
+                bolt_service.save()
+
+
+def init_service_newuklon():
+    for key, value in newuklon_states.items():
+        newuklon_service = NewUklonService.objects.filter(key=key).first()
+        if not NewUklonService.objects.filter(key=key):
+            new_key = NewUklonService(key=key,
+                                      value=value[0],
+                                      description=value[1])
+            try:
+                new_key.save()
+            except IntegrityError:
+                pass
+        else:
+            if newuklon_service.value != value[0]:
+                newuklon_service.value = value[0]
+                newuklon_service.save()
+
+
 def run():
     init_park_settings()
+    init_service_uagps()
+    init_service_uber()
+    init_service_bolt()
+    init_service_newuklon()
     print('Script ParkSettings done')
 
 

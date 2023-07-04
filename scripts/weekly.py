@@ -7,6 +7,3 @@ def run(*args):
     else:
         week_number = None
     print(download_weekly_report.delay())
-
-
-
