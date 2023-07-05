@@ -19,20 +19,26 @@ from selenium_ninja.synchronizer import Synchronizer, RequestSynchronizer
 
 
 class BoltRequest(RequestSynchronizer):
-    def __init__(self, fleet='Bolt', base_url=BoltService.get_value('REQUEST_BOLT_LOGIN_URL')):
-        self.params = {"language": "uk-ua",
-                       "version": "FO.2.61"}
-        super().__init__(fleet=fleet, base_url=base_url)
+    def base_url(self):
+        return BoltService.get_value('REQUEST_BOLT_LOGIN_URL')
+
+    def parameters(self):
+        param = {"language": "uk-ua",
+                 "version": "FO.2.61"}
+        return param
+
 
     def get_login_token(self):
         payload = {
-            'username': ParkSettings.get_value("BOLT_NAME"),
-            'password': ParkSettings.get_value("BOLT_PASSWORD"),
+            'username': ParkSettings.get_value("BOLT_NAME", park=self.id),
+            'password': ParkSettings.get_value("BOLT_PASSWORD", park=self.id),
             'device_name': "Chrome",
             'device_os_version': "NT 10.0",
             "device_uid": "6439b6c1-37c2-4736-b898-cb2a8608e6e2"
         }
-        response = requests.post(url=f'{self.base_url}startAuthentication', params=self.params, json=payload)
+        response = requests.post(url=f'{self.base_url()}startAuthentication',
+                                 params=self.parameters(),
+                                 json=payload)
         self.redis.set(f"{self.fleet}_refresh", response.json()["data"]["refresh_token"])
         return response.json()
 
@@ -44,8 +50,9 @@ class BoltRequest(RequestSynchronizer):
                 "company": {"company_id": "58225",
                             "company_type": "fleet_company"}
             }
-            response = requests.post(url=f'{self.base_url}getAccessToken',
-                                     params=self.params, json=access_payload)
+            response = requests.post(url=f'{self.base_url()}getAccessToken',
+                                     params=self.parameters(),
+                                     json=access_payload)
             if not response.json()['code']:
                 self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
             else:
@@ -56,8 +63,9 @@ class BoltRequest(RequestSynchronizer):
                     "company": {"company_id": "58225",
                                 "company_type": "fleet_company"}
                 }
-                response = requests.post(url=f'{self.base_url}getAccessToken',
-                                         params=self.params, json=new_payload)
+                response = requests.post(url=f'{self.base_url()}getAccessToken',
+                                         params=self.parameters(),
+                                         json=new_payload)
                 self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
         else:
             self.get_login_token()
@@ -77,30 +85,22 @@ class BoltRequest(RequestSynchronizer):
         response = requests.post(url, json=json, params=params, headers=headers)
         return response.json()
 
-    @staticmethod
-    def start_report_interval(start_date):
-        date = pendulum.from_format(start_date, "YYYY-MM-DD")
-        return date.in_timezone("Europe/Kiev").start_of("day")
-
-    @staticmethod
-    def end_report_interval(end_date):
-        date = pendulum.from_format(end_date, "YYYY-MM-DD")
-        return date.in_timezone("Europe/Kiev").end_of("day")
-
     def download_report(self, start, end):
         report = BoltPaymentsOrder.objects.filter(report_from=self.start_report_interval(start),
-                                                  report_to=self.end_report_interval(end))
+                                                  report_to=self.end_report_interval(end),
+                                                  partner=self.get_partner())
         return list(report)
 
     def save_report(self, start, end):
         if self.download_report(start, end):
             return self.download_report(start, end)
         # date format str yyyy-mm-dd
-        self.params.update({"start_date": start,
-                            "end_date": end,
-                            "offset": 0,
-                            "limit": 50})
-        report = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', self.params)
+        self.parameters().update({"start_date": start,
+                                  "end_date": end,
+                                  "offset": 0,
+                                  "limit": 50})
+        report = self.get_target_url(f'{self.base_url()}getDriverEarnings/dateRange', self.parameters())
+
         for driver in report['data']['drivers']:
             order = BoltPaymentsOrder(
                 report_from=self.start_report_interval(start),
@@ -120,7 +120,8 @@ class BoltRequest(RequestSynchronizer):
                 compensation=driver['compensations'],
                 refunds=driver['expense_refunds'],
                 tips=driver['tips'],
-                weekly_balance=0)
+                weekly_balance=0,
+                partner=self.get_partner())
             try:
                 order.save()
             except IntegrityError:
@@ -134,13 +135,13 @@ class BoltRequest(RequestSynchronizer):
                   "end_date": end,
                   "offset": 0,
                   "limit": 25}
-        params.update(self.params)
-        report = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', params)
+        params.update(self.parameters())
+        report = self.get_target_url(f'{self.base_url()}getDriverEngagementData/dateRange', params)
         drivers = report['data']['rows']
         for driver in drivers:
-            driver_params = self.params.copy()
+            driver_params = self.parameters().copy()
             driver_params['id'] = driver['id']
-            driver_info = self.get_target_url(f'{self.base_url}getDriver', driver_params)
+            driver_info = self.get_target_url(f'{self.base_url()}getDriver', driver_params)
             driver_list.append({
                 'fleet_name': self.fleet,
                 'name': driver_info['data']['first_name'],
@@ -160,7 +161,7 @@ class BoltRequest(RequestSynchronizer):
     def get_drivers_status(self):
         with_client = []
         wait = []
-        report = self.get_target_url(f'{self.base_url}getDriversForLiveMap', self.params)
+        report = self.get_target_url(f'{self.base_url()}getDriversForLiveMap', self.parameters())
         drivers = report['data']['list']
         if drivers:
             for driver in drivers:
@@ -181,7 +182,7 @@ class BoltRequest(RequestSynchronizer):
             "driver_id": driver_id,
             "has_cash_payment": enable
         }
-        self.post_target_url(f'{self.base_url}driver/toggleCash', self.params, payload)
+        self.post_target_url(f'{self.base_url()}driver/toggleCash', self.parameters(), payload)
         pay_cash = True if enable == 'true' else False
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver).update(pay_cash=pay_cash)
 
@@ -191,7 +192,7 @@ class BoltRequest(RequestSynchronizer):
                         "phone": f"{job_application.phone_number}",
                         "referral_code": ""
                 }
-        response = self.post_target_url(f'{self.base_url}addDriverRegistration', self.params, payload)
+        response = self.post_target_url(f'{self.base_url()}addDriverRegistration', self.parameters(), payload)
         payload_form = {
             'hash': response['data']['hash'],
             'last_step': 'step_2',

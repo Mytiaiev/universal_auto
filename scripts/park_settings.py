@@ -39,6 +39,8 @@ settings = {
     'CLIENT_ID': ('Enter ID', 'Payload з Uklon'),
     'CLIENT_SECRET': ('Enter Secret', 'Payload з Uklon'),
 }
+
+
 from app.models import ParkSettings, UberService, UaGpsService, BoltService, NewUklonService
 from django.db import IntegrityError
 from scripts.selector_services import uber_states, uagps_states, bolt_states, newuklon_states
