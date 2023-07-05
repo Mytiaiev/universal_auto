@@ -29,7 +29,7 @@ class RequestSynchronizer:
 
     def get_partner(self) -> object:
         park = Park.objects.select_related('partner').get(pk=self.id)
-        return park.partner.pk
+        return park.partner
 
     def start_report_interval(self, start_date):
         date = pendulum.from_format(start_date, "YYYY-MM-DD")
@@ -96,7 +96,7 @@ class RequestSynchronizer:
                 second_name=kwargs[s_name],
                 phone_number=kwargs[phone],
                 email=kwargs[email],
-                partner=self.get_partner()
+                partner=self.get_partner(),
             )
             driver.save()
         return driver

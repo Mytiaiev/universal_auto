@@ -13,7 +13,7 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency
+    NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Park
 from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
 
@@ -23,7 +23,7 @@ from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberSynchronizer
-from selenium_ninja.uklon_sync import UklonSynchronizer
+from selenium_ninja.uklon_sync import UklonSynchronizer, UklonRequest
 
 CHROME_DRIVER = None
 
@@ -103,12 +103,12 @@ def update_driver_status(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
+                for park in Park.objects.all():
+                    bolt_status = BoltRequest(park_id=park.pk, fleet='Bolt').get_drivers_status()
+                    logger.info(f'Bolt {bolt_status}')
 
-                bolt_status = BoltRequest().get_drivers_status()
-                logger.info(f'Bolt {bolt_status}')
-
-                uklon_status = UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('get_driver_status')
-                logger.info(f'Uklon {uklon_status}')
+                    uklon_status = UklonRequest(park_id=park.pk, fleet='Uklon').get_driver_status()
+                    logger.info(f'Uklon {uklon_status}')
 
                 # uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
                 # logger.info(f'Uber {uber_status}')
@@ -152,14 +152,15 @@ def update_driver_status(self):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True, queue='non_priority') # need uber
 def update_driver_data(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
-                BoltRequest().synchronize()
-                UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
-                UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
+                for park in Park.objects.all():
+                    BoltRequest(park_id=park.pk, fleet='Bolt').synchronize()
+                    UklonRequest(park_id=park.pk, fleet='Uklon').synchronize()
+                #UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
             else:
                 logger.info('passed')
     except Exception as e:
@@ -388,12 +389,12 @@ def download_reports(day=None):
     totals = {}
     salary = {}
     try:
-        all_drivers_report += BoltRequest().save_report(start, end)
-        all_drivers_report += UklonSynchronizer(
-            CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day=day)
-        all_drivers_report += UberSynchronizer(
-            CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day=day)
-        all_drivers_report += our_fleet.download_report(day=day)
+        for park in Park.objects.all():
+            all_drivers_report += BoltRequest(park_id=park.pk, fleet='Bolt').save_report(start, end)
+            all_drivers_report += UklonRequest(park_id=park.pk, fleet='Uklon').save_report(start, end)
+        # all_drivers_report += UberSynchronizer(
+        #     CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day=day)
+        # all_drivers_report += our_fleet.download_report(day=day)
         for rate in Fleets_drivers_vehicles_rate.objects.all():
             r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
             if r:

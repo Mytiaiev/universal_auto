@@ -41,9 +41,9 @@ settings = {
 }
 
 
-from app.models import ParkSettings, UberService, UaGpsService, BoltService, NewUklonService
+from app.models import ParkSettings, UberService, UaGpsService, BoltService, NewUklonService, Service
 from django.db import IntegrityError
-from scripts.selector_services import uber_states, uagps_states, bolt_states, newuklon_states
+from scripts.selector_services import uber_states, uagps_states, bolt_states, newuklon_states, states
 from scripts.settings_for_park import settings
 
 
@@ -134,11 +134,29 @@ def init_service_newuklon():
                 newuklon_service.save()
 
 
+def init_service_():
+    for key, value in states.items():
+        service = Service.objects.filter(key=key).first()
+        if not service:
+            new_key = Service(key=key,
+                              value=value[0],
+                              description=value[1])
+            try:
+                new_key.save()
+            except IntegrityError:
+                pass
+        else:
+            if service.value != value[0]:
+                service.value = value[0]
+                service.save()
+
+
 def run():
     init_park_settings()
     init_service_uagps()
     init_service_uber()
     init_service_bolt()
+    init_service_()
     init_service_newuklon()
     print('Script ParkSettings done')
 

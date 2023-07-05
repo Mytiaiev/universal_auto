@@ -27,7 +27,6 @@ class BoltRequest(RequestSynchronizer):
                  "version": "FO.2.61"}
         return param
 
-
     def get_login_token(self):
         payload = {
             'username': ParkSettings.get_value("BOLT_NAME", park=self.id),
@@ -95,12 +94,13 @@ class BoltRequest(RequestSynchronizer):
         if self.download_report(start, end):
             return self.download_report(start, end)
         # date format str yyyy-mm-dd
-        self.parameters().update({"start_date": start,
+        param = self.parameters()
+        param.update({"start_date": start,
                                   "end_date": end,
                                   "offset": 0,
                                   "limit": 50})
-        report = self.get_target_url(f'{self.base_url()}getDriverEarnings/dateRange', self.parameters())
 
+        report = self.get_target_url(f'{self.base_url()}getDriverEarnings/dateRange', param)
         for driver in report['data']['drivers']:
             order = BoltPaymentsOrder(
                 report_from=self.start_report_interval(start),
