@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-from taxi_service.utils import get_all_drivers
+from taxi_service.utils import *
 from app.models import ParkSettings
 
 
@@ -71,6 +71,8 @@ class GetRequestView(View):
             return handler.handle_active_vehicles_locations(request)
         elif action == 'order_confirm':
             return handler.handle_order_confirm(request)
+        elif action == 'get_drivers_cash':
+            return handler.handle_get_drivers_cash(request)
         else:
             return handler.handle_unknown_action(request)
 
@@ -93,6 +95,18 @@ class DriversView(TemplateView):
         context['subscribe_form'] = SubscriberForm()
         context['page_obj'] = page_obj
         return context
+
+
+class DashboardView(TemplateView):
+    template_name = 'dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_distance_rent'] = weekly_rent()
+        context['weekly_income'] = weekly_income()
+
+        return context
+
 
 
 def blog(request):

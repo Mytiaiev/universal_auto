@@ -1,12 +1,8 @@
-import json
-from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse, HttpResponse
 from django.forms.models import model_to_dict
 
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
-from taxi_service.utils import \
-    active_vehicles_gps, update_order_sum_or_status, order_confirm, restart_order
-
+from taxi_service.utils import *
 
 class PostRequestHandler:
     def handle_order_form(self, request):
@@ -70,6 +66,12 @@ class GetRequestHandler:
         id_order = request.GET.get('id_order')
         driver = order_confirm(id_order)
         json_data = JsonResponse({'data': driver}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
+    def handle_get_drivers_cash(self, request):
+        get_drivers_cash = collect_total_earnings()
+        json_data = JsonResponse({'data': get_drivers_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
 

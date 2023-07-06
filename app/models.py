@@ -1334,3 +1334,9 @@ class UaGpsService(Service):
 
 class UberService(Service):
     pass
+
+
+class Dashboard(models.Model):
+    class Meta:
+        verbose_name = 'Інформаційна панель автопарку'
+        verbose_name_plural = 'Інформаційна панель автопарку'

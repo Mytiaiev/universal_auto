@@ -131,6 +131,11 @@ body {
   border-radius: 5px;
 }
 
+.main-cards .card h3 {
+  font-size: 15px;
+  margin: 5px;
+}
+
 .card:first-child {
   background-color: #2962ff;
 }
@@ -148,9 +153,12 @@ body {
 }
 
 .card-inner {
+  font-size: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: -20px;
+  margin-bottom: -5px;
 }
 
 .card-inner > .material-icons-outlined {

@@ -73,7 +73,7 @@ var barChartOptions = {
     labels: {
       colors: "#f5f7ff",
     },
-    show: true,
+    show: false,
     position: "top",
   },
   stroke: {
@@ -109,7 +109,7 @@ var barChartOptions = {
   },
   yaxis: {
     title: {
-      text: "Count",
+      text: "Каса",
       style: {
         color:  "#f5f7ff",
       },
@@ -137,10 +137,10 @@ barChart.render();
 // AREA CHART
 var areaChartOptions = {
   series: [{
-    name: "Purchase Orders",
+    name: "Василь",
     data: [31, 40, 28, 51, 42, 109, 100],
   }, {
-    name: "Sales Orders",
+    name: "Іван",
     data: [11, 32, 45, 32, 34, 52, 41],
   }],
   chart: {
@@ -215,7 +215,7 @@ var areaChartOptions = {
   [
     {
       title: {
-        text: "Purchase Orders",
+        text: "Дохід грн/км",
         style: {
           color: "#f5f7ff",
         },
@@ -229,7 +229,7 @@ var areaChartOptions = {
     {
       opposite: true,
       title: {
-        text: "Sales Orders",
+        text: "Дохід грн/км",
         style: {
           color:  "#f5f7ff",
         },
@@ -250,3 +250,29 @@ var areaChartOptions = {
 
 var areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
+
+
+$(document).ready(function () {
+  $.ajax({
+    type: "GET",
+    url: ajaxGetUrl,
+    data: {
+      action: 'get_drivers_cash',
+    },
+    success: function (response) {
+      console.log(response);
+      let data = response.data;
+      let formattedData = {};
+
+      Object.keys(data).forEach(function (key) {
+        let value = parseFloat(data[key].toFixed(2));
+        if (value !== 0) {
+          formattedData[key] = value;
+        }
+      });
+      barChartOptions.series[0].data = Object.values(formattedData);
+      barChartOptions.xaxis.categories = Object.keys(formattedData);
+      barChart.updateOptions(barChartOptions);
+    }
+  })
+});
