@@ -21,6 +21,19 @@ class UaGpsSynchronizer:
         login = requests.get(self.url, params=params)
         return login.json()['eid']
 
+    def get_vehicle_id(self):
+        params = {
+            'sid': self.session,
+            'svc': 'core/update_data_flags',
+            'params': json.dumps({"spec": [{"type": "type",
+                                            "data": "avl_unit",
+                                            "flags": 1,
+                                            "mode": 0}]})
+        }
+        response = requests.get(self.url, params=params)
+        for vehicle in response.json():
+            Vehicle.objects.filter(licence_plate=vehicle['d']['nm'].split('(')[0]).update(gps_id=vehicle['i'])
+
     def generate_report(self, start_time, end_time, vehicle_id):
         rent_distance = 0
         rent_time = datetime.timedelta()

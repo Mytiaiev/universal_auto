@@ -1,4 +1,6 @@
 # Create driver and other
+import time
+
 from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
@@ -10,7 +12,9 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
-from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips
+from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, update_driver_data, \
+    download_weekly_report, send_daily_into_group
+from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
 from auto_bot.main import bot
 
 
@@ -22,12 +26,64 @@ def remove_cash_driver(sender=None, **kwargs):
                              reply_markup=inline_driver_paid_kb(driver.id))
 
 
+@task_postrun.connect
+def update_drivers(sender=None, **kwargs):
+    if sender == update_driver_data:
+        chat_id = kwargs.get('retval')
+        bot.send_message(chat_id=chat_id, text=update_finished)
+
+
 def remove_cash_by_manager(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.objects.filter(id=int(data[2])).first()
     fleets_cash_trips.delay(int(data[2]), enable=data[1])
     query.edit_message_text(text=remove_cash_text(driver, data[1]))
+
+
+def get_drivers_from_fleets(update, context):
+    query = update.callback_query
+    update_driver_data.delay(query.from_user.id)
+    query.edit_message_text(text=get_drivers_text)
+
+
+def get_weekly_report(update, context):
+    query = update.callback_query
+    query.edit_message_text(text='Ваш запит прийнято.\nМи надішлемо вам звіт, як тільки він сформується')
+    download_weekly_report.delay(query.from_user.id)
+
+@task_postrun.connect
+def send_report(sender=None, **kwargs):
+    if sender == download_weekly_report:
+        rep = kwargs.get("retval")
+        owner, totals = rep[0], rep[1]
+        drivers = {f'{i}': i.chat_id for i in Driver.objects.all()}
+        # sending report to owner
+        message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
+        bot.send_message(chat_id=rep[3], text=message)
+
+        # sending report to driver
+        if drivers:
+            for driver in drivers:
+                try:
+                    message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
+                    bot.send_message(chat_id=chat_id, text=message)
+                except:
+                    pass
+
+
+@task_postrun.connect
+def send_report_daily_in_group(sender=None, **kwargs):
+    if sender == send_daily_into_group:
+        for result in kwargs.get("retval"):
+            try:
+                message = '\U0001f3c6' + result[0] + '\n'
+                for num, driver in enumerate(result[1:], 2):
+                    message += f"{num}. {driver}\n"
+                bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'), text=message)
+                time.sleep(5)
+            except IndexError:
+                bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'), text="No reports")
 
 
 # Add users and vehicle to db and others

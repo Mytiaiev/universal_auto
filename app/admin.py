@@ -690,6 +690,10 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     ordering = ('name', 'second_name')
     list_per_page = 25
 
+    def save_model(self, request, obj, form, change):
+        obj.role = Role.DRIVER_MANAGER
+        super().save_model(request, obj, form, change)
+
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]

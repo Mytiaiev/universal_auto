@@ -372,14 +372,16 @@ class FileNameProcessed(models.Model):
             order.save()
 
 
+class Role(models.TextChoices):
+    CLIENT = 'CLIENT', 'Client'
+    DRIVER = 'DRIVER', 'Driver'
+    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
+    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
+    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
+    OWNER = 'OWNER', 'Owner'
+
+
 class User(models.Model):
-    class Role(models.TextChoices):
-        CLIENT = 'CLIENT', 'Client'
-        DRIVER = 'DRIVER', 'Driver'
-        DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
-        SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
-        SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
-        OWNER = 'OWNER', 'Owner'
 
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
@@ -412,7 +414,7 @@ class User(models.Model):
         try:
             user = cls.objects.get(chat_id=chat_id)
             return user
-        except cls.DoesNotExist:
+        except ObjectDoesNotExist:
             return None
 
     @staticmethod
@@ -431,16 +433,12 @@ class User(models.Model):
         """This func validator for name and second name"""
         if len(name) <= 255:
             return name.title()
-        else:
-            return None
 
     @staticmethod
     def email_validator(email) -> str:
         pattern = r"^([a-zA-Z0-9]+\.?[a-zA-Z0-9]+)+@([a-zA-Z0-9]+\.)+[a-zA-Z0-9]{2,4}$"
         if re.match(pattern, email) is not None:
             return email
-        else:
-            return None
 
     @staticmethod
     def phone_number_validator(phone_number) -> str:
@@ -499,7 +497,7 @@ class Vehicle(models.Model):
         try:
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
             return vehicle
-        except Vehicle.DoesNotExist:
+        except ObjectDoesNotExist:
             return None
 
     @staticmethod
@@ -653,7 +651,6 @@ class Client(User):
     class Meta:
         verbose_name = 'Клієнт'
         verbose_name_plural = 'Клієнти'
-
 
 
 class ServiceStationManager(User):
@@ -1105,14 +1102,6 @@ class Order(models.Model):
     def __str__(self):
         return f'Замовлення №{self.pk}'
 
-    @staticmethod
-    def get_order(chat_id_client, phone, status_order):
-        try:
-            order = Order.objects.get(chat_id_client=chat_id_client, phone_number=phone, status_order=status_order)
-            return order
-        except Order.DoesNotExist:
-            return None
-
 
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
@@ -1160,7 +1149,7 @@ class SubscribeUsers(models.Model):
         try:
             subscriber = SubscribeUsers.objects.get(email=email)
             return subscriber
-        except SubscribeUsers.DoesNotExist:
+        except ObjectDoesNotExist:
             return None
 
 
@@ -1168,6 +1157,7 @@ class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     password = models.CharField(max_length=12, verbose_name='Пароль Uklon')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
     license_expired = models.DateField(blank=True, verbose_name='Термін дії посвідчення')
@@ -1202,7 +1192,7 @@ class JobApplication(models.Model):
             return False
 
     def save(self, *args, **kwargs):
-        if not self.id:
+        if not self.pk:
             self.password = self.generate_password()
         super().save(*args, **kwargs)
 
@@ -1297,7 +1287,7 @@ class ParkSettings(models.Model):
     def get_value(key, default=None, **kwargs):
         try:
             setting = ParkSettings.objects.get(key=key, **kwargs)
-        except ParkSettings.DoesNotExist:
+        except ObjectDoesNotExist:
             return default
         return setting.value
 

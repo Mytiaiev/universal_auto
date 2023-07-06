@@ -72,9 +72,9 @@ def raw_gps_handler(id):
 
 
 @app.task(bind=True, queue='non_priority')
-def download_weekly_report(self):
+def download_weekly_report(self, manager_id):
     report = download_reports()
-    return report
+    return *report, manager_id
 
 
 @app.task(bind=True, queue='non_priority')
@@ -110,9 +110,6 @@ def update_driver_status(self):
                 uklon_status = UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('get_driver_status')
                 logger.info(f'Uklon {uklon_status}')
 
-                # uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
-                # logger.info(f'Uber {uber_status}')
-
                 status_online = set()
                 status_with_client = set()
                 if bolt_status is not None:
@@ -121,9 +118,6 @@ def update_driver_status(self):
                 if uklon_status is not None:
                     status_online = status_online.union(set(uklon_status['wait']))
                     status_with_client = status_with_client.union(set(uklon_status['width_client']))
-                # if uber_status is not None:
-                #     status_online = status_online.union(set(uber_status['online']))
-                #     status_width_client = status_width_client.union(set(uber_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
                     last_status = timezone.localtime() - timezone.timedelta(minutes=2)
@@ -153,18 +147,19 @@ def update_driver_status(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def update_driver_data(self):
+def update_driver_data(self, manager_id):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
                 BoltRequest().synchronize()
                 UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
+                UaGpsSynchronizer().get_vehicle_id()
                 UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
             else:
                 logger.info('passed')
     except Exception as e:
         logger.info(e)
-
+    return manager_id
 
 @app.task(bind=True, queue='non_priority')
 def send_on_job_application_on_driver(self, job_id):

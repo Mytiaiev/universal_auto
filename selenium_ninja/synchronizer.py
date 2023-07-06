@@ -5,6 +5,8 @@ import redis
 import requests
 import os
 import pickle
+
+from django.core.exceptions import ObjectDoesNotExist
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common import TimeoutException, InvalidSessionIdException
@@ -12,8 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from translators.server import tss
 
-from app.models import BoltService, Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle
-
+from app.models import BoltService, Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Client
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -60,14 +61,21 @@ class RequestSynchronizer:
     def get_or_create_driver(**kwargs):
         try:
             driver = Driver.objects.get(name=kwargs['name'], second_name=kwargs['second_name'])
-        except Driver.DoesNotExist:
+        except ObjectDoesNotExist:
             driver = Driver.objects.create(
                 name=kwargs['name'],
                 second_name=kwargs['second_name'],
                 phone_number=kwargs['phone_number'],
-                email=kwargs['email']
+                email=kwargs['email'],
+                role=Role.DRIVER
             )
-            driver.save()
+            try:
+                client = JobApplication.objects.get(first_name=kwargs['name'], second_name=kwargs['second_name'])
+                Client.objects.get(chat_id=client.chat_id).delete()
+                driver.chat_id = client.chat_id
+                driver.save()
+            except ObjectDoesNotExist:
+                pass
         return driver
 
     @staticmethod
@@ -101,6 +109,7 @@ class RequestSynchronizer:
             )
             vehicle.save()
         return vehicle
+
     @staticmethod
     def update_vehicle_fields(vehicle, **kwargs):
         update_fields = []

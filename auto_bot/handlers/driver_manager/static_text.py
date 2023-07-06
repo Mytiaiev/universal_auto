@@ -11,6 +11,8 @@ paid_inline_buttons = (
     "\u2705 Так",
     "\u274c Ні"
 )
+get_drivers_text = "Інформація оновиться протягом хвилини."
+update_finished = "Інформація оновлена"
 
 
 def ask_driver_paid(driver):

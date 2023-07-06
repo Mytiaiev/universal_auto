@@ -2,32 +2,21 @@ app = "workers"
 kill_signal = "SIGINT"
 primary_region = "otp"
 kill_timeout = 5
-processes = []
 [env]
   DEBUG = 0
 [experimental]
-  allowed_public_ports = []
-  auto_rollback = true
-  cmd = []
-  entrypoint = []
-  exec = []
+   auto_rollback = true
 [processes]
   worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q non_priority"
   beat   = "celery -A auto beat -l INFO"
 [[services]]
-  http_checks = []
   auto_stop_machines = true
   auto_start_machines = true
-  internal_port = 5555
   processes = ['worker']
   protocol = "tcp"
-  script_checks = []
-  tcp_checks = []
   [services.concurrency]
     hard_limit = 10
     soft_limit = 5
     type = "connections"
-  [[services.ports]]
-    handlers = []
-    port = 5555
+ 
 

@@ -8,14 +8,13 @@ from auto_bot.states import text
 # handlers
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
     get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, \
-    driver_status, broken_car, remove_cash_by_manager
+    driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report
 from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
     take_a_day_off_or_sick_leave, numberplate, status_car
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
-from auto_bot.handlers.reports.handlers import report
 from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
     get_imei, finish_job_main, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
@@ -23,7 +22,7 @@ from auto_bot.handlers.order.handlers import continue_order, to_the_address, fro
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
     ask_client_action
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
-    more_function_user, more_function_driver, start_query
+    more_function, start_query
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -79,7 +78,6 @@ job_docs_conversation = ConversationHandler(
 
 
 def setup_dispatcher(dp):
-    dp.add_handler(CommandHandler("report", report))
     dp.add_handler(CommandHandler("rating", drivers_rating))
     dp.add_handler(CommandHandler("total_weekly_rating", driver_total_weekly_rating))
     # Transfer money
@@ -99,12 +97,14 @@ def setup_dispatcher(dp):
     # Commands for Users
     # Ordering taxi
     dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CallbackQueryHandler(more_function, pattern="Other_user|Other_manager|More_driver"))
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
     dp.add_handler(CallbackQueryHandler(start_query, pattern="Back_to_main"))
     dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
-    dp.add_handler(CallbackQueryHandler(more_function_user, pattern="Other_user"))
+    dp.add_handler(CallbackQueryHandler(get_drivers_from_fleets, pattern="Update_drivers"))
+    dp.add_handler(CallbackQueryHandler(get_weekly_report, pattern="Get_report"))
     dp.add_handler(MessageHandler(Filters.location, get_location))
     dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order|Wrong_place"))
     dp.add_handler(CallbackQueryHandler(to_the_address, pattern="Right_place"))
@@ -129,7 +129,6 @@ def setup_dispatcher(dp):
     # Commands for Drivers
     dp.add_handler(CallbackQueryHandler(status, pattern="Start_work"))
     dp.add_handler(CallbackQueryHandler(finish_job_main, pattern="Finish_work"))
-    dp.add_handler(CallbackQueryHandler(more_function_driver, pattern="More_driver"))
     dp.add_handler(CallbackQueryHandler(take_a_day_off_or_sick_leave, pattern="Off day_driver|Sick day_driver"))
     dp.add_handler(MessageHandler(
         Filters.regex(fr"^{Driver.ACTIVE}$") |

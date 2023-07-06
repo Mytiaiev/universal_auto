@@ -3,8 +3,9 @@ import os
 import threading
 import time
 import redis
+from django.core.exceptions import ObjectDoesNotExist
 from telegram.ext import ConversationHandler
-from app.models import User, JobApplication
+from app.models import User, JobApplication, Client
 from auto_bot.handlers.driver_job.keyboards import inline_ask_auto_kb, inline_job_name_kb, inline_ask_docs_kb
 from auto_bot.handlers.driver_job.static_text import *
 from auto_bot.handlers.driver_job.utils import save_storage_photo
@@ -25,13 +26,13 @@ def restart_job_application(update, context):
 # Update information for users
 def update_name(update, context):
     query = update.callback_query
-    user = User.get_by_chat_id(update.effective_chat.id)
+    user = Client.get_by_chat_id(update.effective_chat.id)
     context.user_data['role'] = driver_job_name
     if user:
         try:
             JobApplication.objects.get(phone_number=user.phone_number)
             query.edit_message_text(already_send_text)
-        except JobApplication.DoesNotExist:
+        except ObjectDoesNotExist:
             query.edit_message_text(ask_name_text)
             return "JOB_USER_NAME"
     else:
@@ -40,7 +41,7 @@ def update_name(update, context):
 
 def update_second_name(update, context):
     name = update.message.text
-    clear_name = User.name_and_second_name_validator(name=name)
+    clear_name = Client.name_and_second_name_validator(name=name)
     context.bot.send_message(chat_id=update.effective_chat.id, text=make_mistake_text)
     if clear_name is not None:
         context.user_data['u_name'] = clear_name
@@ -53,7 +54,7 @@ def update_second_name(update, context):
 
 def update_email(update, context):
     second_name = update.message.text
-    clear_second_name = User.name_and_second_name_validator(name=second_name)
+    clear_second_name = Client.name_and_second_name_validator(name=second_name)
     if clear_second_name is not None:
         context.user_data['u_second_name'] = clear_second_name
         update.message.reply_text(ask_email_text)
@@ -66,8 +67,8 @@ def update_email(update, context):
 def update_user_information(update, context):
     email = update.message.text
     chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
-    clear_email = User.email_validator(email=email)
+    user = Client.get_by_chat_id(chat_id)
+    clear_email = Client.email_validator(email=email)
     context.user_data['phone'] = user.phone_number
     if clear_email is not None:
         user.name = context.user_data['u_name']
@@ -181,11 +182,12 @@ def upload_insurance(update, context):
 def upload_expired_insurance(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
-    user = User.get_by_chat_id(chat_id)
+    user = Client.get_by_chat_id(chat_id)
     job = JobApplication(first_name=user.name,
                          last_name=user.second_name,
                          email=user.email,
                          phone_number=user.phone_number,
+                         chat_id=chat_id,
                          license_expired=context.user_data['expired_license'],
                          driver_license_front=context.user_data['front_license'],
                          driver_license_back=context.user_data['back_license'],
@@ -214,7 +216,7 @@ def upload_expired_insurance(update, context):
 
 def uklon_code(update, context):
     chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
+    user = Client.get_by_chat_id(chat_id)
     context.user_data['thread'] = False
     r = redis.Redis.from_url(os.environ["REDIS_URL"])
     r.publish(f'{user.phone_number} code', update.message.text)
