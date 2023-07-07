@@ -1,0 +1,52 @@
+# fly.toml app configuration file generated for selenium-staging on 2023-07-06T23:45:31+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "selenium-staging"
+primary_region = "otp"
+
+[build]
+  image = "selenium/standalone-chrome:latest"
+
+[env]
+  PORT = "4444"
+  SE_NODE_SESSION_TIMEOUT = 600
+  SE_NODE_MAX_SESSIONS = 5
+  SE_NODE_MAX_INSTANCES = 5
+  SE_OPTS="--log-level FINE"
+  HUB_PORT_4444_TCP_ADDR = "selenium-staging.internal"
+
+[experimental]
+  allowed_public_ports = [4444]
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 4444
+  processes = ["app"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = false
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.ports]]
+    port = 4444
+    handlers = []
+
+
+  [services.concurrency]
+    type = "requests"
+    hard_limit = 25
+    soft_limit = 20
+
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "1s"
+    restart_limit = 0
+
