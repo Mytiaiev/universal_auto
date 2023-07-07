@@ -13,7 +13,7 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, update_driver_data, \
-    download_weekly_report, send_daily_into_group
+    download_weekly_report, send_efficiency_report
 from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
 from auto_bot.main import bot
 
@@ -74,7 +74,7 @@ def send_report(sender=None, **kwargs):
 
 @task_postrun.connect
 def send_report_daily_in_group(sender=None, **kwargs):
-    if sender == send_daily_into_group:
+    if sender == send_efficiency_report:
         for result in kwargs.get("retval"):
             try:
                 message = '\U0001f3c6' + result[0] + '\n'

@@ -79,11 +79,15 @@ def download_weekly_report(self, manager_id):
 
 @app.task(bind=True, queue='non_priority')
 def download_daily_report(self, day=None):
-    #
-    try:
-        download_reports(day)
-    except Exception as e:
-        logger.error(e)
+    if not day:
+        day = pendulum.now().start_of('day').subtract(days=1)
+    else:
+        day = pendulum.parse(day)
+    start, end = get_start_end(day)
+    BoltRequest().save_report(start, end)
+    UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
+    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
+    save_report_to_ninja_payment(day)
 
 
 @contextmanager
@@ -226,31 +230,28 @@ def download_uber_trips(self):
 
 
 @app.task(bind=True, queue='non_priority')
-def send_daily_into_group(self):
+def send_efficiency_report(self, start=None, end=None):
     try:
         total_values = {}
-        day_values = {}
         report_values = {}
         effective_driver = {}
         effective_report = {}
-        today = pendulum.now().weekday()
-        if today > 0:
-            for i in range(today):
-                day = pendulum.now().start_of('day').subtract(days=i + 1)
-                report = download_reports(day=day)[2]
-                for key, value in report.items():
-                    if not i:
-                        day_values[key] = day_values.get(key, 0) + value
-                    total_values[key] = total_values.get(key, 0) + value
+        day_reports = Payments.objects.filter(report_from__date=start)
+        day_totals = calculate_reports(day_reports)[0]
+        if start and end:
+            reports = Payments.objects.filter(report_from__date__range=(start, end))
         else:
-            day = pendulum.now().start_of('day').subtract(days=1)
-            day_values = download_reports(day=day)[2]
-            total_values = download_reports()[2]
+            start = datetime.datetime.now().date() - datetime.timedelta(days=datetime.datetime.now().weekday())
+            end = datetime.datetime.now().date()
+            reports = Payments.objects.filter(report_from__date__range=(start, end))
+        kassa = calculate_reports(reports)[0]
+        for key, value in kassa.items():
+            total_values[key] = total_values.get(key, 0) + value
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
         for key in sort_report:
-            report_values[key] = "Всього: {:.2f} Учора: (+{:.2f})".format(sort_report[key], day_values.get(key, 0))
+            report_values[key] = "Всього: {:.2f} Учора: (+{:.2f})".format(sort_report[key], day_totals.get(key, 0))
         for driver in Driver.objects.filter(vehicle__isnull=False):
-            effect = calculate_efficiency(driver)
+            effect = calculate_efficiency(driver, start, end)
             effective_driver[driver.full_name()] = {'Середня ефективність(грн/км)': effect[0],
                                                     'Ефективність(грн/км)': effect[1],
                                                     'КМ за тиждень': effect[2],
@@ -295,7 +296,6 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         logger.info(e)
 
 
-@app.task(queue='non_priority')
 def save_report_to_ninja_payment(day=None):
     if day:
         start_date = pendulum.now().start_of('day').subtract(days=1)
@@ -337,6 +337,34 @@ def save_report_to_ninja_payment(day=None):
             pass
 
 
+def send_weekly_report(manager_id):
+    owner = {"Fleet Owner": 0}
+    end = datetime.datetime.now().date() - datetime.timedelta(days=datetime.datetime.now().weekday() + 1)
+    start = end - datetime.timedelta(days=6)
+    all_driver_report = Payments.objects.filter(report_from__date__range=(start, end))
+    totals, salary, reports = calculate_reports(all_driver_report)
+    plan = dict(totals)
+    totals = {k: f'Загальна каса {k}: %.2f\n' % v for k, v in totals.items()}
+    totals = {k: v + reports[k] for k, v in totals.items()}
+    for k, v in totals.items():
+        for driver in Driver.objects.all():
+            if driver.full_name() == k and driver.schema == 'RENT':
+                totals[
+                    k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - Оренда ({'%.2f' % -driver.rental}) = {'%.2f' % (salary[k] - driver.rental)}\n" + "-" * 39
+                owner["Fleet Owner"] += driver.rental
+            elif driver.full_name() == k and driver.schema == 'HALF':
+                if plan[k] < driver.plan:
+                    owner["Fleet Owner"] += driver.rental
+                    incomplete = (driver.plan - plan[k]) * float(1 - driver.rate)
+                    totals[
+                        k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + "-" * 39
+                else:
+                    owner["Fleet Owner"] += plan[k] * float(1 - driver.rate)
+                    totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
+            else:
+                pass
+    return owner, totals, plan, manager_id
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global CHROME_DRIVER
@@ -345,13 +373,9 @@ def setup_periodic_tasks(sender, **kwargs):
                              send_time_order.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
-                             queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(), queue='non_priority')
@@ -373,76 +397,42 @@ def get_start_end(day=None):
     return start, end
 
 
-def download_reports(day=None):
-    try:
-        p_day = pendulum.parse(day)
-    except ValueError:
-        p_day = None
-    start, end = get_start_end(p_day)
-    our_fleet = NinjaFleet()
-    all_drivers_report = []
-    owner = {"Fleet Owner": 0}
-    reports = {}
+def calculate_reports(fleet_reports):
     totals = {}
     salary = {}
-    try:
-        all_drivers_report += BoltRequest().save_report(start, end)
-        all_drivers_report += UklonSynchronizer(
-            CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', p_day)
-        all_drivers_report += UberSynchronizer(
-            CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', p_day)
-        all_drivers_report += our_fleet.download_report(p_day)
-        for rate in Fleets_drivers_vehicles_rate.objects.all():
-            r = list((r for r in all_drivers_report if r.driver_id == rate.driver_external_id))
-            if r:
-                r = r[0]
-                name = rate.driver.full_name()
-                reports[name] = reports.get(name, '') + r.report_text(name, float(rate.driver.rate)) + '\n'
-                totals[name] = totals.get(name, 0) + r.kassa()
-                salary[name] = salary.get(name, 0) + r.total_drivers_amount(float(rate.driver.rate))
+    reports = {}
+    for rate in Fleets_drivers_vehicles_rate.objects.all():
+        r = list((r for r in fleet_reports if r.driver_id == rate.driver_external_id))
+        if r:
+            r = r[0]
+            name = rate.driver.full_name()
+            reports[name] = reports.get(name, '') + r.report_text(name, float(rate.driver.rate)) + '\n'
+            totals[name] = totals.get(name, 0) + r.kassa()
+            salary[name] = salary.get(name, 0) + r.total_drivers_amount(float(rate.driver.rate))
 
-        totals = {k: v for k, v in totals.items() if v != 0.0}
-        plan = dict(totals)
-        totals = {k: f'Загальна каса {k}: %.2f\n' % v for k, v in totals.items()}
-        totals = {k: v + reports[k] for k, v in totals.items()}
-        for k, v in totals.items():
-            for driver in Driver.objects.all():
-                if driver.full_name() == k and driver.schema == 'RENT':
-                    totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - Оренда ({'%.2f' % -driver.rental}) = {'%.2f' % (salary[k] - driver.rental)}\n" + "-" * 39
-                    owner["Fleet Owner"] += driver.rental
-                elif driver.full_name() == k and driver.schema == 'HALF':
-                    if plan[k] < driver.plan:
-                        owner["Fleet Owner"] += driver.rental
-                        incomplete = (driver.plan - plan[k]) * float(1 - driver.rate)
-                        totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + "-" * 39
-                    else:
-                        owner["Fleet Owner"] += plan[k] * float(1 - driver.rate)
-                        totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
-                else:
-                    pass
-        return owner, totals, plan
-    except Exception as e:
-        logger.info(e)
+    totals = {k: v for k, v in totals.items() if v != 0.0}
+    return totals, salary, reports
 
 
 def get_car_efficiency(driver, day=None):
-    efficiency = CarEfficiency.objects.filter(start_report=day.start_of('day'),
-                                              end_report=day.end_of('day'),
+    efficiency = CarEfficiency.objects.filter(start_report=day,
+                                              end_report=day,
                                               driver=driver)
     if not efficiency:
         try:
             total_km = UaGpsSynchronizer().total_per_day(driver, day)
-            total_kasa = download_reports(day)[2]
+            reports = Payments.objects.filter(report_from__date=day)
+            total_kasa = calculate_reports(reports)[0]
             if total_km and total_kasa.get(driver.full_name()):
                 result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
-                CarEfficiency.objects.create(start_report=day.start_of('day'),
-                                             end_report=day.end_of('day'),
+                CarEfficiency.objects.create(start_report=day,
+                                             end_report=day,
                                              driver=driver,
                                              mileage=total_km,
                                              efficiency=result)
             else:
-                CarEfficiency.objects.create(start_report=day.start_of('day'),
-                                             end_report=day.end_of('day'),
+                CarEfficiency.objects.create(start_report=day,
+                                             end_report=day,
                                              driver=driver,
                                              mileage=total_km or 0,
                                              efficiency=0)
@@ -450,16 +440,13 @@ def get_car_efficiency(driver, day=None):
             logger.info(e)
 
 
-def calculate_efficiency(driver):
-    today = pendulum.now().weekday()
-    if not today:
-        today = 7
-    for i in range(today):
-        day = pendulum.now().start_of('day').subtract(days=i + 1)
-        get_car_efficiency(driver, day)
-    start_period = pendulum.now().start_of('day').subtract(days=today)
+def calculate_efficiency(driver, start, end):
+    current_date = start
+    while current_date <= end:
+        get_car_efficiency(driver, current_date)
+        current_date += datetime.timedelta(days=1)
     end_period = pendulum.now().start_of('day').subtract(days=1)
-    all_objects = CarEfficiency.objects.filter(start_report__range=[start_period, end_period],
+    all_objects = CarEfficiency.objects.filter(start_report__range=[start, end],
                                                driver=driver)
     efficiency_objects = all_objects.exclude(efficiency=0)
     yesterday_efficiency = CarEfficiency.objects.filter(start_report=end_period,

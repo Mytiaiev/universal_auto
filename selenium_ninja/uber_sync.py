@@ -98,11 +98,11 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         self.click_uber_calendar(self.start_report_interval(day=day).strftime("%B"),
                                  self.start_report_interval(day=day).strftime("%Y"),
                                  self.start_report_interval(day=day).day)
+
         self.click_uber_calendar(self.end_report_interval(day=day).strftime("%B"),
                                  self.end_report_interval(day=day).strftime("%Y"),
                                  self.end_report_interval(day=day).day)
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
-        return f'{self.payments_order_file_name(self.fleet, pattern, day=day)}'
 
     def download_payments_order(self, report_en, report_ua, pattern="Ninja", day=None):
         if os.path.exists(f'{self.payments_order_file_name(self.fleet, pattern, day)}'):
@@ -121,9 +121,10 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             EC.presence_of_element_located((By.XPATH, download_button)))
         WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
         time.sleep(self.sleep)
-        self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
-        # else:
-        #     self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
+        if self.remote:
+            self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
+        else:
+            self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
 
     def save_report(self, day=None):
         if self.sleep:
@@ -459,13 +460,13 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
 
     def download_weekly_report(self, day=None):
         try:
-            report = Payments.objects.filter(report_from=self.start_report_interval(day),
-                                             report_to=self.end_report_interval(day),
+            report = Payments.objects.filter(report_from=self.start_report_interval(day=day),
+                                             report_to=self.end_report_interval(day=day),
                                              vendor_name=self.fleet)
             if not report:
                 self.download_payments_order(UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3'),
                                              UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4'),
-                                             day)
+                                             day=day)
                 self.save_report(day=day)
                 report = Payments.objects.filter(report_from=self.start_report_interval(day),
                                                  report_to=self.end_report_interval(day),
