@@ -4,8 +4,8 @@ import time
 from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
-from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, NewUklonPaymentsOrder, \
-    BoltPaymentsOrder, UberPaymentsOrder, JobApplication, ParkSettings
+from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication,\
+    ParkSettings, Payments
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
@@ -281,30 +281,14 @@ def get_driver_external_id(update, context):
             vehicle=context.user_data['vehicle'])
         response = str(response)
     except:
-        if fleet == F_UKLON:
-            try:
-                driver = str(context.user_data['driver'])
-                driver = driver.split()
-                driver = f'{driver[1]} {driver[0]}'
-                driver_external_id = NewUklonPaymentsOrder.objects.get(full_name=driver)
-                driver_external_id = driver_external_id.signal
-            except:
-                pass
-        elif fleet == F_BOLT:
-            try:
-                driver_external_id = BoltPaymentsOrder.objects.get(driver_full_name=str(context.user_data['driver']))
-                driver_external_id = driver_external_id.mobile_number
-            except:
-                pass
-        else:
-            try:
-                driver = str(context.user_data['driver'])
-                driver = driver.split()
-                driver_external_id = UberPaymentsOrder.objects.get(first_name=driver[0], last_name=driver[1])
-                driver_external_id = driver_external_id.driver_uuid
-            except:
-                pass
-
+        try:
+            driver = str(context.user_data['driver'])
+            driver = driver.split()
+            driver = f'{driver[1]} {driver[0]}'
+            driver_external_id = Payments.objects.get(full_name=driver, vendor_name=fleet)
+            driver_external_id = driver_external_id.driver_id
+        except:
+            pass
         try:
             context.user_data['driver_external_id'] = driver_external_id
         except:

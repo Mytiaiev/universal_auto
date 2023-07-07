@@ -13,7 +13,7 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency
+     UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Payments
 from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
 
@@ -78,10 +78,9 @@ def download_weekly_report(self, manager_id):
 
 
 @app.task(bind=True, queue='non_priority')
-def download_daily_report(self):
-    # Yesterday
+def download_daily_report(self, day=None):
+    #
     try:
-        day = pendulum.now().start_of('day').subtract(days=1)
         download_reports(day)
     except Exception as e:
         logger.error(e)
@@ -322,16 +321,16 @@ def save_report_to_ninja_payment(day=None):
         total_amount_card = records.filter(payment_method='Картка').aggregate(
             total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
         total_amount = total_amount_cash + total_amount_card
-        report = NinjaPaymentsOrder(
+        report = Payments(
             report_from=start_date,
             report_to=end_date,
             full_name=str(driver),
-            chat_id=driver.chat_id,
+            driver_id=driver.chat_id,
             total_rides=total_rides,
             total_distance=total_distance,
             total_amount_cash=total_amount_cash,
             total_amount_on_card=total_amount_card,
-            total_amount=total_amount)
+            total_amount_without_fee=total_amount)
         try:
             report.save()
         except IntegrityError:
@@ -375,7 +374,11 @@ def get_start_end(day=None):
 
 
 def download_reports(day=None):
-    start, end = get_start_end(day=day)
+    try:
+        p_day = pendulum.parse(day)
+    except ValueError:
+        p_day = None
+    start, end = get_start_end(p_day)
     our_fleet = NinjaFleet()
     all_drivers_report = []
     owner = {"Fleet Owner": 0}
@@ -385,12 +388,12 @@ def download_reports(day=None):
     try:
         all_drivers_report += BoltRequest().save_report(start, end)
         all_drivers_report += UklonSynchronizer(
-            CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day=day)
+            CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', p_day)
         all_drivers_report += UberSynchronizer(
-            CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day=day)
-        all_drivers_report += our_fleet.download_report(day=day)
+            CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', p_day)
+        all_drivers_report += our_fleet.download_report(p_day)
         for rate in Fleets_drivers_vehicles_rate.objects.all():
-            r = list((r for r in all_drivers_report if r.driver_id() == rate.driver_external_id))
+            r = list((r for r in all_drivers_report if r.driver_id == rate.driver_external_id))
             if r:
                 r = r[0]
                 name = rate.driver.full_name()

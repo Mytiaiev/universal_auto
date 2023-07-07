@@ -1,7 +1,6 @@
 import csv
 import datetime
 import os
-import pickle
 import time
 
 import redis
@@ -12,8 +11,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from app.models import NewUklonService, ParkSettings, NewUklonPaymentsOrder, NewUklonFleet, \
-    Fleets_drivers_vehicles_rate, Fleet, Driver
+from app.models import NewUklonService, ParkSettings, NewUklonFleet, \
+    Fleets_drivers_vehicles_rate, Fleet, Driver, Payments
 from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
@@ -77,23 +76,22 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                 reader = csv.reader(file)
                 next(reader)
                 for row in reader:
-                    order = NewUklonPaymentsOrder(
+                    order = Payments(
                         report_from=self.start_report_interval(day=day),
                         report_to=self.end_report_interval(day=day),
-                        report_file_name=file.name,
+                        vendor_name=self.fleet,
                         full_name=row[0],
-                        signal=row[1],
+                        driver_id=row[1],
                         total_rides=float((row[2] or '0').replace(',', '')),
                         total_distance=float((row[3] or '0').replace(',', '')),
-                        total_amount_cach=float((row[4] or '0').replace(',', '')),
-                        total_amount_cach_less=float((row[5] or '0').replace(',', '')),
-                        total_amount_on_card=float((row[6] or '0').replace(',', '')),
+                        total_amount_cash=float((row[4] or '0').replace(',', '')),
+                        total_amount_on_card=float((row[5] or '0').replace(',', '')),
                         total_amount=float((row[7] or '0').replace(',', '')),
                         tips=float((row[8] or '0').replace(',', '')),
                         bonuses=float((row[9] or '0').replace(',', '')),
                         fares=float((row[10] or '0').replace(',', '')),
-                        comission=float((row[11] or '0').replace(',', '')),
-                        total_amount_without_comission=float((row[12] or '0').replace(',', '')))
+                        fee=float((row[11] or '0').replace(',', '')),
+                        total_amount_without_fee=float((row[12] or '0').replace(',', '')))
                     try:
                         order.save()
                     except IntegrityError:
@@ -101,23 +99,22 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     items.append(order)
 
         else:
-            order = NewUklonPaymentsOrder(
+            order = Payments(
                 report_from=self.start_report_interval(day=day),
                 report_to=self.end_report_interval(day=day),
-                report_file_name='',
+                vendor_name=self.fleet,
                 full_name='',
-                signal='',
+                driver_id='',
                 total_rides=0,
                 total_distance=0,
-                total_amount_cach=0,
-                total_amount_cach_less=0,
+                total_amount_cash=0,
                 total_amount_on_card=0,
                 total_amount=0,
                 tips=0,
                 bonuses=0,
                 fares=0,
-                comission=0,
-                total_amount_without_comission=0)
+                fee=0,
+                total_amount_without_fee=0)
             try:
                 order.save()
             except IntegrityError:
@@ -393,13 +390,15 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
 
     def download_weekly_report(self, day=None):
         try:
-            report = NewUklonPaymentsOrder.objects.filter(
-                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                             report_to=self.end_report_interval(day),
+                                             vendor_name=self.fleet)
             if not report:
                 self.download_payments_order(day=day)
                 self.save_report(day=day)
-                report = NewUklonPaymentsOrder.objects.filter(
-                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+                report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                                 report_to=self.end_report_interval(day),
+                                                 vendor_name=self.fleet)
             return list(report)
         except Exception as err:
             self.logger.error(err)

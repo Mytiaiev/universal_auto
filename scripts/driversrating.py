@@ -2,8 +2,7 @@ import pendulum
 from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
-from app.models import UberPaymentsOrder, BoltPaymentsOrder, UklonPaymentsOrder, NewUklonPaymentsOrder, \
-    Fleets_drivers_vehicles_rate, Fleet
+from app.models import Payments, Fleets_drivers_vehicles_rate, Fleet
 from auto.tasks import download_weekly_report
 
 from auto import celery_app
@@ -131,7 +130,7 @@ class GenericDriversRating(type):
 class UberDriversRating(DriversRating, metaclass=GenericDriversRating):
 
     fleet_name = 'Uber'
-    model = UberPaymentsOrder
+    model = Payments
 
     def get_driver(self, item):
         try:
@@ -148,7 +147,7 @@ class UberDriversRating(DriversRating, metaclass=GenericDriversRating):
 class BoltDriversRating(DriversRating, metaclass=GenericDriversRating):
 
     fleet_name = 'Bolt'
-    model = BoltPaymentsOrder
+    model = Payments
 
     def get_driver(self, item):
         try:
@@ -165,7 +164,7 @@ class BoltDriversRating(DriversRating, metaclass=GenericDriversRating):
 class UklonDriversRating(DriversRating, metaclass=GenericDriversRating):
 
     fleet_name = 'Uklon'
-    model = UklonPaymentsOrder
+    model = Payments
 
     def get_driver(self, item):
         try:
@@ -188,7 +187,7 @@ class UklonDriversRating(DriversRating, metaclass=GenericDriversRating):
 class NewUklonDriversRating(DriversRating, metaclass=GenericDriversRating):
 
     fleet_name = 'NewUklon'
-    model = NewUklonPaymentsOrder
+    model = Payments
 
     def get_driver(self, item):
         try:

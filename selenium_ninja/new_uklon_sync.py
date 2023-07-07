@@ -1,6 +1,6 @@
 from selenium_ninja.new_synchronizer import Synchronizer_V2
 from django.db import IntegrityError
-from app.models import Vehicle, Park, NewUklonPaymentsOrder, Partner, Service, ParkSettings
+from app.models import Vehicle, Park, Partner, Service, ParkSettings, Payments
 
 
 class Uklon(Synchronizer_V2):
@@ -82,24 +82,22 @@ class Uklon(Synchronizer_V2):
 
         if data:
             for i in data:
-                order = NewUklonPaymentsOrder(
+                order = Payments(
                     report_from=start,
                     report_to=end,
-                    report_file_name='',
                     full_name=f"{i['driver']['last_name']} {i['driver']['first_name']}",
-                    signal=str(i['driver']['signal']),
+                    driver_id=str(i['driver']['signal']),
                     total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
                     total_distance=float(
                         0) if 'total_distance_meters' not in i else self.to_float(i['total_distance_meters'], div=1000),
-                    total_amount_cach=self.find_value(i, *('profit', 'order', 'cash', 'amount')),
-                    total_amount_cach_less=self.find_value(i, *('profit', 'order', 'wallet', 'amount')),
-                    total_amount_on_card=self.find_value(i, *('profit', 'order', 'card', 'amount')),
+                    total_amount_cash=self.find_value(i, *('profit', 'order', 'cash', 'amount')),
+                    total_amount_on_card=self.find_value(i, *('profit', 'order', 'wallet', 'amount')),
                     total_amount=self.find_value(i, *('profit', 'order', 'total', 'amount')),
                     tips=self.find_value(i, *('profit', 'tips', 'amount')),
                     bonuses=float(0),
                     fares=float(0),
-                    comission=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
-                    total_amount_without_comission=self.find_value(i, *('profit', 'total', 'amount')),
+                    fee=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
+                    total_amount_without_fee=self.find_value(i, *('profit', 'total', 'amount')),
                     partner=self.get_partner(),
                 )
                 try:
@@ -107,23 +105,21 @@ class Uklon(Synchronizer_V2):
                 except IntegrityError:
                     pass
         else:
-            order = NewUklonPaymentsOrder(
+            order = Payments(
                 report_from=start,
                 report_to=end,
-                report_file_name='',
                 full_name='',
-                signal='',
+                driver_id='',
                 total_rides=0,
                 total_distance=0,
-                total_amount_cach=0,
-                total_amount_cach_less=0,
+                total_amount_cash=0,
                 total_amount_on_card=0,
                 total_amount=0,
                 tips=0,
                 bonuses=0,
                 fares=0,
-                comission=0,
-                total_amount_without_comission=0,
+                fee=0,
+                total_amount_without_fee=0,
                 partner=self.get_partner())
             try:
                 order.save()

@@ -70,7 +70,7 @@ class RequestSynchronizer:
                 role=Role.DRIVER
             )
             try:
-                client = JobApplication.objects.get(first_name=kwargs['name'], second_name=kwargs['second_name'])
+                client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
                 Client.objects.get(chat_id=client.chat_id).delete()
                 driver.chat_id = client.chat_id
                 driver.save()

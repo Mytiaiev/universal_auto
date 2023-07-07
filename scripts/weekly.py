@@ -1,9 +1,8 @@
-from auto.tasks import download_weekly_report
+import pendulum
+
+from auto.tasks import download_weekly_report, download_daily_report
 
 
 def run(*args):
-    if args:
-        week_number = f"2022W{args[0]}5"
-    else:
-        week_number = None
-    print(download_weekly_report.delay())
+    day = pendulum.now().start_of('day').subtract(days=1)
+    print(download_daily_report.delay('2023-06-28'))

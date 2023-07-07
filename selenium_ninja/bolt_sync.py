@@ -12,7 +12,7 @@ from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from app.models import ParkSettings, BoltService, BoltPaymentsOrder, Driver, Fleets_drivers_vehicles_rate
+from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments
 from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer, RequestSynchronizer
@@ -88,8 +88,9 @@ class BoltRequest(RequestSynchronizer):
         return date.in_timezone("Europe/Kiev").end_of("day")
 
     def download_report(self, start, end):
-        report = BoltPaymentsOrder.objects.filter(report_from=self.start_report_interval(start),
-                                                  report_to=self.end_report_interval(end))
+        report = Payments.objects.filter(report_from=self.start_report_interval(start),
+                                         report_to=self.end_report_interval(end),
+                                         vendor_name=self.fleet)
         return list(report)
 
     def save_report(self, start, end):
@@ -102,25 +103,22 @@ class BoltRequest(RequestSynchronizer):
                             "limit": 50})
         report = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', self.params)
         for driver in report['data']['drivers']:
-            order = BoltPaymentsOrder(
+            order = Payments(
                 report_from=self.start_report_interval(start),
                 report_to=self.end_report_interval(end),
-                driver_full_name=driver['name'],
-                mobile_number=driver['id'],
-                range_string='',
+                vendor_name=self.fleet,
+                full_name=driver['name'],
+                driver_id=driver['id'],
+                total_amount_cash=driver['cash_in_hand'],
                 total_amount=driver['gross_revenue'],
-                cancels_amount=driver['cancellation_fees'],
-                autorization_payment=0,
-                autorization_deduction=0,
-                additional_fee=0,
-                fee=float(driver['gross_revenue']) - float(driver['net_earnings']),
-                total_amount_cach=driver['cash_in_hand'],
-                discount_cash_trips=0,
-                driver_bonus=driver['bonuses'],
-                compensation=driver['compensations'],
-                refunds=driver['expense_refunds'],
                 tips=driver['tips'],
-                weekly_balance=0)
+                bonuses=driver['bonuses'],
+                cancels=driver['cancellation_fees'],
+                fee=driver['gross_revenue'] - driver['net_earnings'],
+                total_amount_without_fee=driver['net_earnings'],
+                compensations=driver['compensations'],
+                refunds=driver['expense_refunds'],
+)
             try:
                 order.save()
             except IntegrityError:
@@ -347,7 +345,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
                         break
                     if row[1] == "":
                         continue
-                    order = BoltPaymentsOrder(
+                    order = Payments(
                         report_from=self.start_report_interval(day=day),
                         report_to=self.end_report_interval(day=day),
                         report_file_name=file.name,
@@ -373,7 +371,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
                         pass
                     items.append(order)
         else:
-            order = BoltPaymentsOrder(
+            order = Payments(
                 report_from=self.start_report_interval(day=day),
                 report_to=self.end_report_interval(day=day),
                 report_file_name='',
@@ -492,13 +490,15 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
 
     def download_weekly_report(self, day=None, interval=None):
         try:
-            report = BoltPaymentsOrder.objects.filter(
-                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                             report_to=self.end_report_interval(day),
+                                             vendor_name=self.fleet)
             if not report:
                 self.download_payments_order(day=day, interval=interval)
                 self.save_report(day=day)
-                report = BoltPaymentsOrder.objects.filter(
-                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+                report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                                 report_to=self.end_report_interval(day),
+                                                 vendor_name=self.fleet)
             return list(report)
         except Exception as err:
             self.logger.error(err)
@@ -506,7 +506,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
     def disable_cash(self, name, second_name, disable):
         url = BoltService.get_value('BOLT_DRIVERS_URL')
         xpath = BoltService.get_value('BOLT_GET_DRIVERS_TABLE_1')
-        self.get_target_element_of_page(url, xpath, ParkSettings.get_value("BOLT_NAME"))
+        self.get_target_element_of_page(url, xpath)
         driver = self.get_driver_by_name(name=name, second_name=second_name)
         fleet = Fleet.objects.get(name=self.fleet)
         try:

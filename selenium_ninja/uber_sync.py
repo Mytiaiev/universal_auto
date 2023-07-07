@@ -14,7 +14,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from app.models import UberService, ParkSettings, UberPaymentsOrder, UberTrips
+from app.models import UberService, ParkSettings, UberTrips, Payments
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -141,19 +141,20 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             continue
                         if row[3] is None:
                             continue
-                        order = UberPaymentsOrder(
+                        order = Payments(
                             report_from=self.start_report_interval(day=day),
                             report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
-                            driver_uuid=row[0],
-                            first_name=row[1],
-                            last_name=row[2],
+                            vendor_name=self.fleet,
+                            driver_id=str(row[0]),
+                            full_name=f"{row[1]} {row[2]}",
                             total_amount=row[3],
-                            total_clean_amout=row[4] or 0,
-                            returns=row[5] or 0,
-                            total_amount_cach=row[6] or 0,
-                            transfered_to_bank=row[7] or 0,
-                            tips=row[8] or 0)
+                            total_amount_without_fee=row[4] or 0,
+                            bonuses=row[5] or 0,
+                            total_amount_cash=row[6] or 0)
+                        try:
+                            order.tips = row[9]
+                        except IndexError:
+                            order.tips = 0
                         try:
                             order.save()
                         except IntegrityError:
@@ -161,18 +162,16 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                         items.append(order)
 
                     if not items:
-                        order = UberPaymentsOrder(
+                        order = Payments(
                             report_from=self.start_report_interval(day=day),
                             report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
-                            driver_uuid='00000000-0000-0000-0000-000000000000',
-                            first_name='',
-                            last_name='',
+                            vendor_name=self.fleet,
+                            driver_id='00000000-0000-0000-0000-000000000000',
+                            full_name='',
                             total_amount=0,
-                            total_clean_amout=0,
-                            returns=0,
-                            total_amount_cach=0,
-                            transfered_to_bank=0,
+                            total_amount_without_fee=0,
+                            bonuses=0,
+                            total_amount_cash=0,
                             tips=0)
                         try:
                             order.save()
@@ -460,15 +459,17 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
 
     def download_weekly_report(self, day=None):
         try:
-            report = UberPaymentsOrder.objects.filter(
-                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                             report_to=self.end_report_interval(day),
+                                             vendor_name=self.fleet)
             if not report:
                 self.download_payments_order(UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3'),
                                              UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4'),
-                                             day=day)
+                                             day)
                 self.save_report(day=day)
-                report = UberPaymentsOrder.objects.filter(
-                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+                report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                                 report_to=self.end_report_interval(day),
+                                                 vendor_name=self.fleet)
             return list(report)
         except Exception as err:
             self.logger.error(err)

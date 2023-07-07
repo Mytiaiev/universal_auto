@@ -6,7 +6,7 @@ import time
 from celery.signals import task_postrun
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings
+from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
 from auto.tasks import logger, get_distance_trip, check_time_order, check_order, send_time_order
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_start_driver_kb, inline_user_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
@@ -155,7 +155,7 @@ def order_create(update, context):
     data = int(query.data.split(' ')[1])
     button_text = query.message.reply_markup.inline_keyboard[data][0].text
     payment = button_text.split(' ')[1]
-    user = User.get_by_chat_id(update.effective_chat.id)
+    user = Client.get_by_chat_id(update.effective_chat.id)
     destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
     destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
     if not context.user_data.get('from_address'):
@@ -295,7 +295,7 @@ def time_order(update, context):
 
 def order_on_time(update, context):
     context.user_data['state'], pattern = None, r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$',
-    user_time, user = update.message.text, User.get_by_chat_id(update.message.chat.id)
+    user_time, user = update.message.text, Client.get_by_chat_id(update.message.chat.id)
 
     if re.match(pattern, user_time):
         format_time = timezone.datetime.strptime(user_time, '%H:%M').time()
