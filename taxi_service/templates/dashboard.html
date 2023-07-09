@@ -113,10 +113,54 @@
 			<div class="charts-card">
 				<h2 class="chart-title">Каса</h2>
 				<div id="bar-chart"></div>
+				<div class="chart-btns">
+					<div class="radio_btn">
+						<input id="radio-1" type="radio" name="effective-period" value="1" checked>
+						<label for="radio-1">день</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-2" type="radio" name="effective-period" value="2">
+						<label for="radio-2">тиждень</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-3" type="radio" name="effective-period" value="2">
+						<label for="radio-3">місяць</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-4" type="radio" name="effective-period" value="2">
+						<label for="radio-4">квартал</label>
+					</div>
+				</div>
 			</div>
 			<div class="charts-card">
 				<h2 class="chart-title">Ефективність автомобіля</h2>
+
+				<div class="car-select">
+					<select>
+						{% for vehicle in get_all_vehicle %}
+						<option>{{ vehicle.licence_plate }}</option>
+						{% endfor %}
+					</select>
+				</div>
 				<div id="area-chart"></div>
+				<div class="chart-btns">
+					<div class="radio_btn">
+						<input id="radio-5" type="radio" name="effective-period" value="1" checked>
+						<label for="radio-5">день</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-6" type="radio" name="effective-period" value="2">
+						<label for="radio-6">тиждень</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-7" type="radio" name="effective-period" value="2">
+						<label for="radio-7">місяць</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-8" type="radio" name="effective-period" value="2">
+						<label for="radio-8">квартал</label>
+					</div>
+				</div>
 			</div>
 		</div>
 	</main>

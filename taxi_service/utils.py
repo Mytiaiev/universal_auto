@@ -137,7 +137,7 @@ def calculate_earnings(fleet_name, model, driver_external_id_field, full_name_fi
 def collect_total_earnings():
     total_earnings = {}
 
-    uklon_earnings = calculate_earnings('NewUklon', NewUklonPaymentsOrder, 'signal', ['full_name'], 'total_amount_without_comission')
+    uklon_earnings = calculate_earnings('Uklon', NewUklonPaymentsOrder, 'signal', ['full_name'], 'total_amount_without_comission')
     for driver_name, total_amount in uklon_earnings.items():
         split_name = driver_name.split(' ')
         reversed_name = ' '.join([split_name[0], split_name[1]])
@@ -162,3 +162,8 @@ def collect_total_earnings():
         total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total_amount
 
     return total_earnings
+
+
+def get_all_vehicle():
+    vehicles = Vehicle.objects.all()
+    return vehicles

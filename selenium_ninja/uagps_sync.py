@@ -141,4 +141,4 @@ class UaGpsSynchronizer:
             distance = self.generate_report(self.start_day(day),
                                             self.end_day(day),
                                             vehicle.gps_id)[0]
-            return distance
+            return distance, vehicle.licence_plate

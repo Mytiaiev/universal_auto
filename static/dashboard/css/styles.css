@@ -180,6 +180,7 @@ body {
   -webkit-column-break-inside: avoid;
   border-radius: 5px;
   box-shadow: 0 6px 7px -4px rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
 .chart-title {
@@ -188,6 +189,43 @@ body {
   justify-content: center;
 }
 
+.car-select {
+    position: absolute;
+    right: 30px;
+    top: 91px;
+    z-index: 99;
+}
+.car-select select {
+    outline: 0 none;
+    background: #000;
+    color: #fff;
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid #505050;
+}
+
+.chart-btns {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.chart-btns .radio_btn {
+  flex: 1;
+  text-align: center;
+}
+.chart-btns .radio_btn input:checked + label {
+  background: #fff;
+  color: #000;
+}
+.chart-btns .radio_btn input {
+  display: none
+}
+.chart-btns .radio_btn label {
+  display: block;
+  padding: 5px 10px;
+  cursor: pointer;
+}
 
 /* ---------- MEDIA QUERIES ---------- */
 

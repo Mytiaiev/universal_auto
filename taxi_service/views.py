@@ -104,6 +104,7 @@ class DashboardView(TemplateView):
         context = super().get_context_data(**kwargs)
         context['total_distance_rent'] = weekly_rent()
         context['weekly_income'] = weekly_income()
+        context['get_all_vehicle'] = get_all_vehicle()
 
         return context
 

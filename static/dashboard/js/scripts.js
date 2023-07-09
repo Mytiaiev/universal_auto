@@ -186,6 +186,7 @@ var areaChartOptions = {
     },
     show: true,
     position: "top",
+    horizontalAlign: 'left',
   },
   markers: {
     size: 6,
@@ -195,7 +196,7 @@ var areaChartOptions = {
   stroke: {
     curve: "smooth",
   },
-  xaxis: {
+  xAxis: {
     axisBorder: {
       color: "#55596e",
       show: true,
@@ -211,7 +212,7 @@ var areaChartOptions = {
       },
     },
   },
-  yaxis:
+  yAxis:
   [
     {
       title: {

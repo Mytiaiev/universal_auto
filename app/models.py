@@ -1253,9 +1253,10 @@ def admin_image_preview(image, default_image=None):
 class CarEfficiency(models.Model):
     start_report = models.DateTimeField(verbose_name='Звіт з')
     end_report = models.DateTimeField(verbose_name='Звіт по')
-    driver = models.CharField(null=True, max_length=25, verbose_name='Водій авто')
+    driver = models.CharField(null=True, max_length=50, verbose_name='Водій авто')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
+    vehicle = models.CharField(max_length=255, verbose_name='Автомобіль', null=True)
 
     class Meta:
         verbose_name = 'Ефективність автомобіля'
