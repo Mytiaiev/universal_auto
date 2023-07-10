@@ -24,13 +24,12 @@ def clickandclear(element):
 
 
 class SeleniumTools:
-    def __init__(self, session, driver=True, remote=None,
-                 partner="Ninja", sleep=None, headless=True, week_number=None, profile=None):
-        self.session_file_name = session
+    def __init__(self, partner, profile, driver=True, remote=None,
+                 sleep=5, headless=True, week_number=None):
         self.partner = partner
         self.sleep = sleep
         self.remote = remote
-        self.profile = 'Profile 1' if profile is None else profile
+        self.profile = profile
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
         if driver:
@@ -73,8 +72,12 @@ class SeleniumTools:
             return day.in_timezone("Europe/Kiev").end_of("day")
         return self.current_date.end_of('week')
 
+    def park_name(self):
+        park = Park.object.get(pk=self.partner)
+        return park.name
+
     def remove_session(self):
-        os.remove(self.session_file_name)
+        os.remove(self.park_name())
 
     # def retry(self, fun, headless=False):
     #     for i in range(2):
@@ -119,7 +122,6 @@ class SeleniumTools:
         return driver
 
     def build_remote_driver(self, headless=True):
-
         options = Options()
         options.add_argument("--disable-infobars")
         options.add_argument("--enable-file-cookies")
@@ -128,9 +130,11 @@ class SeleniumTools:
         options.add_argument(f'--user-data-dir=home/seluser/{self.profile}')
         options.add_argument(f'--profile-directory={self.profile}')
         # if headless:
-        #     options.add_argument('--headless')
+        #     options.add_argument('--headless=new')
         options.add_argument('--disable-gpu')
         options.add_argument("--no-sandbox")
+        options.add_argument("--screen-size=1920,1080")
+        options.add_argument("--window-size=1920,1080")
         options.add_argument("--start-maximized")
         options.add_argument("--disable-extensions")
         options.add_argument('--disable-dev-shm-usage')
@@ -144,6 +148,7 @@ class SeleniumTools:
             options=options
         )
         return driver
+
 
     @staticmethod
     def get_downloaded_files(driver):

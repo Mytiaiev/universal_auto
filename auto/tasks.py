@@ -6,12 +6,17 @@ import datetime
 
 import pytz
 from _decimal import Decimal
+
+import redis
 from django.db import IntegrityError
 from django.utils import timezone
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
+from selenium import webdriver
+from selenium.webdriver.chrome.webdriver import WebDriver
+
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
     NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Park
 from django.db.models import Sum, IntegerField, FloatField, Avg
@@ -19,7 +24,7 @@ from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
 from auto.celery import app
-from selenium_ninja.bolt_sync import BoltRequest
+from selenium_ninja.bolt_sync import BoltRequest, BoltSynchronizer
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberSynchronizer
@@ -158,9 +163,9 @@ def update_driver_data(self):
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
                 for park in Park.objects.all():
-                    BoltRequest(park_id=park.pk, fleet='Bolt').synchronize()
-                    UklonRequest(park_id=park.pk, fleet='Uklon').synchronize()
-                #UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
+                    BoltRequest(park.pk, 'Bolt').synchronize()
+                    UklonRequest(park.pk, 'Uklon').synchronize()
+                    UberSynchronizer(park.pk, 'Uber', CHROME_DRIVER.driver).try_to_execute('synchronize')
             else:
                 logger.info('passed')
     except Exception as e:
@@ -346,28 +351,54 @@ def save_report_to_ninja_payment(day=None):
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
-    global CHROME_DRIVER
+    # global CHROME_DRIVER
     init_chrome_driver()
-    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             send_time_order.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
-                             queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
+    #                          send_time_order.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
+    #                          queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(day=True), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
+    # sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(), queue='non_priority')
 
 
 def init_chrome_driver():
-    global CHROME_DRIVER
-    CHROME_DRIVER = SeleniumTools(session='Ninja', week_number=None, driver=True, remote=False,
-                                  sleep=5, headless=True, profile='Tasks')
+    # global CHROME_DRIVER
+    # for park in Park.objects.all():
+    day = True
+    # a = SeleniumTools(partner=1, profile=f'Tasks_park.name', remote=True)
+    a = UberSynchronizer(1, 'bolt').try_to_execute('download_weekly_report')
+    print('************************')
+    print(a.driver)
+    k = a.driver.session_id
+    print(k)
+    print('************************')
+    chrome_session_url = f'http://localhost:4444/wd/hub/session/{k}'
+    print(chrome_session_url)# Замініть на відповідний URL вашої сесії хрому
+    # Підключаємося до сесії хрому
+    driver = webdriver.Remote(command_executor=chrome_session_url, desired_capabilities={})
+    print('************************')
+    print(driver)
+    print('************************')
+
+
+    print(22222)
+    print(type(a.driver))
+    print(type(a.driver.session_id))
+    print(1)
+    # c = SeleniumTools(partner=3, remote=True, profile=f'Tasks_park.name2')
+    # print(c.driver)
+    # print(2)
+    # print(c.driver.session_id)
+    # d = SeleniumTools(partner=4, remote=True, profile=f'Tasks_park.name3')
+    # print(d.driver)
 
 
 def get_start_end(day=None):

@@ -3,7 +3,7 @@ import datetime
 import os
 import pickle
 import time
-
+import requests
 import redis
 from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver import Keys
@@ -41,7 +41,7 @@ class UklonRequest(RequestSynchronizer):
         return payload
 
     def create_session(self):
-        response = self.session.post(Service.get_value('UKLON_SESSION'), json=self.park_payload()).json()
+        response = requests.post(Service.get_value('UKLON_SESSION'), json=self.park_payload()).json()
         self.redis.set(f"{self.id}{self.variables[0]}", response["access_token"])
         self.redis.set(f"{self.id}{self.variables[1]}", response["token_type"])
 
@@ -49,7 +49,7 @@ class UklonRequest(RequestSynchronizer):
         if not (self.redis.exists(f"{self.id}{self.variables[1]}") and self.redis.get(f"{self.id}{self.variables[0]}")):
             self.create_session()
         while True:
-            response = self.session.get(
+            response = requests.get(
                 url=url,
                 headers=self.get_header(),
                 json=pjson,
