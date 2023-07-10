@@ -252,28 +252,10 @@ var areaChartOptions = {
 var areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
 
-
 $(document).ready(function () {
-  $('input[name="effective-period"]').change(function () {
-    let selectedValue = $(this).val();
+  function loadDefaultData() {
+    let period = 'day';
 
-    let period;
-    switch (selectedValue) {
-      case '1':
-        period = 'day';
-        break;
-      case '2':
-        period = 'week';
-        break;
-      case '3':
-        period = 'month';
-        break;
-      case '4':
-        period = 'quarter';
-        break;
-      default:
-        period = 'week';
-    }
     $.ajax({
       type: "GET",
       url: ajaxGetUrl,
@@ -295,6 +277,62 @@ $(document).ready(function () {
             formattedData[key] = value;
           }
         });
+
+        barChartOptions.series[0].data = Object.values(formattedData);
+        barChartOptions.xaxis.categories = Object.keys(formattedData);
+        barChart.updateOptions(barChartOptions);
+
+        $('#weekly-income-dates').text(startDate + ' по ' + endDate);
+        $('#weekly-income-amount').text(totalAmount + ' грн');
+      }
+    });
+  }
+
+  loadDefaultData();
+
+  $('input[name="effective-period"]').change(function () {
+    let selectedValue = $(this).val();
+
+    let period;
+    switch (selectedValue) {
+      case '1':
+        period = 'day';
+        break;
+      case '2':
+        period = 'week';
+        break;
+      case '3':
+        period = 'month';
+        break;
+      case '4':
+        period = 'quarter';
+        break;
+      default:
+        period = 'day';
+    }
+
+    $.ajax({
+      type: "GET",
+      url: ajaxGetUrl,
+      data: {
+        action: 'get_drivers_cash',
+        period: period
+      },
+      success: function (response) {
+        let data = response.data[0];
+        let totalAmount = response.data[1].toFixed(2);
+        let startDate = response.data[2];
+        let endDate = response.data[3];
+        console.log(totalAmount, startDate, endDate);
+        let formattedData = {};
+
+        Object.keys(data).forEach(function (key) {
+          let value = parseFloat(data[key].toFixed(2));
+          if (value !== 0) {
+            formattedData[key] = value;
+          }
+        });
+
         barChartOptions.series[0].data = Object.values(formattedData);
         barChartOptions.xaxis.categories = Object.keys(formattedData);
         barChart.updateOptions(barChartOptions);
