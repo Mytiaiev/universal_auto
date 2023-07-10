@@ -3,6 +3,7 @@ import json
 from django.shortcuts import render
 from django.views.generic import View, TemplateView
 from django.core.paginator import Paginator
+from django.http import HttpResponse, JsonResponse
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
@@ -100,14 +101,20 @@ class DriversView(TemplateView):
 class DashboardView(TemplateView):
     template_name = 'dashboard.html'
 
+    def get(self, request, *args, **kwargs):
+        get_params = request.GET
+
+        for key, value in get_params.items():
+            print(f'key, value: {key}, {value}')
+
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['total_distance_rent'] = weekly_rent()
-        context['weekly_income'] = weekly_income()
         context['get_all_vehicle'] = get_all_vehicle()
 
         return context
-
 
 
 def blog(request):

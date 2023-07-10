@@ -12,7 +12,7 @@
 	<!-- Custom CSS -->
 	<link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
 
-	<script src="https://code.jquery.com/jquery-3.6.3.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 </head>
 <body>
@@ -82,8 +82,8 @@
 					<h2>Дохід за період</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
-				<h3>{{ weekly_income.1 }} по {{ weekly_income.2 }}</h3>
-				<h3>{{ weekly_income.0 }} грн</h3>
+				<h3 id="weekly-income-dates"></h3>
+				<h3 id="weekly-income-amount"></h3>
 			</div>
 			<div class="card">
 				<div class="card-inner">
@@ -123,11 +123,11 @@
 						<label for="radio-2">тиждень</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-3" type="radio" name="effective-period" value="2">
+						<input id="radio-3" type="radio" name="effective-period" value="3">
 						<label for="radio-3">місяць</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-4" type="radio" name="effective-period" value="2">
+						<input id="radio-4" type="radio" name="effective-period" value="4">
 						<label for="radio-4">квартал</label>
 					</div>
 				</div>
@@ -145,19 +145,19 @@
 				<div id="area-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
-						<input id="radio-5" type="radio" name="effective-period" value="1" checked>
+						<input id="radio-5" type="radio" name="effective-period" value="5" checked>
 						<label for="radio-5">день</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-6" type="radio" name="effective-period" value="2">
+						<input id="radio-6" type="radio" name="effective-period" value="6">
 						<label for="radio-6">тиждень</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-7" type="radio" name="effective-period" value="2">
+						<input id="radio-7" type="radio" name="effective-period" value="7">
 						<label for="radio-7">місяць</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-8" type="radio" name="effective-period" value="2">
+						<input id="radio-8" type="radio" name="effective-period" value="8">
 						<label for="radio-8">квартал</label>
 					</div>
 				</div>

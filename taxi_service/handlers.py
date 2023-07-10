@@ -70,7 +70,8 @@ class GetRequestHandler:
         return response
 
     def handle_get_drivers_cash(self, request):
-        get_drivers_cash = collect_total_earnings()
+        period = request.GET.get('period')
+        get_drivers_cash = collect_total_earnings(period)
         json_data = JsonResponse({'data': get_drivers_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response

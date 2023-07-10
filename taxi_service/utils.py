@@ -2,6 +2,7 @@ import json
 from datetime import date, timedelta
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
+from django.db.models import F
 
 from app.models import *
 
@@ -66,16 +67,67 @@ def get_all_drivers():
     return drivers
 
 
-def get_week_dates():
-    current_date = timezone.now().date()
-    weekday = current_date.weekday()
-    if weekday == 0:
-        start_date = current_date - timedelta(days=7)
-        end_date = start_date + timedelta(days=6)
+def get_week_dates(period=None):
+
+    if period == 'day':
+        current_date = timezone.now().date()
+        previous_date = current_date - timedelta(days=1)
+
+        start_date = previous_date
+        end_date = current_date
+        return start_date, end_date
+
+    elif period == 'week':
+        current_date = timezone.now().date()
+        weekday = current_date.weekday()
+
+        if weekday == 0:
+            start_date = current_date - timedelta(days=7)
+            end_date = start_date + timedelta(days=6)
+        else:
+            start_date = current_date - timedelta(days=weekday)
+            end_date = start_date + timedelta(days=6)
+        return start_date, end_date
+
+    elif period == 'month':
+        current_date = timezone.now().date()
+        start_date = current_date.replace(day=1)
+        next_month = current_date.replace(day=28) + timedelta(days=4)
+        end_date = next_month - timedelta(days=next_month.day)
+        return start_date, end_date
+
+    elif period == 'quarter':
+        current_date = timezone.now().date()
+        current_month = current_date.month
+        current_quarter = (current_month - 1) // 3 + 1
+
+        if current_quarter == 1:
+            start_date = date(current_date.year, 1, 1)
+            end_date = date(current_date.year, 3, 31)
+            return start_date, end_date
+        elif current_quarter == 2:
+            start_date = date(current_date.year, 4, 1)
+            end_date = date(current_date.year, 6, 30)
+            return start_date, end_date
+        elif current_quarter == 3:
+            start_date = date(current_date.year, 7, 1)
+            end_date = date(current_date.year, 9, 30)
+            return start_date, end_date
+        elif current_quarter == 4:
+            start_date = date(current_date.year, 10, 1)
+            end_date = date(current_date.year, 12, 31)
+            return start_date, end_date
     else:
-        start_date = current_date - timedelta(days=(weekday + 1))
-        end_date = start_date + timedelta(days=6)
-    return start_date, end_date
+        current_date = timezone.now().date()
+        weekday = current_date.weekday()
+
+        if weekday == 0:
+            start_date = current_date - timedelta(days=7)
+            end_date = start_date + timedelta(days=6)
+        else:
+            start_date = current_date - timedelta(days=weekday)
+            end_date = start_date + timedelta(days=6)
+        return start_date, end_date
 
 
 def weekly_rent():
@@ -89,37 +141,16 @@ def weekly_rent():
     return total_distance, start_date_formatted, end_date_formatted
 
 
-def weekly_income():
-
-    start_date, end_date = get_week_dates()
-
-    start_date_formatted = start_date.strftime('%d.%m.%Y')
-    end_date_formatted = end_date.strftime('%d.%m.%Y')
-
-    income_week_uklon = NewUklonPaymentsOrder.objects.filter(report_from__range=(start_date, end_date))
-    income_week_bolt = BoltPaymentsOrder.objects.filter(report_from__range=(start_date, end_date))
-    income_week_uber = UberPaymentsOrder.objects.filter(report_from__range=(start_date, end_date))
-    income_week_ninja = NinjaPaymentsOrder.objects.filter(report_from__range=(start_date, end_date))
-
-    total_amount_new_uklon = income_week_uklon.aggregate(Sum('total_amount_without_comission'))['total_amount_without_comission__sum'] or 0
-    total_amount_bolt = income_week_bolt.aggregate(Sum('total_amount')).get('total_amount__sum', 0) - income_week_bolt.aggregate(Sum('fee')).get('fee__sum', 0)
-    total_amount_uber = income_week_uber.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    total_amount_ninja = income_week_ninja.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-
-    total_amount = total_amount_new_uklon + total_amount_bolt + total_amount_uber + total_amount_ninja
-
-    return total_amount, start_date_formatted, end_date_formatted
-
-
-def calculate_earnings(fleet_name, model, driver_external_id_field, full_name_fields: [], total_field: str, fee_field: str = None):
+def calculate_earnings(fleet_name, model, driver_external_id_field, full_name_fields: [], total_field: str, fee_field: str = None, period: str = None):
     fleet = Fleet.objects.get(name=fleet_name)
     driver_external_ids = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet).values_list('driver_external_id', flat=True)
     earnings_dict = {}
 
-    start_date, end_date = get_week_dates()
+    start_date, end_date = get_week_dates(period=period)
 
     for driver_external_id in driver_external_ids:
         income_week = model.objects.filter(**{driver_external_id_field: driver_external_id,
+                                              'report_from__date': F('report_to__date'),
                                               'report_from__range': (start_date, end_date)})
 
         for report in income_week:
@@ -130,38 +161,45 @@ def calculate_earnings(fleet_name, model, driver_external_id_field, full_name_fi
                 total_amount_without_comission = float(getattr(report, total_field))
 
             earnings_dict[full_name] = earnings_dict.get(full_name, 0) + total_amount_without_comission
+    start_date_formatted = start_date.strftime('%d.%m.%Y')
+    end_date_formatted = end_date.strftime('%d.%m.%Y')
 
-    return earnings_dict
+    return earnings_dict, start_date_formatted, end_date_formatted
 
 
-def collect_total_earnings():
+def collect_total_earnings(period):
     total_earnings = {}
+    total_amount = 0
 
-    uklon_earnings = calculate_earnings('Uklon', NewUklonPaymentsOrder, 'signal', ['full_name'], 'total_amount_without_comission')
-    for driver_name, total_amount in uklon_earnings.items():
+    uklon_earnings, start_date, end_date = calculate_earnings('Uklon', NewUklonPaymentsOrder, 'signal', ['full_name'], 'total_amount_without_comission', period=period)
+    for driver_name, total in uklon_earnings.items():
         split_name = driver_name.split(' ')
         reversed_name = ' '.join([split_name[0], split_name[1]])
-        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total_amount
+        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total
+        total_amount += total
 
-    bolt_earnings = calculate_earnings('Bolt', BoltPaymentsOrder, 'driver_full_name', ['driver_full_name'], 'total_amount')
-    for driver_name, total_amount in bolt_earnings.items():
+    bolt_earnings, _, _ = calculate_earnings('Bolt', BoltPaymentsOrder, 'mobile_number', ['driver_full_name'], 'total_amount', 'fee', period=period)
+    for driver_name, total in bolt_earnings.items():
         split_name = driver_name.split(' ')
         reversed_name = ' '.join([split_name[1], split_name[0]])
-        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total_amount
+        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total
+        total_amount += total
 
-    uber_earnings = calculate_earnings('Uber', UberPaymentsOrder, 'driver_uuid', ['first_name', 'last_name'], 'total_amount')
-    for first_name, total_amount in uber_earnings.items():
+    uber_earnings, _, _ = calculate_earnings('Uber', UberPaymentsOrder, 'driver_uuid', ['first_name', 'last_name'], 'total_amount', period=period)
+    for first_name, total in uber_earnings.items():
         split_name = first_name.split(' ')
         reversed_name = ' '.join([split_name[1], split_name[0]])
-        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total_amount
+        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total
+        total_amount += total
 
-    ninja_earnings = calculate_earnings('Ninja', NinjaPaymentsOrder, 'chat_id', ['full_name'], 'total_amount')
-    for driver_name, total_amount in ninja_earnings.items():
+    ninja_earnings, _, _ = calculate_earnings('Ninja', NinjaPaymentsOrder, 'chat_id', ['full_name'], 'total_amount', period=period)
+    for driver_name, total in ninja_earnings.items():
         split_name = driver_name.split(' ')
         reversed_name = ' '.join([split_name[1], split_name[0]])
-        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total_amount
+        total_earnings[reversed_name] = total_earnings.get(reversed_name, 0) + total
+        total_amount += total
 
-    return total_earnings
+    return total_earnings, total_amount, start_date, end_date
 
 
 def get_all_vehicle():
