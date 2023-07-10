@@ -1,20 +1,17 @@
 import string
 import random
 import csv
-import datetime
+
 import re
+from datetime import datetime, date, time
 import pendulum
 from django.core.exceptions import ObjectDoesNotExist
-
-from scripts.selector_services import *
+from django.utils import timezone
 from django.db import models, IntegrityError, ProgrammingError
-from django.db.models import Sum, QuerySet
-from django.db.models.base import ModelBase
+from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from django.contrib.auth.models import User as AuUser
-from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save
 
 
 class Partner(models.Model):
@@ -24,12 +21,6 @@ class Partner(models.Model):
         if self.user:
             return str(self.user.username)
         return 'Партнер не назначений'
-
-
-@receiver(post_save, sender=AuUser)
-def create_partner(sender, instance, created, **kwargs):
-    if created:
-        Partner.objects.create(user=instance)
 
 
 class Park(models.Model):
@@ -45,11 +36,55 @@ class Park(models.Model):
 
 
 class Payments(models.Model):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_from = models.DateField(verbose_name='Дата звіту')
     vendor_name = models.CharField(max_length=30, default='Ninja', verbose_name='Агрегатор')
     full_name = models.CharField(null=True, max_length=255, verbose_name='ПІ водія')
     driver_id = models.CharField(null=True, max_length=50, verbose_name='Унікальний індифікатор водія')
+    total_rides = models.PositiveIntegerField(null=True, default=0, verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(null=True, default=0, decimal_places=2,
+                                         max_digits=10, verbose_name='Пробіг під замовлення')
+    total_amount_cash = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
+    total_amount_on_card = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                               verbose_name='На картку')
+    total_amount = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                       verbose_name='Загальна сума')
+    tips = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Чайові')
+    bonuses = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Бонуси')
+    fee = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Комісія')
+    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
+    fares = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Штрафи')
+    cancels = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                  verbose_name='Плата за скасування')
+    compensations = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                        verbose_name='Компенсації')
+    refunds = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                  verbose_name='Повернення коштів')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+
+    class Meta:
+        verbose_name = 'Звіт'
+        verbose_name_plural = 'Звіти'
+        unique_together = ('report_from', 'driver_id')
+
+    class Scopes:
+        def filter_by_driver_external_id(self, driver_external_id):
+            return self.filter(driver_id=driver_external_id)
+
+    def report_text(self, name=None, rate=0.35):
+        return f'{self.vendor_name} {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cash)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+
+    def total_drivers_amount(self, rate):
+        return self.kassa() * rate + float(self.total_amount_cash)
+
+    def kassa(self):
+        return float(self.total_amount_without_fee)
+
+
+class SummaryReport(models.Model):
+    report_from = models.DateField(verbose_name='Дата звіту')
+    full_name = models.CharField(null=True, max_length=255, verbose_name='ПІ водія')
     total_rides = models.PositiveIntegerField(null=True, verbose_name='Кількість поїздок')
     total_distance = models.DecimalField(null=True, decimal_places=2,
                                          max_digits=10, verbose_name='Пробіг під замовлення')
@@ -69,16 +104,8 @@ class Payments(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
-        verbose_name = 'Звіт'
-        verbose_name_plural = 'Звіти'
-        unique_together = (('report_from', 'report_to', 'driver_id'))
-
-    class Scopes:
-        def filter_by_driver_external_id(self, driver_external_id):
-            return self.filter(driver_id=driver_external_id)
-
-    def report_text(self, name=None, rate=0.35):
-        return f'{self.vendor_name} {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cash)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        verbose_name = 'Зведений звіт'
+        verbose_name_plural = 'Зведені звіти'
 
     def total_drivers_amount(self, rate):
         return self.kassa() * rate + float(self.total_amount_cash)
@@ -160,7 +187,7 @@ class User(models.Model):
         :type number: str
         """
         user = User.objects.filter(phone_number=number).first()
-        user.deleted_at = datetime.datetime.now()
+        user.deleted_at = timezone.localtime()
         user.save()
         return user
 
@@ -299,12 +326,12 @@ class Driver(User):
         verbose_name = 'Водій'
         verbose_name_plural = 'Водії'
 
-    def get_driver_external_id(self, vendor: str) -> str:
+    def get_driver_external_id(self, vendor: str):
         try:
             return Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self,
                                                             deleted_at=None).driver_external_id
-        except Fleets_drivers_vehicles_rate.DoesNotExist:
-            return ''
+        except ObjectDoesNotExist:
+            return
 
     def get_kassa(self, vendor: str, week_number: [str, None] = None) -> float:
         driver_external_id = self.get_driver_external_id(vendor)
@@ -402,8 +429,7 @@ class ServiceStationManager(User):
 
     @staticmethod
     def save_name_of_service_station(name_of_service_station):
-        service = ServiceStationManager.objects.create(name_of_service_station=name_of_service_station)
-        service.save()
+        ServiceStationManager.objects.create(name_of_service_station=name_of_service_station)
 
 
 class SupportManager(User):
@@ -437,17 +463,12 @@ class UberFleet(Fleet):
 class NinjaFleet(Fleet):
 
     @staticmethod
-    def start_report_interval(day=None):
-        if day:
-            return day.in_timezone("Europe/Kiev").start_of("day")
-        return pendulum.now().start_of('week').subtract(weeks=1)
+    def start_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.min))
 
     @staticmethod
-    def end_report_interval(day=None):
-        current_date = pendulum.now().start_of('week').subtract(weeks=1)
-        if day:
-            return day.in_timezone("Europe/Kiev").end_of("day")
-        return current_date.end_of('week')
+    def end_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.max))
 
     def download_report(self, day=None):
         report = Payments.objects.filter(report_from=self.start_report_interval(day),
@@ -788,7 +809,7 @@ class Comment(models.Model):
     processed = models.BooleanField(default=False, verbose_name='Опрацьовано')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
-    created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
@@ -842,7 +863,7 @@ class Order(models.Model):
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
     image = models.ImageField(upload_to='.', verbose_name='Фото')
-    created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
@@ -906,7 +927,7 @@ class JobApplication(models.Model):
                                       verbose_name='Фото техпаспорту',)
     insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png",
                                   verbose_name='Автоцивілка')
-    insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
+    insurance_expired = models.DateField(default=date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
     role = models.CharField(max_length=255, verbose_name='Роль')
     status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
     status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
@@ -915,12 +936,12 @@ class JobApplication(models.Model):
     @staticmethod
     def validate_date(date_str):
         try:
-            date = datetime.datetime.strptime(date_str, '%Y-%m-%d')
-            today = datetime.datetime.today()
-            future_date = datetime.datetime(2077, 12, 31)
-            if date < today:
+            check_date = datetime.strptime(date_str, '%Y-%m-%d')
+            today = datetime.today()
+            future_date = datetime(2077, 12, 31)
+            if check_date < today:
                 return False
-            elif date > future_date:
+            elif check_date > future_date:
                 return False
             else:
                 return True

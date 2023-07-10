@@ -12,8 +12,8 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
-from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, update_driver_data, \
-    download_weekly_report, send_efficiency_report
+from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
+    update_driver_data, send_efficiency_report, send_weekly_report
 from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
 from auto_bot.main import bot
 
@@ -50,11 +50,12 @@ def get_drivers_from_fleets(update, context):
 def get_weekly_report(update, context):
     query = update.callback_query
     query.edit_message_text(text='Ваш запит прийнято.\nМи надішлемо вам звіт, як тільки він сформується')
-    download_weekly_report.delay(query.from_user.id)
+    send_weekly_report.delay(query.from_user.id)
+
 
 @task_postrun.connect
 def send_report(sender=None, **kwargs):
-    if sender == download_weekly_report:
+    if sender == send_weekly_report:
         rep = kwargs.get("retval")
         owner, totals = rep[0], rep[1]
         drivers = {f'{i}': i.chat_id for i in Driver.objects.all()}

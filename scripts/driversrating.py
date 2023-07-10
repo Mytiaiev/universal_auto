@@ -3,7 +3,6 @@ from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from app.models import Payments, Fleets_drivers_vehicles_rate, Fleet
-from auto.tasks import download_weekly_report
 
 from auto import celery_app
 
@@ -52,9 +51,6 @@ class DriversRating:
                 missing_weeks.append(week.strftime('%Y-%m-%d'))
                 dct[(datetime.utcfromtimestamp(week.start_of('week').timestamp()),
                      datetime.utcfromtimestamp(week.end_of('week').timestamp()))] = {}
-        if missing_weeks:
-            download_weekly_report.delay(self.fleet_name, ';'.join(missing_weeks))
-            # download_weekly_report(self.fleet_name, ';'.join(missing_weeks))
         return dct
 
     def get_rating(self):

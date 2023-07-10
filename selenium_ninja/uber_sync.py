@@ -2,7 +2,6 @@ import csv
 import datetime
 import json
 import os
-import pickle
 import time
 
 import redis
@@ -95,14 +94,14 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         except:
             pass
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_6')).click()
-        self.click_uber_calendar(self.start_report_interval(day=day).strftime("%B"),
-                                 self.start_report_interval(day=day).strftime("%Y"),
-                                 self.start_report_interval(day=day).day)
-
-        self.click_uber_calendar(self.end_report_interval(day=day).strftime("%B"),
-                                 self.end_report_interval(day=day).strftime("%Y"),
-                                 self.end_report_interval(day=day).day)
+        self.click_uber_calendar(day.strftime("%B"),
+                                 day.strftime("%Y"),
+                                 day.day)
+        self.click_uber_calendar(day.strftime("%B"),
+                                 day.strftime("%Y"),
+                                 day.day)
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
+        return f'{self.payments_order_file_name(self.fleet, pattern, day)}'
 
     def download_payments_order(self, report_en, report_ua, pattern="Ninja", day=None):
         if os.path.exists(f'{self.payments_order_file_name(self.fleet, pattern, day)}'):
@@ -126,15 +125,15 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         else:
             self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
 
-    def save_report(self, day=None):
+    def save_report(self, day):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
-        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
+        self.logger.info(self.file_pattern(self.fleet, self.partner, day))
+        if self.payments_order_file_name(self.fleet, self.partner, day) is not None:
             try:
-                with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
+                with open(self.payments_order_file_name(self.fleet, self.partner, day), encoding="utf-8") as file:
                     reader = csv.reader(file)
                     next(reader)  # Advance past the header
                     for row in reader:
@@ -143,16 +142,16 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                         if row[3] is None:
                             continue
                         order = Payments(
-                            report_from=self.start_report_interval(day=day),
-                            report_to=self.end_report_interval(day=day),
+                            report_from=day,
                             vendor_name=self.fleet,
                             driver_id=str(row[0]),
                             full_name=f"{row[1]} {row[2]}",
                             total_amount=row[3],
                             total_amount_without_fee=row[4] or 0,
-                            bonuses=row[5] or 0,
-                            total_amount_cash=row[6] or 0)
+                            bonuses=row[5] or 0)
+
                         try:
+                            order.total_amount_cash = abs(float(row[6])) if row[6] else 0
                             order.tips = row[9]
                         except IndexError:
                             order.tips = 0
@@ -164,8 +163,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
 
                     if not items:
                         order = Payments(
-                            report_from=self.start_report_interval(day=day),
-                            report_to=self.end_report_interval(day=day),
+                            report_from=day,
                             vendor_name=self.fleet,
                             driver_id='00000000-0000-0000-0000-000000000000',
                             full_name='',
@@ -235,7 +233,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     otpa = list(f'{otp["data"]}')
                     otpa = list(filter(lambda d: d.isdigit(), otpa))
                     digits = [s.isdigit() for s in otpa]
-                    if not (digits) or (not all(digits)) or len(digits) != 4:
+                    if not digits or (not all(digits)) or len(digits) != 4:
                         continue
                     break
             except redis.ConnectionError as e:
@@ -257,15 +255,15 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             # self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_5')).click()
             break
 
-    def wait_code_form(self, id):
+    def wait_code_form(self, pk):
         try:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-            self.driver.find_element(By.ID, id)
-            self.driver.get_screenshot_as_file(f'{id}.png')
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, pk)))
+            self.driver.find_element(By.ID, pk)
+            self.driver.get_screenshot_as_file(f'{pk}.png')
             return True
         except Exception as e:
             self.logger.error(str(e))
-            self.driver.get_screenshot_as_file(f'{id}_error.png')
+            self.driver.get_screenshot_as_file(f'{pk}_error.png')
             return False
 
     def otp_code_v1(self):
@@ -286,17 +284,17 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             # self.logger.error(str(e))
             pass
 
-    def password_form(self, id, button, selector):
+    def password_form(self, pk, button, selector):
         try:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
+            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, pk)))
             el = self.driver.find_element(By.ID, id)
             el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
             self.driver.find_element(selector, button).click()
         except Exception as e:
             self.logger.error(str(e))
 
-    def login_form(self, id, button, selector):
-        element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
+    def login_form(self, pk, button, selector):
+        element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, pk)))
         element.send_keys(ParkSettings.get_value("UBER_NAME"))
         e = self.driver.find_element(selector, button)
         e.click()
@@ -458,19 +456,15 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         except WebDriverException as err:
             self.logger.error(err)
 
-    def download_weekly_report(self, day=None):
+    def download_weekly_report(self, day):
         try:
-            report = Payments.objects.filter(report_from=self.start_report_interval(day=day),
-                                             report_to=self.end_report_interval(day=day),
-                                             vendor_name=self.fleet)
+            report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
             if not report:
                 self.download_payments_order(UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3'),
                                              UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4'),
                                              day=day)
                 self.save_report(day=day)
-                report = Payments.objects.filter(report_from=self.start_report_interval(day),
-                                                 report_to=self.end_report_interval(day),
-                                                 vendor_name=self.fleet)
+                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
             return list(report)
         except Exception as err:
             self.logger.error(err)
@@ -480,8 +474,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         if not report:
             self.download_payments_order(UberService.get_value("UBER_GENERATE_TRIPS_1"),
                                          UberService.get_value("UBER_GENERATE_TRIPS_2"),
-                                         pattern, day
-                                         )
+                                         pattern, day)
             self.save_trips_report(pattern, day)
             report = UberTrips.objects.filter(report_file_name=self.file_pattern(self.fleet, pattern, day))
         return list(report)

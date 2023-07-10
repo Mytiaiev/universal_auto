@@ -44,7 +44,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
             input_data = WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_4'))))
-            format_day = day.format('DD.MM.YYYY')
+            format_day = day.strftime("%d.%m.%Y")
             input_data.click()
             input_data.send_keys(format_day + Keys.TAB + format_day)
             WebDriverWait(self.driver, self.sleep).until(
@@ -60,25 +60,24 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day))
         else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day))
 
-    def save_report(self, day=None):
+    def save_report(self, day):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
+        self.logger.info(self.file_pattern(self.fleet, self.partner, day))
 
-        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
-            with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
+        if self.payments_order_file_name(self.fleet, self.partner, day) is not None:
+            with open(self.payments_order_file_name(self.fleet, self.partner, day), encoding="utf-8") as file:
                 reader = csv.reader(file)
                 next(reader)
                 for row in reader:
                     order = Payments(
-                        report_from=self.start_report_interval(day=day),
-                        report_to=self.end_report_interval(day=day),
+                        report_from=day,
                         vendor_name=self.fleet,
                         full_name=row[0],
                         driver_id=row[1],
@@ -100,8 +99,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
 
         else:
             order = Payments(
-                report_from=self.start_report_interval(day=day),
-                report_to=self.end_report_interval(day=day),
+                report_from=day,
                 vendor_name=self.fleet,
                 full_name='',
                 driver_id='',
@@ -390,15 +388,11 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
 
     def download_weekly_report(self, day=None):
         try:
-            report = Payments.objects.filter(report_from=self.start_report_interval(day),
-                                             report_to=self.end_report_interval(day),
-                                             vendor_name=self.fleet)
+            report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
             if not report:
                 self.download_payments_order(day=day)
                 self.save_report(day=day)
-                report = Payments.objects.filter(report_from=self.start_report_interval(day),
-                                                 report_to=self.end_report_interval(day),
-                                                 vendor_name=self.fleet)
+                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
             return list(report)
         except Exception as err:
             self.logger.error(err)

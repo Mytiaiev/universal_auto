@@ -1,22 +1,18 @@
-import os
-import time
-import pendulum
+import time as tm
 from contextlib import contextmanager
-import datetime
-
-import pytz
+from datetime import datetime, time, timedelta
 from _decimal import Decimal
+from celery.signals import task_postrun
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.utils import timezone
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
-from django.conf import settings
 from django.core.cache import cache
-from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-     UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Payments
+from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
+    UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Payments, SummaryReport
 from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
-
 from scripts.conversion import convertion
 from auto.celery import app
 from selenium_ninja.bolt_sync import BoltRequest
@@ -27,18 +23,18 @@ from selenium_ninja.uklon_sync import UklonSynchronizer
 
 CHROME_DRIVER = None
 
-MEMCASH_LOCK_EXPIRE = 60 * 10
-MEMCASH_LOCK_AFTER_FINISHING = 10
+MEMCACHE_LOCK_EXPIRE = 60 * 10
+MEMCACHE_LOCK_AFTER_FINISHING = 10
 
 logger = get_task_logger(__name__)
 
 
 @app.task(queue='non_priority')
-def raw_gps_handler(id):
+def raw_gps_handler(pk):
     try:
-        raw = RawGPS.objects.get(id=id)
-    except RawGPS.DoesNotExist:
-        return f'{RawGPS.DoesNotExist}: id={id}'
+        raw = RawGPS.objects.get(id=pk)
+    except ObjectDoesNotExist:
+        return f'{ObjectDoesNotExist}: id={pk}'
     data = raw.data.split(';')
     try:
         lat, lon = convertion(data[2]), convertion(data[4])
@@ -46,11 +42,11 @@ def raw_gps_handler(id):
         lat, lon = 0, 0
     try:
         vehicle = Vehicle.objects.get(gps_imei=raw.imei)
-    except Vehicle.DoesNotExist:
-        return f'{Vehicle.DoesNotExist}: gps_imei={raw.imei}'
+    except ObjectDoesNotExist:
+        return f'{ObjectDoesNotExist}: gps_imei={raw.imei}'
     try:
-        date_time = datetime.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = pytz.timezone(settings.TIME_ZONE).localize(date_time)
+        date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
+        date_time = timezone.make_aware(date_time)
     except ValueError as err:
         return f'{ValueError} {err}'
     try:
@@ -72,33 +68,49 @@ def raw_gps_handler(id):
 
 
 @app.task(bind=True, queue='non_priority')
-def download_weekly_report(self, manager_id):
-    report = download_reports()
-    return *report, manager_id
-
-
-@app.task(bind=True, queue='non_priority')
 def download_daily_report(self, day=None):
     if not day:
-        day = pendulum.now().start_of('day').subtract(days=1)
+        day = timezone.localtime() - timedelta(days=1)
     else:
-        day = pendulum.parse(day)
-    start, end = get_start_end(day)
-    BoltRequest().save_report(start, end)
-    UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
+        day = datetime.strptime(day, "%Y-%m-%d")
+    # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
+    # BoltRequest().save_report(day)
     UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
     save_report_to_ninja_payment(day)
+    return day
+
+
+@task_postrun.connect
+def save_summary_report(sender=None, **kwargs):
+    if sender == download_daily_report:
+        day = kwargs.get("retval")
+        fleet_reports = Payments.objects.filter(report_from=day)
+        for driver in Driver.objects.all():
+            payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
+            if payments:
+                report = SummaryReport(report_from=day,
+                                       full_name=driver,
+                                       partner=driver.partner)
+                fields = ("total_rides", "total_distance", "total_amount_cash",
+                          "total_amount_on_card", "total_amount", "tips",
+                          "bonuses", "fee", "total_amount_without_fee", "fares",
+                          "cancels", "compensations", "refunds"
+                          )
+
+                for field in fields:
+                    setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
+                report.save()
 
 
 @contextmanager
 def memcache_lock(lock_id, oid):
-    timeout_at = time.monotonic() + MEMCASH_LOCK_EXPIRE - 3
-    status = cache.add(lock_id, oid, MEMCASH_LOCK_EXPIRE)
+    timeout_at = tm.monotonic() + MEMCACHE_LOCK_EXPIRE - 3
+    status = cache.add(lock_id, oid, MEMCACHE_LOCK_EXPIRE)
     try:
         yield status
     finally:
-        if time.monotonic() < timeout_at and status:
-            cache.set(lock_id, oid, MEMCASH_LOCK_AFTER_FINISHING)
+        if tm.monotonic() < timeout_at and status:
+            cache.set(lock_id, oid, MEMCACHE_LOCK_AFTER_FINISHING)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -123,7 +135,7 @@ def update_driver_status(self):
                     status_with_client = status_with_client.union(set(uklon_status['width_client']))
                 drivers = Driver.objects.filter(deleted_at=None)
                 for driver in drivers:
-                    last_status = timezone.localtime() - timezone.timedelta(minutes=2)
+                    last_status = timezone.localtime() - timedelta(minutes=2)
                     park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
                     work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
                                                           created_at__date=timezone.now().date(), end_at=None)
@@ -163,6 +175,7 @@ def update_driver_data(self, manager_id):
     except Exception as e:
         logger.info(e)
     return manager_id
+
 
 @app.task(bind=True, queue='non_priority')
 def send_on_job_application_on_driver(self, job_id):
@@ -208,11 +221,6 @@ def fleets_cash_trips(self, pk, enable):
 
 
 @app.task(bind=True, queue='non_priority')
-def manager_paid_weekly(self):
-    return logger.info('send message to manager')
-
-
-@app.task(bind=True, queue='non_priority')
 def withdraw_uklon(self):
     try:
         UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('withdraw_money')
@@ -223,49 +231,25 @@ def withdraw_uklon(self):
 @app.task(bind=True, queue='non_priority')
 def download_uber_trips(self):
     try:
-        day = pendulum.now().start_of('day').subtract(days=1)
+        day = timezone.localtime() - timedelta(days=1)
         UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
     except Exception as e:
         logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
-def send_efficiency_report(self, start=None, end=None):
-    try:
-        total_values = {}
-        report_values = {}
-        effective_driver = {}
-        effective_report = {}
-        day_reports = Payments.objects.filter(report_from__date=start)
-        day_totals = calculate_reports(day_reports)[0]
-        if start and end:
-            reports = Payments.objects.filter(report_from__date__range=(start, end))
-        else:
-            start = datetime.datetime.now().date() - datetime.timedelta(days=datetime.datetime.now().weekday())
-            end = datetime.datetime.now().date()
-            reports = Payments.objects.filter(report_from__date__range=(start, end))
-        kassa = calculate_reports(reports)[0]
-        for key, value in kassa.items():
-            total_values[key] = total_values.get(key, 0) + value
-        sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
-        for key in sort_report:
-            report_values[key] = "Всього: {:.2f} Учора: (+{:.2f})".format(sort_report[key], day_totals.get(key, 0))
-        for driver in Driver.objects.filter(vehicle__isnull=False):
-            effect = calculate_efficiency(driver, start, end)
-            effective_driver[driver.full_name()] = {'Середня ефективність(грн/км)': effect[0],
-                                                    'Ефективність(грн/км)': effect[1],
-                                                    'КМ за тиждень': effect[2],
-                                                    'КМ учора': effect[3]}
-        sorted_effective_driver = dict(sorted(effective_driver.items(),
-                                       key=lambda x: x[1]['Середня ефективність(грн/км)'],
-                                       reverse=True))
-        message = [f'{k}:\n{v}' for k, v in report_values.items()]
-        for k, v in sorted_effective_driver.items():
-            effective_report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
-        effect_message = [f'{k}:\n' + ''.join(v) for k, v in effective_report.items()]
-        return message, effect_message
-    except Exception as e:
-        logger.error(e)
+def manager_paid_weekly(self):
+    return logger.info('send message to manager')
+
+
+@app.task(bind=True, queue='non_priority')
+def send_weekly_report(self):
+    pass
+
+
+@app.task(bind=True, queue='non_priority')
+def send_efficiency_report(self):
+    pass
 
 
 @app.task(bind=True, queue='non_priority')
@@ -285,8 +269,8 @@ def check_order(self, order_id):
 
 @app.task(bind=True, queue='non_priority')
 def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
-    start = datetime.datetime.fromtimestamp(start_trip_with_client)
-    format_end = datetime.datetime.fromtimestamp(end)
+    start = datetime.fromtimestamp(start_trip_with_client)
+    format_end = datetime.fromtimestamp(end)
     delta = format_end - start
     try:
         result = UaGpsSynchronizer().generate_report(start_trip_with_client, end, gps_id)
@@ -296,20 +280,18 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         logger.info(e)
 
 
-def save_report_to_ninja_payment(day=None):
-    if day:
-        start_date = pendulum.now().start_of('day').subtract(days=1)
-        end_date = start_date.end_of("day")
-    else:
-        start_date = pendulum.now().start_of('week').subtract(weeks=1)
-        end_date = start_date.end_of('week')
-
-    start_date, end_date = str(start_date).replace('T', ' '), str(end_date).replace('T', ' ')
+@app.task(queue='non_priority')
+def save_report_to_ninja_payment(day, partner='Ninja'):
+    reports = Payments.objects.filter(report_from=day, vendor_name=partner)
+    if reports:
+        return reports
+    start_date = datetime.combine(day, time.min)
+    end_date = datetime.combine(day, time.max)
     # Pulling notes for the rest of the week and grouping behind the chat_id field
     for driver in Driver.objects.exclude(chat_id=''):
         records = Order.objects.filter(driver__chat_id=driver.chat_id,
                                        status_order=Order.COMPLETED,
-                                       created_at__date__range=(start_date.split()[0], end_date.split()[0]))
+                                       created_at__date__range=(start_date, end_date))
         total_rides = records.count()
         result = records.aggregate(
             total=Sum(Coalesce(Cast('distance_gps', FloatField()),
@@ -337,34 +319,6 @@ def save_report_to_ninja_payment(day=None):
             pass
 
 
-def send_weekly_report(manager_id):
-    owner = {"Fleet Owner": 0}
-    end = datetime.datetime.now().date() - datetime.timedelta(days=datetime.datetime.now().weekday() + 1)
-    start = end - datetime.timedelta(days=6)
-    all_driver_report = Payments.objects.filter(report_from__date__range=(start, end))
-    totals, salary, reports = calculate_reports(all_driver_report)
-    plan = dict(totals)
-    totals = {k: f'Загальна каса {k}: %.2f\n' % v for k, v in totals.items()}
-    totals = {k: v + reports[k] for k, v in totals.items()}
-    for k, v in totals.items():
-        for driver in Driver.objects.all():
-            if driver.full_name() == k and driver.schema == 'RENT':
-                totals[
-                    k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - Оренда ({'%.2f' % -driver.rental}) = {'%.2f' % (salary[k] - driver.rental)}\n" + "-" * 39
-                owner["Fleet Owner"] += driver.rental
-            elif driver.full_name() == k and driver.schema == 'HALF':
-                if plan[k] < driver.plan:
-                    owner["Fleet Owner"] += driver.rental
-                    incomplete = (driver.plan - plan[k]) * float(1 - driver.rate)
-                    totals[
-                        k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]} - План ({'%.2f' % -incomplete}) = {'%.2f' % (salary[k] - incomplete)}\n" + "-" * 39
-                else:
-                    owner["Fleet Owner"] += plan[k] * float(1 - driver.rate)
-                    totals[k] = v + f"Зарплата за тиждень: {'%.2f' % salary[k]}\n" + "-" * 39
-            else:
-                pass
-    return owner, totals, plan, manager_id
-
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     global CHROME_DRIVER
@@ -376,6 +330,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(), queue='non_priority')
@@ -383,78 +338,5 @@ def setup_periodic_tasks(sender, **kwargs):
 
 def init_chrome_driver():
     global CHROME_DRIVER
-    CHROME_DRIVER = SeleniumTools(session='Ninja', week_number=None, driver=True, remote=False,
+    CHROME_DRIVER = SeleniumTools(session='Ninja', driver=True, remote=False,
                                   sleep=5, headless=True, profile='Tasks')
-
-
-def get_start_end(day=None):
-    if day:
-        start = end = day.format("YYYY-MM-DD")
-    else:
-        week = pendulum.now().start_of('week').subtract(weeks=1)
-        start = week.format("YYYY-MM-DD")
-        end = week.end_of('week').format("YYYY-MM-DD")
-    return start, end
-
-
-def calculate_reports(fleet_reports):
-    totals = {}
-    salary = {}
-    reports = {}
-    for rate in Fleets_drivers_vehicles_rate.objects.all():
-        r = list((r for r in fleet_reports if r.driver_id == rate.driver_external_id))
-        if r:
-            r = r[0]
-            name = rate.driver.full_name()
-            reports[name] = reports.get(name, '') + r.report_text(name, float(rate.driver.rate)) + '\n'
-            totals[name] = totals.get(name, 0) + r.kassa()
-            salary[name] = salary.get(name, 0) + r.total_drivers_amount(float(rate.driver.rate))
-
-    totals = {k: v for k, v in totals.items() if v != 0.0}
-    return totals, salary, reports
-
-
-def get_car_efficiency(driver, day=None):
-    efficiency = CarEfficiency.objects.filter(start_report=day,
-                                              end_report=day,
-                                              driver=driver)
-    if not efficiency:
-        try:
-            total_km = UaGpsSynchronizer().total_per_day(driver, day)
-            reports = Payments.objects.filter(report_from__date=day)
-            total_kasa = calculate_reports(reports)[0]
-            if total_km and total_kasa.get(driver.full_name()):
-                result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
-                CarEfficiency.objects.create(start_report=day,
-                                             end_report=day,
-                                             driver=driver,
-                                             mileage=total_km,
-                                             efficiency=result)
-            else:
-                CarEfficiency.objects.create(start_report=day,
-                                             end_report=day,
-                                             driver=driver,
-                                             mileage=total_km or 0,
-                                             efficiency=0)
-        except Exception as e:
-            logger.info(e)
-
-
-def calculate_efficiency(driver, start, end):
-    current_date = start
-    while current_date <= end:
-        get_car_efficiency(driver, current_date)
-        current_date += datetime.timedelta(days=1)
-    end_period = pendulum.now().start_of('day').subtract(days=1)
-    all_objects = CarEfficiency.objects.filter(start_report__range=[start, end],
-                                               driver=driver)
-    efficiency_objects = all_objects.exclude(efficiency=0)
-    yesterday_efficiency = CarEfficiency.objects.filter(start_report=end_period,
-                                                        driver=driver).first()
-    efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 0
-    distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 0
-    average_efficiency = efficiency_objects.aggregate(avg_efficiency=Avg('efficiency'))['avg_efficiency']
-    total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
-    formatted_efficiency = float('{:.2f}'.format(average_efficiency)) if average_efficiency is not None else 0.00
-    formatted_distance = float('{:.2f}'.format(total_distance)) if total_distance is not None else 0.00
-    return formatted_efficiency, efficiency, formatted_distance, distance

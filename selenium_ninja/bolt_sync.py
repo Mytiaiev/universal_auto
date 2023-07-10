@@ -77,35 +77,20 @@ class BoltRequest(RequestSynchronizer):
         response = requests.post(url, json=json, params=params, headers=headers)
         return response.json()
 
-    @staticmethod
-    def start_report_interval(start_date):
-        date = pendulum.from_format(start_date, "YYYY-MM-DD")
-        return date.in_timezone("Europe/Kiev").start_of("day")
-
-    @staticmethod
-    def end_report_interval(end_date):
-        date = pendulum.from_format(end_date, "YYYY-MM-DD")
-        return date.in_timezone("Europe/Kiev").end_of("day")
-
-    def download_report(self, start, end):
-        report = Payments.objects.filter(report_from=self.start_report_interval(start),
-                                         report_to=self.end_report_interval(end),
-                                         vendor_name=self.fleet)
-        return list(report)
-
-    def save_report(self, start, end):
-        if self.download_report(start, end):
-            return self.download_report(start, end)
+    def save_report(self, day):
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
+        if reports:
+            return list(reports)
         # date format str yyyy-mm-dd
-        self.params.update({"start_date": start,
-                            "end_date": end,
+        format_day = day.strftime("%Y-%m-%d")
+        self.params.update({"start_date": format_day,
+                            "end_date": format_day,
                             "offset": 0,
                             "limit": 50})
-        report = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', self.params)
-        for driver in report['data']['drivers']:
+        reports = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', self.params)
+        for driver in reports['data']['drivers']:
             order = Payments(
-                report_from=self.start_report_interval(start),
-                report_to=self.end_report_interval(end),
+                report_from=day,
                 vendor_name=self.fleet,
                 full_name=driver['name'],
                 driver_id=driver['id'],
@@ -114,7 +99,7 @@ class BoltRequest(RequestSynchronizer):
                 tips=driver['tips'],
                 bonuses=driver['bonuses'],
                 cancels=driver['cancellation_fees'],
-                fee=driver['gross_revenue'] - driver['net_earnings'],
+                fee=-(driver['gross_revenue'] - driver['net_earnings']),
                 total_amount_without_fee=driver['net_earnings'],
                 compensations=driver['compensations'],
                 refunds=driver['expense_refunds'],
@@ -123,7 +108,6 @@ class BoltRequest(RequestSynchronizer):
                 order.save()
             except IntegrityError:
                 pass
-        return self.download_report(start, end)
 
     def get_drivers_table(self):
         driver_list = []
@@ -184,6 +168,9 @@ class BoltRequest(RequestSynchronizer):
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver).update(pay_cash=pay_cash)
 
     def add_driver(self, job_application):
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
         payload = {
                         "email": f"{job_application.email}",
                         "phone": f"{job_application.phone_number}",
@@ -193,10 +180,10 @@ class BoltRequest(RequestSynchronizer):
         payload_form = {
             'hash': response['data']['hash'],
             'last_step': 'step_2',
-            'first_name': f"{job_application.first_name}",
-            'last_name': f"{job_application.last_name}",
-            'email': f"{job_application.email}",
-            'phone': f"{job_application.phone_number}",
+            'first_name': job_application.first_name,
+            'last_name': job_application.last_name,
+            'email': job_application.email,
+            'phone': job_application.phone_number,
             'birthday': '',
             'terms_consent_accepted': '0',
             'whatsapp_opt_in': '0',
@@ -234,12 +221,10 @@ class BoltRequest(RequestSynchronizer):
             'hash': response['data']['hash'],
             'language': 'uk-ua',
         }
-        first_params = dict(list(params.items())[:2])
-        second_params = dict(list(params.items())[0])
-        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationLog/', params=first_params)
+        second_params = dict(list(params.items())[:1])
         requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/',
-                      params=second_params, data=encoded_payload)
-        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationDocumentsSet/', params)
+                      params=second_params, headers=headers, data=encoded_payload)
+        requests.get(f"{BoltService.get_value('R_BOLT_ADD_DRIVER_1')}getDriverRegistrationDocumentsSet/", params=params)
 
         file_paths = [
             f"{settings.MEDIA_URL}{job_application.driver_license_front}",  # license_front
@@ -273,7 +258,10 @@ class BoltRequest(RequestSynchronizer):
         payload_form['last_step'] = 'step_4'
         payload_form['web_marketing_data[url]'] = f"{response['data']['registration_link']}/4"
         encoded = parse.urlencode(payload_form)
-        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', params=params, data=encoded)
+        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', headers=headers,
+                      params=params, data=encoded)
+        job_application.status_bolt = datetime.datetime.now().date()
+        job_application.save()
 
 
 class BoltSynchronizer(Synchronizer, SeleniumTools):
@@ -346,8 +334,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
                     if row[1] == "":
                         continue
                     order = Payments(
-                        report_from=self.start_report_interval(day=day),
-                        report_to=self.end_report_interval(day=day),
+                        report_from=day,
                         report_file_name=file.name,
                         driver_full_name=row[0][:24],
                         mobile_number='',
@@ -372,8 +359,7 @@ class BoltSynchronizer(Synchronizer, SeleniumTools):
                     items.append(order)
         else:
             order = Payments(
-                report_from=self.start_report_interval(day=day),
-                report_to=self.end_report_interval(day=day),
+                report_from=day,
                 report_file_name='',
                 driver_full_name='',
                 mobile_number='',

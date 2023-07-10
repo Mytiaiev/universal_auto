@@ -24,7 +24,11 @@ def start(update, context):
     menu(update, context)
     chat_id = update.effective_chat.id
     users = User.objects.filter(chat_id=chat_id)
-    if users and len(users) == 1:
+    if not users:
+        Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
+                              second_name=update.message.from_user.last_name)
+        update.message.reply_text(share_phone_text, reply_markup=markup_keyboard([contact_keyboard]))
+    elif users and len(users) == 1:
         user = users.first()
         if user.phone_number:
             update.message.reply_text(user_greetings_text, reply_markup=get_start_kb(user))
@@ -34,16 +38,11 @@ def start(update, context):
         reply_markup = inline_owner_kb() if any(user.role == "OWNER" for user in users) else inline_manager_kb()
         update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
 
-        if not users:
-            Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
-                                  second_name=update.message.from_user.last_name)
-            update.message.reply_text(share_phone_text, reply_markup=markup_keyboard([contact_keyboard]))
-
 
 def start_query(update, context):
     query = update.callback_query
     users = User.objects.filter(chat_id=update.effective_chat.id)
-    if users and len(users) == 1:
+    if len(users) == 1:
         user = users.first()
         reply_markup = get_start_kb(user)
     else:

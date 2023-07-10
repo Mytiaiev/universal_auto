@@ -8,7 +8,8 @@ from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
 from auto.tasks import logger, get_distance_trip, check_time_order, check_order, send_time_order
-from auto_bot.handlers.main.keyboards import markup_keyboard, inline_start_driver_kb, inline_user_kb
+from auto_bot.handlers.main.keyboards import markup_keyboard, inline_start_driver_kb, inline_user_kb, get_start_kb, \
+    inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
     inline_route_keyboard, inline_finish_order, inline_repeat_keyboard, inline_reject_order, inline_time_order_kb, \
     inline_increase_price_kb, inline_search_kb, inline_start_order_kb, share_location, inline_location_kb, \
@@ -24,27 +25,31 @@ def continue_order(update, context):
     order = Order.objects.filter(chat_id_client=update.effective_chat.id,
                                  status_order__in=[Order.ON_TIME, Order.WAITING])
     if order:
-        query.edit_message_text(text=already_ordered)
+        query.edit_message_text(already_ordered)
     else:
         context.user_data['state'] = START_TIME_ORDER
         context.user_data['location_button'] = False
-        query.edit_message_text(text=price_info(ParkSettings.get_value('TARIFF_IN_THE_CITY'),
-                                                ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')))
-    query.edit_message_reply_markup(reply_markup=inline_start_order_kb())
+        query.edit_message_text(price_info(ParkSettings.get_value('TARIFF_IN_THE_CITY'),
+                                           ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')))
+    query.edit_message_reply_markup(inline_start_order_kb())
 
 
 def cancel_order(update, context):
     query = update.callback_query
-    query.edit_message_text(text=complete_order_text)
-    driver = Driver.get_by_chat_id(query.message.chat_id)
-    if driver:
-        query.edit_message_reply_markup(reply_markup=inline_start_driver_kb())
+    query.edit_message_text(complete_order_text)
+    users = User.get_by_chat_id(query.message.chat_id)
+    if len(users) == 1:
+        user = users.first()
+        reply_markup = get_start_kb(user)
     else:
-        query.edit_message_reply_markup(reply_markup=inline_user_kb())
+        reply_markup = inline_owner_kb() if any(user.role == "OWNER" for user in users) else inline_manager_kb()
+    query.edit_message_reply_markup(reply_markup)
     context.user_data.clear()
 
 
 def get_location(update, context):
+    if context.user_data.get('location_button'):
+        return
     location = update.message.location
     context.user_data['state'] = None
     context.user_data['location_button'] = True
@@ -67,12 +72,12 @@ def from_address(update, context):
     if not context.user_data.get('location_button'):
         reply_markup = markup_keyboard(share_location)
         if query:
-            query.edit_message_text(text=info_address_text)
+            query.edit_message_text(info_address_text)
         else:
             context.bot.send_message(chat_id=chat_id, text=info_address_text)
         context.bot.send_message(chat_id=chat_id, text=from_address_text, reply_markup=reply_markup)
     else:
-        query.edit_message_text(text=from_address_text)
+        query.edit_message_text(from_address_text)
 
 
 def to_the_address(update, context):
@@ -95,7 +100,7 @@ def to_the_address(update, context):
             from_address(update, context)
     else:
         if query:
-            query.edit_message_text(text=arrival_text)
+            query.edit_message_text(arrival_text)
         else:
             context.bot.send_message(chat_id=chat_id, text=arrival_text)
         context.user_data['state'] = TO_THE_ADDRESS
@@ -123,7 +128,7 @@ def payment_method(update, context):
     else:
         context.user_data['state'] = None
         query.edit_message_text(payment_text)
-        query.edit_message_reply_markup(reply_markup=inline_payment_kb())
+        query.edit_message_reply_markup(inline_payment_kb())
 
 
 def second_address_check(update, context):
@@ -261,14 +266,14 @@ def send_order_to_driver(sender=None, **kwargs):
 
 def increase_search_radius(update, context):
     query = update.callback_query
-    query.edit_message_text(text=increase_radius_text)
-    query.edit_message_reply_markup(reply_markup=inline_increase_price_kb())
+    query.edit_message_text(increase_radius_text)
+    query.edit_message_reply_markup(inline_increase_price_kb())
 
 
 def ask_client_action(update, context):
     query = update.callback_query
-    query.edit_message_text(text=no_driver_in_radius)
-    query.edit_message_reply_markup(reply_markup=inline_search_kb())
+    query.edit_message_text(no_driver_in_radius)
+    query.edit_message_reply_markup(inline_search_kb())
 
 
 def increase_order_price(update, context):
@@ -409,7 +414,7 @@ def handle_callback_order(update, context):
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
     elif data[0] == 'Reject_order':
         context.user_data['running'] = False
-        query.edit_message_text(text="Ви <<Відмовились від замовлення>>")
+        query.edit_message_text(client_decline)
         driver.driver_status = Driver.ACTIVE
         driver.save()
         ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
@@ -576,9 +581,10 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
                 distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
                 if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
                     text_to_client(order, driver_arrived, delete_id=client_msg)
-                    bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                                  message_id=query_id,
-                                                  reply_markup=inline_client_spot(pk=order.id))
+                    context.bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+                                                          message_id=query_id,
+                                                          reply_markup=inline_client_spot(pk=order.id))
+                    context.bot.stop_message_live_location(m.chat_id, m.message_id)
                     context.user_data['flag'] = False
             if order.status_order in [Order.CANCELED, Order.WAITING]:
                 context.user_data['running'] = False
