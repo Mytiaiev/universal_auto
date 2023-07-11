@@ -8,7 +8,7 @@ from telegram.ext import ConversationHandler
 from app.models import User, JobApplication, Client
 from auto_bot.handlers.driver_job.keyboards import inline_ask_auto_kb, inline_job_name_kb, inline_ask_docs_kb
 from auto_bot.handlers.driver_job.static_text import *
-from auto_bot.handlers.driver_job.utils import save_storage_photo
+from auto_bot.handlers.driver_job.utils import save_storage_photo, validate_date
 
 
 def job_application(update, context):
@@ -133,7 +133,7 @@ def upload_license_back_photo(update, context):
 
 def upload_expired_date(update, context):
     date = update.message.text
-    if JobApplication.validate_date(date):
+    if validate_date(date):
         context.user_data['expired_license'] = datetime.datetime.strptime(date, '%Y-%m-%d').date()
         update.message.reply_text(ask_auto_text, reply_markup=inline_ask_auto_kb())
         return "WAIT_ANSWER"
@@ -199,7 +199,7 @@ def upload_expired_insurance(update, context):
         job.save()
     else:
         date = update.message.text
-        if JobApplication.validate_date(date):
+        if validate_date(date):
             job.insurance_expired = datetime.datetime.strptime(date, '%Y-%m-%d').date()
             job.car_documents = context.user_data['auto_doc']
             job.insurance = context.user_data['insurance']

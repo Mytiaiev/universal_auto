@@ -1,6 +1,6 @@
 # Create driver and other
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from celery.signals import task_postrun
 from django.utils import timezone
@@ -11,9 +11,10 @@ from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehi
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
-    fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb
+    fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
+    inline_efficiency_report_kb
 from auto_bot.handlers.driver_manager.static_text import *
-from auto_bot.handlers.driver_manager.utils import calculate_reports
+from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_efficiency_report, send_weekly_report
@@ -41,13 +42,25 @@ def remove_cash_by_manager(update, context):
     data = query.data.split(' ')
     driver = Driver.objects.filter(id=int(data[2])).first()
     fleets_cash_trips.delay(int(data[2]), enable=data[1])
-    query.edit_message_text(text=remove_cash_text(driver, data[1]))
+    query.edit_message_text(remove_cash_text(driver, data[1]))
 
 
 def get_drivers_from_fleets(update, context):
     query = update.callback_query
     update_driver_data.delay(query.from_user.id)
-    query.edit_message_text(text=get_drivers_text)
+    query.edit_message_text(get_drivers_text)
+
+
+def get_earning_report(update, context):
+    query = update.callback_query
+    query.edit_message_text(choose_period_text)
+    query.edit_message_reply_markup(inline_earning_report_kb())
+
+
+def get_efficiency_report(update, context):
+    query = update.callback_query
+    query.edit_message_text(choose_period_text)
+    query.edit_message_reply_markup(inline_efficiency_report_kb())
 
 
 def get_weekly_report(update, context):
@@ -59,23 +72,68 @@ def get_weekly_report(update, context):
     manager = DriverManager.get_by_chat_id(query.from_user.id)
     drivers = Driver.objects.filter(manager=manager)
     if drivers:
-        for driver in Driver.objects.filter(manager=manager):
+        for driver in drivers:
             result = calculate_reports(start, end, driver)
             if result:
                 balance += result[0]
                 message += f"{driver} каса :{result[1]}\n"
                 if driver.schema == "HALF":
                     if result[4]:
-                        message += f'Зарплата за тиждень {result[1]}*{driver.rate}- Готівка {result[2]}- План {result[4]} = {result[3]}\n'
+                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - План {result[4]} = {result[3]}\n'
                     else:
-                        message += f'Зарплата за тиждень {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
+                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} = {result[3]}\n'
                 elif driver.schema == "RENT":
-                    message += f'Зарплата за тиждень {result[1]}*{driver.rate}- Готівка {result[2]}- Оренда {driver.rental} = {result[3]}\n'
+                    message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - Оренда {driver.rental} = {result[3]}\n'
                 message += "*" * 39 + '\n'
+            else:
+                message += f"Заробітки відсутні {driver}\n"
     else:
         message = "У вас ще немає водіїв"
     query.edit_message_text(f'Ваш тижневий баланс: %.2f' % balance)
     context.bot.send_message(chat_id=query.from_user.id, text=message)
+
+
+def get_report(update, context):
+    query = update.callback_query
+    if query.data == "Custom_report":
+        query.edit_message_text(start_report_text)
+        context.user_data['manager_state'] = START_EARNINGS
+    else:
+        sort_report, day_values = get_daily_report(manager_id=query.from_user.id)
+        message = ''
+        for key in sort_report:
+            if sort_report[key]:
+                message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(key, sort_report[key], day_values.get(key, 0))
+        query.edit_message_text(message)
+
+
+def get_report_period(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['start'] = data
+        update.message.reply_text(end_report_text)
+        context.user_data['manager_state'] = END_EARNINGS
+    else:
+        context.user_data['manager_state'] = START_EARNINGS
+        context.bot.send_message(invalid_data_text)
+        update.message.reply_text(start_report_text)
+
+
+def create_period_report(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['manager_state'] = None
+        start = datetime.strptime(context.user_data['start'], '%Y-%m-%d')
+        end = datetime.strptime(data, '%Y-%m-%d')
+        sort_report, day_values = get_daily_report(update.message.chat_id, start, end)
+        message = ''
+        for key in sort_report:
+            if sort_report[key]:
+                message += "{}\n Всього: {:.2f}\n".format(key, sort_report[key])
+        update.message.reply_text(message)
+    else:
+        context.user_data['manager_state'] = END_EARNINGS
+        context.bot.send_message(invalid_end_data_text)
 
 
 @task_postrun.connect

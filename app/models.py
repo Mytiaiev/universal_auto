@@ -933,21 +933,6 @@ class JobApplication(models.Model):
     status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата подачі заявки')
 
-    @staticmethod
-    def validate_date(date_str):
-        try:
-            check_date = datetime.strptime(date_str, '%Y-%m-%d')
-            today = datetime.today()
-            future_date = datetime(2077, 12, 31)
-            if check_date < today:
-                return False
-            elif check_date > future_date:
-                return False
-            else:
-                return True
-        except ValueError:
-            return False
-
     def save(self, *args, **kwargs):
         if not self.pk:
             self.password = self.generate_password()

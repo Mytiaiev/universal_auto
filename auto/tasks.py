@@ -269,6 +269,11 @@ def send_weekly_report(self):
 
 
 @app.task(bind=True, queue='non_priority')
+def send_daily_report(self):
+    pass
+
+
+@app.task(bind=True, queue='non_priority')
 def send_efficiency_report(self):
     pass
 

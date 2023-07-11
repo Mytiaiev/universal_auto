@@ -12,6 +12,24 @@ def inline_driver_paid_kb(pk):
     return InlineKeyboardMarkup(keyboard)
 
 
+def inline_earning_report_kb():
+    keyboard = [
+        [InlineKeyboardButton(report_period[0], callback_data="Weekly_report")],
+        [InlineKeyboardButton(report_period[1], callback_data="Daily_report")],
+        [InlineKeyboardButton(report_period[2], callback_data="Custom_report")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_efficiency_report_kb():
+    keyboard = [
+        [InlineKeyboardButton(report_period[0], callback_data="Efficiency_weekly")],
+        [InlineKeyboardButton(report_period[1], callback_data="Efficiency_daily")],
+        [InlineKeyboardButton(report_period[2], callback_data="Efficiency_custom")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
 create_user_keyboard = [KeyboardButton(f'{CREATE_USER}'),
                         KeyboardButton(f'{CREATE_VEHICLE}')]
 

@@ -8,7 +8,8 @@ from auto_bot.states import text
 # handlers
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
     get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, \
-    driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report
+    driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report, get_earning_report, \
+    get_efficiency_report, get_report
 from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
@@ -103,8 +104,6 @@ def setup_dispatcher(dp):
     # ordering taxi
     dp.add_handler(CallbackQueryHandler(start_query, pattern="Back_to_main"))
     dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
-    dp.add_handler(CallbackQueryHandler(get_drivers_from_fleets, pattern="Update_drivers"))
-    dp.add_handler(CallbackQueryHandler(get_weekly_report, pattern="Get_report"))
     dp.add_handler(MessageHandler(Filters.location, get_location))
     dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order|Wrong_place"))
     dp.add_handler(CallbackQueryHandler(to_the_address, pattern="Right_place"))
@@ -160,6 +159,12 @@ def setup_dispatcher(dp):
     # Commands for Driver Managers
     dp.add_handler(CallbackQueryHandler(remove_cash_by_manager,
                                         pattern=re.compile("^Paid_driver (true|false) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(get_drivers_from_fleets, pattern="Update_drivers"))
+    dp.add_handler(CallbackQueryHandler(get_earning_report, pattern="Get_report"))
+    dp.add_handler(CallbackQueryHandler(get_weekly_report, pattern="Weekly_report"))
+    dp.add_handler(CallbackQueryHandler(get_report, pattern="Daily_report|Custom_report"))
+
+    dp.add_handler(CallbackQueryHandler(get_efficiency_report, pattern="Get_efficiency_report"))
     # Returns status cars
     dp.add_handler(CommandHandler("car_status", broken_car))
     # Viewing status driver

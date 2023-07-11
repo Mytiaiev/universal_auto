@@ -37,7 +37,7 @@ def continue_order(update, context):
 def cancel_order(update, context):
     query = update.callback_query
     query.edit_message_text(complete_order_text)
-    users = User.get_by_chat_id(query.message.chat_id)
+    users = User.objects.filter(chat_id=query.message.chat_id)
     if len(users) == 1:
         user = users.first()
         reply_markup = get_start_kb(user)
