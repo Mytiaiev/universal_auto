@@ -1,7 +1,9 @@
 # Create driver and other
 import time
+from datetime import timedelta
 
 from celery.signals import task_postrun
+from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
 from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication,\
@@ -11,6 +13,7 @@ from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb
 from auto_bot.handlers.driver_manager.static_text import *
+from auto_bot.handlers.driver_manager.utils import calculate_reports
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_efficiency_report, send_weekly_report
@@ -49,28 +52,30 @@ def get_drivers_from_fleets(update, context):
 
 def get_weekly_report(update, context):
     query = update.callback_query
-    query.edit_message_text(text='Ваш запит прийнято.\nМи надішлемо вам звіт, як тільки він сформується')
-    send_weekly_report.delay(query.from_user.id)
-
-
-@task_postrun.connect
-def send_report(sender=None, **kwargs):
-    if sender == send_weekly_report:
-        rep = kwargs.get("retval")
-        owner, totals = rep[0], rep[1]
-        drivers = {f'{i}': i.chat_id for i in Driver.objects.all()}
-        # sending report to owner
-        message = f'Fleet Owner: {"%.2f" % owner["Fleet Owner"]}\n\n' + '\n'.join(totals.values())
-        bot.send_message(chat_id=rep[3], text=message)
-
-        # sending report to driver
-        if drivers:
-            for driver in drivers:
-                try:
-                    message, chat_id = totals[f'{driver}'], drivers[f'{driver}']
-                    bot.send_message(chat_id=chat_id, text=message)
-                except:
-                    pass
+    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+    start = end - timedelta(days=6)
+    message = ''
+    balance = 0
+    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    drivers = Driver.objects.filter(manager=manager)
+    if drivers:
+        for driver in Driver.objects.filter(manager=manager):
+            result = calculate_reports(start, end, driver)
+            if result:
+                balance += result[0]
+                message += f"{driver} каса :{result[1]}\n"
+                if driver.schema == "HALF":
+                    if result[4]:
+                        message += f'Зарплата за тиждень {result[1]}*{driver.rate}- Готівка {result[2]}- План {result[4]} = {result[3]}\n'
+                    else:
+                        message += f'Зарплата за тиждень {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
+                elif driver.schema == "RENT":
+                    message += f'Зарплата за тиждень {result[1]}*{driver.rate}- Готівка {result[2]}- Оренда {driver.rental} = {result[3]}\n'
+                message += "*" * 39 + '\n'
+    else:
+        message = "У вас ще немає водіїв"
+    query.edit_message_text(f'Ваш тижневий баланс: %.2f' % balance)
+    context.bot.send_message(chat_id=query.from_user.id, text=message)
 
 
 @task_postrun.connect

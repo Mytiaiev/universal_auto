@@ -10,9 +10,12 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Payments, SummaryReport
+    UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Payments, SummaryReport, DriverManager
 from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
+
+from auto_bot.handlers.driver_manager.utils import calculate_reports
+from auto_bot.main import bot
 from scripts.conversion import convertion
 from auto.celery import app
 from selenium_ninja.bolt_sync import BoltRequest
@@ -73,8 +76,8 @@ def download_daily_report(self, day=None):
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
-    # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
-    # BoltRequest().save_report(day)
+    UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
+    BoltRequest().save_report(day)
     UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
     save_report_to_ninja_payment(day)
     return day
@@ -244,7 +247,25 @@ def manager_paid_weekly(self):
 
 @app.task(bind=True, queue='non_priority')
 def send_weekly_report(self):
-    pass
+    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+    start = end - timedelta(days=6)
+    message = ''
+    balance = 0
+    for manager in DriverManager.objects.all():
+        for driver in Driver.objects.filter(manager=manager):
+            driver_message = ''
+            result = calculate_reports(start, end, driver)
+            if result:
+                balance += result[0]
+                driver_message += f"{driver} каса :{result[1]}\n"
+                driver_message += f'Зарплата за тиждень: {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
+                if driver.chat_id:
+                    bot.send_message(chat_id=driver.chat_id, text=driver_message)
+                message += driver_message
+                message += "*" * 39 + '\n'
+        manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
+        manager_message += message
+        bot.send_message(chat_id=manager.chat_id, text=manager_message)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -285,13 +306,11 @@ def save_report_to_ninja_payment(day, partner='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=partner)
     if reports:
         return reports
-    start_date = datetime.combine(day, time.min)
-    end_date = datetime.combine(day, time.max)
     # Pulling notes for the rest of the week and grouping behind the chat_id field
     for driver in Driver.objects.exclude(chat_id=''):
         records = Order.objects.filter(driver__chat_id=driver.chat_id,
                                        status_order=Order.COMPLETED,
-                                       created_at__date__range=(start_date, end_date))
+                                       created_at__date=day)
         total_rides = records.count()
         result = records.aggregate(
             total=Sum(Coalesce(Cast('distance_gps', FloatField()),
@@ -304,8 +323,7 @@ def save_report_to_ninja_payment(day, partner='Ninja'):
             total=Coalesce(Sum(Cast('sum', output_field=IntegerField())), 0))['total']
         total_amount = total_amount_cash + total_amount_card
         report = Payments(
-            report_from=start_date,
-            report_to=end_date,
+            report_from=day,
             full_name=str(driver),
             driver_id=driver.chat_id,
             total_rides=total_rides,
@@ -330,7 +348,7 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=3), save_report_to_ninja_payment.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=45, hour=9), send_weekly_report.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
     sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(), queue='non_priority')
