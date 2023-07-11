@@ -408,8 +408,8 @@ class JobApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(admin.ModelAdmin):
-    list_display = ['driver', 'vehicle', 'efficiency', 'mileage', 'start_report', 'end_report']
-    readonly_fields = ['driver', 'vehicle', 'efficiency', 'mileage', 'start_report', 'end_report']
+    list_display = ['driver', 'total_kasa', 'vehicle', 'efficiency', 'mileage', 'start_report', 'end_report']
+    readonly_fields = ['driver', 'total_kasa', 'vehicle', 'efficiency', 'mileage', 'start_report', 'end_report']
 
 
 @admin.register(BoltService)
