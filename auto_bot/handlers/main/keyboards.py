@@ -47,7 +47,6 @@ def inline_user_kb():
 
 def inline_manager_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         [InlineKeyboardButton(manager_main_buttons[0], callback_data="Update_drivers")],
         [InlineKeyboardButton(manager_main_buttons[1], callback_data="Get_report")],
         [InlineKeyboardButton(manager_main_buttons[2], callback_data="Get_efficiency_report")],
@@ -58,6 +57,7 @@ def inline_manager_kb():
 
 def inline_more_manager_kb():
     keyboard = [
+        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)

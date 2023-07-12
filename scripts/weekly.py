@@ -11,4 +11,5 @@ from selenium_ninja.uber_sync import UberSynchronizer
 
 
 def run(*args):
-    get_car_efficiency.delay("2023-07-11")
+    download_daily_report.delay("2023-07-10")
+    get_car_efficiency.delay("2023-07-10")

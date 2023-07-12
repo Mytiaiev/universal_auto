@@ -15,7 +15,7 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
     inline_efficiency_report_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
-from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
+from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_efficiency_report, send_weekly_report
 from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
@@ -34,7 +34,7 @@ def remove_cash_driver(sender=None, **kwargs):
 def update_drivers(sender=None, **kwargs):
     if sender == update_driver_data:
         chat_id = kwargs.get('retval')
-        bot.send_message(chat_id=chat_id, text=update_finished)
+        bot.send_message(chat_id=chat_id, text=update_finished, reply_markup=inline_manager_kb())
 
 
 def remove_cash_by_manager(update, context):
@@ -90,7 +90,7 @@ def get_weekly_report(update, context):
     else:
         message = no_drivers_text
     query.edit_message_text(f'Ваш тижневий баланс: %.2f' % balance)
-    context.bot.send_message(chat_id=query.from_user.id, text=message)
+    context.bot.send_message(chat_id=query.from_user.id, text=message, reply_markup=inline_manager_kb())
 
 
 def get_report(update, context):
@@ -109,6 +109,7 @@ def get_report(update, context):
         else:
             message += no_drivers_text
         query.edit_message_text(message)
+        query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
 
 def get_report_period(update, context):
@@ -157,6 +158,7 @@ def get_efficiency_auto(update, context):
         else:
             message += no_vehicles_text
         query.edit_message_text(message)
+        query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
 
 def get_efficiency_period(update, context):
@@ -186,7 +188,7 @@ def create_period_efficiency(update, context):
                 message += f"{k}\n" + "".join(v)
         else:
             message += no_vehicles_text
-        update.message.reply_text(message)
+        update.message.reply_text(message, reply_markup=inline_manager_kb())
     else:
         context.user_data['manager_state'] = END_EFFICIENCY
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)

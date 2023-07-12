@@ -69,9 +69,8 @@ def get_daily_report(manager_id=None, start=None, end=None):
 
 
 def calculate_efficiency(licence_plate, start, end):
-    all_objects = CarEfficiency.objects.filter(report_from__range=(start, end),
-                                               licence_plate=licence_plate)
-    efficiency_objects = all_objects.exclude(efficiency=0)
+    efficiency_objects = CarEfficiency.objects.filter(report_from__range=(start, end),
+                                                      licence_plate=licence_plate)
     average_efficiency = efficiency_objects.aggregate(avg_efficiency=Avg('efficiency'))['avg_efficiency']
     total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
     formatted_efficiency = float('{:.2f}'.format(average_efficiency)) if average_efficiency is not None else 0.00

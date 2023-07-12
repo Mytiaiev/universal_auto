@@ -575,6 +575,9 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
     while True:
         if context.user_data.get('running'):
             latitude, longitude = get_location_from_db(licence_plate)
+            if order.status_order in [Order.CANCELED, Order.WAITING]:
+                context.bot.stop_message_live_location(m.chat_id, m.message_id)
+                context.user_data['running'] = False
             if context.user_data['flag']:
                 distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
                 if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
@@ -584,8 +587,6 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
                                                           reply_markup=inline_client_spot(pk=order.id))
                     context.bot.stop_message_live_location(m.chat_id, m.message_id)
                     context.user_data['flag'] = False
-            if order.status_order in [Order.CANCELED, Order.WAITING]:
-                context.user_data['running'] = False
             try:
                 if order.chat_id_client:
                     m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,

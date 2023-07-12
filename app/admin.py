@@ -657,7 +657,7 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             'phone_number', 'chat_id',
                                                             ]}),
                 ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
-                                                             )}),
+                                                            )}),
                 ('Додатково',                   {'fields': ['driver_status', 'manager',  'vehicle'
                                                             ]}),
             )
