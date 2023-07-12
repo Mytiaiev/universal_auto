@@ -76,5 +76,13 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
+    def handle_effective_vehicle(self, request):
+        period = request.GET.get('period')
+        vehicle = request.GET.get('vehicle_id')
+        get_efficiency_vehicle = effective_vehicle(period, vehicle)
+        json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)

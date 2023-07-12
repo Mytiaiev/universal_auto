@@ -4,19 +4,18 @@ var sidebarOpen = false;
 var sidebar = document.getElementById("sidebar");
 
 function openSidebar() {
-  if(!sidebarOpen) {
+  if (!sidebarOpen) {
     sidebar.classList.add("sidebar-responsive");
     sidebarOpen = true;
   }
 }
 
 function closeSidebar() {
-  if(sidebarOpen) {
+  if (sidebarOpen) {
     sidebar.classList.remove("sidebar-responsive");
     sidebarOpen = false;
   }
 }
-
 
 
 // ---------- CHARTS ----------
@@ -111,7 +110,7 @@ var barChartOptions = {
     title: {
       text: "Каса",
       style: {
-        color:  "#f5f7ff",
+        color: "#f5f7ff",
       },
     },
     axisBorder: {
@@ -138,7 +137,7 @@ barChart.render();
 var areaChartOptions = {
   series: [{
     name: "Василь",
-    data: [31, 40, 28, 51, 42, 109, 100],
+    data: [31, 40, 28, 51, 42, 60, 76],
   }, {
     name: "Іван",
     data: [11, 32, 45, 32, 34, 52, 41],
@@ -213,35 +212,35 @@ var areaChartOptions = {
     },
   },
   yAxis:
-  [
-    {
-      title: {
-        text: "Дохід грн/км",
-        style: {
-          color: "#f5f7ff",
+    [
+      {
+        title: {
+          text: "Дохід грн/км",
+          style: {
+            color: "#f5f7ff",
+          },
+        },
+        labels: {
+          style: {
+            colors: ["#f5f7ff"],
+          },
         },
       },
-      labels: {
-        style: {
-          colors: ["#f5f7ff"],
+      {
+        opposite: true,
+        title: {
+          text: "Дохід грн/км",
+          style: {
+            color: "#f5f7ff",
+          },
+        },
+        labels: {
+          style: {
+            colors: ["#f5f7ff"],
+          },
         },
       },
-    },
-    {
-      opposite: true,
-      title: {
-        text: "Дохід грн/км",
-        style: {
-          color:  "#f5f7ff",
-        },
-      },
-      labels: {
-        style: {
-          colors: ["#f5f7ff"],
-        },
-      },
-    },
-  ],
+    ],
   tooltip: {
     shared: true,
     intersect: false,
@@ -268,7 +267,6 @@ $(document).ready(function () {
         let totalAmount = response.data[1].toFixed(2);
         let startDate = response.data[2];
         let endDate = response.data[3];
-        console.log(totalAmount, startDate, endDate);
         let formattedData = {};
 
         Object.keys(data).forEach(function (key) {
@@ -323,7 +321,6 @@ $(document).ready(function () {
         let totalAmount = response.data[1].toFixed(2);
         let startDate = response.data[2];
         let endDate = response.data[3];
-        console.log(totalAmount, startDate, endDate);
         let formattedData = {};
 
         Object.keys(data).forEach(function (key) {
@@ -332,13 +329,67 @@ $(document).ready(function () {
             formattedData[key] = value;
           }
         });
-
         barChartOptions.series[0].data = Object.values(formattedData);
         barChartOptions.xaxis.categories = Object.keys(formattedData);
         barChart.updateOptions(barChartOptions);
 
         $('#weekly-income-dates').text(startDate + ' по ' + endDate);
         $('#weekly-income-amount').text(totalAmount + ' грн');
+      }
+    });
+  });
+
+  $('#vehicle-select').change(function () {
+    let vehicleId = $(this).val();
+    $.ajax({
+      type: "GET",
+      url: ajaxGetUrl,
+      data: {
+        action: 'effective_vehicle',
+        period: 'week',
+        vehicle_id: vehicleId
+      },
+      success: function (response) {
+        // Отримати дані з відповіді
+        let dataArray = response.data.data;
+        let uniqueNames = Array.from(new Set(dataArray.map(item => item.name)));
+        let driverData = {};
+        uniqueNames.forEach((name, index) => {
+          let driverIndex = index + 1;
+          let driverNameKey = `name${driverIndex}`;
+          let effectiveKey = `effective${driverIndex}`;
+
+          driverData[driverNameKey] = name;
+          driverData[effectiveKey] = dataArray
+            .filter(item => item.name === name)
+            .map(item => item.effective)
+            .join(', ');
+          if (driverData[effectiveKey] === '') {
+            driverData[effectiveKey] = 0;
+          }
+        });
+
+        if (uniqueNames.length === 1) {
+          let driverIndex = 2;
+          let driverNameKey = `name${driverIndex}`;
+          let effectiveKey = `effective${driverIndex}`;
+
+          driverData[driverNameKey] = "Водій відсутній";
+          driverData[effectiveKey] = "0";
+        }
+        driverData.date_effective = dataArray
+          .map(item => {
+            let date = new Date(item.date_effective);
+            return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+          })
+          .join(', ');
+
+        areaChartOptions.series[0].name = driverData.name1;
+        areaChartOptions.series[0].data = driverData.effective1.split(', ');
+        areaChartOptions.series[1].name = driverData.name2;
+        areaChartOptions.series[1].data = driverData.effective2.split(', ');
+        areaChartOptions.xaxis.categories = driverData.date_effective.split(', ');
+        areaChart.updateOptions(areaChartOptions);
       }
     });
   });

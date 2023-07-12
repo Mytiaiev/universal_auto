@@ -131,13 +131,15 @@ def get_week_dates(period=None):
 
 
 def weekly_rent():
-    start_date, end_date = get_week_dates()
 
-    start_date_formatted = start_date.strftime('%d.%m.%Y')
-    end_date_formatted = end_date.strftime('%d.%m.%Y')
+    week_start, week_end = get_week_dates('week')
 
-    rents = RentInformation.objects.filter(created_at__range=(start_date, end_date))
-    total_distance = sum(rent.rent_distance for rent in rents)
+    start_date_formatted = week_start.strftime('%d.%m.%Y')
+    end_date_formatted = week_end.strftime('%d.%m.%Y')
+
+    total_distance = RentInformation.objects.filter(
+        created_at__date__range=(week_start, week_end)).aggregate(total_distance=Sum('rent_distance'))['total_distance'] or 0
+
     return total_distance, start_date_formatted, end_date_formatted
 
 
@@ -203,5 +205,49 @@ def collect_total_earnings(period):
 
 
 def get_all_vehicle():
-    vehicles = Vehicle.objects.all()
+    vehicles = Vehicle.objects.exclude(licence_plate='Unknown car')
     return vehicles
+
+
+def average_effective_vehicle():
+    start_date, end_date = get_week_dates('week')
+
+    start_date_formatted = start_date.strftime('%d.%m.%Y')
+    end_date_formatted = end_date.strftime('%d.%m.%Y')
+
+    vehicle = CarEfficiency.objects.filter(start_report__range=(start_date, end_date))
+    mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum'] or 0
+    total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
+    effective = total_kasa / mileage
+    effective = float('{:.2f}'.format(effective))
+
+    return effective, start_date_formatted, end_date_formatted
+
+
+def effective_vehicle(period, vehicle):
+    start_date, end_date = get_week_dates(period=period)
+    car_effective = []
+
+    effective_objects = CarEfficiency.objects.filter(vehicle=vehicle, start_report__range=(start_date, end_date))
+    vehicle_effective = effective_objects.exclude(efficiency=0)
+
+    for effective in vehicle_effective:
+        date_effective = effective.start_report
+        name = effective.driver
+        total_amount = effective.total_kasa
+        car = effective.vehicle
+        mileage = effective.mileage
+        effective = effective.efficiency
+
+        car_data = {
+            'date_effective': date_effective,
+            'car': car,
+            'name': name,
+            'total_amount': total_amount,
+            'mileage': mileage,
+            'effective': effective
+        }
+        car_effective.append(car_data)
+    result = {'data': car_effective}
+
+    return result

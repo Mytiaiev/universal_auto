@@ -95,10 +95,11 @@
 			</div>
 			<div class="card">
 				<div class="card-inner">
-					<h2>Середня ефективність</h2>
+					<h2>Загальна ефективність авто за період</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
-				<h3>7.8 грн/км</h3>
+				<h3>{{ average_effective_vehicle.1 }} по {{ average_effective_vehicle.2 }}</h3>
+				<h3>{{ average_effective_vehicle.0 }} грн/км</h3>
 			</div>
 			<div class="card">
 				<div class="card-inner">
@@ -136,7 +137,7 @@
 				<h2 class="chart-title">Ефективність автомобіля</h2>
 
 				<div class="car-select">
-					<select>
+					<select id="vehicle-select">
 						{% for vehicle in get_all_vehicle %}
 						<option>{{ vehicle.licence_plate }}</option>
 						{% endfor %}
@@ -146,19 +147,15 @@
 				<div class="chart-btns">
 					<div class="radio_btn">
 						<input id="radio-5" type="radio" name="effective-period" value="5" checked>
-						<label for="radio-5">день</label>
+						<label for="radio-5">тиждень</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-6" type="radio" name="effective-period" value="6">
-						<label for="radio-6">тиждень</label>
+						<label for="radio-6">місяць</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-7" type="radio" name="effective-period" value="7">
-						<label for="radio-7">місяць</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-8" type="radio" name="effective-period" value="8">
-						<label for="radio-8">квартал</label>
+						<label for="radio-7">квартал</label>
 					</div>
 				</div>
 			</div>
