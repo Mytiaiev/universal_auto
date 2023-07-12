@@ -242,6 +242,7 @@ class Vehicle(models.Model):
     gps_id = models.IntegerField(default=0)
     gps_imei = models.CharField(max_length=100, default='')
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
+    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
@@ -984,7 +985,7 @@ def admin_image_preview(image, default_image=None):
 
 class CarEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
-    licence_plate = models.CharField(max_length=25, verbose_name='Номер автомобіля')
+    licence_plate = models.CharField(null=True, max_length=25, verbose_name='Номер автомобіля')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
 

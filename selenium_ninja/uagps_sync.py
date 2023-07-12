@@ -70,14 +70,6 @@ class UaGpsSynchronizer:
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
 
-    def start_day(self, day):
-        start_of_day = day.in_timezone("Europe/Kiev").start_of("day")
-        return self.get_timestamp(start_of_day)
-
-    def end_day(self, day):
-        end_of_day = day.in_timezone("Europe/Kiev").end_of("day")
-        return self.get_timestamp(end_of_day)
-
     def get_rent_distance(self):
         yesterday = timezone.localtime() - datetime.timedelta(days=1)
         start = timezone.datetime.combine(yesterday, datetime.datetime.min.time()).astimezone()
@@ -149,9 +141,11 @@ class UaGpsSynchronizer:
                 rent.save()
 
     def total_per_day(self, licence_plate, day):
+        start = datetime.datetime.combine(day, datetime.time.min)
+        end = datetime.datetime.combine(day, datetime.time.max)
         vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
         if vehicle:
-            distance = self.generate_report(self.start_day(day),
-                                            self.end_day(day),
+            distance = self.generate_report(self.get_timestamp(start),
+                                            self.get_timestamp(end),
                                             vehicle.gps_id)[0]
-            return distance
+            return distance, vehicle

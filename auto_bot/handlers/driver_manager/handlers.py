@@ -14,7 +14,7 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
     inline_efficiency_report_kb
 from auto_bot.handlers.driver_manager.static_text import *
-from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date
+from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_efficiency_report, send_weekly_report
@@ -110,6 +110,7 @@ def get_report(update, context):
             message += no_drivers_text
         query.edit_message_text(message)
 
+
 def get_report_period(update, context):
     data = update.message.text
     if validate_date(data):
@@ -128,29 +129,67 @@ def create_period_report(update, context):
         context.user_data['manager_state'] = None
         start = datetime.strptime(context.user_data['start'], '%Y-%m-%d')
         end = datetime.strptime(data, '%Y-%m-%d')
+        if start > end:
+            start, end = end, start
         sort_report, day_values = get_daily_report(update.message.chat_id, start, end)
         message = ''
-        for key in sort_report:
-            if sort_report[key]:
-                message += "{} {:.2f}\n".format(key, sort_report[key])
+        for key, value in sort_report.items():
+            message += "{} {:.2f}\n".format(key, value)
         update.message.reply_text(message)
+        context.user_data['manager_state'] = END_EARNINGS
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
     else:
         context.user_data['manager_state'] = END_EARNINGS
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
 
 
-@task_postrun.connect
-def send_report_daily_in_group(sender=None, **kwargs):
-    if sender == send_efficiency_report:
-        for result in kwargs.get("retval"):
-            try:
-                message = '\U0001f3c6' + result[0] + '\n'
-                for num, driver in enumerate(result[1:], 2):
-                    message += f"{num}. {driver}\n"
-                bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'), text=message)
-                time.sleep(5)
-            except IndexError:
-                bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'), text="No reports")
+def get_efficiency_auto(update, context):
+    query = update.callback_query
+    message = ''
+    if query.data == "Efficiency_custom":
+        query.edit_message_text(start_report_text)
+        context.user_data['manager_state'] = START_EFFICIENCY
+    else:
+        result = get_efficiency(manager_id=query.from_user.id)
+        if result:
+            for k, v in result.items():
+                message += f"{k}\n" + "".join(v)
+        else:
+            message += no_vehicles_text
+        query.edit_message_text(message)
+
+
+def get_efficiency_period(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['start'] = data
+        update.message.reply_text(end_report_text)
+        context.user_data['manager_state'] = END_EFFICIENCY
+    else:
+        context.user_data['manager_state'] = START_EFFICIENCY
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_data_text)
+        update.message.reply_text(start_report_text)
+
+
+def create_period_efficiency(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['manager_state'] = None
+        start = datetime.strptime(context.user_data['start'], '%Y-%m-%d')
+        end = datetime.strptime(data, '%Y-%m-%d')
+        if start > end:
+            start, end = end, start
+        result = get_efficiency(update.message.chat_id, start, end)
+        message = ''
+        if result:
+            for k, v in result.items():
+                message += f"{k}\n" + "".join(v)
+        else:
+            message += no_vehicles_text
+        update.message.reply_text(message)
+    else:
+        context.user_data['manager_state'] = END_EFFICIENCY
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
 
 
 # Add users and vehicle to db and others

@@ -48,8 +48,6 @@ def cancel_order(update, context):
 
 
 def get_location(update, context):
-    if context.user_data.get('location_button'):
-        return
     location = update.message.location
     context.user_data['state'] = None
     context.user_data['location_button'] = True

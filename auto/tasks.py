@@ -15,7 +15,7 @@ from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
 
 from auto_bot.handlers.driver_manager.static_text import no_drivers_text
-from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report
+from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
 from auto_bot.main import bot
 from scripts.conversion import convertion
 from auto.celery import app
@@ -71,7 +71,7 @@ def raw_gps_handler(pk):
         return f'{ValueError} {err}'
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def download_daily_report(self, day=None):
     if not day:
         day = timezone.localtime() - timedelta(days=1)
@@ -82,6 +82,34 @@ def download_daily_report(self, day=None):
     UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
     save_report_to_ninja_payment(day)
     return day
+
+
+@app.task(bind=True)
+def get_car_efficiency(self, day=None):
+    if not day:
+        day = timezone.localtime() - timedelta(days=1)
+    else:
+        day = datetime.strptime(day, "%Y-%m-%d")
+    for vehicle in Vehicle.objects.filter(driver__isnull=False):
+        efficiency = CarEfficiency.objects.filter(report_from=day,
+                                                  licence_plate=vehicle.licence_plate)
+        if not efficiency:
+            total_km, vehicle = UaGpsSynchronizer().total_per_day(vehicle.licence_plate, day)
+            if total_km:
+                drivers = Driver.objects.filter(vehicle=vehicle)
+                total_kasa = 0
+                for driver in drivers:
+                    report = SummaryReport.objects.filter(report_from=day,
+                                                          full_name=driver).first()
+                    if report:
+                        total_kasa += report.total_amount_without_fee
+                result = Decimal(total_kasa)/Decimal(total_km)
+            else:
+                result = 0
+            CarEfficiency.objects.create(report_from=day,
+                                         licence_plate=vehicle.licence_plate,
+                                         mileage=total_km or 0,
+                                         efficiency=result)
 
 
 @task_postrun.connect
@@ -117,7 +145,7 @@ def memcache_lock(lock_id, oid):
             cache.set(lock_id, oid, MEMCACHE_LOCK_AFTER_FINISHING)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def update_driver_status(self):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
@@ -165,7 +193,7 @@ def update_driver_status(self):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def update_driver_data(self, manager_id):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
@@ -181,7 +209,7 @@ def update_driver_data(self, manager_id):
     return manager_id
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
@@ -192,7 +220,7 @@ def send_on_job_application_on_driver(self, job_id):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def detaching_the_driver_from_the_car(self, licence_plate):
     try:
         UklonSynchronizer(CHROME_DRIVER.driver).try_to_execute('detaching_the_driver_from_the_car', licence_plate)
@@ -201,7 +229,7 @@ def detaching_the_driver_from_the_car(self, licence_plate):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def get_rent_information(self):
     try:
         session = UaGpsSynchronizer()
@@ -213,7 +241,7 @@ def get_rent_information(self):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def fleets_cash_trips(self, pk, enable):
     try:
         UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('disable_cash', pk, enable)
@@ -224,7 +252,7 @@ def fleets_cash_trips(self, pk, enable):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def withdraw_uklon(self):
     try:
         UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('withdraw_money')
@@ -232,7 +260,7 @@ def withdraw_uklon(self):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def download_uber_trips(self):
     try:
         day = timezone.localtime() - timedelta(days=1)
@@ -241,12 +269,12 @@ def download_uber_trips(self):
         logger.error(e)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def manager_paid_weekly(self):
     return logger.info('send message to manager')
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def send_weekly_report(self):
     end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
     start = end - timedelta(days=6)
@@ -271,40 +299,48 @@ def send_weekly_report(self):
             bot.send_message(chat_id=manager.chat_id, text=manager_message)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def send_daily_report(self):
     message = ''
     for manager in DriverManager.objects.filter(chat_id__isnull=False):
         result = get_daily_report(manager_id=manager.chat_id)
         if result:
-            for key in result[0]:
+            for num, key in enumerate(result[0], 1):
                 if result[0][key]:
-                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
-                        key, result[0][key], result[1].get(key, 0))
-            bot.send_message(chat_id=manager.chat_id, text=message)
+                    num = "\U0001f3c6" if num == 1 else num
+                    message += "{}.{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
+                        num, key, result[0][key], result[1].get(key, 0))
+            bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'), text=message)
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def send_efficiency_report(self):
-    pass
+    message = ''
+    for manager in DriverManager.objects.filter(chat_id__isnull=False):
+        result = get_efficiency(manager_id=manager.chat_id)
+        if result:
+            for k, v in result.items():
+                message += f"{k}\n" + "".join(v)
+            bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'), text=message)
 
 
-@app.task(bind=True, queue='non_priority')
+
+@app.task(bind=True)
 def check_time_order(self, order_id):
     return order_id
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def send_time_order(self):
     return logger.info('sending_time_orders')
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def check_order(self, order_id):
     return order_id
 
 
-@app.task(bind=True, queue='non_priority')
+@app.task(bind=True)
 def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
     start = datetime.fromtimestamp(start_trip_with_client)
     format_end = datetime.fromtimestamp(end)
@@ -317,8 +353,8 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         logger.info(e)
 
 
-@app.task(queue='non_priority')
-def save_report_to_ninja_payment(day, partner='Ninja'):
+@app.task(bind=True)
+def save_report_to_ninja_payment(self, day, partner='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=partner)
     if reports:
         return reports
@@ -358,16 +394,16 @@ def setup_periodic_tasks(sender, **kwargs):
     global CHROME_DRIVER
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             send_time_order.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=45, hour=9), send_weekly_report.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s(), queue='non_priority')
-    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(), queue='non_priority')
+                             send_time_order.s())
+    sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s())
+    sender.add_periodic_task(crontab(minute=20, hour=3), update_driver_data.s())
+    sender.add_periodic_task(crontab(minute=0, hour=3), download_daily_report.s())
+    sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s())
+    sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s())
+    sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s())
+    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s())
+    sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), send_weekly_report.s())
+    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s())
 
 
 def init_chrome_driver():
