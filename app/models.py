@@ -40,18 +40,18 @@ class Payments(models.Model):
     vendor_name = models.CharField(max_length=30, default='Ninja', verbose_name='Агрегатор')
     full_name = models.CharField(null=True, max_length=255, verbose_name='ПІ водія')
     driver_id = models.CharField(null=True, max_length=50, verbose_name='Унікальний індифікатор водія')
-    total_rides = models.PositiveIntegerField(null=True, default=0, verbose_name='Кількість поїздок')
-    total_distance = models.DecimalField(null=True, default=0, decimal_places=2,
-                                         max_digits=10, verbose_name='Пробіг під замовлення')
+    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
     total_amount_cash = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
     total_amount_on_card = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
                                                verbose_name='На картку')
     total_amount = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
                                        verbose_name='Загальна сума')
     tips = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Чайові')
+    total_rides = models.PositiveIntegerField(null=True, default=0, verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(null=True, default=0, decimal_places=2,
+                                         max_digits=10, verbose_name='Пробіг під замовлення')
     bonuses = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Бонуси')
     fee = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Комісія')
-    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
     fares = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Штрафи')
     cancels = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
                                   verbose_name='Плата за скасування')
@@ -85,16 +85,16 @@ class Payments(models.Model):
 class SummaryReport(models.Model):
     report_from = models.DateField(verbose_name='Дата звіту')
     full_name = models.CharField(null=True, max_length=255, verbose_name='ПІ водія')
-    total_rides = models.PositiveIntegerField(null=True, verbose_name='Кількість поїздок')
-    total_distance = models.DecimalField(null=True, decimal_places=2,
-                                         max_digits=10, verbose_name='Пробіг під замовлення')
+    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
     total_amount_cash = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
     total_amount_on_card = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='На картку')
     total_amount = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Загальна сума')
+    total_rides = models.PositiveIntegerField(null=True, verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(null=True, decimal_places=2,
+                                         max_digits=10, verbose_name='Пробіг під замовлення')
     tips = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Чайові')
     bonuses = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Бонуси')
     fee = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Комісія')
-    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
     fares = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Штрафи')
     cancels = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
     compensations = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Компенсації')

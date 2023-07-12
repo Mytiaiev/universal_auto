@@ -89,8 +89,9 @@ def get_weekly_report(update, context):
                 message += f"Заробітки відсутні {driver}\n"
     else:
         message = no_drivers_text
-    query.edit_message_text(f'Ваш тижневий баланс: %.2f' % balance)
-    context.bot.send_message(chat_id=query.from_user.id, text=message, reply_markup=inline_manager_kb())
+    owner_message = f'Ваш тижневий баланс: %.2f\n' % balance
+    owner_message += message
+    query.edit_message_text(owner_message)
 
 
 def get_report(update, context):
@@ -136,9 +137,7 @@ def create_period_report(update, context):
         message = ''
         for key, value in sort_report.items():
             message += "{} {:.2f}\n".format(key, value)
-        update.message.reply_text(message)
-        context.user_data['manager_state'] = END_EARNINGS
-        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
+        update.message.reply_text(message, reply_markup=inline_manager_kb())
     else:
         context.user_data['manager_state'] = END_EARNINGS
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
