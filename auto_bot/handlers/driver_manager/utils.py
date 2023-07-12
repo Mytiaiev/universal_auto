@@ -109,7 +109,7 @@ def calculate_efficiency(driver, start, end):
     return formatted_efficiency, efficiency, formatted_distance, distance
 
 
-def send_efficiency(start, end):
+def send_efficiency(manager_id=None, start=None, end=None):
     effective_driver = {}
     effective_report = {}
     for vehicle in Vehicle.objects.all():
