@@ -3,11 +3,14 @@ import time
 import pendulum
 from contextlib import contextmanager
 import datetime
+import pickle
+import redis
 
 import pytz
 from _decimal import Decimal
 
 import redis
+import requests
 from django.db import IntegrityError
 from django.utils import timezone
 from celery.schedules import crontab
@@ -15,7 +18,9 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.cache import cache
 from selenium import webdriver
+from selenium.webdriver import chromium
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.chromium.remote_connection import ChromiumRemoteConnection
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
     NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Park
@@ -374,25 +379,30 @@ def init_chrome_driver():
     # for park in Park.objects.all():
     day = True
     # a = SeleniumTools(partner=1, profile=f'Tasks_park.name', remote=True)
-    a = UberSynchronizer(1, 'bolt').try_to_execute('download_weekly_report')
-    print('************************')
-    print(a.driver)
-    k = a.driver.session_id
-    print(k)
-    print('************************')
-    chrome_session_url = f'http://localhost:4444/wd/hub/session/{k}'
-    print(chrome_session_url)# Замініть на відповідний URL вашої сесії хрому
-    # Підключаємося до сесії хрому
-    driver = webdriver.Remote(command_executor=chrome_session_url, desired_capabilities={})
-    print('************************')
-    print(driver)
-    print('************************')
-
-
-    print(22222)
-    print(type(a.driver))
-    print(type(a.driver.session_id))
-    print(1)
+    #
+    # # a = UberSynchronizer(1, 'bolt').try_to_execute('download_weekly_report')
+    # print('************************')
+    # # print(requests.get(/cookie"))
+    # print(a.driver)
+    # print(a.driver.get_cookies())
+    # a.driver.get('https://uklon.com.ua/ru/')
+    # print(1)
+    # print('************************')
+    # print(a.driver.get_cookies())
+    # print('########################')
+    # # try:
+    # #     chrome_session_url = f'http://172.19.0.3:4444/wd/hub/session/{k}'
+    # #     driver = webdriver.Remote(command_executor=chrome_session_url, desired_capabilities={})
+    # # except:
+    # #     chrome_session_url = f'http://172.19.0.2:4444/wd/hub/session/{k}'
+    # #     driver = webdriver.Remote(command_executor=chrome_session_url, desired_capabilities={})
+    # print('************************')
+    #
+    #
+    # print(22222)
+    # print(type(a.driver))
+    # print(type(a.driver.session_id))
+    # print(1)
     # c = SeleniumTools(partner=3, remote=True, profile=f'Tasks_park.name2')
     # print(c.driver)
     # print(2)
