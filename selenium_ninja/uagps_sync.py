@@ -148,8 +148,8 @@ class UaGpsSynchronizer:
                 rent.rent_distance -= Decimal(distance_in_trips)
                 rent.save()
 
-    def total_per_day(self, driver, day):
-        vehicle = Vehicle.objects.filter(driver=driver).first()
+    def total_per_day(self, licence_plate, day):
+        vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
         if vehicle:
             distance = self.generate_report(self.start_day(day),
                                             self.end_day(day),

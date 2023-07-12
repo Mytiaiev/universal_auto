@@ -5,7 +5,10 @@ from django.db.models import Sum, Avg, FloatField, DecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from app.models import Fleets_drivers_vehicles_rate, CarEfficiency, Payments, Driver, SummaryReport, DriverManager
+from app.models import Fleets_drivers_vehicles_rate, CarEfficiency, Payments, Driver, SummaryReport, DriverManager, \
+    Vehicle
+from auto_bot.handlers.driver_manager.static_text import no_drivers_text
+from auto_bot.main import bot
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 
 
@@ -48,7 +51,6 @@ def calculate_reports(start, end, driver):
     return balance, kasa, cash, salary, '%.2f' % incomplete
 
 
-
 def get_daily_report(manager_id=None, start=None, end=None):
     yesterday = timezone.localtime().date() - timedelta(days=1)
     if not start and not end:
@@ -57,30 +59,32 @@ def get_daily_report(manager_id=None, start=None, end=None):
     total_values = {}
     day_values = {}
     manager = DriverManager.get_by_chat_id(manager_id)
-    for driver in Driver.objects.filter(manager=manager):
-        day_values[driver] = calculate_reports(yesterday, yesterday, driver)[1]
-        total_values[driver] = calculate_reports(start, end, driver)[1]
-    sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
-    return sort_report, day_values
+    drivers = Driver.objects.filter(manager=manager)
+    if drivers:
+        for driver in Driver.objects.filter(manager=manager):
+            day_values[driver] = calculate_reports(yesterday, yesterday, driver)[1]
+            total_values[driver] = calculate_reports(start, end, driver)[1]
+        sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
+        return sort_report, day_values
 
 
-def get_car_efficiency(driver, day):
-    efficiency = CarEfficiency.objects.filter(start_report=timezone.localize(datetime.combine(day, time.min)),
-                                              end_report=timezone.localize(datetime.combine(day, time.max)),
-                                              driver=driver)
+def get_car_efficiency(licence_plate, day):
+    efficiency = CarEfficiency.objects.filter(report_from=day,
+                                              licence_plate=licence_plate)
     if not efficiency:
-        total_km = UaGpsSynchronizer().total_per_day(driver, day)
-        report = SummaryReport.objects.filter(report_from=day,
-                                              full_name=driver).first()
-
+        total_km, vehicle = UaGpsSynchronizer().total_per_day(licence_plate, day)
         if total_km:
-            result = Decimal(report.total_amount_without_fee)/Decimal(total_km)
-
+            drivers = Driver.objects.filter(vehicle=vehicle)
+            total_kasa = 0
+            for driver in drivers:
+                report = SummaryReport.objects.filter(report_from=day,
+                                                      full_name=driver).first()
+                total_kasa += report.total_amount_without_fee
+            result = Decimal(total_kasa)/Decimal(total_km)
         else:
             result = 0
-        CarEfficiency.objects.create(start_report=day,
-                                     end_report=day,
-                                     driver=driver,
+        CarEfficiency.objects.create(report_from=day,
+                                     licence_plate=licence_plate,
                                      mileage=total_km or 0,
                                      efficiency=result)
 
@@ -105,17 +109,15 @@ def calculate_efficiency(driver, start, end):
     return formatted_efficiency, efficiency, formatted_distance, distance
 
 
-
-
 def send_efficiency(start, end):
     effective_driver = {}
     effective_report = {}
-    for driver in Driver.objects.all():
-        effect = calculate_efficiency(driver, start, end)
-        effective_driver[driver] = {'Середня ефективність(грн/км)': effect[0],
-                                    'Ефективність(грн/км)': effect[1],
-                                    'КМ за тиждень': effect[2],
-                                    'КМ учора': effect[3]}
+    for vehicle in Vehicle.objects.all():
+        effect = calculate_efficiency(vehicle.licence_plate, start, end)
+        effective_driver[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
+                                                   'Ефективність(грн/км)': effect[1],
+                                                   'КМ за тиждень': effect[2],
+                                                   'КМ учора': effect[3]}
 
     sorted_effective_driver = dict(sorted(effective_driver.items(),
                                    key=lambda x: x[1]['Середня ефективність(грн/км)'],

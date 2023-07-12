@@ -88,24 +88,27 @@ def get_weekly_report(update, context):
             else:
                 message += f"Заробітки відсутні {driver}\n"
     else:
-        message = "У вас ще немає водіїв"
+        message = no_drivers_text
     query.edit_message_text(f'Ваш тижневий баланс: %.2f' % balance)
     context.bot.send_message(chat_id=query.from_user.id, text=message)
 
 
 def get_report(update, context):
     query = update.callback_query
+    message = ''
     if query.data == "Custom_report":
         query.edit_message_text(start_report_text)
         context.user_data['manager_state'] = START_EARNINGS
     else:
-        sort_report, day_values = get_daily_report(manager_id=query.from_user.id)
-        message = ''
-        for key in sort_report:
-            if sort_report[key]:
-                message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(key, sort_report[key], day_values.get(key, 0))
+        result = get_daily_report(manager_id=query.from_user.id)
+        if result:
+            for key in result[0]:
+                if result[0][key]:
+                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
+                        key, result[0][key], result[1].get(key, 0))
+        else:
+            message += no_drivers_text
         query.edit_message_text(message)
-
 
 def get_report_period(update, context):
     data = update.message.text
@@ -115,7 +118,7 @@ def get_report_period(update, context):
         context.user_data['manager_state'] = END_EARNINGS
     else:
         context.user_data['manager_state'] = START_EARNINGS
-        context.bot.send_message(invalid_data_text)
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_data_text)
         update.message.reply_text(start_report_text)
 
 
@@ -129,11 +132,11 @@ def create_period_report(update, context):
         message = ''
         for key in sort_report:
             if sort_report[key]:
-                message += "{}\n Всього: {:.2f}\n".format(key, sort_report[key])
+                message += "{} {:.2f}\n".format(key, sort_report[key])
         update.message.reply_text(message)
     else:
         context.user_data['manager_state'] = END_EARNINGS
-        context.bot.send_message(invalid_end_data_text)
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
 
 
 @task_postrun.connect

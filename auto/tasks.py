@@ -14,7 +14,8 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
 from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
 
-from auto_bot.handlers.driver_manager.utils import calculate_reports
+from auto_bot.handlers.driver_manager.static_text import no_drivers_text
+from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report
 from auto_bot.main import bot
 from scripts.conversion import convertion
 from auto.celery import app
@@ -252,25 +253,35 @@ def send_weekly_report(self):
     message = ''
     balance = 0
     for manager in DriverManager.objects.all():
-        for driver in Driver.objects.filter(manager=manager):
-            driver_message = ''
-            result = calculate_reports(start, end, driver)
-            if result:
-                balance += result[0]
-                driver_message += f"{driver} каса :{result[1]}\n"
-                driver_message += f'Зарплата за тиждень: {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
-                if driver.chat_id:
-                    bot.send_message(chat_id=driver.chat_id, text=driver_message)
-                message += driver_message
-                message += "*" * 39 + '\n'
-        manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
-        manager_message += message
-        bot.send_message(chat_id=manager.chat_id, text=manager_message)
+        drivers = Driver.objects.filter(manager=manager)
+        if drivers:
+            for driver in drivers:
+                driver_message = ''
+                result = calculate_reports(start, end, driver)
+                if result:
+                    balance += result[0]
+                    driver_message += f"{driver} каса :{result[1]}\n"
+                    driver_message += f'Зарплата за тиждень: {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
+                    if driver.chat_id:
+                        bot.send_message(chat_id=driver.chat_id, text=driver_message)
+                    message += driver_message
+                    message += "*" * 39 + '\n'
+            manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
+            manager_message += message
+            bot.send_message(chat_id=manager.chat_id, text=manager_message)
 
 
 @app.task(bind=True, queue='non_priority')
 def send_daily_report(self):
-    pass
+    message = ''
+    for manager in DriverManager.objects.filter(chat_id__isnull=False):
+        result = get_daily_report(manager_id=manager.chat_id)
+        if result:
+            for key in result[0]:
+                if result[0][key]:
+                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
+                        key, result[0][key], result[1].get(key, 0))
+            bot.send_message(chat_id=manager.chat_id, text=message)
 
 
 @app.task(bind=True, queue='non_priority')

@@ -147,7 +147,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             driver_id=str(row[0]),
                             full_name=f"{row[1]} {row[2]}",
                             total_amount=row[3],
-                            total_amount_without_fee=row[4] or 0,
+                            total_amount_without_fee=row[3],
                             bonuses=row[5] or 0)
 
                         try:
