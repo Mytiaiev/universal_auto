@@ -33,8 +33,8 @@ def remove_cash_driver(sender=None, **kwargs):
 @task_postrun.connect
 def update_drivers(sender=None, **kwargs):
     if sender == update_driver_data:
-        chat_id = kwargs.get('retval')
-        bot.send_message(chat_id=chat_id, text=update_finished, reply_markup=inline_manager_kb())
+        if kwargs.get('retval'):
+            bot.send_message(chat_id=kwargs.get('retval'), text=update_finished, reply_markup=inline_manager_kb())
 
 
 def remove_cash_by_manager(update, context):

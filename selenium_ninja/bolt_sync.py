@@ -88,6 +88,8 @@ class BoltRequest(RequestSynchronizer):
                             "offset": 0,
                             "limit": 50})
         reports = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', self.params)
+        self.params['limit'] = 25
+        rides = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', self.params)
         for driver in reports['data']['drivers']:
             order = Payments(
                 report_from=day,
@@ -103,7 +105,10 @@ class BoltRequest(RequestSynchronizer):
                 total_amount_without_fee=driver['net_earnings'],
                 compensations=driver['compensations'],
                 refunds=driver['expense_refunds'],
-)
+            )
+            for rider in rides['data']['rows']:
+                if driver['id'] == rider['id']:
+                    order.total_rides = rider['finished_orders']
             try:
                 order.save()
             except IntegrityError:

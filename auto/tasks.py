@@ -39,7 +39,7 @@ def download_daily_report(self, day=None):
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
-    UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
+    # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
     BoltRequest().save_report(day)
     save_report_to_ninja_payment(day)
     fleet_reports = Payments.objects.filter(report_from=day)
@@ -153,9 +153,9 @@ def update_driver_status(self):
 def update_driver_data(self, manager_id=None):
     day = timezone.localtime() - timedelta(days=1)
     try:
-        BoltRequest().synchronize()
-        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
-        UaGpsSynchronizer().get_vehicle_id()
+        # BoltRequest().synchronize()
+        # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
+        # UaGpsSynchronizer().get_vehicle_id()
         if not manager_id:
             uber_driver = UberSynchronizer(CHROME_DRIVER.driver, 'Uber')
             uber_driver.try_to_execute('synchronize')

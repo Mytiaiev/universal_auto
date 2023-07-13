@@ -389,7 +389,7 @@ def handle_callback_order(update, context):
                 context.bot.delete_message(chat_id=int(ParkSettings.get_value('DRIVERS_CHAT')),
                                            message_id=int(order.driver_message_id))
                 context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
-            else:
+            elif order.status_order in (Order.IN_PROGRESS, Order.WAITING):
                 ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
                 message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
                                      order.phone_number, order.sum, order.distance_google)
@@ -409,10 +409,11 @@ def handle_callback_order(update, context):
                     r.start()
                 except:
                     pass
+            else:
+                query.edit_message_text(text=already_accepted)
         else:
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
     elif data[0] == 'Reject_order':
-        context.user_data['running'] = False
         query.edit_message_text(client_decline)
         driver.driver_status = Driver.ACTIVE
         driver.save()
@@ -501,6 +502,7 @@ def handle_callback_order(update, context):
         order.status_order = Order.COMPLETED
         order.save()
 
+
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
     title = 'Послуга особистого водія'
     description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
@@ -542,8 +544,14 @@ def notify_driver(sender=None, **kwargs):
                 text = order_info(order.pk, order.from_address, order.to_the_address,
                                   order.payment_method, order.phone_number,
                                   time=timezone.localtime(order.order_time).time())
-                bot.send_message(chat_id=order.driver.chat_id, text=text,
-                                 reply_markup=markup, parse_mode=ParseMode.HTML)
+                try:
+                    bot.delete_message(chat_id=order.driver.chat_id, message_id=order.driver_message_id)
+                except:
+                    pass
+                message = bot.send_message(chat_id=order.driver.chat_id, text=text,
+                                           reply_markup=markup, parse_mode=ParseMode.HTML)
+                order.driver_message_id = message.id
+                order.save()
 
 
 @task_postrun.connect
@@ -573,31 +581,31 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
         context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
         m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
     context.user_data['flag'] = True
-    while True:
-        if context.user_data.get('running'):
-            latitude, longitude = get_location_from_db(licence_plate)
-            if order.status_order in [Order.CANCELED, Order.WAITING]:
-                context.bot.stop_message_live_location(m.chat_id, m.message_id)
-                context.user_data['running'] = False
-            if context.user_data['flag']:
-                distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
-                if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
-                    text_to_client(order, driver_arrived, delete_id=client_msg)
-                    context.bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                                          message_id=query_id,
-                                                          reply_markup=inline_client_spot(pk=order.id))
-                    context.bot.stop_message_live_location(m.chat_id, m.message_id)
-                    context.user_data['flag'] = False
-            try:
-                if order.chat_id_client:
-                    m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
-                                                            longitude=longitude)
-                time.sleep(10)
-            except Exception as e:
-                logger.error(msg=str(e))
-                time.sleep(30)
-        else:
-            if order.chat_id_client:
-                context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
-                context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
+    while context.user_data.get('running'):
+        latitude, longitude = get_location_from_db(licence_plate)
+        if order.status_order in [Order.CANCELED, Order.WAITING]:
+            context.bot.stop_message_live_location(m.chat_id, m.message_id)
+            context.user_data['running'] = False
             break
+        if context.user_data['flag']:
+            distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
+            if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
+                text_to_client(order, driver_arrived, delete_id=client_msg)
+                context.bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+                                                      message_id=query_id,
+                                                      reply_markup=inline_client_spot(pk=order.id))
+                context.bot.stop_message_live_location(m.chat_id, m.message_id)
+                context.user_data['flag'] = False
+                break
+        try:
+            if order.chat_id_client:
+                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
+                                                        longitude=longitude)
+            time.sleep(10)
+        except Exception as e:
+            logger.error(msg=str(e))
+            time.sleep(30)
+    if order.chat_id_client:
+        context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
+        context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
+

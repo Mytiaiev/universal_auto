@@ -1,12 +1,14 @@
 import json
 import traceback
 import html
+
+from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 
-from app.models import User, Client
+from app.models import User, Client, UseOfCars
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
-    inline_owner_kb, inline_manager_kb, get_more_func_kb
+    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
@@ -35,7 +37,16 @@ def start(update, context):
         else:
             update.message.reply_text(share_phone_text, reply_markup=markup_keyboard([contact_keyboard]))
     else:
-        reply_markup = inline_owner_kb() if any(user.role == "OWNER" for user in users) else inline_manager_kb()
+        if any(user.role == "OWNER" for user in users):
+            reply_markup = inline_owner_kb()
+        elif any(user.role == "DRIVER_MANAGER" for user in users):
+            reply_markup = inline_manager_kb()
+        else:
+            user = users.first()
+            reply_markup = inline_finish_driver_kb() if UseOfCars.objects.filter(user_vehicle=user,
+                                                                                 created_at__date=timezone.now().date(),
+                                                                                 end_at=None)\
+                else inline_start_driver_kb()
         update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
 
 
@@ -46,7 +57,16 @@ def start_query(update, context):
         user = users.first()
         reply_markup = get_start_kb(user)
     else:
-        reply_markup = inline_owner_kb() if any(user.role == "OWNER" for user in users) else inline_manager_kb()
+        if any(user.role == "OWNER" for user in users):
+            reply_markup = inline_owner_kb()
+        elif any(user.role == "DRIVER_MANAGER" for user in users):
+            reply_markup = inline_manager_kb()
+        else:
+            user = users.first()
+            reply_markup = inline_finish_driver_kb() if UseOfCars.objects.filter(user_vehicle=user,
+                                                                                 created_at__date=timezone.now().date(),
+                                                                                 end_at=None) \
+                else inline_start_driver_kb()
     query.edit_message_text(text=user_greetings_text)
     query.edit_message_reply_markup(reply_markup=reply_markup)
 

@@ -14,7 +14,8 @@ def comment(update, context):
         query.edit_message_text(text='Поставте оцінку або напишіть відгук')
         query.edit_message_reply_markup(reply_markup=inline_comment_kb())
         if order.status_order == Order.WAITING:
-            order.update(status_order=Order.CANCELED)
+            order.status_order = Order.CANCELED
+            order.save()
     else:
         query.edit_message_text(text='Напишіть відгук або пропозицію, будь ласка')
     context.user_data['state'] = COMMENT
