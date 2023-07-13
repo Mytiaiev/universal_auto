@@ -4,10 +4,46 @@ from auto.tasks import send_on_job_application_on_driver, check_order, check_tim
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus, \
-    Vehicle, Park, Partner
+    Vehicle, Park, Partner, RawGPS, VehicleGPS
 from auto_bot.main import bot
+from scripts.conversion import convertion
 from scripts.settings_for_park import settings
 from django.contrib.auth.models import User as AuUser
+
+
+@receiver(post_save, sender=RawGPS)
+def create_vehicle_gps(sender, instance, created, **kwargs):
+    if created:
+        data = instance.data.split(';')
+        try:
+            lat, lon = convertion(data[2]), convertion(data[4])
+        except ValueError:
+            lat, lon = 0, 0
+        try:
+            vehicle = Vehicle.objects.get(gps_imei=instance.imei)
+        except ObjectDoesNotExist:
+            return f'{ObjectDoesNotExist}: gps_imei={instance.imei}'
+        try:
+            date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
+            date_time = timezone.make_aware(date_time)
+        except ValueError as err:
+            return err
+        try:
+            kwa = {
+                'date_time': date_time,
+                'vehicle': vehicle,
+                'lat': float(lat),
+                'lat_zone': data[3],
+                'lon': float(lon),
+                'lon_zone': data[5],
+                'speed': float(data[6]),
+                'course': float(data[7]),
+                'height': float(data[8]),
+                'raw_data': instance,
+            }
+            VehicleGPS.objects.create(**kwa)
+        except ValueError as err:
+            return err
 
 
 @receiver(post_save, sender=AuUser)

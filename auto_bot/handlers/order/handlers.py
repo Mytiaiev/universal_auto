@@ -48,19 +48,20 @@ def cancel_order(update, context):
 
 
 def get_location(update, context):
-    location = update.message.location
-    context.user_data['state'] = None
-    context.user_data['location_button'] = True
-    context.user_data['latitude'], context.user_data['longitude'] = location.latitude, location.longitude
-    address = get_address(context.user_data['latitude'], context.user_data['longitude'],
-                          ParkSettings.get_value('GOOGLE_API_KEY'))
-    if address is not None:
-        context.user_data['location_address'] = address
-        update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=ReplyKeyboardRemove())
-        update.message.reply_text(text=ask_spot_text, reply_markup=inline_location_kb())
-    else:
-        update.message.reply_text(text=no_location_text)
-        from_address(update, context)
+    if update.message:
+        location = update.message.location
+        context.user_data['state'] = None
+        context.user_data['location_button'] = True
+        context.user_data['latitude'], context.user_data['longitude'] = location.latitude, location.longitude
+        address = get_address(context.user_data['latitude'], context.user_data['longitude'],
+                              ParkSettings.get_value('GOOGLE_API_KEY'))
+        if address is not None:
+            context.user_data['location_address'] = address
+            update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text(text=ask_spot_text, reply_markup=inline_location_kb())
+        else:
+            update.message.reply_text(text=no_location_text)
+            from_address(update, context)
 
 
 def from_address(update, context):

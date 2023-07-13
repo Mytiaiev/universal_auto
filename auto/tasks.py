@@ -33,44 +33,6 @@ MEMCACHE_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
-@app.task(queue='non_priority')
-def raw_gps_handler(pk):
-    try:
-        raw = RawGPS.objects.get(id=pk)
-    except ObjectDoesNotExist:
-        return f'{ObjectDoesNotExist}: id={pk}'
-    data = raw.data.split(';')
-    try:
-        lat, lon = convertion(data[2]), convertion(data[4])
-    except ValueError:
-        lat, lon = 0, 0
-    try:
-        vehicle = Vehicle.objects.get(gps_imei=raw.imei)
-    except ObjectDoesNotExist:
-        return f'{ObjectDoesNotExist}: gps_imei={raw.imei}'
-    try:
-        date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = timezone.make_aware(date_time)
-    except ValueError as err:
-        return f'{ValueError} {err}'
-    try:
-        kwa = {
-            'date_time': date_time,
-            'vehicle': vehicle,
-            'lat': float(lat),
-            'lat_zone': data[3],
-            'lon': float(lon),
-            'lon_zone': data[5],
-            'speed': float(data[6]),
-            'course': float(data[7]),
-            'height': float(data[8]),
-            'raw_data': raw,
-        }
-        VehicleGPS.objects.create(**kwa)
-    except ValueError as err:
-        return f'{ValueError} {err}'
-
-
 @app.task(bind=True)
 def download_daily_report(self, day=None):
     if not day:
@@ -79,9 +41,23 @@ def download_daily_report(self, day=None):
         day = datetime.strptime(day, "%Y-%m-%d")
     UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
     BoltRequest().save_report(day)
-    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
     save_report_to_ninja_payment(day)
-    return day
+    fleet_reports = Payments.objects.filter(report_from=day)
+    for driver in Driver.objects.all():
+        payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
+        if payments:
+            report = SummaryReport(report_from=day,
+                                   full_name=driver,
+                                   partner=driver.partner)
+            fields = ("total_rides", "total_distance", "total_amount_cash",
+                      "total_amount_on_card", "total_amount", "tips",
+                      "bonuses", "fee", "total_amount_without_fee", "fares",
+                      "cancels", "compensations", "refunds"
+                      )
+
+            for field in fields:
+                setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
+            report.save()
 
 
 @app.task(bind=True)
@@ -112,26 +88,6 @@ def get_car_efficiency(self, day=None):
                                          efficiency=result)
 
 
-@task_postrun.connect
-def save_summary_report(sender=None, **kwargs):
-    if sender == download_daily_report:
-        day = kwargs.get("retval")
-        fleet_reports = Payments.objects.filter(report_from=day)
-        for driver in Driver.objects.all():
-            payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
-            if payments:
-                report = SummaryReport(report_from=day,
-                                       full_name=driver,
-                                       partner=driver.partner)
-                fields = ("total_rides", "total_distance", "total_amount_cash",
-                          "total_amount_on_card", "total_amount", "tips",
-                          "bonuses", "fee", "total_amount_without_fee", "fares",
-                          "cancels", "compensations", "refunds"
-                          )
-
-                for field in fields:
-                    setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
-                report.save()
 
 
 @contextmanager
@@ -194,16 +150,17 @@ def update_driver_status(self):
 
 
 @app.task(bind=True)
-def update_driver_data(self, manager_id):
+def update_driver_data(self, manager_id=None):
+    day = timezone.localtime() - timedelta(days=1)
     try:
-        with memcache_lock(self.name, self.app.oid) as acquired:
-            if acquired:
-                BoltRequest().synchronize()
-                UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
-                UaGpsSynchronizer().get_vehicle_id()
-                UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('synchronize')
-            else:
-                logger.info('passed')
+        BoltRequest().synchronize()
+        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('synchronize')
+        UaGpsSynchronizer().get_vehicle_id()
+        if not manager_id:
+            uber_driver = UberSynchronizer(CHROME_DRIVER.driver, 'Uber')
+            uber_driver.try_to_execute('synchronize')
+            uber_driver.try_to_execute('download_trips', 'Trips', day)
+            uber_driver.try_to_execute('download_weekly_report', day)
     except Exception as e:
         logger.info(e)
     return manager_id
@@ -261,15 +218,6 @@ def withdraw_uklon(self):
 
 
 @app.task(bind=True)
-def download_uber_trips(self):
-    try:
-        day = timezone.localtime() - timedelta(days=1)
-        UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
-    except Exception as e:
-        logger.error(e)
-
-
-@app.task(bind=True)
 def manager_paid_weekly(self):
     return logger.info('send message to manager')
 
@@ -288,7 +236,7 @@ def send_weekly_report(self):
                 result = calculate_reports(start, end, driver)
                 if result:
                     balance += result[0]
-                    driver_message += f"{driver} каса :{result[1]}\n"
+                    driver_message += f"{driver} каса: {result[1]}\n"
                     driver_message += f'Зарплата за тиждень: {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
                     if driver.chat_id:
                         bot.send_message(chat_id=driver.chat_id, text=driver_message)
@@ -322,7 +270,6 @@ def send_efficiency_report(self):
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
             bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'), text=message)
-
 
 
 @app.task(bind=True)
@@ -396,12 +343,13 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())
     sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s())
-    sender.add_periodic_task(crontab(minute=20, hour=3), update_driver_data.s())
-    sender.add_periodic_task(crontab(minute=0, hour=3), download_daily_report.s())
+    sender.add_periodic_task(crontab(minute=5, hour=3), update_driver_data.s())
+    sender.add_periodic_task(crontab(minute=20, hour=3), download_daily_report.s())
     sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s())
-    sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s())
-    sender.add_periodic_task(crontab(minute=10, hour=6), get_rent_information.s())
+    sender.add_periodic_task(crontab(minute=10, hour=5), get_rent_information.s())
     sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s())
+    sender.add_periodic_task(crontab(minute=30, hour=3), get_car_efficiency.s())
+    sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s())
     sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), send_weekly_report.s())
     sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s())
 
