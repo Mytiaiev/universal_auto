@@ -11,6 +11,7 @@
 	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
 	<!-- Custom CSS -->
 	<link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
+	<link href="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.css" rel="stylesheet">
 
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
@@ -116,19 +117,19 @@
 				<div id="bar-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
-						<input id="radio-1" type="radio" name="effective-period" value="1" checked>
+						<input id="radio-1" type="radio" name="effective-amount" value="d" checked>
 						<label for="radio-1">день</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-2" type="radio" name="effective-period" value="2">
+						<input id="radio-2" type="radio" name="effective-amount" value="w">
 						<label for="radio-2">тиждень</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-3" type="radio" name="effective-period" value="3">
+						<input id="radio-3" type="radio" name="effective-amount" value="m">
 						<label for="radio-3">місяць</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-4" type="radio" name="effective-period" value="4">
+						<input id="radio-4" type="radio" name="effective-amount" value="q">
 						<label for="radio-4">квартал</label>
 					</div>
 				</div>
@@ -146,15 +147,15 @@
 				<div id="area-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
-						<input id="radio-5" type="radio" name="effective-period" value="5" checked>
+						<input id="radio-5" type="radio" name="effective-period" value="w" checked>
 						<label for="radio-5">тиждень</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-6" type="radio" name="effective-period" value="6">
+						<input id="radio-6" type="radio" name="effective-period" value="m">
 						<label for="radio-6">місяць</label>
 					</div>
 					<div class="radio_btn">
-						<input id="radio-7" type="radio" name="effective-period" value="7">
+						<input id="radio-7" type="radio" name="effective-period" value="q">
 						<label for="radio-7">квартал</label>
 					</div>
 				</div>
@@ -170,7 +171,8 @@
   var ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 <!-- ApexCharts -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.35.5/apexcharts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js"></script>
+{#<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.35.5/apexcharts.min.js"></script>#}
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
 <script src="{% static 'dashboard/js/scripts.js' %}"></script>
 </body>

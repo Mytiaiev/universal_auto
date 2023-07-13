@@ -1,7 +1,7 @@
 // SIDEBAR TOGGLE
 
-var sidebarOpen = false;
-var sidebar = document.getElementById("sidebar");
+let sidebarOpen = false;
+let sidebar = document.getElementById("sidebar");
 
 function openSidebar() {
   if (!sidebarOpen) {
@@ -21,7 +21,7 @@ function closeSidebar() {
 // ---------- CHARTS ----------
 
 // BAR CHART
-var barChartOptions = {
+let barChartOptions = {
   series: [{
     data: [10, 8, 6, 4, 2],
     name: "Products",
@@ -129,12 +129,12 @@ var barChartOptions = {
   }
 };
 
-var barChart = new ApexCharts(document.querySelector("#bar-chart"), barChartOptions);
+let barChart = new ApexCharts(document.querySelector("#bar-chart"), barChartOptions);
 barChart.render();
 
 
 // AREA CHART
-var areaChartOptions = {
+let areaChartOptions = {
   series: [{
     name: "Василь",
     data: [31, 40, 28, 51, 42, 60, 76],
@@ -248,13 +248,11 @@ var areaChartOptions = {
   }
 };
 
-var areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
+let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
 
 $(document).ready(function () {
-  function loadDefaultData() {
-    let period = 'day';
-
+  function loadDefaultKasa(period) {
     $.ajax({
       type: "GET",
       url: ajaxGetUrl,
@@ -286,84 +284,31 @@ $(document).ready(function () {
     });
   }
 
-  loadDefaultData();
-
-  $('input[name="effective-period"]').change(function () {
-    let selectedValue = $(this).val();
-
-    let period;
-    switch (selectedValue) {
-      case '1':
-        period = 'day';
-        break;
-      case '2':
-        period = 'week';
-        break;
-      case '3':
-        period = 'month';
-        break;
-      case '4':
-        period = 'quarter';
-        break;
-      default:
-        period = 'day';
-    }
-
-    $.ajax({
-      type: "GET",
-      url: ajaxGetUrl,
-      data: {
-        action: 'get_drivers_cash',
-        period: period
-      },
-      success: function (response) {
-        let data = response.data[0];
-        let totalAmount = response.data[1].toFixed(2);
-        let startDate = response.data[2];
-        let endDate = response.data[3];
-        let formattedData = {};
-
-        Object.keys(data).forEach(function (key) {
-          let value = parseFloat(data[key].toFixed(2));
-          if (value !== 0) {
-            formattedData[key] = value;
-          }
-        });
-        barChartOptions.series[0].data = Object.values(formattedData);
-        barChartOptions.xaxis.categories = Object.keys(formattedData);
-        barChart.updateOptions(barChartOptions);
-
-        $('#weekly-income-dates').text(startDate + ' по ' + endDate);
-        $('#weekly-income-amount').text(totalAmount + ' грн');
-      }
-    });
-  });
-
-  $('#vehicle-select').change(function () {
-    let vehicleId = $(this).val();
+  function loadEffectiveChart(period, vehicleId) {
     $.ajax({
       type: "GET",
       url: ajaxGetUrl,
       data: {
         action: 'effective_vehicle',
-        period: 'week',
+        period: period,
         vehicle_id: vehicleId
       },
       success: function (response) {
-        // Отримати дані з відповіді
         let dataArray = response.data.data;
         let uniqueNames = Array.from(new Set(dataArray.map(item => item.name)));
         let driverData = {};
-        uniqueNames.forEach((name, index) => {
+
+        uniqueNames.forEach(function (name, index) {
           let driverIndex = index + 1;
-          let driverNameKey = `name${driverIndex}`;
-          let effectiveKey = `effective${driverIndex}`;
+          let driverNameKey = 'name' + driverIndex;
+          let effectiveKey = 'effective' + driverIndex;
 
           driverData[driverNameKey] = name;
           driverData[effectiveKey] = dataArray
             .filter(item => item.name === name)
             .map(item => item.effective)
             .join(', ');
+
           if (driverData[effectiveKey] === '') {
             driverData[effectiveKey] = 0;
           }
@@ -371,26 +316,89 @@ $(document).ready(function () {
 
         if (uniqueNames.length === 1) {
           let driverIndex = 2;
-          let driverNameKey = `name${driverIndex}`;
-          let effectiveKey = `effective${driverIndex}`;
+          let driverNameKey = 'name' + driverIndex;
+          let effectiveKey = 'effective' + driverIndex;
 
           driverData[driverNameKey] = "Водій відсутній";
           driverData[effectiveKey] = "0";
         }
+
         driverData.date_effective = dataArray
-          .map(item => {
+          .map(function (item) {
             let date = new Date(item.date_effective);
             return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
           })
           .join(', ');
 
+        let dataPairs = [];
+        let dates = driverData.date_effective.split(', ');
+        let effective1 = driverData.effective1.split(', ');
+        let effective2 = driverData.effective2.split(', ');
+
+        for (let i = 0; i < dates.length; i++) {
+          let pair = {
+            date: dates[i],
+            effective1: parseFloat(effective1[i]),
+            effective2: parseFloat(effective2[i])
+          };
+          dataPairs.push(pair);
+        }
+
+        // Сортування масиву за датами
+        dataPairs.sort(function (a, b) {
+          let dateA = new Date(a.date);
+          let dateB = new Date(b.date);
+          return dateA - dateB;
+        });
+
+        // Оновлення графіка з новими даними
         areaChartOptions.series[0].name = driverData.name1;
-        areaChartOptions.series[0].data = driverData.effective1.split(', ');
+        areaChartOptions.series[0].data = dataPairs.map(pair => pair.effective1);
         areaChartOptions.series[1].name = driverData.name2;
-        areaChartOptions.series[1].data = driverData.effective2.split(', ');
-        areaChartOptions.xaxis.categories = driverData.date_effective.split(', ');
+        areaChartOptions.series[1].data = dataPairs.map(pair => pair.effective2);
+        areaChartOptions.labels = dataPairs.map(pair => pair.date);
+
         areaChart.updateOptions(areaChartOptions);
       }
     });
+  }
+
+  function updateEffectiveChart(vehicleId, period) {
+    loadEffectiveChart(period, vehicleId);
+  }
+
+  loadDefaultKasa('day');
+  loadEffectiveChart('week', $('#vehicle-select').val());
+
+  $('input[name="effective-amount"]').change(function () {
+    const selectedKasa = $(this).val();
+    const period = getPeriod(selectedKasa);
+
+    loadDefaultKasa(period);
   });
+
+  $('input[name="effective-period"]').change(function () {
+    const selectedEffective = $(this).valconst
+    const vehicleId = $('#vehicle-select').val();
+    const period = getPeriod(selectedEffective);
+
+    updateEffectiveChart(vehicleId, period);
+  });
+
+  $('#vehicle-select').change(function () {
+    const vehicleId = $(this).val();
+    const selectedEffective = $('input[name="effective-period"]:checked').val();
+    const period = getPeriod(selectedEffective);
+
+    updateEffectiveChart(vehicleId, period);
+  });
+
+  function getPeriod(val) {
+    return {
+      d: 'day',
+      w: 'week',
+      m: 'month',
+      q: 'hueta'
+    }[val];
+  }
 });
