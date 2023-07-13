@@ -372,11 +372,11 @@ def handle_callback_order(update, context):
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
     order = Order.objects.filter(pk=int(data[1])).first()
+    if order.status_order in (Order.COMPLETED, Order.IN_PROGRESS):
+        query.edit_message_text(text=already_accepted)
+        return
     if data[0] in ("Accept_order", "Start_route"):
         if data[0] == "Start_route":
-            if order.status_order == Order.COMPLETED:
-                query.edit_message_text(text=already_accepted)
-                return
             order.status_order = Order.IN_PROGRESS
             order.save()
         record = UseOfCars.objects.filter(user_vehicle=driver,
@@ -413,7 +413,14 @@ def handle_callback_order(update, context):
                     pass
         else:
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
-    elif data[0] == 'Reject_order':
+
+
+def handle_order(update, context):
+    query = update.callback_query
+    data = query.data.split(' ')
+    driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
+    order = Order.objects.filter(pk=int(data[1])).first()
+    if data[0] == 'Reject_order':
         query.edit_message_text(client_decline)
         driver.driver_status = Driver.ACTIVE
         driver.save()

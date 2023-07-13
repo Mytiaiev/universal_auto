@@ -21,7 +21,7 @@ from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_s
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
-    ask_client_action
+    ask_client_action, handle_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
     more_function, start_query
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
@@ -116,8 +116,9 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
     dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile("^(Accept_order|Start_route|Reject_order|"
-                                                           "Client_on_site|Along_the_route|Off_route|"
+                                        pattern=re.compile("^(Accept_order|Start_route) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(handle_order,
+                                        pattern=re.compile("^(Reject_order|Client_on_site|Along_the_route|Off_route|"
                                                            "Accept|End_trip) [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
     # sending comment

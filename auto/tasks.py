@@ -75,7 +75,7 @@ def download_daily_report(self, day=None):
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
-    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
+    # UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
     UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
     BoltRequest().save_report(day)
     save_report_to_ninja_payment(day)
