@@ -398,7 +398,7 @@ $(document).ready(function () {
       d: 'day',
       w: 'week',
       m: 'month',
-      q: 'hueta'
+      q: 'quarter'
     }[val];
   }
 });
