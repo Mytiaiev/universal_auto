@@ -115,7 +115,7 @@ class SummaryReport(models.Model):
 
 
 class UberTrips(models.Model):
-    report_file_name = models.CharField(max_length=255)
+    report_from = models.DateField(verbose_name="Дата поїздки")
     driver_external_id = models.CharField(max_length=50)
     license_plate = models.CharField(max_length=10)
     start_trip = models.DateTimeField(null=True, blank=True)
@@ -235,7 +235,6 @@ class DriverManager(User):
 class Vehicle(models.Model):
 
     name = models.CharField(max_length=255, verbose_name='Назва')
-    model = models.CharField(max_length=50, verbose_name='Модель')
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
     vin_code = models.CharField(max_length=17)
@@ -1066,3 +1065,79 @@ class UaGpsService(Service):
 
 class UberService(Service):
     pass
+
+
+class NewUklonPaymentsOrder(models.Model):
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
+    full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
+    signal = models.CharField(max_length=8, verbose_name='Унікальний індифікатор водія')
+    total_rides = models.PositiveIntegerField(verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Пробіг під замовлення')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
+    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На гаманець')
+    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На картку')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна сума')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    bonuses = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Бонуси')
+    fares = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Штрафи')
+    comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Uklon')
+    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Разом')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+
+    vendor_name = 'NewUklon'
+
+
+class BoltPaymentsOrder(models.Model):
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
+    driver_full_name = models.CharField(max_length=24, verbose_name='ПІ водія')
+    mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор водія')
+    range_string = models.CharField(max_length=50, verbose_name='Період')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальний тариф')
+    cancels_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
+    autorization_payment = models.DecimalField(decimal_places=2, max_digits=10,
+                                               verbose_name='Авторизаційцний платіж (платіж)')
+    autorization_deduction = models.DecimalField(decimal_places=2, max_digits=10,
+                                                 verbose_name='Авторизаційцний платіж (відрахування)')
+    additional_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Додатковий збір')
+    fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Bolt')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Поїздки за готівку')
+    discount_cash_trips = models.DecimalField(decimal_places=2, max_digits=10,
+                                              verbose_name='Сума знижки Bolt за готівкові поїздки')
+    driver_bonus = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Водійський бонус')
+    compensation = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Компенсації')
+    refunds = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    weekly_balance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Тижневий баланс')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
+
+    vendor_name = 'Bolt'
+
+
+class UberPaymentsOrder(models.Model):
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файла')
+    driver_uuid = models.UUIDField(verbose_name='Унікальний індитифікатор водія')
+    first_name = models.CharField(max_length=24, verbose_name='Імя водія')
+    last_name = models.CharField(max_length=24, verbose_name='Прізвище водія')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід')
+    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід - Чистий тариф')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Виплати')
+    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Перераховано на банківський рахунок')
+    returns = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Відшкодування та витрати')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+
+    vendor_name = 'Uber'

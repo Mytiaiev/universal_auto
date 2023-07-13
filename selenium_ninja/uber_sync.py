@@ -148,10 +148,11 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             full_name=f"{row[1]} {row[2]}",
                             total_amount=row[3],
                             total_amount_without_fee=row[3],
+                            total_amount_cash=abs(float(row[6])) if row[6] else 0,
                             bonuses=row[5] or 0)
-
                         try:
-                            order.total_amount_cash = abs(float(row[6])) if row[6] else 0
+                            order.total_rides = UberTrips.objects.filter(report_from=day,
+                                                                         driver_external_id=str(row[0])).count()
                             order.tips = row[9]
                         except IndexError:
                             order.tips = 0
@@ -192,7 +193,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     for row in reader:
                         start = timezone.make_aware(datetime.datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S"))
                         trip = UberTrips(
-                            report_file_name=self.payments_order_file_name(self.fleet, pattern, day),
+                            report_from=day,
                             driver_external_id=row[1],
                             license_plate=row[5],
                             start_trip=start
@@ -207,7 +208,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                         items.append(trip)
                     if not items:
                         trip = UberTrips(
-                            report_file_name=self.payments_order_file_name(self.fleet, pattern, day),
+                            report_from=day,
                             driver_external_id='00000000-0000-0000-0000-000000000000',
                             license_plate=''
                         )
@@ -470,11 +471,11 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             self.logger.error(err)
 
     def download_trips(self, pattern, day):
-        report = UberTrips.objects.filter(report_file_name=self.file_pattern(self.fleet, pattern, day))
+        report = UberTrips.objects.filter(report_from=day)
         if not report:
             self.download_payments_order(UberService.get_value("UBER_GENERATE_TRIPS_1"),
                                          UberService.get_value("UBER_GENERATE_TRIPS_2"),
                                          pattern, day)
             self.save_trips_report(pattern, day)
-            report = UberTrips.objects.filter(report_file_name=self.file_pattern(self.fleet, pattern, day))
+            report = UberTrips.objects.filter(report_from=day)
         return list(report)

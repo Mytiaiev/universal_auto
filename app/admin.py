@@ -687,7 +687,7 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 @admin.register(Vehicle)
 @add_partner_on_save_model(Vehicle)
 class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    search_fields = ('name', 'model', 'licence_plate', 'vin_code', 'gps_imei',)
+    search_fields = ('name', 'licence_plate', 'vin_code', 'gps_imei',)
     ordering = ('name',)
     exclude = ('deleted_at',)
     list_per_page = 25
@@ -697,7 +697,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['id', 'name', 'model',
+            return ['id', 'name',
                     'licence_plate', 'type', 'vin_code',
                     'gps_imei', 'car_status', 'created_at',
                     ]
@@ -707,7 +707,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
-                ('Інформація про машину',       {'fields': ['name', 'model', 'type',
+                ('Інформація про машину',       {'fields': ['name', 'type',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei',
                                                             'car_status', 'gps_id',
@@ -720,7 +720,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
-                ('Інформація про машину',       {'fields': ['name', 'model', 'type',
+                ('Інформація про машину',       {'fields': ['name', 'type',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei',
                                                             'car_status',

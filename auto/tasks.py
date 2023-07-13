@@ -1,8 +1,7 @@
 import time as tm
 from contextlib import contextmanager
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from _decimal import Decimal
-from celery.signals import task_postrun
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.utils import timezone
@@ -10,11 +9,10 @@ from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from django.core.cache import cache
 from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Payments, SummaryReport, DriverManager
-from django.db.models import Sum, IntegerField, FloatField, Avg
+    UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager
+from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 
-from auto_bot.handlers.driver_manager.static_text import no_drivers_text
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
 from auto_bot.main import bot
 from scripts.conversion import convertion
@@ -33,12 +31,51 @@ MEMCACHE_LOCK_AFTER_FINISHING = 10
 logger = get_task_logger(__name__)
 
 
+@app.task(queue='non_priority')
+def raw_gps_handler(pk):
+    try:
+        raw = RawGPS.objects.get(id=pk)
+    except ObjectDoesNotExist:
+        return f'{ObjectDoesNotExist}: id={pk}'
+    data = raw.data.split(';')
+    try:
+        lat, lon = convertion(data[2]), convertion(data[4])
+    except ValueError:
+        lat, lon = 0, 0
+    try:
+        vehicle = Vehicle.objects.get(gps_imei=raw.imei)
+    except ObjectDoesNotExist:
+        return f'{ObjectDoesNotExist}: gps_imei={raw.imei}'
+    try:
+        date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
+        date_time = timezone.make_aware(date_time)
+    except ValueError as err:
+        return f'{ValueError} {err}'
+    try:
+        kwa = {
+            'date_time': date_time,
+            'vehicle': vehicle,
+            'lat': float(lat),
+            'lat_zone': data[3],
+            'lon': float(lon),
+            'lon_zone': data[5],
+            'speed': float(data[6]),
+            'course': float(data[7]),
+            'height': float(data[8]),
+            'raw_data': raw,
+        }
+        VehicleGPS.objects.create(**kwa)
+    except ValueError as err:
+        return f'{ValueError} {err}'
+
+
 @app.task(bind=True)
 def download_daily_report(self, day=None):
     if not day:
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
+    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
     UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
     BoltRequest().save_report(day)
     save_report_to_ninja_payment(day)
@@ -46,18 +83,19 @@ def download_daily_report(self, day=None):
     for driver in Driver.objects.all():
         payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
         if payments:
-            report = SummaryReport(report_from=day,
-                                   full_name=driver,
-                                   partner=driver.partner)
-            fields = ("total_rides", "total_distance", "total_amount_cash",
-                      "total_amount_on_card", "total_amount", "tips",
-                      "bonuses", "fee", "total_amount_without_fee", "fares",
-                      "cancels", "compensations", "refunds"
-                      )
+            if not SummaryReport.objects.filter(report_from=day, full_name=driver, partner=driver.partner):
+                report = SummaryReport(report_from=day,
+                                       full_name=driver,
+                                       partner=driver.partner)
+                fields = ("total_rides", "total_distance", "total_amount_cash",
+                          "total_amount_on_card", "total_amount", "tips",
+                          "bonuses", "fee", "total_amount_without_fee", "fares",
+                          "cancels", "compensations", "refunds"
+                          )
 
-            for field in fields:
-                setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
-            report.save()
+                for field in fields:
+                    setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
+                report.save()
 
 
 @app.task(bind=True)
@@ -86,8 +124,6 @@ def get_car_efficiency(self, day=None):
                                          licence_plate=vehicle.licence_plate,
                                          mileage=total_km or 0,
                                          efficiency=result)
-
-
 
 
 @contextmanager

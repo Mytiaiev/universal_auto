@@ -8,8 +8,7 @@ from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
 from auto.tasks import logger, get_distance_trip, check_time_order, check_order, send_time_order
-from auto_bot.handlers.main.keyboards import markup_keyboard, inline_start_driver_kb, inline_user_kb, get_start_kb, \
-    inline_owner_kb, inline_manager_kb
+from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
     inline_route_keyboard, inline_finish_order, inline_repeat_keyboard, inline_reject_order, inline_time_order_kb, \
     inline_increase_price_kb, inline_search_kb, inline_start_order_kb, share_location, inline_location_kb, \
@@ -375,6 +374,9 @@ def handle_callback_order(update, context):
     order = Order.objects.filter(pk=int(data[1])).first()
     if data[0] in ("Accept_order", "Start_route"):
         if data[0] == "Start_route":
+            if order.status_order == Order.COMPLETED:
+                query.edit_message_text(text=already_accepted)
+                return
             order.status_order = Order.IN_PROGRESS
             order.save()
         record = UseOfCars.objects.filter(user_vehicle=driver,
@@ -389,7 +391,7 @@ def handle_callback_order(update, context):
                 context.bot.delete_message(chat_id=int(ParkSettings.get_value('DRIVERS_CHAT')),
                                            message_id=int(order.driver_message_id))
                 context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
-            elif order.status_order in (Order.IN_PROGRESS, Order.WAITING):
+            else:
                 ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
                 message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
                                      order.phone_number, order.sum, order.distance_google)
@@ -409,8 +411,6 @@ def handle_callback_order(update, context):
                     r.start()
                 except:
                     pass
-            else:
-                query.edit_message_text(text=already_accepted)
         else:
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
     elif data[0] == 'Reject_order':
@@ -538,20 +538,15 @@ def notify_driver(sender=None, **kwargs):
     if sender == send_time_order:
         accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
         for order in accepted_orders:
-            if order.order_time < (timezone.localtime() + datetime.timedelta(minutes=int(
+            if timezone.localtime() < order.order_time < (timezone.localtime() + datetime.timedelta(minutes=int(
                     ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
                 markup = inline_time_order_kb(order.id)
                 text = order_info(order.pk, order.from_address, order.to_the_address,
                                   order.payment_method, order.phone_number,
                                   time=timezone.localtime(order.order_time).time())
-                try:
-                    bot.delete_message(chat_id=order.driver.chat_id, message_id=order.driver_message_id)
-                except:
-                    pass
-                message = bot.send_message(chat_id=order.driver.chat_id, text=text,
-                                           reply_markup=markup, parse_mode=ParseMode.HTML)
-                order.driver_message_id = message.id
-                order.save()
+
+                bot.send_message(chat_id=order.driver.chat_id, text=text,
+                                 reply_markup=markup, parse_mode=ParseMode.HTML)
 
 
 @task_postrun.connect
