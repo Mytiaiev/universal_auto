@@ -141,14 +141,14 @@ def update_driver_status(self):
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
                 for park in Park.objects.all():
-                    # bolt_status = BoltRequest(park.pk, 'Bolt').get_drivers_status()
-                    # logger.info(f'Bolt {bolt_status}')
-                    #
-                    # uklon_status = UklonRequest(park.pk, 'Uklon').get_driver_status()
-                    # logger.info(f'Uklon {uklon_status}')
+                    bolt_status = BoltRequest(park.pk, 'Bolt').get_drivers_status()
+                    logger.info(f'Bolt {bolt_status}')
 
-                # uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
-                # logger.info(f'Uber {uber_status}')
+                    uklon_status = UklonRequest(park.pk, 'Uklon').get_driver_status()
+                    logger.info(f'Uklon {uklon_status}')
+
+                uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
+                logger.info(f'Uber {uber_status}')
 
                 status_online = set()
                 status_with_client = set()
