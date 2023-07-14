@@ -282,7 +282,8 @@ body {
 /*vehicle-block*/
 
 .payback-car {
-  display: flex;
+  /*!*тимчасово none*!   ########################*/
+  display: none;
   flex-wrap: wrap;
   gap: 20px;
 }
