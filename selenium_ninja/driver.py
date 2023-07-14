@@ -26,7 +26,7 @@ class SeleniumTools:
         self.session_file_name = session
         self.partner = partner
         self.sleep = sleep
-        self.remote = True
+        self.remote = remote
         self.profile = 'Profile 1' if profile is None else profile
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)

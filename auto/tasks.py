@@ -114,18 +114,18 @@ def get_car_efficiency(self, day=None):
             drivers = None
             total_km, vehicle = UaGpsSynchronizer().total_per_day(vehicle.licence_plate, day)
             if total_km:
-                drivers = Driver.objects.filter(vehicle=vehicle)
-                for driver in drivers:
-                    report = SummaryReport.objects.filter(report_from=day,
-                                                          full_name=driver).first()
-                    if report:
-                        total_kasa += report.total_amount_without_fee
+                drivers = Driver.objects.filter(vehicle=vehicle).first()
+                # for driver in drivers:
+                report = SummaryReport.objects.filter(report_from=day,
+                                                      full_name=drivers).first()
+                if report:
+                    total_kasa += report.total_amount_without_fee
                 result = Decimal(total_kasa)/Decimal(total_km)
             else:
                 result = 0
             CarEfficiency.objects.create(report_from=day,
                                          licence_plate=vehicle.licence_plate,
-                                         driver=list(drivers),
+                                         driver=drivers,
                                          total_kasa=total_kasa,
                                          mileage=total_km or 0,
                                          efficiency=result)
@@ -405,6 +405,7 @@ def upload_db(self, day):
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
+    global CHROME_DRIVER
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())

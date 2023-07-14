@@ -985,7 +985,7 @@ def admin_image_preview(image, default_image=None):
 class CarEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
     licence_plate = models.CharField(null=True, max_length=25, verbose_name='Номер автомобіля')
-    driver = models.CharField(null=True, max_length=25, verbose_name='Водій авто')
+    driver = models.CharField(null=True, max_length=255, verbose_name='Водій авто')
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')

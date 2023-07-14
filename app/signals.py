@@ -94,7 +94,6 @@ def reject_order_client(sender, instance, **kwargs):
                 chat_id=driver_chat_id,
                 text=f'Вибачте, замовлення за адресою {instance.from_address} відхилено клієнтом.'
             )
-            redis_instance.set(f'running_{instance.id}', 0)
             ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         except Exception:
             pass
