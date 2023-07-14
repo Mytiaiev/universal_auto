@@ -262,13 +262,13 @@ $(document).ready(function () {
       },
       success: function (response) {
         let data = response.data[0];
-        let totalAmount = response.data[1].toFixed(2);
+        let totalAmount = response.data[1];
         let startDate = response.data[2];
         let endDate = response.data[3];
         let formattedData = {};
 
         Object.keys(data).forEach(function (key) {
-          let value = parseFloat(data[key].toFixed(2));
+          let value = parseFloat(data[key]);
           if (value !== 0) {
             formattedData[key] = value;
           }
