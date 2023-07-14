@@ -1,20 +1,17 @@
 import string
 import random
 import csv
-import datetime
+
 import re
+from datetime import datetime, date, time
 import pendulum
 from django.core.exceptions import ObjectDoesNotExist
-
-from scripts.selector_services import *
+from django.utils import timezone
 from django.db import models, IntegrityError, ProgrammingError
-from django.db.models import Sum, QuerySet
-from django.db.models.base import ModelBase
+from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from django.contrib.auth.models import User as AuUser
-from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save
 
 
 class Partner(models.Model):
@@ -24,12 +21,6 @@ class Partner(models.Model):
         if self.user:
             return str(self.user.username)
         return 'Партнер не назначений'
-
-
-@receiver(post_save, sender=AuUser)
-def create_partner(sender, instance, created, **kwargs):
-    if created:
-        Partner.objects.create(user=instance)
 
 
 class Park(models.Model):
@@ -44,315 +35,87 @@ class Park(models.Model):
         return self.name
 
 
-class PaymentsOrder(models.Model):
-    transaction_uuid = models.UUIDField()
-    driver_uuid = models.UUIDField()
-    driver_name = models.CharField(max_length=30)
-    driver_second_name = models.CharField(max_length=30)
-    trip_uuid = models.CharField(max_length=255)
-    trip_description = models.CharField(max_length=50)
-    organization_name = models.CharField(max_length=50)
-    organization_nickname = models.CharField(max_length=50)
-    transaction_time = models.DateTimeField()
-    paid_to_you = models.DecimalField(decimal_places=2, max_digits=10)
-    your_earnings = models.DecimalField(decimal_places=2, max_digits=10)
-    cash = models.DecimalField(decimal_places=2, max_digits=10)
-    fare = models.DecimalField(decimal_places=2, max_digits=10)
-    tax = models.DecimalField(decimal_places=2, max_digits=10)
-    fare2 = models.DecimalField(decimal_places=2, max_digits=10)
-    service_tax = models.DecimalField(decimal_places=2, max_digits=10)
-    wait_time = models.DecimalField(decimal_places=2, max_digits=10)
-    out_of_city = models.DecimalField(decimal_places=2, max_digits=10)
-    tips = models.DecimalField(decimal_places=2, max_digits=10)
-    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10)
-    ajustment_payment = models.DecimalField(decimal_places=2, max_digits=10)
-    cancel_payment = models.DecimalField(decimal_places=2, max_digits=10)
+class Payments(models.Model):
+    report_from = models.DateField(verbose_name='Дата звіту')
+    vendor_name = models.CharField(max_length=30, default='Ninja', verbose_name='Агрегатор')
+    full_name = models.CharField(null=True, max_length=255, verbose_name='ПІ водія')
+    driver_id = models.CharField(null=True, max_length=50, verbose_name='Унікальний індифікатор водія')
+    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
+    total_amount_cash = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
+    total_amount_on_card = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                               verbose_name='На картку')
+    total_amount = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                       verbose_name='Загальна сума')
+    tips = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Чайові')
+    total_rides = models.PositiveIntegerField(null=True, default=0, verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(null=True, default=0, decimal_places=2,
+                                         max_digits=10, verbose_name='Пробіг під замовлення')
+    bonuses = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Бонуси')
+    fee = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Комісія')
+    fares = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10, verbose_name='Штрафи')
+    cancels = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                  verbose_name='Плата за скасування')
+    compensations = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                        verbose_name='Компенсації')
+    refunds = models.DecimalField(null=True, default=0, decimal_places=2, max_digits=10,
+                                  verbose_name='Повернення коштів')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
-        verbose_name = 'Payments order'
-        verbose_name_plural = 'Payments order'
-
-
-class GenericPaymentsOrder(ModelBase):
-    _registry = {}
-
-    def __new__(cls, name, bases, attrs):
-
-        if attrs.get('vendor_name') is None:
-            raise NotImplementedError(f'vendor_name must be implemented in {name}')
-        try:
-            if not callable(getattr(attrs.get('Scopes'), 'filter_by_driver_external_id')):
-                raise NotImplementedError(f'{name}.Scopes.filter_by_driver_external_id() must be callable')
-        except AttributeError:
-            raise NotImplementedError(f'{name}.Scopes.filter_by_driver_external_id() must be implemented')
-
-        scopes_bases = filter(None, [attrs.get('Scopes')] +
-                              [getattr(b, 'Scopes', None) for b in bases])
-
-        attrs['Scopes'] = type('ScopesFor' + name, tuple(scopes_bases), {})
-
-        ScopedQuerySet = type('ScopedQuerySetFor' + name, (QuerySet, attrs['Scopes']), {})
-        ScopedManager = type('ScopedManagerFor' + name, (models.Manager, attrs['Scopes']), {
-            'use_for_related_fields': True,
-            'get_query_set': lambda self: ScopedQuerySet(self.model, using=self._db)
-        })
-
-        attrs['objects'] = ScopedManager()
-
-        vendor_name_ = attrs.get('vendor_name')
-        if vendor_name_ in cls._registry:
-            raise ValueError(f'{vendor_name_} is already registered for {name}')
-
-        new_cls = ModelBase.__new__(cls, name, bases, attrs)
-        cls._registry[vendor_name_] = new_cls
-
-        return new_cls
-
-    @classmethod
-    def filter_by_driver(cls, vendor, driver_external_id):
-        if vendor in cls._registry:
-            return cls._registry[vendor].objects.filter_by_driver_external_id(driver_external_id)
-        else:
-            raise NotImplementedError(f'{vendor} is not registered in {cls}')
-
-
-class UklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField()
-    report_to = models.DateTimeField()
-    report_file_name = models.CharField(max_length=255)
-    signal = models.CharField(max_length=8)
-    licence_plate = models.CharField(max_length=8)
-    total_rides = models.PositiveIntegerField()
-    total_distance = models.PositiveIntegerField()
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10)
-    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10)
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10)
-    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10)
-    bonuses = models.DecimalField(decimal_places=2, max_digits=10)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    vendor_name = 'Uklon'
+        verbose_name = 'Звіт'
+        verbose_name_plural = 'Звіти'
+        unique_together = ('report_from', 'driver_id')
 
     class Scopes:
         def filter_by_driver_external_id(self, driver_external_id):
-            return self.filter(signal=driver_external_id)
-
-    class Meta:
-        verbose_name = 'Payments order: Uklon'
-        verbose_name_plural = 'Payments order: Uklon'
-        unique_together = (('report_from', 'report_to', 'licence_plate', 'signal'))
-
-    def driver_id(self):
-        return self.signal
+            return self.filter(driver_id=driver_external_id)
 
     def report_text(self, name=None, rate=0.35):
-        return f'Uklon {name} {self.signal}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
+        return f'{self.vendor_name} {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cash)}) = {"%.2f" % self.total_drivers_amount(rate)}'
 
-    def total_drivers_amount(self, rate=0.35):
-        return -(self.kassa()) * rate
-
-    def vendor(self):
-        return 'uklon'
-
-    def total_owner_amount(self, rate=0.35):
-        return -self.total_drivers_amount(rate)
+    def total_drivers_amount(self, rate):
+        return self.kassa() * rate + float(self.total_amount_cash)
 
     def kassa(self):
-        return float(self.total_amount) * 0.81
+        return float(self.total_amount_without_fee)
 
 
-class NewUklonPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
-    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
-    full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
-    signal = models.CharField(max_length=8, verbose_name='Унікальний індифікатор водія')
-    total_rides = models.PositiveIntegerField(verbose_name='Кількість поїздок')
-    total_distance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Пробіг під замовлення')
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
-    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На гаманець')
-    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На картку')
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна сума')
-    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
-    bonuses = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Бонуси')
-    fares = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Штрафи')
-    comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Uklon')
-    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Разом')
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
-
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
-
-    vendor_name = 'NewUklon'
-
-    class Scopes:
-        def filter_by_driver_external_id(self, driver_external_id):
-            return self.filter(signal=driver_external_id)
-
-    class Meta:
-        verbose_name = 'Платіжний звіт: NewUklon'
-        verbose_name_plural = 'Платіжні звіти: NewUklon'
-        unique_together = (('report_from', 'report_to', 'full_name', 'signal'))
-
-    def driver_id(self):
-        return self.signal
-
-    def report_text(self, name=None, rate=0.35):
-        return f'Uklon: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
-
-    def vendor(self):
-        return 'new_uklon'
-
-    def total_drivers_amount(self, rate=0.35):
-        return self.kassa() * rate - float(self.total_amount_cach)
-
-    def kassa(self):
-        return float(self.total_amount_without_comission)
-
-
-class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
-    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
-    driver_full_name = models.CharField(max_length=50, verbose_name='ПІ водія')
-    mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор водія')
-    range_string = models.CharField(max_length=50, verbose_name='Період')
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальний тариф')
-    cancels_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
-    autorization_payment = models.DecimalField(decimal_places=2, max_digits=10,
-                                               verbose_name='Авторизаційцний платіж (платіж)')
-    autorization_deduction = models.DecimalField(decimal_places=2, max_digits=10,
-                                                 verbose_name='Авторизаційцний платіж (відрахування)')
-    additional_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Додатковий збір')
-    fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Bolt')
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Поїздки за готівку')
-    discount_cash_trips = models.DecimalField(decimal_places=2, max_digits=10,
-                                              verbose_name='Сума знижки Bolt за готівкові поїздки')
-    driver_bonus = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Водійський бонус')
-    compensation = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Компенсації')
-    refunds = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
-    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
-    weekly_balance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Тижневий баланс')
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
-
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
-
-    vendor_name = 'Bolt'
-
-    class Scopes:
-        def filter_by_driver_external_id(self, driver_external_id):
-            return self.filter(driver_full_name=driver_external_id)
-
-    class Meta:
-        verbose_name = 'Платіжний звіт: Bolt'
-        verbose_name_plural = 'Платіжні звіти: Bolt'
-        unique_together = (('report_from', 'report_to', 'driver_full_name', 'mobile_number'))
-
-    def driver_id(self):
-        return self.mobile_number
-
-    def report_text(self, name=None, rate=0.65):
-        return f'Bolt: Каса {"%.2f" % self.kassa()} * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({"%.2f" % float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
-
-    def total_drivers_amount(self, rate=0.65):
-        return self.kassa() * rate - float(self.total_amount_cach)
-
-    def vendor(self):
-        return 'bolt'
-
-    def kassa(self):
-        return float(self.total_amount) - float(self.fee)
-
-
-class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
-    report_file_name = models.CharField(max_length=255, verbose_name='Назва файла')
-    driver_uuid = models.UUIDField(verbose_name='Унікальний індитифікатор водія')
-    first_name = models.CharField(max_length=50, verbose_name='Імя водія')
-    last_name = models.CharField(max_length=50, verbose_name='Прізвище водія')
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід')
-    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід - Чистий тариф')
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Виплати')
-    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Перераховано на банківський рахунок')
-    returns = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Відшкодування та витрати')
-    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+class SummaryReport(models.Model):
+    report_from = models.DateField(verbose_name='Дата звіту')
+    full_name = models.CharField(null=True, max_length=255, verbose_name='ПІ водія')
+    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
+    total_amount_cash = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
+    total_amount_on_card = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='На картку')
+    total_amount = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Загальна сума')
+    total_rides = models.PositiveIntegerField(null=True, verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(null=True, decimal_places=2,
+                                         max_digits=10, verbose_name='Пробіг під замовлення')
+    tips = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Чайові')
+    bonuses = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Бонуси')
+    fee = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Комісія')
+    fares = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Штрафи')
+    cancels = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
+    compensations = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Компенсації')
+    refunds = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
-    vendor_name = 'Uber'
-
-    class Scopes:
-        def filter_by_driver_external_id(self, driver_external_id):
-            return self.filter(driver_uuid=driver_external_id)
-
     class Meta:
-        verbose_name = 'Платіжний звіт: Uber'
-        verbose_name_plural = 'Платіжні звіти: Uber'
-        unique_together = (('report_from', 'report_to', 'driver_uuid'))
+        verbose_name = 'Зведений звіт'
+        verbose_name_plural = 'Зведені звіти'
 
-    def driver_id(self):
-        return str(self.driver_uuid)
-
-    def report_text(self, name=None, rate=0.65):
-        return f'Uber: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка({float(self.total_amount_cach)}) = {"%.2f" % self.total_drivers_amount(rate)}'
-
-    def total_drivers_amount(self, rate=0.65):
-        return self.kassa() * rate + float(self.total_amount_cach)
-
-    def vendor(self):
-        return 'uber'
+    def total_drivers_amount(self, rate):
+        return self.kassa() * rate + float(self.total_amount_cash)
 
     def kassa(self):
-        return float(self.total_amount)
-
-
-class NinjaPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
-    full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
-    chat_id = models.CharField(max_length=11, verbose_name='Унікальний індифікатор водія')
-    total_rides = models.PositiveIntegerField(null=True, blank=True, verbose_name='Кількість поїздок')
-    total_distance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дистанція')
-    total_amount_cash = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума готівкою')
-    total_amount_on_card = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума карточкою')
-    total_amount = models.PositiveIntegerField(null=True, blank=True, verbose_name='Загальна сума')
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
-
-    vendor_name = 'Ninja'
-
-    class Scopes:
-        def filter_by_driver_external_id(self, driver_external_id):
-            return self.filter(signal=driver_external_id)
-
-    class Meta:
-        verbose_name = 'Платіжний звіт: Ninja'
-        verbose_name_plural = 'Платіжні звіти: Ninja'
-        unique_together = (('report_from', 'report_to', 'full_name', 'chat_id'))
-
-    def driver_id(self):
-        return self.chat_id
-
-    def report_text(self, name=None, rate=0.5):
-        return f'Ninja: Каса {"%.2f" % self.kassa()}  * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Готівка(-{"%.2f" % float(self.total_amount_cash)}) = {"%.2f" % self.total_drivers_amount(rate)}'
-
-    def total_drivers_amount(self, rate=0.5):
-        return self.kassa() * (1 - rate) - float(self.total_amount_cash)
-
-    def vendor(self):
-        return 'ninja'
-
-    def kassa(self):
-        return float(self.total_amount)
+        return float(self.total_amount_without_fee)
 
 
 class UberTrips(models.Model):
-    report_file_name = models.CharField(max_length=255)
+    report_from = models.DateField(verbose_name="Дата поїздки")
     driver_external_id = models.CharField(max_length=50)
     license_plate = models.CharField(max_length=10)
     start_trip = models.DateTimeField(null=True, blank=True)
@@ -372,14 +135,16 @@ class FileNameProcessed(models.Model):
             order.save()
 
 
+class Role(models.TextChoices):
+    CLIENT = 'CLIENT', 'Client'
+    DRIVER = 'DRIVER', 'Driver'
+    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
+    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
+    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
+    OWNER = 'OWNER', 'Owner'
+
+
 class User(models.Model):
-    class Role(models.TextChoices):
-        CLIENT = 'CLIENT', 'Client'
-        DRIVER = 'DRIVER', 'Driver'
-        DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
-        SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
-        SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
-        OWNER = 'OWNER', 'Owner'
 
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
@@ -412,7 +177,7 @@ class User(models.Model):
         try:
             user = cls.objects.get(chat_id=chat_id)
             return user
-        except cls.DoesNotExist:
+        except ObjectDoesNotExist:
             return None
 
     @staticmethod
@@ -422,7 +187,7 @@ class User(models.Model):
         :type number: str
         """
         user = User.objects.filter(phone_number=number).first()
-        user.deleted_at = datetime.datetime.now()
+        user.deleted_at = timezone.localtime()
         user.save()
         return user
 
@@ -431,16 +196,12 @@ class User(models.Model):
         """This func validator for name and second name"""
         if len(name) <= 255:
             return name.title()
-        else:
-            return None
 
     @staticmethod
     def email_validator(email) -> str:
         pattern = r"^([a-zA-Z0-9]+\.?[a-zA-Z0-9]+)+@([a-zA-Z0-9]+\.)+[a-zA-Z0-9]{2,4}$"
         if re.match(pattern, email) is not None:
             return email
-        else:
-            return None
 
     @staticmethod
     def phone_number_validator(phone_number) -> str:
@@ -472,16 +233,15 @@ class DriverManager(User):
 
 
 class Vehicle(models.Model):
-    ELECTRO = 'Електро'
 
     name = models.CharField(max_length=255, verbose_name='Назва')
-    model = models.CharField(max_length=50, verbose_name='Модель')
-    type = models.CharField(max_length=20, default=ELECTRO, verbose_name='Тип')
+    type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
     vin_code = models.CharField(max_length=17)
     gps_id = models.IntegerField(default=0)
     gps_imei = models.CharField(max_length=100, default='')
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
+    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
@@ -499,7 +259,7 @@ class Vehicle(models.Model):
         try:
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
             return vehicle
-        except Vehicle.DoesNotExist:
+        except ObjectDoesNotExist:
             return None
 
     @staticmethod
@@ -566,17 +326,17 @@ class Driver(User):
         verbose_name = 'Водій'
         verbose_name_plural = 'Водії'
 
-    def get_driver_external_id(self, vendor: str) -> str:
+    def get_driver_external_id(self, vendor: str):
         try:
             return Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self,
                                                             deleted_at=None).driver_external_id
-        except Fleets_drivers_vehicles_rate.DoesNotExist:
-            return ''
+        except ObjectDoesNotExist:
+            return
 
     def get_kassa(self, vendor: str, week_number: [str, None] = None) -> float:
         driver_external_id = self.get_driver_external_id(vendor)
         current_date = pendulum.parse(week_number, tz="Europe/Kiev")
-        qset = GenericPaymentsOrder.filter_by_driver(vendor, driver_external_id) \
+        qset = Payments.objects.filter(vendor_name=vendor, driver_id=driver_external_id) \
             .filter(report_from__lte=current_date.end_of('week'), report_to__gte=current_date.start_of('week'))
         return sum(map(lambda x: x.kassa(), qset))
 
@@ -655,7 +415,6 @@ class Client(User):
         verbose_name_plural = 'Клієнти'
 
 
-
 class ServiceStationManager(User):
     car_id = models.ManyToManyField('Vehicle', blank=True)
     fleet_id = models.ManyToManyField(Fleet, blank=True)
@@ -670,8 +429,7 @@ class ServiceStationManager(User):
 
     @staticmethod
     def save_name_of_service_station(name_of_service_station):
-        service = ServiceStationManager.objects.create(name_of_service_station=name_of_service_station)
-        service.save()
+        ServiceStationManager.objects.create(name_of_service_station=name_of_service_station)
 
 
 class SupportManager(User):
@@ -705,21 +463,17 @@ class UberFleet(Fleet):
 class NinjaFleet(Fleet):
 
     @staticmethod
-    def start_report_interval(day=None):
-        if day:
-            return day.in_timezone("Europe/Kiev").start_of("day")
-        return pendulum.now().start_of('week').subtract(weeks=1)
+    def start_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.min))
 
     @staticmethod
-    def end_report_interval(day=None):
-        current_date = pendulum.now().start_of('week').subtract(weeks=1)
-        if day:
-            return day.in_timezone("Europe/Kiev").end_of("day")
-        return current_date.end_of('week')
+    def end_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.max))
 
     def download_report(self, day=None):
-        report = NinjaPaymentsOrder.objects.filter(report_from=self.start_report_interval(day=day),
-                                                   report_to=self.end_report_interval(day=day))
+        report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                         report_to=self.end_report_interval(day),
+                                         vendor_name=self.name)
         return list(report)
 
 
@@ -1054,7 +808,7 @@ class Comment(models.Model):
     processed = models.BooleanField(default=False, verbose_name='Опрацьовано')
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
 
-    created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
@@ -1104,19 +858,11 @@ class Order(models.Model):
     def __str__(self):
         return f'Замовлення №{self.pk}'
 
-    @staticmethod
-    def get_order(chat_id_client, phone, status_order):
-        try:
-            order = Order.objects.get(chat_id_client=chat_id_client, phone_number=phone, status_order=status_order)
-            return order
-        except Order.DoesNotExist:
-            return None
-
 
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
     image = models.ImageField(upload_to='.', verbose_name='Фото')
-    created_at = models.DateTimeField(editable=False, auto_now=datetime.datetime.now(), verbose_name='Створено')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
@@ -1159,7 +905,7 @@ class SubscribeUsers(models.Model):
         try:
             subscriber = SubscribeUsers.objects.get(email=email)
             return subscriber
-        except SubscribeUsers.DoesNotExist:
+        except ObjectDoesNotExist:
             return None
 
 
@@ -1167,6 +913,7 @@ class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     password = models.CharField(max_length=12, verbose_name='Пароль Uklon')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
     license_expired = models.DateField(blank=True, verbose_name='Термін дії посвідчення')
@@ -1179,29 +926,14 @@ class JobApplication(models.Model):
                                       verbose_name='Фото техпаспорту',)
     insurance = models.ImageField(blank=True, upload_to='job/insurance', default="docs/default_insurance.png",
                                   verbose_name='Автоцивілка')
-    insurance_expired = models.DateField(default=datetime.date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
+    insurance_expired = models.DateField(default=date(2023, 12, 15), verbose_name='Термін дії автоцивілки')
     role = models.CharField(max_length=255, verbose_name='Роль')
     status_bolt = models.DateField(null=True, verbose_name='Опрацьована BOLT')
     status_uklon = models.DateField(null=True, verbose_name='Опрацьована Uklon')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата подачі заявки')
 
-    @staticmethod
-    def validate_date(date_str):
-        try:
-            date = datetime.datetime.strptime(date_str, '%Y-%m-%d')
-            today = datetime.datetime.today()
-            future_date = datetime.datetime(2077, 12, 31)
-            if date < today:
-                return False
-            elif date > future_date:
-                return False
-            else:
-                return True
-        except ValueError:
-            return False
-
     def save(self, *args, **kwargs):
-        if not self.id:
+        if not self.pk:
             self.password = self.generate_password()
         super().save(*args, **kwargs)
 
@@ -1250,20 +982,19 @@ def admin_image_preview(image, default_image=None):
 
 
 class CarEfficiency(models.Model):
-    start_report = models.DateTimeField(verbose_name='Звіт з')
-    end_report = models.DateTimeField(verbose_name='Звіт по')
+    report_from = models.DateField(verbose_name='Звіт за')
+    licence_plate = models.CharField(null=True, max_length=25, verbose_name='Номер автомобіля')
+    driver = models.CharField(null=True, max_length=255, verbose_name='Водій авто')
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
-    driver = models.CharField(null=True, max_length=50, verbose_name='Водій авто')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
-    vehicle = models.CharField(max_length=255, verbose_name='Автомобіль', null=True)
 
     class Meta:
         verbose_name = 'Ефективність автомобіля'
         verbose_name_plural = 'Ефективність автомобілів'
 
     def __str__(self):
-        return self.driver
+        return self.licence_plate
 
 
 class UseOfCars(models.Model):
@@ -1298,7 +1029,7 @@ class ParkSettings(models.Model):
     def get_value(key, default=None, **kwargs):
         try:
             setting = ParkSettings.objects.get(key=key, **kwargs)
-        except ParkSettings.DoesNotExist:
+        except ObjectDoesNotExist:
             return default
         return setting.value
 
@@ -1341,3 +1072,79 @@ class Dashboard(models.Model):
     class Meta:
         verbose_name = 'Інформаційна панель автопарку'
         verbose_name_plural = 'Інформаційна панель автопарку'
+
+
+class NewUklonPaymentsOrder(models.Model):
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
+    full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
+    signal = models.CharField(max_length=8, verbose_name='Унікальний індифікатор водія')
+    total_rides = models.PositiveIntegerField(verbose_name='Кількість поїздок')
+    total_distance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Пробіг під замовлення')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
+    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На гаманець')
+    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На картку')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна сума')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    bonuses = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Бонуси')
+    fares = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Штрафи')
+    comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Uklon')
+    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Разом')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+
+    vendor_name = 'NewUklon'
+
+
+class BoltPaymentsOrder(models.Model):
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
+    driver_full_name = models.CharField(max_length=24, verbose_name='ПІ водія')
+    mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор водія')
+    range_string = models.CharField(max_length=50, verbose_name='Період')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальний тариф')
+    cancels_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
+    autorization_payment = models.DecimalField(decimal_places=2, max_digits=10,
+                                               verbose_name='Авторизаційцний платіж (платіж)')
+    autorization_deduction = models.DecimalField(decimal_places=2, max_digits=10,
+                                                 verbose_name='Авторизаційцний платіж (відрахування)')
+    additional_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Додатковий збір')
+    fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Bolt')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Поїздки за готівку')
+    discount_cash_trips = models.DecimalField(decimal_places=2, max_digits=10,
+                                              verbose_name='Сума знижки Bolt за готівкові поїздки')
+    driver_bonus = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Водійський бонус')
+    compensation = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Компенсації')
+    refunds = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    weekly_balance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Тижневий баланс')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
+
+    vendor_name = 'Bolt'
+
+
+class UberPaymentsOrder(models.Model):
+    report_from = models.DateTimeField(verbose_name='Репорт з')
+    report_to = models.DateTimeField(verbose_name='Репорт по')
+    report_file_name = models.CharField(max_length=255, verbose_name='Назва файла')
+    driver_uuid = models.UUIDField(verbose_name='Унікальний індитифікатор водія')
+    first_name = models.CharField(max_length=24, verbose_name='Імя водія')
+    last_name = models.CharField(max_length=24, verbose_name='Прізвище водія')
+    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід')
+    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід - Чистий тариф')
+    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Виплати')
+    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Перераховано на банківський рахунок')
+    returns = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Відшкодування та витрати')
+    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Партнер')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+
+    vendor_name = 'Uber'

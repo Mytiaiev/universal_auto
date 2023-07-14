@@ -6,9 +6,9 @@ from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 
-from app.models import User, Driver, DriverManager, Owner, ServiceStationManager, UseOfCars
-from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, \
-    inline_start_driver_kb, inline_finish_driver_kb, inline_more_func_kb, inline_driver_func_kb
+from app.models import User, Client, UseOfCars
+from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
+    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
@@ -25,71 +25,73 @@ def start(update, context):
     context.user_data.clear()
     menu(update, context)
     chat_id = update.effective_chat.id
-    user = User.get_by_chat_id(chat_id)
-    if user:
+    users = User.objects.filter(chat_id=chat_id)
+    if not users:
+        Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
+                              second_name=update.message.from_user.last_name)
+        update.message.reply_text(share_phone_text, reply_markup=markup_keyboard([contact_keyboard]))
+    elif users and len(users) == 1:
+        user = users.first()
         if user.phone_number:
-            driver = Driver.get_by_chat_id(chat_id)
-            if driver:
-                if UseOfCars.objects.filter(user_vehicle=driver, created_at__date=timezone.now().date(), end_at=None):
-                    reply_markup = inline_finish_driver_kb()
-                else:
-                    reply_markup = inline_start_driver_kb()
-            else:
-                reply_markup = inline_user_kb()
-                user.chat_id = chat_id
-                user.save()
-            update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
+            update.message.reply_text(user_greetings_text, reply_markup=get_start_kb(user))
         else:
-            update.message.reply_text(share_phone_text,
-                                      reply_markup=markup_keyboard([contact_keyboard]))
+            update.message.reply_text(share_phone_text, reply_markup=markup_keyboard([contact_keyboard]))
     else:
-        User.objects.create(chat_id=chat_id,
-                            name=update.message.from_user.first_name,
-                            second_name=update.message.from_user.last_name
-                            )
-        update.message.reply_text(share_phone_text,
-                                  reply_markup=markup_keyboard([contact_keyboard]))
+        if any(user.role == "OWNER" for user in users):
+            reply_markup = inline_owner_kb()
+        elif any(user.role == "DRIVER_MANAGER" for user in users):
+            reply_markup = inline_manager_kb()
+        else:
+            user = users.first()
+            reply_markup = inline_finish_driver_kb() if UseOfCars.objects.filter(user_vehicle=user,
+                                                                                 created_at__date=timezone.now().date(),
+                                                                                 end_at=None)\
+                else inline_start_driver_kb()
+        update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
 
 
 def start_query(update, context):
     query = update.callback_query
-    driver = Driver.get_by_chat_id(update.effective_chat.id)
-    if driver:
-        reply_markup = inline_start_driver_kb()
+    users = User.objects.filter(chat_id=update.effective_chat.id)
+    if len(users) == 1:
+        user = users.first()
+        reply_markup = get_start_kb(user)
     else:
-        reply_markup = inline_user_kb()
+        if any(user.role == "OWNER" for user in users):
+            reply_markup = inline_owner_kb()
+        elif any(user.role == "DRIVER_MANAGER" for user in users):
+            reply_markup = inline_manager_kb()
+        else:
+            user = users.first()
+            reply_markup = inline_finish_driver_kb() if UseOfCars.objects.filter(user_vehicle=user,
+                                                                                 created_at__date=timezone.now().date(),
+                                                                                 end_at=None) \
+                else inline_start_driver_kb()
     query.edit_message_text(text=user_greetings_text)
     query.edit_message_reply_markup(reply_markup=reply_markup)
 
 
-def more_function_user(update, context):
+def more_function(update, context):
     query = update.callback_query
     query.edit_message_text(text=more_func_text)
-    query.edit_message_reply_markup(reply_markup=inline_more_func_kb())
-
-
-def more_function_driver(update, context):
-    query = update.callback_query
-    query.edit_message_text(text=more_func_text)
-    query.edit_message_reply_markup(reply_markup=inline_driver_func_kb())
+    query.edit_message_reply_markup(reply_markup=get_more_func_kb(query.data))
 
 
 def update_phone_number(update, context):
     chat_id = update.message.chat.id
-    user = User.get_by_chat_id(chat_id)
+    user = Client.get_by_chat_id(chat_id)
     phone_number = update.message.contact.phone_number
-    if (phone_number and user):
+    if phone_number and user:
         if len(phone_number) == 12:
             phone_number = f'+{phone_number}'
         user.phone_number = phone_number
-        user.chat_id = chat_id
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
                                   reply_markup=ReplyKeyboardRemove())
     context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=inline_user_kb())
 
 
-def helptext(update, context) -> str:
+def helptext(update, context):
     update.message.reply_text(help_text)
 
 

@@ -1,4 +1,4 @@
-from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup
+from telegram import ReplyKeyboardRemove
 from app.models import Owner
 from app.portmone.generate_link import Portmone
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime

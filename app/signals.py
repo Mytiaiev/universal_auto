@@ -1,11 +1,20 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus,\
-    Vehicle, Park
+from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus,  Park, \
+    Partner
 from auto_bot.main import bot
+from scripts.redis_conn import redis_instance
 from scripts.settings_for_park import settings
+from django.contrib.auth.models import User as AuUser
+
+
+@receiver(post_save, sender=AuUser)
+def create_partner(sender, instance, created, **kwargs):
+    if created:
+        Partner.objects.create(user=instance)
 
 
 @receiver(post_save, sender=Park)
@@ -27,7 +36,7 @@ def create_park_settings(sender, instance, created, **kwargs):
 def create_status_change(sender, instance, **kwargs):
     try:
         old_instance = Driver.objects.get(pk=instance.pk)
-    except Driver.DoesNotExist:
+    except ObjectDoesNotExist:
         # new instance, ignore
         return
     if old_instance.driver_status != instance.driver_status:

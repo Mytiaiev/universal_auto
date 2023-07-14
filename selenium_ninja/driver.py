@@ -1,9 +1,11 @@
+from datetime import datetime, time
 import logging
 import base64
 import shutil
 import os
 import re
 
+from django.utils import timezone
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -20,7 +22,6 @@ class SeleniumTools:
         self.remote = remote
         self.session = session
         self.sleep = sleep
-
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
         if driver:
@@ -35,19 +36,16 @@ class SeleniumTools:
             if re.search(pattern, file):
                 return file
 
+    def park_name(self):
+        park = Park.objects.get(pk=self.partner)
+        return park.name
+
     def payments_order_file_name(self, fleet, partner, day):
         return self.report_file_name(self.file_pattern(fleet, partner, day))
 
-    def file_pattern(self, fleet, partner, day):
-        start, end = self.start_report_interval(day), self.end_report_interval(day)
-
-        sd, sy, sm = start.strftime("%d"), start.strftime("%Y"), start.strftime("%m")
-        ed, ey, em = end.strftime("%d"), end.strftime("%Y"), end.strftime("%m")
-        return f'{fleet} {sy}{sm}{sd}-{ey}{em}{ed}-{partner}.csv'
-
-    def park_name(self):
-        park = Park.object.get(pk=self.partner)
-        return park.name
+    @staticmethod
+    def file_pattern(fleet, partner, day=None):
+        return f'{fleet} {day.strftime("%Y%m%d")}-{partner}.csv'
 
     def remove_session(self):
         os.remove(self.park_name())

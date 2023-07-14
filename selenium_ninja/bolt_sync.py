@@ -1,6 +1,4 @@
-import csv
 import datetime
-import io
 import mimetypes
 import time
 from urllib import parse
@@ -8,11 +6,8 @@ from urllib import parse
 import pendulum
 import requests
 from django.db import IntegrityError
-from selenium.common import TimeoutException, WebDriverException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from app.models import ParkSettings, BoltService, BoltPaymentsOrder, Driver, Fleets_drivers_vehicles_rate
+
+from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments
 from auto import settings
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -38,6 +33,7 @@ class BoltRequest(Synchronizer):
                                  params=self.parameters(),
                                  json=payload)
         self.redis.set(f"{self.fleet}_refresh", response.json()["data"]["refresh_token"])
+
         return response.json()
 
     def get_access_token(self):
@@ -65,6 +61,7 @@ class BoltRequest(Synchronizer):
                                          params=self.parameters(),
                                          json=new_payload)
                 self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+
         else:
             self.get_login_token()
             self.get_access_token()
@@ -83,49 +80,44 @@ class BoltRequest(Synchronizer):
         response = requests.post(url, json=json, params=params, headers=headers)
         return response.json()
 
-    def download_report(self, start, end):
-        report = BoltPaymentsOrder.objects.filter(report_from=self.start_report_interval(start),
-                                                  report_to=self.end_report_interval(end),
-                                                  partner=self.get_partner())
-        return list(report)
-
-    def save_report(self, start, end):
-        if self.download_report(start, end):
-            return self.download_report(start, end)
+    def save_report(self, day):
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
+        if reports:
+            return list(reports)
         # date format str yyyy-mm-dd
+        format_day = day.strftime("%Y-%m-%d")
         param = self.parameters()
-        param.update({"start_date": start,
-                                  "end_date": end,
-                                  "offset": 0,
-                                  "limit": 50})
-
-        report = self.get_target_url(f'{self.base_url()}getDriverEarnings/dateRange', param)
-        for driver in report['data']['drivers']:
-            order = BoltPaymentsOrder(
-                report_from=self.start_report_interval(start),
-                report_to=self.end_report_interval(end),
-                driver_full_name=driver['name'],
-                mobile_number=driver['id'],
-                range_string='',
+        param.update({"start_date": format_day,
+                            "end_date": format_day,
+                            "offset": 0,
+                            "limit": 50})
+        reports = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', param)
+        param['limit'] = 25
+        rides = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', param)
+        for driver in reports['data']['drivers']:
+            order = Payments(
+                report_from=day,
+                vendor_name=self.fleet,
+                full_name=driver['name'],
+                driver_id=driver['id'],
+                total_amount_cash=driver['cash_in_hand'],
                 total_amount=driver['gross_revenue'],
-                cancels_amount=driver['cancellation_fees'],
-                autorization_payment=0,
-                autorization_deduction=0,
-                additional_fee=0,
-                fee=float(driver['gross_revenue']) - float(driver['net_earnings']),
-                total_amount_cach=driver['cash_in_hand'],
-                discount_cash_trips=0,
-                driver_bonus=driver['bonuses'],
-                compensation=driver['compensations'],
-                refunds=driver['expense_refunds'],
                 tips=driver['tips'],
-                weekly_balance=0,
-                partner=self.get_partner())
+                partner=self.get_partner(),
+                bonuses=driver['bonuses'],
+                cancels=driver['cancellation_fees'],
+                fee=-(driver['gross_revenue'] - driver['net_earnings']),
+                total_amount_without_fee=driver['net_earnings'],
+                compensations=driver['compensations'],
+                refunds=driver['expense_refunds'],
+            )
+            for rider in rides['data']['rows']:
+                if driver['id'] == rider['id']:
+                    order.total_rides = rider['finished_orders']
             try:
                 order.save()
             except IntegrityError:
                 pass
-        return self.download_report(start, end)
 
     def get_drivers_table(self):
         driver_list = []
@@ -185,6 +177,9 @@ class BoltRequest(Synchronizer):
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver).update(pay_cash=pay_cash)
 
     def add_driver(self, job_application):
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
         payload = {
                         "email": f"{job_application.email}",
                         "phone": f"{job_application.phone_number}",
@@ -194,10 +189,10 @@ class BoltRequest(Synchronizer):
         payload_form = {
             'hash': response['data']['hash'],
             'last_step': 'step_2',
-            'first_name': f"{job_application.first_name}",
-            'last_name': f"{job_application.last_name}",
-            'email': f"{job_application.email}",
-            'phone': f"{job_application.phone_number}",
+            'first_name': job_application.first_name,
+            'last_name': job_application.last_name,
+            'email': job_application.email,
+            'phone': job_application.phone_number,
             'birthday': '',
             'terms_consent_accepted': '0',
             'whatsapp_opt_in': '0',
@@ -235,12 +230,10 @@ class BoltRequest(Synchronizer):
             'hash': response['data']['hash'],
             'language': 'uk-ua',
         }
-        first_params = dict(list(params.items())[:2])
-        second_params = dict(list(params.items())[0])
-        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationLog/', params=first_params)
+        second_params = dict(list(params.items())[:1])
         requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/',
-                      params=second_params, data=encoded_payload)
-        requests.get(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}getDriverRegistrationDocumentsSet/', params)
+                      params=second_params, headers=headers, data=encoded_payload)
+        requests.get(f"{BoltService.get_value('R_BOLT_ADD_DRIVER_1')}getDriverRegistrationDocumentsSet/", params=params)
 
         file_paths = [
             f"{settings.MEDIA_URL}{job_application.driver_license_front}",  # license_front
@@ -274,5 +267,7 @@ class BoltRequest(Synchronizer):
         payload_form['last_step'] = 'step_4'
         payload_form['web_marketing_data[url]'] = f"{response['data']['registration_link']}/4"
         encoded = parse.urlencode(payload_form)
-        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', params=params, data=encoded)
-
+        requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', headers=headers,
+                      params=params, data=encoded)
+        job_application.status_bolt = datetime.datetime.now().date()
+        job_application.save()

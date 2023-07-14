@@ -1,16 +1,24 @@
 # Create driver and other
+import time
+from datetime import timedelta, datetime
+
 from celery.signals import task_postrun
+from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
-from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, NewUklonPaymentsOrder, \
-    BoltPaymentsOrder, UberPaymentsOrder, JobApplication, ParkSettings
+from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication,\
+    ParkSettings, Payments
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
-    fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb
+    fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
+    inline_efficiency_report_kb
 from auto_bot.handlers.driver_manager.static_text import *
-from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime
-from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips
+from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
+from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
+from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
+    update_driver_data, send_efficiency_report, send_weekly_report
+from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
 from auto_bot.main import bot
 
 
@@ -22,12 +30,167 @@ def remove_cash_driver(sender=None, **kwargs):
                              reply_markup=inline_driver_paid_kb(driver.id))
 
 
+@task_postrun.connect
+def update_drivers(sender=None, **kwargs):
+    if sender == update_driver_data:
+        if kwargs.get('retval'):
+            bot.send_message(chat_id=kwargs.get('retval'), text=update_finished, reply_markup=inline_manager_kb())
+
+
 def remove_cash_by_manager(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.objects.filter(id=int(data[2])).first()
     fleets_cash_trips.delay(int(data[2]), enable=data[1])
-    query.edit_message_text(text=remove_cash_text(driver, data[1]))
+    query.edit_message_text(remove_cash_text(driver, data[1]))
+
+
+def get_drivers_from_fleets(update, context):
+    query = update.callback_query
+    update_driver_data.delay(query.from_user.id)
+    query.edit_message_text(get_drivers_text)
+
+
+def get_earning_report(update, context):
+    query = update.callback_query
+    query.edit_message_text(choose_period_text)
+    query.edit_message_reply_markup(inline_earning_report_kb())
+
+
+def get_efficiency_report(update, context):
+    query = update.callback_query
+    query.edit_message_text(choose_period_text)
+    query.edit_message_reply_markup(inline_efficiency_report_kb())
+
+
+def get_weekly_report(update, context):
+    query = update.callback_query
+    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+    start = end - timedelta(days=6)
+    message = ''
+    balance = 0
+    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    drivers = Driver.objects.filter(manager=manager)
+    if drivers:
+        for driver in drivers:
+            result = calculate_reports(start, end, driver)
+            if result:
+                balance += result[0]
+                message += f"{driver} каса :{result[1]}\n"
+                if driver.schema == "HALF":
+                    if result[4]:
+                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - План {result[4]} = {result[3]}\n'
+                    else:
+                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} = {result[3]}\n'
+                elif driver.schema == "RENT":
+                    message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - Оренда {driver.rental} = {result[3]}\n'
+                message += "*" * 39 + '\n'
+            else:
+                message += f"Заробітки відсутні {driver}\n"
+    else:
+        message = no_drivers_text
+    owner_message = f'Ваш тижневий баланс: %.2f\n' % balance
+    owner_message += message
+    query.edit_message_text(owner_message)
+
+
+def get_report(update, context):
+    query = update.callback_query
+    message = ''
+    if query.data == "Custom_report":
+        query.edit_message_text(start_report_text)
+        context.user_data['manager_state'] = START_EARNINGS
+    else:
+        result = get_daily_report(manager_id=query.from_user.id)
+        if result:
+            for key in result[0]:
+                if result[0][key]:
+                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
+                        key, result[0][key], result[1].get(key, 0))
+        else:
+            message += no_drivers_text
+        query.edit_message_text(message)
+        query.edit_message_reply_markup(reply_markup=inline_manager_kb())
+
+
+def get_report_period(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['start'] = data
+        update.message.reply_text(end_report_text)
+        context.user_data['manager_state'] = END_EARNINGS
+    else:
+        context.user_data['manager_state'] = START_EARNINGS
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_data_text)
+        update.message.reply_text(start_report_text)
+
+
+def create_period_report(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['manager_state'] = None
+        start = datetime.strptime(context.user_data['start'], '%Y-%m-%d')
+        end = datetime.strptime(data, '%Y-%m-%d')
+        if start > end:
+            start, end = end, start
+        sort_report, day_values = get_daily_report(update.message.chat_id, start, end)
+        message = ''
+        for key, value in sort_report.items():
+            message += "{} {:.2f}\n".format(key, value)
+        update.message.reply_text(message, reply_markup=inline_manager_kb())
+    else:
+        context.user_data['manager_state'] = END_EARNINGS
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
+
+
+def get_efficiency_auto(update, context):
+    query = update.callback_query
+    message = ''
+    if query.data == "Efficiency_custom":
+        query.edit_message_text(start_report_text)
+        context.user_data['manager_state'] = START_EFFICIENCY
+    else:
+        result = get_efficiency(manager_id=query.from_user.id)
+        if result:
+            for k, v in result.items():
+                message += f"{k}\n" + "".join(v)
+        else:
+            message += no_vehicles_text
+        query.edit_message_text(message)
+        query.edit_message_reply_markup(reply_markup=inline_manager_kb())
+
+
+def get_efficiency_period(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['start'] = data
+        update.message.reply_text(end_report_text)
+        context.user_data['manager_state'] = END_EFFICIENCY
+    else:
+        context.user_data['manager_state'] = START_EFFICIENCY
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_data_text)
+        update.message.reply_text(start_report_text)
+
+
+def create_period_efficiency(update, context):
+    data = update.message.text
+    if validate_date(data):
+        context.user_data['manager_state'] = None
+        start = datetime.strptime(context.user_data['start'], '%Y-%m-%d')
+        end = datetime.strptime(data, '%Y-%m-%d')
+        if start > end:
+            start, end = end, start
+        result = get_efficiency(update.message.chat_id, start, end)
+        message = ''
+        if result:
+            for k, v in result.items():
+                message += f"{k}\n" + "".join(v)
+        else:
+            message += no_vehicles_text
+        update.message.reply_text(message, reply_markup=inline_manager_kb())
+    else:
+        context.user_data['manager_state'] = END_EFFICIENCY
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
 
 
 # Add users and vehicle to db and others
@@ -225,30 +388,14 @@ def get_driver_external_id(update, context):
             vehicle=context.user_data['vehicle'])
         response = str(response)
     except:
-        if fleet == F_UKLON:
-            try:
-                driver = str(context.user_data['driver'])
-                driver = driver.split()
-                driver = f'{driver[1]} {driver[0]}'
-                driver_external_id = NewUklonPaymentsOrder.objects.get(full_name=driver)
-                driver_external_id = driver_external_id.signal
-            except:
-                pass
-        elif fleet == F_BOLT:
-            try:
-                driver_external_id = BoltPaymentsOrder.objects.get(driver_full_name=str(context.user_data['driver']))
-                driver_external_id = driver_external_id.mobile_number
-            except:
-                pass
-        else:
-            try:
-                driver = str(context.user_data['driver'])
-                driver = driver.split()
-                driver_external_id = UberPaymentsOrder.objects.get(first_name=driver[0], last_name=driver[1])
-                driver_external_id = driver_external_id.driver_uuid
-            except:
-                pass
-
+        try:
+            driver = str(context.user_data['driver'])
+            driver = driver.split()
+            driver = f'{driver[1]} {driver[0]}'
+            driver_external_id = Payments.objects.get(full_name=driver, vendor_name=fleet)
+            driver_external_id = driver_external_id.driver_id
+        except:
+            pass
         try:
             context.user_data['driver_external_id'] = driver_external_id
         except:

@@ -1,19 +1,15 @@
-import csv
 import datetime
-import os
-import pickle
 import time
 import requests
 import redis
-from selenium.common import TimeoutException, WebDriverException
-from selenium.webdriver import Keys
+from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
-from app.models import NewUklonService, ParkSettings, NewUklonPaymentsOrder, NewUklonFleet, \
-    Fleets_drivers_vehicles_rate, Fleet, Driver, Service
+from app.models import NewUklonService, ParkSettings, NewUklonFleet, \
+    Fleets_drivers_vehicles_rate, Fleet, Driver, Payments, Service
 from auto import settings
+from scripts.redis_conn import redis_instance
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
 from django.db import IntegrityError
@@ -65,7 +61,6 @@ class UklonRequest(Synchronizer):
     def find_value(self, data: dict, *args) -> float:
         """Search value if args not False and return float"""
         nested_data = data
-
         for key in args:
             if key in nested_data:
                 nested_data = nested_data[key]
@@ -86,41 +81,38 @@ class UklonRequest(Synchronizer):
 
         return nested_data
 
-    def download_report(self, start, end):
-        report = NewUklonPaymentsOrder.objects.filter(report_from=self.start_report_interval(start),
-                                                      report_to=self.end_report_interval(end),
-                                                      partner=self.get_partner())
+    def download_report(self, day):
+        report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                         partner=self.get_partner())
         return list(report)
 
-    def save_report(self, start, end):
-        if self.download_report(start, end):
-            return self.download_report(start, end)
+    def save_report(self, day):
+        if self.download_report(day):
+            return self.download_report(day)
         param = self.parameters()
-        param['dateFrom'] = str(self.start_report_interval(start).int_timestamp)
-        param['dateTo'] = str(self.end_report_interval(end).int_timestamp)
+        param['dateFrom'] = str(self.start_report_interval(day).int_timestamp)
+        param['dateTo'] = str(self.end_report_interval(day).int_timestamp)
         url = f"{Service.get_value('UKLON_3')}{ParkSettings.get_value(key='ID_PARK', park=self.id)}"
         url += Service.get_value('UKLON_4')
         data = self.response_data(url=url, params=param)['items']
         if data:
             for i in data:
-                order = NewUklonPaymentsOrder(
-                    report_from=self.start_report_interval(start),
-                    report_to=self.end_report_interval(end),
-                    report_file_name='',
+                order = Payments(
+                    report_from=self.start_report_interval(day).date(),
+                    vendor_name=self.fleet,
                     full_name=f"{i['driver']['last_name']} {i['driver']['first_name']}",
-                    signal=str(i['driver']['signal']),
+                    driver_id=str(i['driver']['signal']),
                     total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
                     total_distance=float(
                         0) if 'total_distance_meters' not in i else self.to_float(i['total_distance_meters'], div=1000),
                     total_amount_cach=self.find_value(i, *('profit', 'order', 'cash', 'amount')),
-                    total_amount_cach_less=self.find_value(i, *('profit', 'order', 'wallet', 'amount')),
-                    total_amount_on_card=self.find_value(i, *('profit', 'order', 'card', 'amount')),
+                    total_amount_on_card=self.find_value(i, *('profit', 'order', 'wallet', 'amount')),
                     total_amount=self.find_value(i, *('profit', 'order', 'total', 'amount')),
                     tips=self.find_value(i, *('profit', 'tips', 'amount')),
                     bonuses=float(0),
                     fares=float(0),
-                    comission=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
-                    total_amount_without_comission=self.find_value(i, *('profit', 'total', 'amount')),
+                    fee=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
+                    total_amount_without_fee=self.find_value(i, *('profit', 'total', 'amount')),
                     partner=self.get_partner(),
                 )
                 try:
@@ -128,30 +120,28 @@ class UklonRequest(Synchronizer):
                 except IntegrityError:
                     pass
         else:
-            order = NewUklonPaymentsOrder(
-                report_from=self.start_report_interval(start),
-                report_to=self.end_report_interval(end),
-                report_file_name='',
+            order = Payments(
+                report_from=self.start_report_interval(day).date(),
+                vendor_name=self.fleet,
                 full_name='',
-                signal='',
+                driver_id='',
                 total_rides=0,
                 total_distance=0,
-                total_amount_cach=0,
-                total_amount_cach_less=0,
+                total_amount_cash=0,
                 total_amount_on_card=0,
                 total_amount=0,
                 tips=0,
                 bonuses=0,
                 fares=0,
-                comission=0,
-                total_amount_without_comission=0,
+                fee=0,
+                total_amount_without_fee=0,
                 partner=self.get_partner())
             try:
                 order.save()
             except IntegrityError:
                 pass
 
-        return self.download_report(start, end)
+        return self.download_report(day)
 
     def get_driver_status(self):
         first_key, second_key = 'width_client', 'wait'
@@ -225,8 +215,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
 
     def wait_otp_code(self, user):
-        r = redis.Redis.from_url(os.environ["REDIS_URL"])
-        p = r.pubsub()
+        p = redis_instance.pubsub()
         p.subscribe(f'{user.phone_number} code')
         p.ping()
         otpa = []
@@ -240,12 +229,12 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     otpa = list(f'{otp["data"]}')
                     otpa = list(filter(lambda d: d.isdigit(), otpa))
                     digits = [s.isdigit() for s in otpa]
-                    if not (digits) or (not all(digits)) or len(digits) != 4:
+                    if not digits or (not all(digits)) or len(digits) != 4:
                         continue
                     break
             except redis.ConnectionError as e:
                 self.logger.error(str(e))
-                p = r.pubsub()
+                p = redis_instance.pubsub()
                 p.subscribe(f'{user.phone_number} code')
             time.sleep(1)
         return otpa
@@ -370,19 +359,6 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
-
-    def download_weekly_report(self, day):
-        try:
-            report = NewUklonPaymentsOrder.objects.filter(
-                report_file_name=self.file_pattern(self.fleet, self.partner, day))
-            if not report:
-                self.download_payments_order(day=day)
-                self.save_report(day=day)
-                report = NewUklonPaymentsOrder.objects.filter(
-                    report_file_name=self.file_pattern(self.fleet, self.partner, day))
-            return list(report)
-        except Exception as err:
-            self.logger.error(err)
 
     def detaching_the_driver_from_the_car(self, licence_plate):
         self.driver.get(NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_1'))

@@ -1,15 +1,17 @@
 import logging
 import time
 import pendulum
-import redis
 import requests
 import os
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from scripts.redis_conn import redis_instance
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common import TimeoutException, InvalidSessionIdException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Park
+from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Park
+import datetime
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -20,7 +22,7 @@ class Synchronizer:
     def __init__(self, park_id, fleet, chrome_driver=None):
         self.id = park_id
         self.fleet = fleet
-        self.redis = redis.Redis.from_url(os.environ["REDIS_URL"])
+        self.redis = redis_instance
         if chrome_driver is not None:
             self.sleep = 5
             self.driver = chrome_driver
@@ -143,9 +145,14 @@ class Synchronizer:
                                                    second_name=kwargs[s_name],
                                                    phone_number=kwargs[phone],
                                                    email=kwargs[email],
+                                                   role=Role.DRIVER,
                                                    partner=self.get_partner())
-                    driver.save()
-
+                    try:
+                        client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
+                        driver.chat_id = client.chat_id
+                        driver.save()
+                    except ObjectDoesNotExist:
+                        pass
         return driver
 
     def get_or_create_vehicle(self, **kwargs):
@@ -157,8 +164,6 @@ class Synchronizer:
         except Vehicle.DoesNotExist:
             vehicle = Vehicle.objects.create(
                 name=kwargs[v_name].upper(),
-                model='',
-                type='',
                 licence_plate=licence_plate,
                 vin_code=kwargs[vin],
                 partner=self.get_partner()
@@ -195,19 +200,12 @@ class Synchronizer:
             driver.save(update_fields=update_fields)
 
     @staticmethod
-    def translate_text(text, to_lang):
-        translated_text = translate(text, to_lang)
-        return translated_text
+    def start_report_interval(day):
+        return datetime.datetime.combine(day, datetime.time.min)
 
     @staticmethod
-    def start_report_interval(start_date):
-        date = pendulum.from_format(start_date, "YYYY-MM-DD")
-        return date.in_timezone("Europe/Kiev").start_of("day")
-
-    @staticmethod
-    def end_report_interval(end_date):
-        date = pendulum.from_format(end_date, "YYYY-MM-DD")
-        return date.in_timezone("Europe/Kiev").end_of("day")
+    def end_report_interval(day):
+        return datetime.datetime.combine(day, datetime.time.max)
 
     @staticmethod
     def parameters() -> dict:
