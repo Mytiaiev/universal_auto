@@ -21,6 +21,19 @@ class UaGpsSynchronizer:
         login = requests.get(self.url, params=params)
         return login.json()['eid']
 
+    def get_vehicle_id(self):
+        params = {
+            'sid': self.session,
+            'svc': 'core/update_data_flags',
+            'params': json.dumps({"spec": [{"type": "type",
+                                            "data": "avl_unit",
+                                            "flags": 1,
+                                            "mode": 0}]})
+        }
+        response = requests.get(self.url, params=params)
+        for vehicle in response.json():
+            Vehicle.objects.filter(licence_plate=vehicle['d']['nm'].split('(')[0]).update(gps_id=vehicle['i'])
+
     def generate_report(self, start_time, end_time, vehicle_id):
         rent_distance = 0
         rent_time = datetime.timedelta()
@@ -56,14 +69,6 @@ class UaGpsSynchronizer:
     @staticmethod
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
-
-    def start_day(self, day):
-        start_of_day = day.in_timezone("Europe/Kiev").start_of("day")
-        return self.get_timestamp(start_of_day)
-
-    def end_day(self, day):
-        end_of_day = day.in_timezone("Europe/Kiev").end_of("day")
-        return self.get_timestamp(end_of_day)
 
     def get_rent_distance(self):
         yesterday = timezone.localtime() - datetime.timedelta(days=1)
@@ -135,10 +140,12 @@ class UaGpsSynchronizer:
                 rent.rent_distance -= Decimal(distance_in_trips)
                 rent.save()
 
-    def total_per_day(self, driver, day):
-        vehicle = Vehicle.objects.filter(driver=driver).first()
+    def total_per_day(self, licence_plate, day):
+        start = datetime.datetime.combine(day, datetime.time.min)
+        end = datetime.datetime.combine(day, datetime.time.max)
+        vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
         if vehicle:
-            distance = self.generate_report(self.start_day(day),
-                                            self.end_day(day),
+            distance = self.generate_report(self.get_timestamp(start),
+                                            self.get_timestamp(end),
                                             vehicle.gps_id)[0]
-            return distance, vehicle.licence_plate
+            return distance, vehicle

@@ -1,19 +1,16 @@
+from datetime import datetime, time
 import logging
 import base64
 import shutil
 import os
-import time
-import pendulum
 import re
-import pickle
 
+from django.utils import timezone
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver import ActionChains
 from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException
 
@@ -25,11 +22,11 @@ def clickandclear(element):
 
 class SeleniumTools:
     def __init__(self, session, driver=True, remote=None,
-                 partner="Ninja", sleep=None, headless=True, week_number=None, profile=None):
+                 partner="Ninja", sleep=None, headless=True, profile=None):
         self.session_file_name = session
         self.partner = partner
         self.sleep = sleep
-        self.remote = True
+        self.remote = remote
         self.profile = 'Profile 1' if profile is None else profile
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
@@ -38,10 +35,6 @@ class SeleniumTools:
                 self.driver = self.build_remote_driver(headless)
             else:
                 self.driver = self.build_driver(headless)
-        if week_number:
-            self.current_date = pendulum.parse(week_number, tz="Europe/Kiev")
-        else:
-            self.current_date = pendulum.now().start_of('week').subtract(weeks=1)
 
     def report_file_name(self, pattern):
         filenames = os.listdir(os.curdir)
@@ -50,28 +43,11 @@ class SeleniumTools:
                 return file
 
     def payments_order_file_name(self, fleet, partner, day=None):
-        return self.report_file_name(self.file_pattern(fleet, partner, day=day))
+        return self.report_file_name(self.file_pattern(fleet, partner, day))
 
-    def file_pattern(self, fleet, partner, day=None):
-        start = self.start_report_interval(day=day)
-        end = self.end_report_interval(day=day)
-
-        sd, sy, sm = start.strftime("%d"), start.strftime("%Y"), start.strftime("%m")
-        ed, ey, em = end.strftime("%d"), end.strftime("%Y"), end.strftime("%m")
-        return f'{fleet} {sy}{sm}{sd}-{ey}{em}{ed}-{partner}.csv'
-
-    def week_number(self):
-        return f'{self.current_date.strftime("%W")}'
-
-    def start_report_interval(self, day=None):
-        if day:
-            return day.in_timezone("Europe/Kiev").start_of("day")
-        return self.current_date
-
-    def end_report_interval(self, day=None):
-        if day:
-            return day.in_timezone("Europe/Kiev").end_of("day")
-        return self.current_date.end_of('week')
+    @staticmethod
+    def file_pattern(fleet, partner, day=None):
+        return f'{fleet} {day.strftime("%Y%m%d")}-{partner}.csv'
 
     def remove_session(self):
         os.remove(self.session_file_name)
@@ -217,79 +193,3 @@ class SeleniumTools:
         if hasattr(self, 'driver'):
             self.driver.quit()
             self.driver = None
-
-
-class Privat24(SeleniumTools):
-    def __init__(self, card=None, sum=None, driver=True, sleep=3, headless=False, base_url='https://next.privat24.ua/'):
-        self.card = card
-        self.sum = sum
-        if driver:
-            self.driver = self.build_driver(headless)
-        self.base_url = base_url
-        super().__init__('privat', sleep=sleep)
-
-    def quit(self):
-        self.driver.quit()
-
-    def login(self):
-        self.driver.get(self.base_url)
-        if self.sleep:
-            time.sleep(self.sleep)
-        e = self.driver.find_element(By.XPATH, '//div/button')
-        e.click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        login = self.driver.find_element(By.XPATH, '//div[3]/div[1]/input')
-        ActionChains(self.driver).move_to_element(login).send_keys(os.environ["PRIVAT24_NAME"]).perform()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def password(self):
-        password = self.driver.find_element(By.XPATH, '//input')
-        ActionChains(self.driver).move_to_element(password).send_keys('').perform()
-        ActionChains(self.driver).move_to_element(password).send_keys('PRIVAT24_PASSWORD').perform()
-        ActionChains(self.driver).move_to_element(password).send_keys(Keys.TAB + Keys.TAB + Keys.ENTER).perform()
-        if self.sleep:
-            time.sleep(self.sleep)
-
-    def money_transfer(self):
-        if self.sleep:
-            time.sleep(25)
-        url = f'{self.base_url}money-transfer/card'
-        self.driver.get(url)
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.get_screenshot_as_file(f'privat_1.png')
-        e = self.driver.find_element(By.XPATH, '//div[2]/div/div[1]/div[2]/div/div[2]')
-        e.click()
-        card = self.driver.find_element(By.XPATH, '//div[1]/div[2]/input')
-        card.click()
-        self.driver.get_screenshot_as_file(f'privat_2.png')
-        card.send_keys(f"{self.card}" + Keys.TAB + f'{self.sum}')
-        self.driver.get_screenshot_as_file(f'privat_3.png')
-        button = self.driver.find_element(By.XPATH, '//div[4]/div/button')
-        button.click()
-
-    def transfer_confirmation(self):
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, '//div[3]/div[3]/button').click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        try:
-            xpath = '//div/div[4]/div[2]/button'
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-        except TimeoutException:
-            pass
-        finally:
-            if self.sleep:
-                time.sleep(self.sleep)
-            self.driver.find_element(By.XPATH, '//div[2]/div[2]/div/div[2]/button').click()
-
-    @staticmethod
-    def card_validator(card):
-        pattern = '^([0-9]{4}[- ]?){3}[0-9]{4}$'
-        result = re.match(pattern, card)
-        if True:
-            return result
-

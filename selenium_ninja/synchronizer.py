@@ -1,10 +1,11 @@
 import logging
 import time
 
-import redis
 import requests
 import os
 import pickle
+
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common import TimeoutException, InvalidSessionIdException
@@ -12,8 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from translators.server import tss
 
-from app.models import BoltService, Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle
-
+from app.models import BoltService, Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Client
 
 LOGGER.setLevel(logging.WARNING)
 
@@ -22,7 +22,6 @@ class RequestSynchronizer:
     def __init__(self, fleet=None, base_url=None):
         self.fleet = fleet
         self.base_url = base_url
-        self.redis = redis.Redis.from_url(os.environ["REDIS_URL"])
 
     def get_drivers_table(self):
         raise NotImplementedError
@@ -60,14 +59,20 @@ class RequestSynchronizer:
     def get_or_create_driver(**kwargs):
         try:
             driver = Driver.objects.get(name=kwargs['name'], second_name=kwargs['second_name'])
-        except Driver.DoesNotExist:
+        except ObjectDoesNotExist:
             driver = Driver.objects.create(
                 name=kwargs['name'],
                 second_name=kwargs['second_name'],
                 phone_number=kwargs['phone_number'],
-                email=kwargs['email']
+                email=kwargs['email'],
+                role=Role.DRIVER
             )
-            driver.save()
+            try:
+                client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
+                driver.chat_id = client.chat_id
+                driver.save()
+            except ObjectDoesNotExist:
+                pass
         return driver
 
     @staticmethod
@@ -89,18 +94,17 @@ class RequestSynchronizer:
             licence_plate = 'Unknown car'
         try:
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-        except Vehicle.MultipleObjectsReturned:
+        except MultipleObjectsReturned:
             vehicle = Vehicle.objects.filter(licence_plate=licence_plate)[0]
-        except Vehicle.DoesNotExist:
+        except ObjectDoesNotExist:
             vehicle = Vehicle.objects.create(
                 name=kwargs['vehicle_name'],
-                model='',
-                type='',
                 licence_plate=licence_plate,
                 vin_code=kwargs['vin_code']
             )
             vehicle.save()
         return vehicle
+
     @staticmethod
     def update_vehicle_fields(vehicle, **kwargs):
         update_fields = []
@@ -216,11 +220,9 @@ class Synchronizer:
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
         except Vehicle.MultipleObjectsReturned:
             vehicle = Vehicle.objects.filter(licence_plate=licence_plate)[0]
-        except Vehicle.DoesNotExist:
+        except ObjectDoesNotExist:
             vehicle = Vehicle.objects.create(
                 name=kwargs['vehicle_name'],
-                model='',
-                type='',
                 licence_plate=licence_plate,
                 vin_code=kwargs['vin_code']
             )
@@ -230,7 +232,7 @@ class Synchronizer:
     def get_driver_by_name(self, name, second_name):
         try:
             return Driver.objects.get(name=name, second_name=second_name)
-        except Driver.MultipleObjectsReturned:
+        except MultipleObjectsReturned:
             return Driver.objects.filter(name=name, second_name=second_name)[0]
 
     def get_driver_by_phone_or_email(self, phone_number, email):
@@ -238,39 +240,39 @@ class Synchronizer:
             if len(phone_number):
                 return Driver.objects.get(phone_number__icontains=phone_number[-10::])
             else:
-                raise Driver.DoesNotExist
-        except (Driver.MultipleObjectsReturned, Driver.DoesNotExist):
+                raise ObjectDoesNotExist
+        except (MultipleObjectsReturned, ObjectDoesNotExist):
             try:
                 return Driver.objects.get(email__icontains=email)
-            except Driver.MultipleObjectsReturned:
-                raise Driver.DoesNotExist
+            except MultipleObjectsReturned:
+                raise ObjectDoesNotExist
 
     def get_or_create_driver(self, **kwargs):
         try:
             driver = self.get_driver_by_name(kwargs['name'], kwargs['second_name'])
-        except Driver.DoesNotExist:
+        except ObjectDoesNotExist:
             try:
                 driver = self.get_driver_by_name(kwargs['second_name'], kwargs['name'])
-            except Driver.DoesNotExist:
+            except ObjectDoesNotExist:
                 t_name, t_second_name = self.split_name(
                     self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'uk'))
                 try:
                     driver = self.get_driver_by_name(t_name, t_second_name)
-                except Driver.DoesNotExist:
+                except ObjectDoesNotExist:
                     try:
                         driver = self.get_driver_by_name(t_second_name, t_name)
-                    except Driver.DoesNotExist:
+                    except ObjectDoesNotExist:
                         t_name, t_second_name = self.split_name(
                             self.translate_text(f'{kwargs["name"]} {kwargs["second_name"]}', 'ru'))
                         try:
                             driver = self.get_driver_by_name(t_name, t_second_name)
-                        except Driver.DoesNotExist:
+                        except ObjectDoesNotExist:
                             try:
                                 driver = self.get_driver_by_name(t_second_name, t_name)
-                            except Driver.DoesNotExist:
+                            except ObjectDoesNotExist:
                                 try:
                                     driver = self.get_driver_by_phone_or_email(kwargs['phone_number'], kwargs['email'])
-                                except Driver.DoesNotExist:
+                                except ObjectDoesNotExist:
                                     driver = Driver.objects.create(
                                         name=kwargs['name'],
                                         second_name=kwargs['second_name'],

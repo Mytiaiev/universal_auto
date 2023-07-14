@@ -1,7 +1,6 @@
 import csv
 import datetime
 import os
-import pickle
 import time
 
 import redis
@@ -12,9 +11,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from app.models import NewUklonService, ParkSettings, NewUklonPaymentsOrder, NewUklonFleet, \
-    Fleets_drivers_vehicles_rate, Fleet, Driver
+from app.models import NewUklonService, ParkSettings, NewUklonFleet, \
+    Fleets_drivers_vehicles_rate, Fleet, Driver, Payments
 from auto import settings
+from scripts.redis_conn import redis_instance
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -45,7 +45,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
             input_data = WebDriverWait(self.driver, self.sleep).until(
                 EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_4'))))
-            format_day = day.format('DD.MM.YYYY')
+            format_day = day.strftime("%d.%m.%Y")
             input_data.click()
             input_data.send_keys(format_day + Keys.TAB + format_day)
             WebDriverWait(self.driver, self.sleep).until(
@@ -61,39 +61,37 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day))
         else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day=day))
+            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day))
 
-    def save_report(self, day=None):
+    def save_report(self, day):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
+        self.logger.info(self.file_pattern(self.fleet, self.partner, day))
 
-        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
-            with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
+        if self.payments_order_file_name(self.fleet, self.partner, day) is not None:
+            with open(self.payments_order_file_name(self.fleet, self.partner, day), encoding="utf-8") as file:
                 reader = csv.reader(file)
                 next(reader)
                 for row in reader:
-                    order = NewUklonPaymentsOrder(
-                        report_from=self.start_report_interval(day=day),
-                        report_to=self.end_report_interval(day=day),
-                        report_file_name=file.name,
+                    order = Payments(
+                        report_from=day,
+                        vendor_name=self.fleet,
                         full_name=row[0],
-                        signal=row[1],
+                        driver_id=row[1],
                         total_rides=float((row[2] or '0').replace(',', '')),
                         total_distance=float((row[3] or '0').replace(',', '')),
-                        total_amount_cach=float((row[4] or '0').replace(',', '')),
-                        total_amount_cach_less=float((row[5] or '0').replace(',', '')),
-                        total_amount_on_card=float((row[6] or '0').replace(',', '')),
+                        total_amount_cash=float((row[4] or '0').replace(',', '')),
+                        total_amount_on_card=float((row[5] or '0').replace(',', '')),
                         total_amount=float((row[7] or '0').replace(',', '')),
                         tips=float((row[8] or '0').replace(',', '')),
                         bonuses=float((row[9] or '0').replace(',', '')),
                         fares=float((row[10] or '0').replace(',', '')),
-                        comission=float((row[11] or '0').replace(',', '')),
-                        total_amount_without_comission=float((row[12] or '0').replace(',', '')))
+                        fee=float((row[11] or '0').replace(',', '')),
+                        total_amount_without_fee=float((row[12] or '0').replace(',', '')))
                     try:
                         order.save()
                     except IntegrityError:
@@ -101,23 +99,21 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     items.append(order)
 
         else:
-            order = NewUklonPaymentsOrder(
-                report_from=self.start_report_interval(day=day),
-                report_to=self.end_report_interval(day=day),
-                report_file_name='',
+            order = Payments(
+                report_from=day,
+                vendor_name=self.fleet,
                 full_name='',
-                signal='',
+                driver_id='',
                 total_rides=0,
                 total_distance=0,
-                total_amount_cach=0,
-                total_amount_cach_less=0,
+                total_amount_cash=0,
                 total_amount_on_card=0,
                 total_amount=0,
                 tips=0,
                 bonuses=0,
                 fares=0,
-                comission=0,
-                total_amount_without_comission=0)
+                fee=0,
+                total_amount_without_fee=0)
             try:
                 order.save()
             except IntegrityError:
@@ -126,8 +122,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         return items
 
     def wait_otp_code(self, user):
-        r = redis.Redis.from_url(os.environ["REDIS_URL"])
-        p = r.pubsub()
+        p = redis_instance.pubsub()
         p.subscribe(f'{user.phone_number} code')
         p.ping()
         otpa = []
@@ -141,12 +136,12 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     otpa = list(f'{otp["data"]}')
                     otpa = list(filter(lambda d: d.isdigit(), otpa))
                     digits = [s.isdigit() for s in otpa]
-                    if not (digits) or (not all(digits)) or len(digits) != 4:
+                    if not digits or (not all(digits)) or len(digits) != 4:
                         continue
                     break
             except redis.ConnectionError as e:
                 self.logger.error(str(e))
-                p = r.pubsub()
+                p = redis_instance.pubsub()
                 p.subscribe(f'{user.phone_number} code')
             time.sleep(1)
         return otpa
@@ -393,13 +388,11 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
 
     def download_weekly_report(self, day=None):
         try:
-            report = NewUklonPaymentsOrder.objects.filter(
-                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+            report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
             if not report:
                 self.download_payments_order(day=day)
                 self.save_report(day=day)
-                report = NewUklonPaymentsOrder.objects.filter(
-                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
             return list(report)
         except Exception as err:
             self.logger.error(err)

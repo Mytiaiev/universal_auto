@@ -1,12 +1,10 @@
 import asyncio
 import logging
-import os
 import re
 
 from asgiref.sync import sync_to_async
-
-from app.models import RawGPS
 from auto.tasks import raw_gps_handler
+from app.models import RawGPS
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -38,7 +36,7 @@ class PackageHandler:
     async def _d_handler(self, **kwargs):
         if len(self.imei) and len(kwargs['msg']):
             obj = await sync_to_async(RawGPS.objects.create)(imei=self.imei, client_ip=kwargs['addr'][0],
-                                                       client_port=kwargs['addr'][1], data=kwargs['msg'])
+                                                             client_port=kwargs['addr'][1], data=kwargs['msg'])
             raw_gps_handler.delay(obj.id)
             return self.answer_data
         else:
