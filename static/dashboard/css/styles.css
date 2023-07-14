@@ -277,3 +277,42 @@ body {
     display: none;
   }
 }
+
+
+/*vehicle-block*/
+
+.payback-car {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.car-item {
+  width: 300px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.car-image img {
+  width: 100%;
+  height: auto;
+}
+
+.car-details h3 {
+  margin-top: 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background-color: #eee;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.progress {
+  height: 100%;
+  background-color: #5cb85c;
+  border-radius: 10px;
+}

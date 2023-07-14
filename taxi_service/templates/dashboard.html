@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 {% load static %}
+{% load i18n %}
 <html lang="en">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1.0">
 	<title>Admin Dashboard</title>
 	<!-- Montserrat Font -->
-	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
+				rel="stylesheet">
 	<!-- Material Icons -->
 	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
 	<!-- Custom CSS -->
@@ -134,13 +136,13 @@
 					</div>
 				</div>
 			</div>
+
 			<div class="charts-card">
 				<h2 class="chart-title">Ефективність автомобіля</h2>
-
 				<div class="car-select">
 					<select id="vehicle-select">
 						{% for vehicle in get_all_vehicle %}
-						<option>{{ vehicle.licence_plate }}</option>
+							<option>{{ vehicle.licence_plate }}</option>
 						{% endfor %}
 					</select>
 				</div>
@@ -160,19 +162,78 @@
 					</div>
 				</div>
 			</div>
-		</div>
+			<div class="payback-car">
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<h3>Водій: Іванов Іван</h3>
+						<p>Номер авто: AB1234</p>
+						<p>Заробіток: $5000</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 70%;"></div>
+						</div>
+						<p>Повна сума авто: $20000</p>
+					</div>
+				</div>
+
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<h3>Водій: Петров Петро</h3>
+						<p>Номер авто: CD5678</p>
+						<p>Заробіток: $3000</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 40%;"></div>
+						</div>
+						<p>Повна сума авто: $15000</p>
+					</div>
+				</div>
+
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<h3>Водій: Сидорова Олена</h3>
+						<p>Номер авто: EF9012</p>
+						<p>Заробіток: $7000</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 90%;"></div>
+						</div>
+						<p>Повна сума авто: $25000</p>
+					</div>
+				</div>
+
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<h3>Водій: Коваленко Микола</h3>
+						<p>Номер авто: GH3456</p>
+						<p>Заробіток: $2000</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 20%;"></div>
+						</div>
+						<p>Повна сума авто: $10000</p>
+					</div>
+				</div>
+			</div>
 	</main>
 	<!-- End Main -->
 </div>
 
 <!-- Scripts -->
 <script>
-	var ajaxPostUrl = "{% url 'post_request' %}";
+  var ajaxPostUrl = "{% url 'post_request' %}";
   var ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 <!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js"></script>
-{#<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.35.5/apexcharts.min.js"></script>#}
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
 <script src="{% static 'dashboard/js/scripts.js' %}"></script>
 </body>
