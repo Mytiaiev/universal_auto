@@ -111,7 +111,7 @@ def raw_gps_handler(id):
 @app.task(bind=True, queue='non_priority')
 def download_daily_report(self):
     for park in Park.objects.all():
-        synchronize_drivers_task.apply_async(args=[park.pk])
+        download_report_d.apply_async(args=[park.pk])
 
 
 @app.task(bind=True, queue='non_priority')
@@ -188,7 +188,7 @@ def update_driver_status(self):
     except Exception as e:
         logger.error(e)
 
-        
+
 @app.task(bind=True, queue='non_priority')
 def download_weekly_report(self):
     report = download_reports()
