@@ -6,6 +6,7 @@ from django.dispatch import receiver
 from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus,  Park, \
     Partner
 from auto_bot.main import bot
+from scripts.redis_conn import redis_instance
 from scripts.settings_for_park import settings
 from django.contrib.auth.models import User as AuUser
 
@@ -93,6 +94,7 @@ def reject_order_client(sender, instance, **kwargs):
                 chat_id=driver_chat_id,
                 text=f'Вибачте, замовлення за адресою {instance.from_address} відхилено клієнтом.'
             )
+            redis_instance.set(f'running_{instance.id}', 0)
             ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
         except Exception:
             pass

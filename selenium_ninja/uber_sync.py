@@ -14,6 +14,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from app.models import UberService, ParkSettings, UberTrips, Payments
+from scripts.redis_conn import redis_instance
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -222,8 +223,8 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         return items
 
     def wait_opt_code(self):
-        r = redis.Redis.from_url(os.environ["REDIS_URL"])
-        p = r.pubsub()
+
+        p = redis_instance.pubsub()
         p.subscribe('code')
         p.ping()
         otpa = []
@@ -239,7 +240,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     break
             except redis.ConnectionError as e:
                 self.logger.error(str(e))
-                p = r.pubsub()
+                p = redis_instance.pubsub()
                 p.subscribe('code')
             time.sleep(1)
         return otpa

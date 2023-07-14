@@ -1,6 +1,5 @@
 import csv
 import datetime
-import io
 import mimetypes
 import time
 from urllib import parse
@@ -14,6 +13,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments
 from auto import settings
+from scripts.redis_conn import redis_instance
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer, RequestSynchronizer
 
@@ -33,11 +33,11 @@ class BoltRequest(RequestSynchronizer):
             "device_uid": "6439b6c1-37c2-4736-b898-cb2a8608e6e2"
         }
         response = requests.post(url=f'{self.base_url}startAuthentication', params=self.params, json=payload)
-        self.redis.set(f"{self.fleet}_refresh", response.json()["data"]["refresh_token"])
+        redis_instance.set(f"{self.fleet}_refresh", response.json()["data"]["refresh_token"])
         return response.json()
 
     def get_access_token(self):
-        token = self.redis.get(f"{self.fleet}_refresh")
+        token = redis_instance.get(f"{self.fleet}_refresh")
         if token:
             access_payload = {
                 "refresh_token": token.decode(),
@@ -47,10 +47,10 @@ class BoltRequest(RequestSynchronizer):
             response = requests.post(url=f'{self.base_url}getAccessToken',
                                      params=self.params, json=access_payload)
             if not response.json()['code']:
-                self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+                redis_instance.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
             else:
                 self.get_login_token()
-                new_token = self.redis.get(f"{self.fleet}_refresh")
+                new_token = redis_instance.get(f"{self.fleet}_refresh")
                 new_payload = {
                     "refresh_token": new_token.decode(),
                     "company": {"company_id": "58225",
@@ -58,21 +58,21 @@ class BoltRequest(RequestSynchronizer):
                 }
                 response = requests.post(url=f'{self.base_url}getAccessToken',
                                          params=self.params, json=new_payload)
-                self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+                redis_instance.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
         else:
             self.get_login_token()
             self.get_access_token()
 
     def get_target_url(self, url, params):
         self.get_access_token()
-        new_token = self.redis.get(f"{self.fleet}_token")
+        new_token = redis_instance.get(f"{self.fleet}_token")
         headers = {'Authorization': f'Bearer {new_token.decode()}'}
         response = requests.get(url, params=params, headers=headers)
         return response.json()
 
     def post_target_url(self, url, params, json):
         self.get_access_token()
-        new_token = self.redis.get(f"{self.fleet}_token")
+        new_token = redis_instance.get(f"{self.fleet}_token")
         headers = {'Authorization': f'Bearer {new_token.decode()}'}
         response = requests.post(url, json=json, params=params, headers=headers)
         return response.json()

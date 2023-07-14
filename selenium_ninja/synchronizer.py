@@ -1,7 +1,6 @@
 import logging
 import time
 
-import redis
 import requests
 import os
 import pickle
@@ -23,7 +22,6 @@ class RequestSynchronizer:
     def __init__(self, fleet=None, base_url=None):
         self.fleet = fleet
         self.base_url = base_url
-        self.redis = redis.Redis.from_url(os.environ["REDIS_URL"])
 
     def get_drivers_table(self):
         raise NotImplementedError

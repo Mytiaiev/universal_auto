@@ -1,6 +1,7 @@
-from auto.tasks import download_daily_report,get_car_efficiency
+from auto.tasks import download_daily_report, get_car_efficiency
+from scripts.redis_conn import redis_instance
 
 
 def run(*args):
-    download_daily_report.delay("2023-07-09")
-    get_car_efficiency.delay("2023-07-09")
+    redis_instance.set(f'running_{1}', 1)
+    print(redis_instance.get(f'running_{1}').decode())

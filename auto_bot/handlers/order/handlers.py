@@ -1,8 +1,10 @@
+import os
 import re
 import datetime
 import threading
 import time
 
+import redis
 from celery.signals import task_postrun
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
@@ -17,6 +19,7 @@ from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
 from auto_bot.handlers.order.static_text import *
+from scripts.redis_conn import redis_instance
 
 
 def continue_order(update, context):
@@ -404,7 +407,7 @@ def handle_callback_order(update, context):
                 order.client_message_id = client_msg
                 order.save()
                 try:
-                    context.user_data['running'] = True
+                    redis_instance.set(f'running_{order.id}', 1)
                     r = threading.Thread(target=send_map_to_client,
                                          args=(update, context, order, query.message.message_id, vehicle, client_msg),
                                          daemon=True)
@@ -434,7 +437,7 @@ def handle_order(update, context):
         order.save()
     elif data[0] == "Client_on_site":
         if not context.user_data.get('recheck'):
-            context.user_data['running'] = False
+            redis_instance.set(f'running_{order.id}', 0)
             ParkStatus.objects.create(driver=driver,
                                       status=Driver.WITH_CLIENT)
         message = order_info(order.id,
@@ -583,12 +586,12 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
         context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
         m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
     context.user_data['flag'] = True
-    while context.user_data.get('running'):
+    while redis_instance.get(f'running_{order.id}').decode():
         latitude, longitude = get_location_from_db(licence_plate)
-        if order.status_order in [Order.CANCELED, Order.WAITING]:
-            context.bot.stop_message_live_location(m.chat_id, m.message_id)
-            context.user_data['running'] = False
-            break
+        if order.status_order in (Order.CANCELED, Order.WAITING):
+            context.bot.stopMessageLiveLocation(m.chat_id, m.message_id)
+            redis_instance.set(f'running_{order.id}', 0)
+            return
         if context.user_data['flag']:
             distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
             if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
@@ -596,13 +599,17 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
                 context.bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                                       message_id=query_id,
                                                       reply_markup=inline_client_spot(pk=order.id))
-                context.bot.stop_message_live_location(m.chat_id, m.message_id)
+                context.bot.stopMessageLiveLocation(m.chat_id, m.message_id)
                 context.user_data['flag'] = False
-                break
+                redis_instance.set(f'running_{order.id}', 0)
+                return
         try:
             if order.chat_id_client:
-                m = context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
+                if redis_instance.get(f'running_{order.id}').decode():
+                    context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
                                                         longitude=longitude)
+                else:
+                    context.bot.stopMessageLiveLocation(m.chat_id, m.message_id)
             time.sleep(10)
         except Exception as e:
             logger.error(msg=str(e))
@@ -610,4 +617,5 @@ def send_map_to_client(update, context, order, query_id, licence_plate, client_m
     if order.chat_id_client:
         context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
         context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
+        return
 

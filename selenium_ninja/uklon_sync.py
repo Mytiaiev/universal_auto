@@ -14,6 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from app.models import NewUklonService, ParkSettings, NewUklonFleet, \
     Fleets_drivers_vehicles_rate, Fleet, Driver, Payments
 from auto import settings
+from scripts.redis_conn import redis_instance
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -121,8 +122,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         return items
 
     def wait_otp_code(self, user):
-        r = redis.Redis.from_url(os.environ["REDIS_URL"])
-        p = r.pubsub()
+        p = redis_instance.pubsub()
         p.subscribe(f'{user.phone_number} code')
         p.ping()
         otpa = []
@@ -136,12 +136,12 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                     otpa = list(f'{otp["data"]}')
                     otpa = list(filter(lambda d: d.isdigit(), otpa))
                     digits = [s.isdigit() for s in otpa]
-                    if not (digits) or (not all(digits)) or len(digits) != 4:
+                    if not digits or (not all(digits)) or len(digits) != 4:
                         continue
                     break
             except redis.ConnectionError as e:
                 self.logger.error(str(e))
-                p = r.pubsub()
+                p = redis_instance.pubsub()
                 p.subscribe(f'{user.phone_number} code')
             time.sleep(1)
         return otpa
