@@ -69,6 +69,8 @@ def raw_gps_handler(pk):
         return f'{ValueError} {err}'
 
 
+
+
 @app.task(bind=True)
 def download_daily_report(self, day=None):
     if not day:
@@ -372,9 +374,34 @@ def save_report_to_ninja_payment(self, day, partner='Ninja'):
             pass
 
 
+@app.task(bind=True)
+def upload_db(self, day):
+    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
+    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
+    UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
+    BoltRequest().save_report(day)
+    save_report_to_ninja_payment(day)
+    fleet_reports = Payments.objects.filter(report_from=day)
+    for driver in Driver.objects.all():
+        payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
+        if payments:
+            if not SummaryReport.objects.filter(report_from=day, full_name=driver, partner=driver.partner):
+                report = SummaryReport(report_from=day,
+                                       full_name=driver,
+                                       partner=driver.partner)
+                fields = ("total_rides", "total_distance", "total_amount_cash",
+                          "total_amount_on_card", "total_amount", "tips",
+                          "bonuses", "fee", "total_amount_without_fee", "fares",
+                          "cancels", "compensations", "refunds"
+                          )
+
+                for field in fields:
+                    setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
+                report.save()
+
+
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
-    global CHROME_DRIVER
     init_chrome_driver()
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())
@@ -394,3 +421,4 @@ def init_chrome_driver():
     global CHROME_DRIVER
     CHROME_DRIVER = SeleniumTools(session='Ninja', driver=True, remote=False,
                                   sleep=5, headless=True, profile='Tasks')
+
