@@ -16,12 +16,10 @@ from app.models import NewUklonService, ParkSettings, NewUklonPaymentsOrder, New
 from auto import settings
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
-from selenium_ninja.synchronizer import RequestSynchronizer
 from django.db import IntegrityError
 
 
-class UklonRequest(RequestSynchronizer):
-
+class UklonRequest(Synchronizer):
     def get_header(self) -> dict:
         type_token, token = self.redis.get(f"{self.id}{self.variables[1]}"), self.redis.get(f"{self.id}{self.variables[0]}")
         headers = {
@@ -215,16 +213,15 @@ class UklonRequest(RequestSynchronizer):
 
 
 class UklonSynchronizer(Synchronizer, SeleniumTools):
-
     def login(self):
         self.driver.get(NewUklonService.get_value('NEWUKLON_LOGIN_1'))
         if self.sleep:
             time.sleep(self.sleep)
         login = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_2'))
-        login.send_keys(ParkSettings.get_value("UKLON_NAME"))
+        login.send_keys(ParkSettings.get_value("UKLON_NAME", park=self.id))
         password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
         password.send_keys('')
-        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD"))
+        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD", park=self.id))
         self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
 
     def wait_otp_code(self, user):
@@ -374,15 +371,15 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
 
-    def download_weekly_report(self, day=None):
+    def download_weekly_report(self, day):
         try:
             report = NewUklonPaymentsOrder.objects.filter(
-                report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+                report_file_name=self.file_pattern(self.fleet, self.partner, day))
             if not report:
                 self.download_payments_order(day=day)
                 self.save_report(day=day)
                 report = NewUklonPaymentsOrder.objects.filter(
-                    report_file_name=self.file_pattern(self.fleet, self.partner, day=day))
+                    report_file_name=self.file_pattern(self.fleet, self.partner, day))
             return list(report)
         except Exception as err:
             self.logger.error(err)

@@ -1,11 +1,12 @@
 import os
 import time
+from functools import partial
+
 import pendulum
 from contextlib import contextmanager
 import datetime
 import pickle
 import redis
-
 import pytz
 from _decimal import Decimal
 
@@ -20,16 +21,18 @@ from django.core.cache import cache
 from selenium import webdriver
 from selenium.webdriver import chromium
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.chromium import remote_connection
 from selenium.webdriver.chromium.remote_connection import ChromiumRemoteConnection
+from selenium.webdriver.common.by import By
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Fleet, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Park
+    NinjaPaymentsOrder, UseOfCars, Fleets_drivers_vehicles_rate, NinjaFleet, CarEfficiency, Park, NewUklonService
 from django.db.models import Sum, IntegerField, FloatField, Avg
 from django.db.models.functions import Cast, Coalesce
 
 from scripts.conversion import convertion
 from auto.celery import app
-from selenium_ninja.bolt_sync import BoltRequest, BoltSynchronizer
+from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberSynchronizer
@@ -41,6 +44,30 @@ MEMCASH_LOCK_EXPIRE = 60 * 10
 MEMCASH_LOCK_AFTER_FINISHING = 10
 
 logger = get_task_logger(__name__)
+
+connect_to_redis = redis.Redis.from_url(os.environ["REDIS_URL"])
+
+
+def get_remote_selenium(park_pk):
+    driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
+                              desired_capabilities=webdriver.DesiredCapabilities.CHROME,
+                              )
+    session = driver.session_id
+    connect_to_redis.set(f"session_{park_pk}_d{session}", session)
+    park_session = connect_to_redis.get(f"session_{park_pk}")
+    driver.session_id = park_session.decode()
+    return driver, session
+
+
+def remove_session_driver_in_redis(driver, session, park_pk):
+    driver.session_id = session
+    driver.quit()
+    connect_to_redis.delete(f"session_{park_pk}_d{session}")
+
+
+def get_start_end(day):
+    start = end = day.format("YYYY-MM-DD")
+    return start, end
 
 
 @app.task(queue='non_priority')
@@ -82,19 +109,19 @@ def raw_gps_handler(id):
 
 
 @app.task(bind=True, queue='non_priority')
-def download_weekly_report(self):
-    report = download_reports()
-    return report
+def download_daily_report(self):
+    for park in Park.objects.all():
+        synchronize_drivers_task.apply_async(args=[park.pk])
 
 
 @app.task(bind=True, queue='non_priority')
-def download_daily_report(self):
-    # Yesterday
-    try:
-        day = pendulum.now().start_of('day').subtract(days=1)
-        download_reports(day)
-    except Exception as e:
-        logger.error(e)
+def download_report_d(park_pk):
+    start, end = get_start_end(pendulum.now().start_of('day').subtract(days=1))
+    BoltRequest(park_pk, 'Bolt').save_report(start, end)
+    UklonRequest(park_pk, 'Uklon').save_report(start, end)
+    driver, session = get_remote_selenium(park_pk)
+    UberSynchronizer(park_pk, 'Uber', driver).synchronize()
+    remove_session_driver_in_redis(driver, session, park_pk)
 
 
 @contextmanager
@@ -114,10 +141,10 @@ def update_driver_status(self):
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
                 for park in Park.objects.all():
-                    bolt_status = BoltRequest(park_id=park.pk, fleet='Bolt').get_drivers_status()
+                    bolt_status = BoltRequest(park.pk, 'Bolt').get_drivers_status()
                     logger.info(f'Bolt {bolt_status}')
 
-                    uklon_status = UklonRequest(park_id=park.pk, fleet='Uklon').get_driver_status()
+                    uklon_status = UklonRequest(park.pk, 'Uklon').get_driver_status()
                     logger.info(f'Uklon {uklon_status}')
 
                 # uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
@@ -161,6 +188,12 @@ def update_driver_status(self):
     except Exception as e:
         logger.error(e)
 
+        
+@app.task(bind=True, queue='non_priority')
+def download_weekly_report(self):
+    report = download_reports()
+    return report
+
 
 @app.task(bind=True, queue='non_priority') # need uber
 def update_driver_data(self):
@@ -168,13 +201,20 @@ def update_driver_data(self):
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
                 for park in Park.objects.all():
-                    BoltRequest(park.pk, 'Bolt').synchronize()
-                    UklonRequest(park.pk, 'Uklon').synchronize()
-                    UberSynchronizer(park.pk, 'Uber', CHROME_DRIVER.driver).try_to_execute('synchronize')
+                    synchronize_drivers_task.apply_async(args=[park.pk])
             else:
                 logger.info('passed')
     except Exception as e:
         logger.info(e)
+
+
+@app.task(bind=True, queue='non_priority')
+def synchronize_drivers_task(self, park_pk):
+    BoltRequest(park_pk, 'Bolt').synchronize()
+    UklonRequest(park_pk, 'Uklon').synchronize()
+    driver, session = get_remote_selenium(park_pk)
+    UberSynchronizer(park_pk, 'Uber', driver).synchronize()
+    remove_session_driver_in_redis(driver, session, park_pk)
 
 
 @app.task(bind=True, queue='non_priority')
@@ -356,14 +396,12 @@ def save_report_to_ninja_payment(day=None):
 
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
-    # global CHROME_DRIVER
     init_chrome_driver()
-    # sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-    #                          send_time_order.s(), queue='non_priority')
-    # sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
-    # sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
-    # sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), download_weekly_report.s(), queue='non_priority')
-    # sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
+                             send_time_order.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(), queue='non_priority')
+    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(), queue='non_priority')
     # sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(), queue='non_priority')
     # sender.add_periodic_task(crontab(minute=0, hour=6), send_daily_into_group.s(), queue='non_priority')
     # sender.add_periodic_task(crontab(minute=0, hour=4, day_of_week=1), save_report_to_ninja_payment.s(),
@@ -375,50 +413,10 @@ def setup_periodic_tasks(sender, **kwargs):
 
 
 def init_chrome_driver():
-    # global CHROME_DRIVER
-    # for park in Park.objects.all():
-    day = True
-    # a = SeleniumTools(partner=1, profile=f'Tasks_park.name', remote=True)
-    #
-    # # a = UberSynchronizer(1, 'bolt').try_to_execute('download_weekly_report')
-    # print('************************')
-    # # print(requests.get(/cookie"))
-    # print(a.driver)
-    # print(a.driver.get_cookies())
-    # a.driver.get('https://uklon.com.ua/ru/')
-    # print(1)
-    # print('************************')
-    # print(a.driver.get_cookies())
-    # print('########################')
-    # # try:
-    # #     chrome_session_url = f'http://172.19.0.3:4444/wd/hub/session/{k}'
-    # #     driver = webdriver.Remote(command_executor=chrome_session_url, desired_capabilities={})
-    # # except:
-    # #     chrome_session_url = f'http://172.19.0.2:4444/wd/hub/session/{k}'
-    # #     driver = webdriver.Remote(command_executor=chrome_session_url, desired_capabilities={})
-    # print('************************')
-    #
-    #
-    # print(22222)
-    # print(type(a.driver))
-    # print(type(a.driver.session_id))
-    # print(1)
-    # c = SeleniumTools(partner=3, remote=True, profile=f'Tasks_park.name2')
-    # print(c.driver)
-    # print(2)
-    # print(c.driver.session_id)
-    # d = SeleniumTools(partner=4, remote=True, profile=f'Tasks_park.name3')
-    # print(d.driver)
-
-
-def get_start_end(day=None):
-    if day:
-        start = end = day.format("YYYY-MM-DD")
-    else:
-        week = pendulum.now().start_of('week').subtract(weeks=1)
-        start = week.format("YYYY-MM-DD")
-        end = week.end_of('week').format("YYYY-MM-DD")
-    return start, end
+    for park in Park.objects.all():
+        driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
+                                  desired_capabilities=webdriver.DesiredCapabilities.CHROME)
+        connect_to_redis.set(f"session_{park.pk}", driver.session_id)
 
 
 def download_reports(day=None):

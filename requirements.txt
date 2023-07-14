@@ -26,6 +26,5 @@ celery==5.1.2
 folium
 shapely
 python-gettext
-translators
 gunicorn
 backports.zoneinfo

@@ -117,6 +117,8 @@ services:
       - "4444:4444"
     restart: always
     environment:
-      SE_NODE_SESSION_TIMEOUT: 600
-      SE_NODE_MAX_SESSIONS: 4
+      JAVA_OPTS: -Dwebdriver.chrome.whitelistedIps=
+      SE_NODE_SESSION_TIMEOUT: 999999999
+      SE_NODE_MAX_SESSIONS: 10
       SE_NODE_MAX_INSTANCES: 5
+      SE_START_VNC: "false"

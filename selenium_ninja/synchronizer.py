@@ -4,21 +4,14 @@ import pendulum
 import redis
 import requests
 import os
-import pickle
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common import TimeoutException, InvalidSessionIdException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from translators.server import tss
-
-from app.models import BoltService, Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Park
-
+from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Park
 
 LOGGER.setLevel(logging.WARNING)
-
-class RequestSynchronizer:
-    pass
 
 
 class Synchronizer:
@@ -28,23 +21,20 @@ class Synchronizer:
         self.id = park_id
         self.fleet = fleet
         self.redis = redis.Redis.from_url(os.environ["REDIS_URL"])
-
-        if chrome_driver is None:
-            super().__init__(partner=park_id, profile=f'Task_{park_id}', driver=True, remote=True, sleep=5, headless=True)
-        else:
-            super().__init__(partner=park_id, profile=f'Task_{park_id}', driver=False, remote=True, sleep=5, headless=True)
+        if chrome_driver is not None:
+            self.sleep = 5
             self.driver = chrome_driver
 
     def try_to_execute(self, func_name, *args, **kwargs):
         # if not self.driver.service.is_connectable():
         #     print('###################### Driver recreating... ########################')
-        #     self.driver = self.build_remote_driver()
+        #     self.driver = self.build_driver()
         #     time.sleep(self.sleep)
         # try:
         #     WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH, '//div')))
         # except InvalidSessionIdException:
         #     print('###################### Session recreating... ########################')
-        #     self.driver = self.build_remote_driver()
+        #     self.driver = self.build_driver()
         #     time.sleep(self.sleep)
         # except TimeoutException:
         #     pass
@@ -66,13 +56,11 @@ class Synchronizer:
                 self.driver.get(url)
                 time.sleep(self.sleep)
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                self.logger.info(f'Got the page without authorization {url}')
-            except (TimeoutException, FileNotFoundError):
+            except:
                 self.login()
                 time.sleep(self.sleep)
                 self.driver.get(url)
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                self.logger.info(f'Got the page using authorization {url}')
 
     def get_partner(self) -> object:
         park = Park.objects.select_related('partner').get(pk=self.id)
@@ -116,29 +104,48 @@ class Synchronizer:
                 self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
                 self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
 
-    def check_name(self, name, second_name, partner):
-        result = self.translate_text(f'{name} {second_name}', 'uk').split()
-        driver = Driver.objects.filter(name=result[0], second_name=result[1], partner=partner)
-        if not driver:
-            result = self.translate_text(f'{name} {second_name}', 'ru').split()
-        return result[0], result[1], partner
+    def get_driver_by_name(self, name, second_name, partner):
+        try:
+            return Driver.objects.get(name=name, second_name=second_name, partner=partner)
+        except Driver.MultipleObjectsReturned:
+            return Driver.objects.filter(name=name, second_name=second_name, partner=partner)[0]
+
+    def get_driver_by_phone_or_email(self, phone_number, email, partner):
+        try:
+            if phone_number:
+                return Driver.objects.get(phone_number__icontains=phone_number[-10::], partner=partner)
+            else:
+                raise Driver.DoesNotExist
+        except (Driver.MultipleObjectsReturned, Driver.DoesNotExist):
+            try:
+                return Driver.objects.get(email__icontains=email, partner=partner)
+            except Driver.MultipleObjectsReturned:
+                raise Driver.DoesNotExist
 
     def get_or_create_driver(self, **kwargs):
         name, s_name, phone, email = 'name', 'second_name', 'phone_number', 'email'
         try:
-            result = self.check_name(kwargs[name], kwargs[s_name], self.get_partner())
-            driver = Driver.objects.get(name=result[0],
-                                        second_name=result[1],
-                                        partner=result[2])
+            driver = self.get_driver_by_name(kwargs[name],
+                                             kwargs[s_name],
+                                             partner=self.get_partner())
         except Driver.DoesNotExist:
-            driver = Driver.objects.create(
-                name=kwargs[name],
-                second_name=kwargs[s_name],
-                phone_number=kwargs[phone],
-                email=kwargs[email],
-                partner=self.get_partner(),
-            )
-            driver.save()
+            try:
+                driver = self.get_driver_by_name(kwargs[s_name],
+                                                 kwargs[name],
+                                                 partner=self.get_partner())
+            except Driver.DoesNotExist:
+                try:
+                    driver = self.get_driver_by_phone_or_email(kwargs[phone],
+                                                               kwargs[email],
+                                                               partner=self.get_partner())
+                except Driver.DoesNotExist:
+                    driver = Driver.objects.create(name=kwargs[name],
+                                                   second_name=kwargs[s_name],
+                                                   phone_number=kwargs[phone],
+                                                   email=kwargs[email],
+                                                   partner=self.get_partner())
+                    driver.save()
+
         return driver
 
     def get_or_create_vehicle(self, **kwargs):
@@ -189,20 +196,18 @@ class Synchronizer:
 
     @staticmethod
     def translate_text(text, to_lang):
-        try:
-            return tss.google(text, to_language=to_lang, if_use_cn_host=False)
-        except Exception:
-            return text
+        translated_text = translate(text, to_lang)
+        return translated_text
 
-    # @staticmethod
-    # def start_report_interval(start_date):
-    #     date = pendulum.from_format(start_date, "YYYY-MM-DD")
-    #     return date.in_timezone("Europe/Kiev").start_of("day")
-    #
-    # @staticmethod
-    # def end_report_interval(end_date):
-    #     date = pendulum.from_format(end_date, "YYYY-MM-DD")
-    #     return date.in_timezone("Europe/Kiev").end_of("day")
+    @staticmethod
+    def start_report_interval(start_date):
+        date = pendulum.from_format(start_date, "YYYY-MM-DD")
+        return date.in_timezone("Europe/Kiev").start_of("day")
+
+    @staticmethod
+    def end_report_interval(end_date):
+        date = pendulum.from_format(end_date, "YYYY-MM-DD")
+        return date.in_timezone("Europe/Kiev").end_of("day")
 
     @staticmethod
     def parameters() -> dict:
@@ -211,5 +216,10 @@ class Synchronizer:
             'offset': '0',
         }
         return params
+
+    def r_dup(self, text):
+        if 'DUP' in text:
+            return text[:-3]
+        return text
 
 

@@ -20,17 +20,7 @@ from selenium_ninja.synchronizer import Synchronizer
 
 
 class UberSynchronizer(Synchronizer, SeleniumTools):
-
-    def login_v2(self, link=f"{UberService.get_value('UBER_LOGIN_V2_1')}"):
-        self.driver.get(link)
-        self.login_form(UberService.get_value('UBER_LOGIN_V2_2.1'), UberService.get_value('UBER_LOGIN_V2_2.2'), By.ID)
-        self.force_opt_form()
-        self.otp_code_v2()
-        # self.otp_code_v1()
-        self.password_form(UberService.get_value('UBER_LOGIN_V2_3.1'), UberService.get_value('UBER_LOGIN_V2_3.2'),
-                           By.ID)
-
-    def login_v3(self, link=f"{UberService.get_value('UBER_LOGIN_V3_1')}"):
+    def login(self, link=f"{UberService.get_value('UBER_LOGIN_V3_1')}"):
         self.driver.get(link)
         self.login_form(UberService.get_value('UBER_LOGIN_V3_2.1'), UberService.get_value('UBER_LOGIN_V3_2.2'), By.ID)
         try:
@@ -48,19 +38,10 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         el = WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_1'))))
         el.clear()
-        el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
+        el.send_keys(ParkSettings.get_value("UBER_PASSWORD", park=self.id))
         el = WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_2'))))
         el.click()
-
-    # def login(self, link=f"{UberService.get_value('UBER_LOGIN_1')}"):
-    #     self.driver.get(link)
-    #     self.login_form(UberService.get_value('UBER_LOGIN_2.1'), UberService.get_value('UBER_LOGIN_2.2'), By.CLASS_NAME)
-    #     self.otp_code_v1()
-    #     self.password_form(UberService.get_value('UBER_LOGIN_3.1'), UberService.get_value('UBER_LOGIN_3.2'),
-    #                        By.CLASS_NAME)
-    #     if self.sleep:
-    #         time.sleep(self.sleep)
 
     def click_uber_calendar(self, month, year, day):
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_11')).click()
@@ -95,12 +76,12 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         except:
             pass
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_6')).click()
-        self.click_uber_calendar(self.start_report_interval(day=day).strftime("%B"),
-                                 self.start_report_interval(day=day).strftime("%Y"),
-                                 self.start_report_interval(day=day).day)
-        self.click_uber_calendar(self.end_report_interval(day=day).strftime("%B"),
-                                 self.end_report_interval(day=day).strftime("%Y"),
-                                 self.end_report_interval(day=day).day)
+        self.click_uber_calendar(self.start_report_interval(start_date=day).strftime("%B"),
+                                 self.start_report_interval(start_date=day).strftime("%Y"),
+                                 self.start_report_interval(start_date=day).day)
+        self.click_uber_calendar(self.end_report_interval(end_date=day).strftime("%B"),
+                                 self.end_report_interval(end_date=day).strftime("%Y"),
+                                 self.end_report_interval(end_date=day).day)
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
         return f'{self.payments_order_file_name(self.fleet, pattern, day=day)}'
 
@@ -125,15 +106,16 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         # else:
         #     self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
 
-    def save_report(self, day=None):
+    def save_report(self, day):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day=day))
-        if self.payments_order_file_name(self.fleet, self.partner, day=day) is not None:
+        file_order = self.payments_order_file_name(self.fleet, self.park_name(), day)
+        self.logger.info(self.file_pattern(self.fleet, self.park_name(), day))
+        if file_order is not None:
             try:
-                with open(self.payments_order_file_name(self.fleet, self.partner, day=day), encoding="utf-8") as file:
+                with open(file_order, encoding="utf-8") as file:
                     reader = csv.reader(file)
                     next(reader)  # Advance past the header
                     for row in reader:
@@ -142,9 +124,9 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                         if row[3] is None:
                             continue
                         order = UberPaymentsOrder(
-                            report_from=self.start_report_interval(day=day),
-                            report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
+                            report_from=self.start_report_interval(day),
+                            report_to=self.end_report_interval(day),
+                            report_file_name=file_order,
                             driver_uuid=row[0],
                             first_name=row[1],
                             last_name=row[2],
@@ -153,7 +135,8 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             returns=row[5] or 0,
                             total_amount_cach=row[6] or 0,
                             transfered_to_bank=row[7] or 0,
-                            tips=row[8] or 0)
+                            tips=row[8] or 0,
+                            partner=self.get_partner(),)
                         try:
                             order.save()
                         except IntegrityError:
@@ -162,9 +145,9 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
 
                     if not items:
                         order = UberPaymentsOrder(
-                            report_from=self.start_report_interval(day=day),
-                            report_to=self.end_report_interval(day=day),
-                            report_file_name=self.payments_order_file_name(self.fleet, self.partner, day=day),
+                            report_from=self.start_report_interval(day),
+                            report_to=self.end_report_interval(day),
+                            report_file_name=file_order,
                             driver_uuid='00000000-0000-0000-0000-000000000000',
                             first_name='',
                             last_name='',
@@ -173,7 +156,8 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             returns=0,
                             total_amount_cach=0,
                             transfered_to_bank=0,
-                            tips=0)
+                            tips=0,
+                            partner=self.get_partner(),)
                         try:
                             order.save()
                         except IntegrityError:
@@ -283,21 +267,20 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 EC.presence_of_element_located((By.ID, UberService.get_value('UBER_FORCE_OPT_FORM'))))
             self.driver.find_element(By.ID, UberService.get_value('UBER_FORCE_OPT_FORM')).click()
         except Exception as e:
-            # self.logger.error(str(e))
             pass
 
     def password_form(self, id, button, selector):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
             el = self.driver.find_element(By.ID, id)
-            el.send_keys(ParkSettings.get_value("UBER_PASSWORD"))
+            el.send_keys(ParkSettings.get_value("UBER_PASSWORD", park=self.id))
             self.driver.find_element(selector, button).click()
         except Exception as e:
             self.logger.error(str(e))
 
     def login_form(self, id, button, selector):
         element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-        element.send_keys(ParkSettings.get_value("UBER_NAME"))
+        element.send_keys(ParkSettings.get_value("UBER_NAME", park=self.id))
         e = self.driver.find_element(selector, button)
         e.click()
 
@@ -318,11 +301,6 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         send_data.click()
         if self.sleep:
             time.sleep(self.sleep)
-
-    def login(self):
-        # """ Don't login in UberSynchronizer cause this instance runs periodically"""
-        self.login_v3()
-        pass
 
     def get_all_vehicles(self):
         vehicles = {}
@@ -395,11 +373,11 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                     vin_code = ''
             except TimeoutException:
                 break
-            s_name = self.split_name(name)
+            s_name = name.split()
             drivers.append({
                 'fleet_name': self.fleet,
-                'name': s_name[0],
-                'second_name': s_name[1],
+                'name': self.r_dup(s_name[0]),
+                'second_name': self.r_dup(s_name[1]),
                 'email': email if email else '',
                 'phone_number': f"{phone_number[:4]}{phone_number[5:]}",
                 'driver_external_id': driver_external_id,
@@ -408,6 +386,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 'vehicle_name': vehicle_name,
                 'vin_code': vin_code,
             })
+        print(drivers)
         return drivers
 
     def get_driver_status_from_map(self, search_text):
