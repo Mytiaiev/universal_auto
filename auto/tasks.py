@@ -137,56 +137,57 @@ def memcache_lock(lock_id, oid):
 
 @app.task(bind=True, queue='non_priority')
 def update_driver_status(self):
-    try:
-        with memcache_lock(self.name, self.app.oid) as acquired:
-            if acquired:
-                for park in Park.objects.all():
-                    bolt_status = BoltRequest(park.pk, 'Bolt').get_drivers_status()
-                    logger.info(f'Bolt {bolt_status}')
-
-                    uklon_status = UklonRequest(park.pk, 'Uklon').get_driver_status()
-                    logger.info(f'Uklon {uklon_status}')
-
-                # uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
-                # logger.info(f'Uber {uber_status}')
-
-                status_online = set()
-                status_with_client = set()
-                if bolt_status is not None:
-                    status_online = status_online.union(set(bolt_status['wait']))
-                    status_with_client = status_with_client.union(set(bolt_status['with_client']))
-                if uklon_status is not None:
-                    status_online = status_online.union(set(uklon_status['wait']))
-                    status_with_client = status_with_client.union(set(uklon_status['width_client']))
-                # if uber_status is not None:
-                #     status_online = status_online.union(set(uber_status['online']))
-                #     status_width_client = status_width_client.union(set(uber_status['width_client']))
-                drivers = Driver.objects.filter(deleted_at=None)
-                for driver in drivers:
-                    last_status = timezone.localtime() - timezone.timedelta(minutes=2)
-                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
-                    work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
-                                                          created_at__date=timezone.now().date(), end_at=None)
-                    if work_ninja or (driver.name, driver.second_name) in status_online:
-                        current_status = Driver.ACTIVE
-                    else:
-                        current_status = Driver.OFFLINE
-                    if park_status and park_status.status != Driver.ACTIVE:
-                        current_status = park_status.status
-                    if (driver.name, driver.second_name) in status_with_client:
-                        current_status = Driver.WITH_CLIENT
-                    # if (driver.name, driver.second_name) in status['wait']:
-                    #     current_status = Driver.ACTIVE
-                    driver.driver_status = current_status
-                    driver.save()
-                    if current_status != Driver.OFFLINE:
-                        logger.info(f'{driver}: {current_status}')
-
-            else:
-                logger.info('passed')
-
-    except Exception as e:
-        logger.error(e)
+    pass
+    # try:
+    #     with memcache_lock(self.name, self.app.oid) as acquired:
+    #         if acquired:
+    #             for park in Park.objects.all():
+    #                 # bolt_status = BoltRequest(park.pk, 'Bolt').get_drivers_status()
+    #                 # logger.info(f'Bolt {bolt_status}')
+    #                 #
+    #                 # uklon_status = UklonRequest(park.pk, 'Uklon').get_driver_status()
+    #                 # logger.info(f'Uklon {uklon_status}')
+    #
+    #             # uber_status = UberSynchronizer(UBER_CHROME_DRIVER.driver).try_to_execute('get_driver_status')
+    #             # logger.info(f'Uber {uber_status}')
+    #
+    #             status_online = set()
+    #             status_with_client = set()
+    #             if bolt_status is not None:
+    #                 status_online = status_online.union(set(bolt_status['wait']))
+    #                 status_with_client = status_with_client.union(set(bolt_status['with_client']))
+    #             if uklon_status is not None:
+    #                 status_online = status_online.union(set(uklon_status['wait']))
+    #                 status_with_client = status_with_client.union(set(uklon_status['width_client']))
+    #             # if uber_status is not None:
+    #             #     status_online = status_online.union(set(uber_status['online']))
+    #             #     status_width_client = status_width_client.union(set(uber_status['width_client']))
+    #             drivers = Driver.objects.filter(deleted_at=None)
+    #             for driver in drivers:
+    #                 last_status = timezone.localtime() - timezone.timedelta(minutes=2)
+    #                 park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
+    #                 work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
+    #                                                       created_at__date=timezone.now().date(), end_at=None)
+    #                 if work_ninja or (driver.name, driver.second_name) in status_online:
+    #                     current_status = Driver.ACTIVE
+    #                 else:
+    #                     current_status = Driver.OFFLINE
+    #                 if park_status and park_status.status != Driver.ACTIVE:
+    #                     current_status = park_status.status
+    #                 if (driver.name, driver.second_name) in status_with_client:
+    #                     current_status = Driver.WITH_CLIENT
+    #                 # if (driver.name, driver.second_name) in status['wait']:
+    #                 #     current_status = Driver.ACTIVE
+    #                 driver.driver_status = current_status
+    #                 driver.save()
+    #                 if current_status != Driver.OFFLINE:
+    #                     logger.info(f'{driver}: {current_status}')
+    #
+    #         else:
+    #             logger.info('passed')
+    #
+    # except Exception as e:
+    #     logger.error(e)
 
 
 @app.task(bind=True, queue='non_priority')
