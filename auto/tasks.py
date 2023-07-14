@@ -474,21 +474,26 @@ def get_car_efficiency(driver, day=None):
                                               driver=driver)
     if not efficiency:
         try:
-            total_km = UaGpsSynchronizer().total_per_day(driver, day)
+            distance_vehicle = UaGpsSynchronizer().total_per_day(driver, day)
+            distance, vehicle = distance_vehicle[0], distance_vehicle[1]
             total_kasa = download_reports(day)[2]
-            if total_km and total_kasa.get(driver.full_name()):
-                result = Decimal(total_kasa[driver.full_name()])/Decimal(total_km)
+            if distance and total_kasa.get(driver.full_name()):
+                result = Decimal(total_kasa[driver.full_name()])/Decimal(distance)
                 CarEfficiency.objects.create(start_report=day.start_of('day'),
                                              end_report=day.end_of('day'),
                                              driver=driver,
-                                             mileage=total_km,
-                                             efficiency=result)
+                                             total_kasa=total_kasa[driver.full_name()],
+                                             mileage=distance,
+                                             efficiency=result,
+                                             vehicle=vehicle)
             else:
                 CarEfficiency.objects.create(start_report=day.start_of('day'),
                                              end_report=day.end_of('day'),
                                              driver=driver,
-                                             mileage=total_km or 0,
-                                             efficiency=0)
+                                             total_kasa=total_kasa.get(driver.full_name()) or 0,
+                                             mileage=distance or 0,
+                                             efficiency=0,
+                                             vehicle=vehicle)
         except Exception as e:
             logger.info(e)
 

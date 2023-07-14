@@ -215,7 +215,7 @@ class BoltPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     report_from = models.DateTimeField(verbose_name='Репорт з')
     report_to = models.DateTimeField(verbose_name='Репорт по')
     report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
-    driver_full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
+    driver_full_name = models.CharField(max_length=50, verbose_name='ПІ водія')
     mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор водія')
     range_string = models.CharField(max_length=50, verbose_name='Період')
     total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальний тариф')
@@ -271,8 +271,8 @@ class UberPaymentsOrder(models.Model, metaclass=GenericPaymentsOrder):
     report_to = models.DateTimeField(verbose_name='Репорт по')
     report_file_name = models.CharField(max_length=255, verbose_name='Назва файла')
     driver_uuid = models.UUIDField(verbose_name='Унікальний індитифікатор водія')
-    first_name = models.CharField(max_length=255, verbose_name='Імя водія')
-    last_name = models.CharField(max_length=255, verbose_name='Прізвище водія')
+    first_name = models.CharField(max_length=50, verbose_name='Імя водія')
+    last_name = models.CharField(max_length=50, verbose_name='Прізвище водія')
     total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід')
     total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід - Чистий тариф')
     total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Виплати')
@@ -733,7 +733,6 @@ class StatusChange(models.Model):
 
 
 class Fleets_drivers_vehicles_rate(models.Model):
-
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, verbose_name='Автомобіль')
@@ -1253,9 +1252,11 @@ def admin_image_preview(image, default_image=None):
 class CarEfficiency(models.Model):
     start_report = models.DateTimeField(verbose_name='Звіт з')
     end_report = models.DateTimeField(verbose_name='Звіт по')
-    driver = models.CharField(null=True, max_length=25, verbose_name='Водій авто')
+    total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
+    driver = models.CharField(null=True, max_length=50, verbose_name='Водій авто')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
+    vehicle = models.CharField(max_length=255, verbose_name='Автомобіль', null=True)
 
     class Meta:
         verbose_name = 'Ефективність автомобіля'
@@ -1334,3 +1335,9 @@ class UaGpsService(Service):
 
 class UberService(Service):
     pass
+
+
+class Dashboard(models.Model):
+    class Meta:
+        verbose_name = 'Інформаційна панель автопарку'
+        verbose_name_plural = 'Інформаційна панель автопарку'

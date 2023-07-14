@@ -20,6 +20,7 @@ class SeleniumTools:
         self.remote = remote
         self.session = session
         self.sleep = sleep
+
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
         if driver:
@@ -88,6 +89,7 @@ class SeleniumTools:
         options.add_argument('--enable-profile-shortcut-manager')
         options.add_argument(f'--user-data-dir=home/seluser/{self.profile}')
         options.add_argument(f'--profile-directory={self.profile}')
+
         options.add_argument('--disable-gpu')
         options.add_argument("--no-sandbox")
         options.add_argument("--start-maximized")
