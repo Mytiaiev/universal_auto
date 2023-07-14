@@ -228,10 +228,10 @@ def effective_vehicle(period, vehicle):
     start_date, end_date = get_week_dates(period=period)
     car_effective = []
 
-    effective_objects = CarEfficiency.objects.filter(vehicle=vehicle, start_report__range=(start_date, end_date))
-    vehicle_effective = effective_objects.exclude(efficiency=0)
+    effective_objects = CarEfficiency.objects.filter(
+        vehicle=vehicle, start_report__range=(start_date, end_date)).order_by('start_report')
 
-    for effective in vehicle_effective:
+    for effective in effective_objects:
         date_effective = effective.start_report
         name = effective.driver
         total_amount = effective.total_kasa
