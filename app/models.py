@@ -487,7 +487,6 @@ class StatusChange(models.Model):
 
 
 class Fleets_drivers_vehicles_rate(models.Model):
-
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, verbose_name='Автомобіль')

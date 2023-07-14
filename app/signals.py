@@ -23,7 +23,9 @@ def create_park_settings(sender, instance, created, **kwargs):
         keys_to_save = ('UBER_NAME', 'UBER_PASSWORD',
                         'BOLT_NAME', 'BOLT_PASSWORD',
                         'UKLON_NAME', 'UKLON_PASSWORD',
-                        'UKLON_TOKEN', 'DRIVERS_CHAT')
+                        'UKLON_TOKEN', 'DRIVERS_CHAT',
+                        'ID_PARK', 'CLIENT_ID',
+                        'CLIENT_SECRET')
 
         for key in keys_to_save:
             response = settings[key]

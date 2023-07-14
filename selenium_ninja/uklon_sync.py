@@ -1,106 +1,127 @@
-import csv
 import datetime
-import os
 import time
-
+import requests
 import redis
-from django.db import IntegrityError
-from selenium.common import TimeoutException, WebDriverException
-from selenium.webdriver import Keys
+from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
 from app.models import NewUklonService, ParkSettings, NewUklonFleet, \
-    Fleets_drivers_vehicles_rate, Fleet, Driver, Payments
+    Fleets_drivers_vehicles_rate, Fleet, Driver, Payments, Service
 from auto import settings
 from scripts.redis_conn import redis_instance
 from selenium_ninja.driver import SeleniumTools, clickandclear
 from selenium_ninja.synchronizer import Synchronizer
+from django.db import IntegrityError
 
 
-class UklonSynchronizer(Synchronizer, SeleniumTools):
+class UklonRequest(Synchronizer):
+    def get_header(self) -> dict:
+        type_token, token = self.redis.get(f"{self.id}{self.variables[1]}"), self.redis.get(f"{self.id}{self.variables[0]}")
+        headers = {
+            'Authorization': f'{type_token.decode()} {token.decode()}'
+         }
+        return headers
 
-    def login(self):
-        self.driver.get(NewUklonService.get_value('NEWUKLON_LOGIN_1'))
-        if self.sleep:
-            time.sleep(self.sleep)
-        login = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_2'))
-        login.send_keys(ParkSettings.get_value("UKLON_NAME"))
-        password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
-        password.send_keys('')
-        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD"))
-        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
+    def park_payload(self) -> dict:
+        payload = {
+            'client_id': ParkSettings.get_value(key='CLIENT_ID', park=self.id),
+            'client_secret': ParkSettings.get_value(key='CLIENT_SECRET', park=self.id),
+            'contact': ParkSettings.get_value(key='UKLON_NAME', park=self.id),
+            'device_id': "38c13dc5-2ef3-4637-99f5-8de26b2e8216",
+            'grant_type': "password_mfa",
+            'password': ParkSettings.get_value(key='UKLON_PASSWORD', park=self.id),
+        }
+        return payload
 
-    def download_payments_order(self, day=None):
-        url = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_1')
-        xpath = NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_2')
-        self.get_target_element_of_page(url, xpath)
-        self.driver.find_element(By.XPATH, xpath).click()
-        if day:
-            if self.sleep:
-                time.sleep(self.sleep)
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_3')))).click()
-            input_data = WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_4'))))
-            format_day = day.strftime("%d.%m.%Y")
-            input_data.click()
-            input_data.send_keys(format_day + Keys.TAB + format_day)
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_5')))).click()
-        else:
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_6')))).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_DOWNLOAD_PAYMENTS_ORDER_7')).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        if self.remote:
-            self.get_last_downloaded_file_frome_remote(save_as=self.file_pattern(self.fleet, self.partner, day))
-        else:
-            self.get_last_downloaded_file(save_as=self.file_pattern(self.fleet, self.partner, day))
+    def create_session(self):
+        response = requests.post(Service.get_value('UKLON_SESSION'), json=self.park_payload()).json()
+        self.redis.set(f"{self.id}{self.variables[0]}", response["access_token"])
+        self.redis.set(f"{self.id}{self.variables[1]}", response["token_type"])
+
+    def response_data(self, url: str = None, params: dict = None,  pjson: dict = None) -> dict:
+        if not (self.redis.exists(f"{self.id}{self.variables[1]}") and self.redis.get(f"{self.id}{self.variables[0]}")):
+            self.create_session()
+        while True:
+            response = requests.get(
+                url=url,
+                headers=self.get_header(),
+                json=pjson,
+                params=params,
+            )
+            if response.status_code in (401, 403):
+                self.create_session()
+            else:
+                break
+        return response.json()
+
+    def to_float(self, number: int, div=100) -> float:
+        return float("{:.2f}".format(number / div))
+
+    def find_value(self, data: dict, *args) -> float:
+        """Search value if args not False and return float"""
+        nested_data = data
+        for key in args:
+            if key in nested_data:
+                nested_data = nested_data[key]
+            else:
+                return float(0)
+
+        return self.to_float(nested_data)
+
+    def find_value_str(self, data: dict, *args) -> str:
+        """Search value if args not False and return str"""
+        nested_data = data
+
+        for key in args:
+            if key in nested_data:
+                nested_data = nested_data[key]
+            else:
+                return ''
+
+        return nested_data
+
+    def download_report(self, day):
+        report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                         partner=self.get_partner())
+        return list(report)
 
     def save_report(self, day):
-        if self.sleep:
-            time.sleep(self.sleep)
-        items = []
-
-        self.logger.info(self.file_pattern(self.fleet, self.partner, day))
-
-        if self.payments_order_file_name(self.fleet, self.partner, day) is not None:
-            with open(self.payments_order_file_name(self.fleet, self.partner, day), encoding="utf-8") as file:
-                reader = csv.reader(file)
-                next(reader)
-                for row in reader:
-                    order = Payments(
-                        report_from=day,
-                        vendor_name=self.fleet,
-                        full_name=row[0],
-                        driver_id=row[1],
-                        total_rides=float((row[2] or '0').replace(',', '')),
-                        total_distance=float((row[3] or '0').replace(',', '')),
-                        total_amount_cash=float((row[4] or '0').replace(',', '')),
-                        total_amount_on_card=float((row[5] or '0').replace(',', '')),
-                        total_amount=float((row[7] or '0').replace(',', '')),
-                        tips=float((row[8] or '0').replace(',', '')),
-                        bonuses=float((row[9] or '0').replace(',', '')),
-                        fares=float((row[10] or '0').replace(',', '')),
-                        fee=float((row[11] or '0').replace(',', '')),
-                        total_amount_without_fee=float((row[12] or '0').replace(',', '')))
-                    try:
-                        order.save()
-                    except IntegrityError:
-                        pass
-                    items.append(order)
-
+        if self.download_report(day):
+            return self.download_report(day)
+        param = self.parameters()
+        param['dateFrom'] = str(self.start_report_interval(day).int_timestamp)
+        param['dateTo'] = str(self.end_report_interval(day).int_timestamp)
+        url = f"{Service.get_value('UKLON_3')}{ParkSettings.get_value(key='ID_PARK', park=self.id)}"
+        url += Service.get_value('UKLON_4')
+        data = self.response_data(url=url, params=param)['items']
+        if data:
+            for i in data:
+                order = Payments(
+                    report_from=self.start_report_interval(day).date(),
+                    vendor_name=self.fleet,
+                    full_name=f"{i['driver']['last_name']} {i['driver']['first_name']}",
+                    driver_id=str(i['driver']['signal']),
+                    total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
+                    total_distance=float(
+                        0) if 'total_distance_meters' not in i else self.to_float(i['total_distance_meters'], div=1000),
+                    total_amount_cach=self.find_value(i, *('profit', 'order', 'cash', 'amount')),
+                    total_amount_on_card=self.find_value(i, *('profit', 'order', 'wallet', 'amount')),
+                    total_amount=self.find_value(i, *('profit', 'order', 'total', 'amount')),
+                    tips=self.find_value(i, *('profit', 'tips', 'amount')),
+                    bonuses=float(0),
+                    fares=float(0),
+                    fee=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
+                    total_amount_without_fee=self.find_value(i, *('profit', 'total', 'amount')),
+                    partner=self.get_partner(),
+                )
+                try:
+                    order.save()
+                except IntegrityError:
+                    pass
         else:
             order = Payments(
-                report_from=day,
+                report_from=self.start_report_interval(day).date(),
                 vendor_name=self.fleet,
                 full_name='',
                 driver_id='',
@@ -113,13 +134,85 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                 bonuses=0,
                 fares=0,
                 fee=0,
-                total_amount_without_fee=0)
+                total_amount_without_fee=0,
+                partner=self.get_partner())
             try:
                 order.save()
             except IntegrityError:
                 pass
 
-        return items
+        return self.download_report(day)
+
+    def get_driver_status(self):
+        first_key, second_key = 'width_client', 'wait'
+        drivers = {
+                first_key: [],
+                second_key: [],
+            }
+        url = f"{Service.get_value('UKLON_5')}{ParkSettings.get_value(key='ID_PARK', park=self.id)}"
+        url += Service.get_value('UKLON_6')
+        data = self.response_data(url=url, params=self.parameters())
+
+        for driver in data['drivers']:
+            first_data = (driver['last_name'], driver['first_name'])
+            second_data = (driver['first_name'], driver['last_name'])
+            if driver['status'] == 'Active':
+                drivers[f'{second_key}'].append(first_data)
+                drivers[f'{second_key}'].append(second_data)
+            elif driver['status'] == 'OrderExecution':
+                drivers[f'{first_key}'].append(first_data)
+                drivers[f'{first_key}'].append(second_data)
+        return drivers
+
+    def get_drivers_table(self):
+        drivers = []
+        param = self.parameters()
+        param['name'], param['phone'], param['status'], param['limit'] = ('', '', 'All', '30')
+        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', park=self.id)}"
+        url_1 = url + Service.get_value('UKLON_6')
+        url_2 = url + Service.get_value('UKLON_2')
+
+        all_drivers = self.response_data(url=url_1, params=param)
+
+        for driver in all_drivers['items']:
+            pay_cash, vehicle_name, vin_code = True, '', ''
+            if driver['restrictions']:
+                pay_cash = False if 'Cash' in driver['restrictions'][0]['restriction_types'] else True
+
+            elif self.find_value_str(driver, *('selected_vehicle', )):
+                vehicle_name = f"{driver['selected_vehicle']['make']} {driver['selected_vehicle']['model']}"
+                vin_code = self.response_data(f"{url_2}/{driver['selected_vehicle']['vehicle_id']}")
+                vin_code = vin_code.get('vin_code', '')
+
+            email = self.response_data(url=f"{url_1}/{driver['id']}")
+
+            drivers.append({
+                'fleet_name': self.fleet,
+                'name': driver['first_name'],
+                'second_name': driver['last_name'],
+                'email': email.get('email', ''),
+                'phone_number': f"+{driver['phone']}",
+                'driver_external_id': driver['signal'],
+                'pay_cash': pay_cash,
+                'licence_plate': self.find_value_str(driver, *('selected_vehicle', 'license_plate')),
+                'vehicle_name': vehicle_name,
+                'vin_code': vin_code,
+            })
+
+        return drivers
+
+
+class UklonSynchronizer(Synchronizer, SeleniumTools):
+    def login(self):
+        self.driver.get(NewUklonService.get_value('NEWUKLON_LOGIN_1'))
+        if self.sleep:
+            time.sleep(self.sleep)
+        login = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_2'))
+        login.send_keys(ParkSettings.get_value("UKLON_NAME", park=self.id))
+        password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
+        password.send_keys('')
+        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD", park=self.id))
+        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
 
     def wait_otp_code(self, user):
         p = redis_instance.pubsub()
@@ -145,125 +238,6 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                 p.subscribe(f'{user.phone_number} code')
             time.sleep(1)
         return otpa
-
-    def get_drivers_table(self):
-        drivers = []
-        url = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_1')
-        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_2')
-        self.get_target_element_of_page(url, xpath)
-        driver_urls = []
-        i = 0
-        while True:
-            i += 1
-            try:
-                xpath = f'{NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_3.1")}{i}{NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_3.2")}'
-                url = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("href")
-                driver_urls.append(url)
-            except TimeoutException:
-                break
-        for url in driver_urls:
-            self.driver.get(url)
-            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_4')
-            self.get_target_element_of_page(url, xpath)
-            name = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_5')
-            email = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_6')
-            phone_number = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).text
-            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_7')
-            driver_external_id = WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH, xpath))).text
-            try:
-                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_8')
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath))).click()
-                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_9')
-                pay_cash = 'true' in WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("aria-checked")
-            except TimeoutException:
-                pay_cash = False
-            licence_plate = ''
-            vehicle_name = ''
-            vin_code = ''
-            try:
-                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_10')
-                vehicle_url = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).get_attribute("href")
-                self.driver.get(vehicle_url)
-                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_11')
-                self.get_target_element_of_page(vehicle_url, xpath)
-                licence_plate = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_12')
-                vehicle_name = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_13')
-                vin_code = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-            except TimeoutException:
-                pass
-            s_name = self.split_name(name)
-            drivers.append({
-                'fleet_name': self.fleet,
-                'name': s_name[0],
-                'second_name': s_name[1],
-                'email': self.validate_email(email),
-                'phone_number': self.validate_phone_number(phone_number),
-                'driver_external_id': driver_external_id,
-                'pay_cash': pay_cash,
-                'licence_plate': licence_plate,
-                'vehicle_name': vehicle_name,
-                'vin_code': vin_code,
-            })
-        return drivers
-
-    def get_driver_status_from_map(self, search_text):
-        raw_data = []
-        self.driver.refresh()
-        xpath = f"{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_1')}[{search_text}]"
-        status_box = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-        count_drivers = status_box.find_element(
-            By.XPATH, NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.0')).text
-        if int(count_drivers):
-            status_box.click()
-        else:
-            return raw_data
-        i = 0
-        while i < int(count_drivers):
-            i += 1
-            try:
-                el = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.1')
-                xpath = f"{el}{i}{NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_2.2')}"
-                driver_name = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-            except TimeoutException:
-                return raw_data
-            name_list = [x for x in driver_name.split(' ') if len(x) > 0]
-            name, second_name = '', ''
-            try:
-                name, second_name = name_list[0], name_list[1]
-            except IndexError:
-                pass
-            raw_data.append((name, second_name))
-            raw_data.append((second_name, name))
-        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_FROM_MAP_3')
-        WebDriverWait(self.driver, self.sleep).until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
-        return raw_data
-
-    def get_driver_status(self):
-        try:
-            url = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_1')
-            xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVER_STATUS_2')
-
-            self.get_target_element_of_page(url, xpath)
-            return {
-                'width_client': self.get_driver_status_from_map('1'),
-                'wait': self.get_driver_status_from_map('2')
-            }
-        except WebDriverException as err:
-            self.logger.error(err)
 
     def disable_cash(self, pk, enable):
         url = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_1')
@@ -385,17 +359,6 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
         jobapplication.status_uklon = datetime.datetime.now().date()
         jobapplication.save()
-
-    def download_weekly_report(self, day=None):
-        try:
-            report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
-            if not report:
-                self.download_payments_order(day=day)
-                self.save_report(day=day)
-                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
-            return list(report)
-        except Exception as err:
-            self.logger.error(err)
 
     def detaching_the_driver_from_the_car(self, licence_plate):
         self.driver.get(NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_1'))

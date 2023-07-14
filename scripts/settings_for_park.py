@@ -33,5 +33,8 @@ settings = {
     'SEARCH_TIME': ('180', 'Час пошуку водія (с)'),
     'MINIMUM_PRICE_RADIUS': ('30', 'Мінімальна ціна за радіус (грн)'),
     'MAXIMUM_PRICE_RADIUS': ('1000', 'Максимальна ціна за радіус (грн)'),
-    'MANAGER_ID': ('515224934', 'Тимчасово id менеджера')
+    'MANAGER_ID': ('515224934', 'Тимчасово id менеджера'),
+    'ID_PARK': ('Enter ID', 'Індифікатор парка з url'),
+    'CLIENT_ID': ('Enter ID', 'Payload з Uklon'),
+    'CLIENT_SECRET': ('Enter Secret', 'Payload з Uklon'),
 }

@@ -15,24 +15,18 @@ from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException
 
 
-def clickandclear(element):
-    element.click()
-    element.clear()
-
-
 class SeleniumTools:
-    def __init__(self, session, driver=True, remote=None,
-                 partner="Ninja", sleep=None, headless=True, profile=None):
-        self.session_file_name = session
+    def __init__(self, partner, profile, session, remote=True, driver=True, sleep=5, headless=True):
         self.partner = partner
-        self.sleep = sleep
+        self.profile = profile
         self.remote = remote
-        self.profile = 'Profile 1' if profile is None else profile
+        self.session = session
+        self.sleep = sleep
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
         if driver:
             if self.remote:
-                self.driver = self.build_remote_driver(headless)
+                self.driver = self.build_remote_driver()
             else:
                 self.driver = self.build_driver(headless)
 
@@ -42,7 +36,11 @@ class SeleniumTools:
             if re.search(pattern, file):
                 return file
 
-    def payments_order_file_name(self, fleet, partner, day=None):
+    def park_name(self):
+        park = Park.objects.get(pk=self.partner)
+        return park.name
+
+    def payments_order_file_name(self, fleet, partner, day):
         return self.report_file_name(self.file_pattern(fleet, partner, day))
 
     @staticmethod
@@ -50,20 +48,7 @@ class SeleniumTools:
         return f'{fleet} {day.strftime("%Y%m%d")}-{partner}.csv'
 
     def remove_session(self):
-        os.remove(self.session_file_name)
-
-    # def retry(self, fun, headless=False):
-    #     for i in range(2):
-    #         try:
-    #            time.sleep(0.3)
-    #            return fun(headless)
-    #         except Exception:
-    #             try:
-    #                 self.remove_session()
-    #                 return fun(headless)
-    #             except FileNotFoundError:
-    #                 return fun(headless)
-    #             continue
+        os.remove(self.park_name())
 
     def build_driver(self, headless=True):
         options = webdriver.ChromeOptions()
@@ -94,7 +79,7 @@ class SeleniumTools:
         driver = webdriver.Chrome(options=options, port=9514)
         return driver
 
-    def build_remote_driver(self, headless=True):
+    def build_remote_driver(self):
         options = Options()
         options.add_argument("--disable-infobars")
         options.add_argument("--enable-file-cookies")
@@ -102,15 +87,14 @@ class SeleniumTools:
         options.add_argument('--enable-profile-shortcut-manager')
         options.add_argument(f'--user-data-dir=home/seluser/{self.profile}')
         options.add_argument(f'--profile-directory={self.profile}')
-        if headless:
-             options.add_argument('--headless')
-             options.add_argument('--headless=new')
+
         options.add_argument('--disable-gpu')
         options.add_argument("--no-sandbox")
         options.add_argument("--start-maximized")
         options.add_argument("--disable-extensions")
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
+
         capabilities = DesiredCapabilities.CHROME.copy()
         capabilities['acceptInsecureCerts'] = True
 
@@ -181,7 +165,7 @@ class SeleniumTools:
         folder = os.path.join(os.getcwd(), "LastDownloads")
         files = [os.path.join(folder, f) for f in os.listdir(folder)]  # add path to each file
         files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-        if len(files):
+        if files:
             fname = os.path.basename(files[0]) if save_as is None else save_as
             shutil.copyfile(files[0], os.path.join(os.getcwd(), fname))
         for filename in files:
@@ -193,3 +177,9 @@ class SeleniumTools:
         if hasattr(self, 'driver'):
             self.driver.quit()
             self.driver = None
+
+
+def clickandclear(element):
+    element.click()
+    element.clear()
+

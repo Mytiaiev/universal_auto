@@ -409,6 +409,10 @@ class CarEfficiencyAdmin(admin.ModelAdmin):
     list_filter = ['licence_plate']
     readonly_fields = ['driver', 'total_kasa', 'licence_plate', 'efficiency', 'mileage', 'report_from']
 
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ['key', 'value', 'description', ]
+
 
 @admin.register(BoltService)
 class BoltServiceAdmin(admin.ModelAdmin):
@@ -636,9 +640,9 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         else:
             return ['id', 'name', 'second_name',
-                    'email', 'phone_number', 'chat_id',
+                    'vehicle', 'phone_number', 'chat_id',
                     'schema', 'plan', 'rental',
-                    'driver_status', 'manager', 'vehicle',
+                    'driver_status', 'manager', 'email',
                     'created_at',
                     ]
 
