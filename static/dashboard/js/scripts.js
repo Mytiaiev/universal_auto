@@ -1,28 +1,27 @@
 // SIDEBAR TOGGLE
 
-var sidebarOpen = false;
-var sidebar = document.getElementById("sidebar");
+let sidebarOpen = false;
+let sidebar = document.getElementById("sidebar");
 
 function openSidebar() {
-  if(!sidebarOpen) {
+  if (!sidebarOpen) {
     sidebar.classList.add("sidebar-responsive");
     sidebarOpen = true;
   }
 }
 
 function closeSidebar() {
-  if(sidebarOpen) {
+  if (sidebarOpen) {
     sidebar.classList.remove("sidebar-responsive");
     sidebarOpen = false;
   }
 }
 
 
-
 // ---------- CHARTS ----------
 
 // BAR CHART
-var barChartOptions = {
+let barChartOptions = {
   series: [{
     data: [10, 8, 6, 4, 2],
     name: "Products",
@@ -73,7 +72,7 @@ var barChartOptions = {
     labels: {
       colors: "#f5f7ff",
     },
-    show: true,
+    show: false,
     position: "top",
   },
   stroke: {
@@ -109,9 +108,9 @@ var barChartOptions = {
   },
   yaxis: {
     title: {
-      text: "Count",
+      text: "Каса",
       style: {
-        color:  "#f5f7ff",
+        color: "#f5f7ff",
       },
     },
     axisBorder: {
@@ -130,17 +129,17 @@ var barChartOptions = {
   }
 };
 
-var barChart = new ApexCharts(document.querySelector("#bar-chart"), barChartOptions);
+let barChart = new ApexCharts(document.querySelector("#bar-chart"), barChartOptions);
 barChart.render();
 
 
 // AREA CHART
-var areaChartOptions = {
+let areaChartOptions = {
   series: [{
-    name: "Purchase Orders",
-    data: [31, 40, 28, 51, 42, 109, 100],
+    name: "Василь",
+    data: [31, 40, 28, 51, 42, 60, 76],
   }, {
-    name: "Sales Orders",
+    name: "Іван",
     data: [11, 32, 45, 32, 34, 52, 41],
   }],
   chart: {
@@ -186,6 +185,7 @@ var areaChartOptions = {
     },
     show: true,
     position: "top",
+    horizontalAlign: 'left',
   },
   markers: {
     size: 6,
@@ -195,7 +195,7 @@ var areaChartOptions = {
   stroke: {
     curve: "smooth",
   },
-  xaxis: {
+  xAxis: {
     axisBorder: {
       color: "#55596e",
       show: true,
@@ -211,36 +211,36 @@ var areaChartOptions = {
       },
     },
   },
-  yaxis:
-  [
-    {
-      title: {
-        text: "Purchase Orders",
-        style: {
-          color: "#f5f7ff",
+  yAxis:
+    [
+      {
+        title: {
+          text: "Дохід грн/км",
+          style: {
+            color: "#f5f7ff",
+          },
+        },
+        labels: {
+          style: {
+            colors: ["#f5f7ff"],
+          },
         },
       },
-      labels: {
-        style: {
-          colors: ["#f5f7ff"],
+      {
+        opposite: true,
+        title: {
+          text: "Дохід грн/км",
+          style: {
+            color: "#f5f7ff",
+          },
+        },
+        labels: {
+          style: {
+            colors: ["#f5f7ff"],
+          },
         },
       },
-    },
-    {
-      opposite: true,
-      title: {
-        text: "Sales Orders",
-        style: {
-          color:  "#f5f7ff",
-        },
-      },
-      labels: {
-        style: {
-          colors: ["#f5f7ff"],
-        },
-      },
-    },
-  ],
+    ],
   tooltip: {
     shared: true,
     intersect: false,
@@ -248,5 +248,157 @@ var areaChartOptions = {
   }
 };
 
-var areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
+let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
+
+$(document).ready(function () {
+  function loadDefaultKasa(period) {
+    $.ajax({
+      type: "GET",
+      url: ajaxGetUrl,
+      data: {
+        action: 'get_drivers_cash',
+        period: period
+      },
+      success: function (response) {
+        let data = response.data[0];
+        let totalAmount = response.data[1].toFixed(2);
+        let startDate = response.data[2];
+        let endDate = response.data[3];
+        let formattedData = {};
+
+        Object.keys(data).forEach(function (key) {
+          let value = parseFloat(data[key].toFixed(2));
+          if (value !== 0) {
+            formattedData[key] = value;
+          }
+        });
+
+        barChartOptions.series[0].data = Object.values(formattedData);
+        barChartOptions.xaxis.categories = Object.keys(formattedData);
+        barChart.updateOptions(barChartOptions);
+
+        $('#weekly-income-dates').text(startDate + ' по ' + endDate);
+        $('#weekly-income-amount').text(totalAmount + ' грн');
+      }
+    });
+  }
+
+  function loadEffectiveChart(period, vehicleId) {
+    $.ajax({
+      type: "GET",
+      url: ajaxGetUrl,
+      data: {
+        action: 'effective_vehicle',
+        period: period,
+        vehicle_id: vehicleId
+      },
+      success: function (response) {
+        let dataArray = response.data.data;
+        let uniqueNames = Array.from(new Set(dataArray.map(item => item.name)));
+        let driverData = {};
+
+        uniqueNames.forEach(function (name, index) {
+          let driverIndex = index + 1;
+          let driverNameKey = 'name' + driverIndex;
+          let effectiveKey = 'effective' + driverIndex;
+
+          driverData[driverNameKey] = name;
+          driverData[effectiveKey] = dataArray
+            .filter(item => item.name === name)
+            .map(item => item.effective)
+            .join(', ');
+
+          if (driverData[effectiveKey] === '') {
+            driverData[effectiveKey] = 0;
+          }
+        });
+
+        if (uniqueNames.length === 1) {
+          let driverIndex = 2;
+          let driverNameKey = 'name' + driverIndex;
+          let effectiveKey = 'effective' + driverIndex;
+
+          driverData[driverNameKey] = "Водій відсутній";
+          driverData[effectiveKey] = "0";
+        }
+
+        driverData.date_effective = dataArray
+          .map(function (item) {
+            let date = new Date(item.date_effective);
+            return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+          })
+          .join(', ');
+
+        let dataPairs = [];
+        let dates = driverData.date_effective.split(', ');
+        let effective1 = driverData.effective1.split(', ');
+        let effective2 = driverData.effective2.split(', ');
+
+        for (let i = 0; i < dates.length; i++) {
+          let pair = {
+            date: dates[i],
+            effective1: parseFloat(effective1[i]),
+            effective2: parseFloat(effective2[i])
+          };
+          dataPairs.push(pair);
+        }
+
+        // Сортування масиву за датами
+        dataPairs.sort(function (a, b) {
+          let dateA = new Date(a.date);
+          let dateB = new Date(b.date);
+          return dateA - dateB;
+        });
+
+        // Оновлення графіка з новими даними
+        areaChartOptions.series[0].name = driverData.name1;
+        areaChartOptions.series[0].data = dataPairs.map(pair => pair.effective1);
+        areaChartOptions.series[1].name = driverData.name2;
+        areaChartOptions.series[1].data = dataPairs.map(pair => pair.effective2);
+        areaChartOptions.labels = dataPairs.map(pair => pair.date);
+
+        areaChart.updateOptions(areaChartOptions);
+      }
+    });
+  }
+
+  function updateEffectiveChart(vehicleId, period) {
+    loadEffectiveChart(period, vehicleId);
+  }
+
+  loadDefaultKasa('day');
+  loadEffectiveChart('week', $('#vehicle-select').val());
+
+  $('input[name="effective-amount"]').change(function () {
+    const selectedKasa = $(this).val();
+    const period = getPeriod(selectedKasa);
+
+    loadDefaultKasa(period);
+  });
+
+  $('input[name="effective-period"]').change(function () {
+    const selectedEffective = $(this).valconst
+    const vehicleId = $('#vehicle-select').val();
+    const period = getPeriod(selectedEffective);
+
+    updateEffectiveChart(vehicleId, period);
+  });
+
+  $('#vehicle-select').change(function () {
+    const vehicleId = $(this).val();
+    const selectedEffective = $('input[name="effective-period"]:checked').val();
+    const period = getPeriod(selectedEffective);
+
+    updateEffectiveChart(vehicleId, period);
+  });
+
+  function getPeriod(val) {
+    return {
+      d: 'day',
+      w: 'week',
+      m: 'month',
+      q: 'quarter'
+    }[val];
+  }
+});

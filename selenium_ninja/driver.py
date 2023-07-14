@@ -26,7 +26,7 @@ class SeleniumTools:
         self.session_file_name = session
         self.partner = partner
         self.sleep = sleep
-        self.remote = remote
+        self.remote = True
         self.profile = 'Profile 1' if profile is None else profile
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
@@ -95,7 +95,6 @@ class SeleniumTools:
         return driver
 
     def build_remote_driver(self, headless=True):
-
         options = Options()
         options.add_argument("--disable-infobars")
         options.add_argument("--enable-file-cookies")
@@ -103,8 +102,9 @@ class SeleniumTools:
         options.add_argument('--enable-profile-shortcut-manager')
         options.add_argument(f'--user-data-dir=home/seluser/{self.profile}')
         options.add_argument(f'--profile-directory={self.profile}')
-        # if headless:
-        #     options.add_argument('--headless')
+        if headless:
+             options.add_argument('--headless')
+             options.add_argument('--headless=new')
         options.add_argument('--disable-gpu')
         options.add_argument("--no-sandbox")
         options.add_argument("--start-maximized")

@@ -1,12 +1,10 @@
-import json
-
 from django.shortcuts import render
 from django.views.generic import View, TemplateView
 from django.core.paginator import Paginator
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-from taxi_service.utils import get_all_drivers
+from taxi_service.utils import *
 from app.models import ParkSettings
 
 
@@ -71,6 +69,10 @@ class GetRequestView(View):
             return handler.handle_active_vehicles_locations(request)
         elif action == 'order_confirm':
             return handler.handle_order_confirm(request)
+        elif action == 'get_drivers_cash':
+            return handler.handle_get_drivers_cash(request)
+        elif action == 'effective_vehicle':
+            return handler.handle_effective_vehicle(request)
         else:
             return handler.handle_unknown_action(request)
 
@@ -92,6 +94,18 @@ class DriversView(TemplateView):
         page_obj = paginator.get_page(page_number)
         context['subscribe_form'] = SubscriberForm()
         context['page_obj'] = page_obj
+        return context
+
+
+class DashboardView(TemplateView):
+    template_name = 'dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_distance_rent'] = weekly_rent()
+        context['get_all_vehicle'] = get_all_vehicle()
+        context['average_effective_vehicle'] = average_effective_vehicle()
+
         return context
 
 

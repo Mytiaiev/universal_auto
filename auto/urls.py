@@ -30,7 +30,6 @@ urlpatterns = [
     path('fake_uklon/', include('fake_uklon.urls')),
     path('fake_uber/', include('fake_uber.urls')),
     path('cars/', gps_cars, name='map'),
-    path('dashboard/', dashboard, name='app/dashboard'),
     path('', include('taxi_service.urls')),
     path('webhook/', csrf_exempt(TelegramBotWebhookView.as_view())),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -87,10 +87,6 @@ def drivers_total_weekly_rating(request):
     return render(request, 'app/drivers_total_weekly_rating.html', context)
 
 
-def dashboard(request):
-    return render(request, 'app/dashboard.html', )
-
-
 def gps_cars(request):
     all_gps_cars = Vehicle.objects.all()
     # Create Map Object
