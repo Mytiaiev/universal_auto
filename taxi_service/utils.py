@@ -141,7 +141,7 @@ def weekly_rent():
 def collect_total_earnings(period):
     total = {}
     total_amount = 0
-    start_period, end_period = get_dates("week")
+    start_period, end_period = get_dates(period)
     reports = SummaryReport.objects.filter(report_from__range=(start_period, end_period))
     for driver in Driver.objects.all():
         total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
