@@ -3,7 +3,10 @@ from django.contrib.admin import AdminSite
 from django.forms import BaseInlineFormSet
 from django.utils import timezone
 
+from taxi_service.views import *
 from .models import *
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
@@ -405,9 +408,8 @@ class JobApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(admin.ModelAdmin):
-    list_display = ['driver', 'efficiency', 'mileage', 'start_report', 'end_report']
-    readonly_fields = ['driver', 'efficiency', 'mileage', 'start_report', 'end_report']
-
+    list_display = ['driver', 'total_kasa', 'vehicle', 'efficiency', 'mileage', 'start_report', 'end_report']
+    readonly_fields = ['driver', 'total_kasa', 'vehicle', 'efficiency', 'mileage', 'start_report', 'end_report']
 
 
 @admin.register(BoltService)
@@ -988,3 +990,13 @@ class ParkSettingsAdmin(admin.ModelAdmin):
             ]
 
         return fieldsets
+
+
+@admin.register(Dashboard)
+class DashboardAdmin(admin.ModelAdmin):
+    def changelist_view(self, request, extra_context=None):
+        if request.method == "GET":
+            dashboard_url = reverse('dashboard')
+            return redirect(dashboard_url)
+
+        return super().changelist_view(request, extra_context)
