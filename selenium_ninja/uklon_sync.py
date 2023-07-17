@@ -1,4 +1,5 @@
 import datetime
+import json
 import time
 import requests
 import redis
@@ -82,6 +83,9 @@ class UklonRequest(Synchronizer):
                 return ''
 
         return nested_data
+
+    def put_target_url(self, url):
+        pass
 
     def download_report(self, day):
         report = Payments.objects.filter(report_from=self.start_report_interval(day),
@@ -203,6 +207,39 @@ class UklonRequest(Synchronizer):
             })
 
         return drivers
+
+    def disable_cash(self, pk, enable):
+        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url += Service.get_value('UKLON_6')
+        param = self.parameters()
+        param['name'], param['phone'], param['status'], param['limit'] = ('', '', 'All', '30')
+        all_drivers = self.response_data(url=url, params=param)
+        signal = Driver.objects.get(pk=pk).get_external_id(self.fleet)
+        matching_item = next((item for item in all_drivers if item["signal"] == signal), None)
+        if matching_item is not None:
+            url += f'{matching_item["id"]}/restrictions'
+            if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
+                self.create_session()
+            while True:
+                headers = self.get_header()
+                headers.update({"Content-Type": "application/json"})
+                payload = {"type": "Cash"}
+                if enable == 'true':
+                    response = requests.delete(url=url,
+                                               headers=self.get_header(),
+                                               data=json.dumps(payload),
+                                               )
+                else:
+                    response = requests.put(url=url,
+                                            headers=self.get_header(),
+                                            data=json.dumps(payload),
+                                            )
+                if response.status_code in (401, 403):
+                    self.create_session()
+                else:
+                    pay_cash = True if enable == 'true' else False
+                    Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=signal).update(pay_cash=pay_cash)
+                    break
 
 
 class UklonSynchronizer(Synchronizer, SeleniumTools):
