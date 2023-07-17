@@ -44,7 +44,7 @@ try:
         for permission in group1.permissions.all():
             user.user_permissions.add(permission)
     assign_model_permissions(group1)
-except ProgrammingError:
+except (ProgrammingError, ObjectDoesNotExist):
     pass
 
 
