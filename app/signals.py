@@ -24,7 +24,7 @@ def create_park_settings(sender, instance, created, **kwargs):
                                   desired_capabilities=webdriver.DesiredCapabilities.CHROME)
         selenium_session[instance.pk] = driver
         for key in settings_for_partner.keys():
-            response = settings[key]
+            response = settings_for_partner[key]
             ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
 
 

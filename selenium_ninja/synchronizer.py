@@ -17,10 +17,12 @@ LOGGER.setLevel(logging.WARNING)
 
 class Synchronizer:
 
-    def __init__(self, partner_id, fleet, chrome_driver=None):
+    def __init__(self, partner_id=None, fleet=None, chrome_driver=None):
         self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+        self.logger = logging.getLogger(__name__)
         if chrome_driver is not None:
             self.logger = logging.getLogger(__name__)
             self.sleep = 5

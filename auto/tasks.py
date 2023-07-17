@@ -27,8 +27,6 @@ from selenium_ninja.uber_sync import UberSynchronizer
 from selenium_ninja.uklon_sync import UklonSynchronizer, UklonRequest
 from scripts.redis_conn import redis_instance
 
-CHROME_DRIVER = None
-
 MEMCACHE_LOCK_EXPIRE = 60 * 10
 MEMCACHE_LOCK_AFTER_FINISHING = 10
 
@@ -81,7 +79,6 @@ def download_daily_report(self, partner_pk, day=None):
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
     BoltRequest(partner_pk, 'Bolt').save_report(day)
-    UberSynchronizer(partner_pk, 'Uber', selenium_session[partner_pk]).download_report(day)
     UklonRequest(partner_pk, 'Uklon').save_report(day)
     save_report_to_ninja_payment(day)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
@@ -134,60 +131,43 @@ def get_car_efficiency(self, partner_pk, day=None):
                                          efficiency=result)
 
 
-@contextmanager
-def memcache_lock(lock_id, oid):
-    timeout_at = tm.monotonic() + MEMCACHE_LOCK_EXPIRE - 3
-    status = cache.add(lock_id, oid, MEMCACHE_LOCK_EXPIRE)
-    try:
-        yield status
-    finally:
-        if tm.monotonic() < timeout_at and status:
-            cache.set(lock_id, oid, MEMCACHE_LOCK_AFTER_FINISHING)
-
-
 @app.task(bind=True)
 def update_driver_status(self, partner_pk):
     try:
-        with memcache_lock(self.name, self.app.oid) as acquired:
-            if acquired:
-                bolt_status = BoltRequest(partner_pk, 'Bolt').get_drivers_status()
-                logger.info(f'Bolt {bolt_status}')
+        bolt_status = BoltRequest(partner_pk, 'Bolt').get_drivers_status()
+        logger.info(f'Bolt {bolt_status}')
 
-                uklon_status = UklonRequest(partner_pk, 'Uklon').get_driver_status()
-                logger.info(f'Uklon {uklon_status}')
+        uklon_status = UklonRequest(partner_pk, 'Uklon').get_driver_status()
+        logger.info(f'Uklon {uklon_status}')
 
-                status_online = set()
-                status_with_client = set()
-                if bolt_status is not None:
-                    status_online = status_online.union(set(bolt_status['wait']))
-                    status_with_client = status_with_client.union(set(bolt_status['with_client']))
-                if uklon_status is not None:
-                    status_online = status_online.union(set(uklon_status['wait']))
-                    status_with_client = status_with_client.union(set(uklon_status['width_client']))
-                drivers = Driver.objects.filter(deleted_at=None)
-                for driver in drivers:
-                    last_status = timezone.localtime() - timedelta(minutes=2)
-                    park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
-                    work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
-                                                          created_at__date=timezone.now().date(), end_at=None)
-                    if work_ninja or (driver.name, driver.second_name) in status_online:
-                        current_status = Driver.ACTIVE
-                    else:
-                        current_status = Driver.OFFLINE
-                    if park_status and park_status.status != Driver.ACTIVE:
-                        current_status = park_status.status
-                    if (driver.name, driver.second_name) in status_with_client:
-                        current_status = Driver.WITH_CLIENT
-                    # if (driver.name, driver.second_name) in status['wait']:
-                    #     current_status = Driver.ACTIVE
-                    driver.driver_status = current_status
-                    driver.save()
-                    if current_status != Driver.OFFLINE:
-                        logger.info(f'{driver}: {current_status}')
-
+        status_online = set()
+        status_with_client = set()
+        if bolt_status is not None:
+            status_online = status_online.union(set(bolt_status['wait']))
+            status_with_client = status_with_client.union(set(bolt_status['with_client']))
+        if uklon_status is not None:
+            status_online = status_online.union(set(uklon_status['wait']))
+            status_with_client = status_with_client.union(set(uklon_status['width_client']))
+        drivers = Driver.objects.filter(deleted_at=None)
+        for driver in drivers:
+            last_status = timezone.localtime() - timedelta(minutes=2)
+            park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
+            work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
+                                                  created_at__date=timezone.now().date(), end_at=None)
+            if work_ninja or (driver.name, driver.second_name) in status_online:
+                current_status = Driver.ACTIVE
             else:
-                logger.info('passed')
-
+                current_status = Driver.OFFLINE
+            if park_status and park_status.status != Driver.ACTIVE:
+                current_status = park_status.status
+            if (driver.name, driver.second_name) in status_with_client:
+                current_status = Driver.WITH_CLIENT
+            # if (driver.name, driver.second_name) in status['wait']:
+            #     current_status = Driver.ACTIVE
+            driver.driver_status = current_status
+            driver.save()
+            if current_status != Driver.OFFLINE:
+                logger.info(f'{driver}: {current_status}')
     except Exception as e:
         logger.error(e)
 
@@ -195,40 +175,37 @@ def update_driver_status(self, partner_pk):
 @app.task(bind=True)
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
-        with memcache_lock(self.name, self.app.oid) as acquired:
-            if acquired:
-                day = timezone.localtime() - timedelta(days=1)
+        day = timezone.localtime() - timedelta(days=1)
 
-                BoltRequest(partner_pk, 'Bolt').synchronize()
-                UklonRequest(partner_pk, 'Uklon').synchronize()
-                UaGpsSynchronizer().get_vehicle_id()
+        BoltRequest(partner_pk, 'Bolt').synchronize()
+        UklonRequest(partner_pk, 'Uklon').synchronize()
+        UaGpsSynchronizer().get_vehicle_id()
 
-                uber_driver = UberSynchronizer(partner_pk, 'Uber', selenium_session[partner_pk])
-                if manager_id is None:
-                    uber_driver.synchronize()
-                    # uber_driver.try_to_execute('download_trips', 'Trips', day)
-                    # uber_driver.try_to_execute('download_weekly_report', day)
-            else:
-                logger.info('passed')
+        if manager_id is None:
+            uber_driver = UberSynchronizer(partner_pk, 'Uber', selenium_session[partner_pk])
+            # uber_driver.synchronize()
+            uber_driver.download_trips(f'Trips{partner_pk}', day)
+            uber_driver.download_weekly_report(f'Reports{partner_pk}', day)
     except Exception as e:
         logger.error(e)
+    return manager_id
 
 
 @app.task(bind=True)
-def send_on_job_application_on_driver(self, job_id):
+def send_on_job_application_on_driver(self, partner_pk, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('add_driver', candidate)
-        BoltRequest().add_driver(candidate)
+        UklonSynchronizer(fleet='Uklon', chrome_driver=selenium_session[partner_pk]).add_driver(candidate)
+        BoltRequest(fleet='Bolt').add_driver(candidate)
         logger.info('The job application has been sent')
     except Exception as e:
         logger.error(e)
 
 
 @app.task(bind=True)
-def detaching_the_driver_from_the_car(self, licence_plate):
+def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
     try:
-        UklonSynchronizer(CHROME_DRIVER.driver).try_to_execute('detaching_the_driver_from_the_car', licence_plate)
+        UklonSynchronizer(partner_pk, 'Uklon', selenium_session[partner_pk]).detaching_the_driver_from_the_car(licence_plate)
         logger.info(f'Car {licence_plate} was detached')
     except Exception as e:
         logger.error(e)
@@ -249,7 +226,7 @@ def get_rent_information(self):
 @app.task(bind=True)
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
-        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('disable_cash', pk, enable)
+        UklonSynchronizer(partner_pk, 'Uklon', selenium_session[partner_pk]).disable_cash(pk, enable)
         logger.info('disable_uklon_cash')
         BoltRequest(partner_pk, "Bolt").cash_restriction(pk, enable)
         logger.info('disable_bolt_cash')
@@ -258,9 +235,9 @@ def fleets_cash_trips(self, partner_pk, pk, enable):
 
 
 @app.task(bind=True)
-def withdraw_uklon(self):
+def withdraw_uklon(self, partner_pk):
     try:
-        UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('withdraw_money')
+        UklonSynchronizer(partner_pk, 'Uklon', selenium_session[partner_pk]).withdraw_money()
     except Exception as e:
         logger.error(e)
 
@@ -386,9 +363,9 @@ def save_report_to_ninja_payment(self, day, partner='Ninja'):
 
 @app.task(bind=True)
 def upload_db(self, day):
-    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
-    UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
-    UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
+    # UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
+    # UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
+    # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
     BoltRequest().save_report(day)
     save_report_to_ninja_payment(day)
     fleet_reports = Payments.objects.filter(report_from=day)
@@ -420,8 +397,8 @@ def setup_periodic_tasks(sender, **kwargs):
             init_chrome_driver(partner_id)
             sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(partner_id))
             sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(partner_id))
-            sender.add_periodic_task(crontab(minute='*/2'), download_daily_report.s(partner_id))
-            # sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s())
+            sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(partner_id))
+            sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
             # sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s())
             # sender.add_periodic_task(crontab(minute=10, hour=5), get_rent_information.s())
             # sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s())
