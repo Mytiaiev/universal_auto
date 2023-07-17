@@ -3,10 +3,8 @@ from django.utils import timezone
 from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus,  Park, \
-    Partner
+from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus, Partner
 from auto_bot.main import bot
-from scripts.redis_conn import redis_instance
 from scripts.settings_for_park import settings
 from django.contrib.auth.models import User as AuUser
 
@@ -17,7 +15,9 @@ def create_partner(sender, instance, created, **kwargs):
         Partner.objects.create(user=instance)
 
 
-@receiver(post_save, sender=Park)
+
+
+@receiver(post_save, sender=Partner)
 def create_park_settings(sender, instance, created, **kwargs):
     if created:
         keys_to_save = ('UBER_NAME', 'UBER_PASSWORD',
@@ -29,7 +29,7 @@ def create_park_settings(sender, instance, created, **kwargs):
 
         for key in keys_to_save:
             response = settings[key]
-            ParkSettings.objects.create(key=key, value=response[0], description=response[1], park=instance)
+            ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
 
 
 @receiver(pre_save, sender=Driver)

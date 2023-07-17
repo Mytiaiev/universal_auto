@@ -13,54 +13,52 @@ from selenium_ninja.synchronizer import Synchronizer
 
 
 class BoltRequest(Synchronizer):
-    def base_url(self):
-        return BoltService.get_value('REQUEST_BOLT_LOGIN_URL')
-
-    def parameters(self):
-        param = {"language": "uk-ua",
-                 "version": "FO.2.61"}
-        return param
+    def __init__(self, partner_id, fleet):
+        super().__init__(partner_id, fleet)
+        self.base_url = BoltService.get_value('REQUEST_BOLT_LOGIN_URL')
+        self.param = {"language": "uk-ua", "version": "FO.2.61"}
 
     def get_login_token(self):
         payload = {
-            'username': ParkSettings.get_value("BOLT_NAME", park=self.id),
-            'password': ParkSettings.get_value("BOLT_PASSWORD", park=self.id),
+            'username': ParkSettings.get_value("BOLT_NAME", partner=self.partner_id),
+            'password': ParkSettings.get_value("BOLT_PASSWORD", partner=self.partner_id),
             'device_name': "Chrome",
             'device_os_version': "NT 10.0",
             "device_uid": "6439b6c1-37c2-4736-b898-cb2a8608e6e2"
         }
-        response = requests.post(url=f'{self.base_url()}startAuthentication',
-                                 params=self.parameters(),
+        response = requests.post(url=f'{self.base_url}startAuthentication',
+                                 params=self.param,
                                  json=payload)
-        self.redis.set(f"{self.fleet}_refresh", response.json()["data"]["refresh_token"])
+        self.redis.set(f"{self.partner_id}_{self.fleet}_refresh", response.json()["data"]["refresh_token"])
 
         return response.json()
 
     def get_access_token(self):
-        token = self.redis.get(f"{self.fleet}_refresh")
+        token = self.redis.get(f"{self.partner_id}_{self.fleet}_refresh")
         if token:
             access_payload = {
                 "refresh_token": token.decode(),
                 "company": {"company_id": "58225",
                             "company_type": "fleet_company"}
             }
-            response = requests.post(url=f'{self.base_url()}getAccessToken',
-                                     params=self.parameters(),
+
+            response = requests.post(url=f'{self.base_url}getAccessToken',
+                                     params=self.param,
                                      json=access_payload)
             if not response.json()['code']:
-                self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+                self.redis.set(f"{self.partner_id}_{self.fleet}_token", response.json()["data"]["access_token"])
             else:
                 self.get_login_token()
-                new_token = self.redis.get(f"{self.fleet}_refresh")
+                new_token = self.redis.get(f"{self.partner_id}_{self.fleet}_refresh")
                 new_payload = {
                     "refresh_token": new_token.decode(),
                     "company": {"company_id": "58225",
                                 "company_type": "fleet_company"}
                 }
-                response = requests.post(url=f'{self.base_url()}getAccessToken',
-                                         params=self.parameters(),
+                response = requests.post(url=f'{self.base_url}getAccessToken',
+                                         params=self.param,
                                          json=new_payload)
-                self.redis.set(f"{self.fleet}_token", response.json()["data"]["access_token"])
+                self.redis.set(f"{self.partner_id}_{self.fleet}_token", response.json()["data"]["access_token"])
 
         else:
             self.get_login_token()
@@ -68,14 +66,14 @@ class BoltRequest(Synchronizer):
 
     def get_target_url(self, url, params):
         self.get_access_token()
-        new_token = self.redis.get(f"{self.fleet}_token")
+        new_token = self.redis.get(f"{self.partner_id}_{self.fleet}_token")
         headers = {'Authorization': f'Bearer {new_token.decode()}'}
         response = requests.get(url, params=params, headers=headers)
         return response.json()
 
     def post_target_url(self, url, params, json):
         self.get_access_token()
-        new_token = self.redis.get(f"{self.fleet}_token")
+        new_token = self.redis.get(f"{self.partner_id}_{self.fleet}_token")
         headers = {'Authorization': f'Bearer {new_token.decode()}'}
         response = requests.post(url, json=json, params=params, headers=headers)
         return response.json()
@@ -86,11 +84,11 @@ class BoltRequest(Synchronizer):
             return list(reports)
         # date format str yyyy-mm-dd
         format_day = day.strftime("%Y-%m-%d")
-        param = self.parameters()
+        param = self.param
         param.update({"start_date": format_day,
-                            "end_date": format_day,
-                            "offset": 0,
-                            "limit": 50})
+                      "end_date": format_day,
+                      "offset": 0,
+                      "limit": 50})
         reports = self.get_target_url(f'{self.base_url}getDriverEarnings/dateRange', param)
         param['limit'] = 25
         rides = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', param)
@@ -126,13 +124,13 @@ class BoltRequest(Synchronizer):
                   "end_date": end,
                   "offset": 0,
                   "limit": 25}
-        params.update(self.parameters())
-        report = self.get_target_url(f'{self.base_url()}getDriverEngagementData/dateRange', params)
+        params.update(self.param)
+        report = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', params)
         drivers = report['data']['rows']
         for driver in drivers:
-            driver_params = self.parameters().copy()
+            driver_params = self.param.copy()
             driver_params['id'] = driver['id']
-            driver_info = self.get_target_url(f'{self.base_url()}getDriver', driver_params)
+            driver_info = self.get_target_url(f'{self.base_url}getDriver', driver_params)
             driver_list.append({
                 'fleet_name': self.fleet,
                 'name': driver_info['data']['first_name'],
@@ -146,13 +144,13 @@ class BoltRequest(Synchronizer):
                 'vin_code': '',
 
             })
-            time.sleep(1)
+            time.sleep(0.5)
         return driver_list
 
     def get_drivers_status(self):
         with_client = []
         wait = []
-        report = self.get_target_url(f'{self.base_url()}getDriversForLiveMap', self.parameters())
+        report = self.get_target_url(f'{self.base_url}getDriversForLiveMap', self.param)
         if report['data']:
             for driver in report['data']['list']:
                 name, second_name = driver['name'].split(' ')
@@ -172,7 +170,7 @@ class BoltRequest(Synchronizer):
             "driver_id": driver_id,
             "has_cash_payment": enable
         }
-        self.post_target_url(f'{self.base_url()}driver/toggleCash', self.parameters(), payload)
+        self.post_target_url(f'{self.base_url}driver/toggleCash', self.param, payload)
         pay_cash = True if enable == 'true' else False
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver).update(pay_cash=pay_cash)
 
@@ -185,7 +183,7 @@ class BoltRequest(Synchronizer):
                         "phone": f"{job_application.phone_number}",
                         "referral_code": ""
                 }
-        response = self.post_target_url(f'{self.base_url()}addDriverRegistration', self.parameters(), payload)
+        response = self.post_target_url(f'{self.base_url}addDriverRegistration', self.param, payload)
         payload_form = {
             'hash': response['data']['hash'],
             'last_step': 'step_2',
