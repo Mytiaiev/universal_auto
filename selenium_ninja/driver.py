@@ -16,11 +16,10 @@ from selenium.common import TimeoutException
 
 
 class SeleniumTools:
-    def __init__(self, partner, profile, session, remote=True, driver=True, sleep=5, headless=True):
+    def __init__(self, partner, profile, remote=True, driver=True, sleep=5, headless=True):
         self.partner = partner
         self.profile = profile
         self.remote = remote
-        self.session = session
         self.sleep = sleep
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)

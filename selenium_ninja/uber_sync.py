@@ -387,7 +387,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 'vehicle_name': vehicle_name,
                 'vin_code': vin_code,
             })
-        print(drivers)
+
         return drivers
 
     def get_driver_status_from_map(self, search_text):

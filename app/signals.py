@@ -1,14 +1,15 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
+from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order, selenium_session
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus,  Park, \
     Partner
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
-from scripts.settings_for_park import settings
+from scripts.settings_for_park import settings, settings_for_partner
 from django.contrib.auth.models import User as AuUser
+from selenium_ninja.driver import SeleniumTools
 
 
 @receiver(post_save, sender=AuUser)
@@ -20,14 +21,9 @@ def create_partner(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Park)
 def create_park_settings(sender, instance, created, **kwargs):
     if created:
-        keys_to_save = ('UBER_NAME', 'UBER_PASSWORD',
-                        'BOLT_NAME', 'BOLT_PASSWORD',
-                        'UKLON_NAME', 'UKLON_PASSWORD',
-                        'UKLON_TOKEN', 'DRIVERS_CHAT',
-                        'ID_PARK', 'CLIENT_ID',
-                        'CLIENT_SECRET')
-
-        for key in keys_to_save:
+        driver = SeleniumTools(partner=instance.pk, profile=f'Task_{instance.pk}')
+        selenium_session[instance.pk] = driver
+        for key in settings_for_partner.keys():
             response = settings[key]
             ParkSettings.objects.create(key=key, value=response[0], description=response[1], park=instance)
 

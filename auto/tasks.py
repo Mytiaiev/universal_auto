@@ -32,23 +32,7 @@ MEMCACHE_LOCK_EXPIRE = 60 * 10
 MEMCACHE_LOCK_AFTER_FINISHING = 10
 
 logger = get_task_logger(__name__)
-
-
-def get_remote_selenium(park_pk):
-    driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
-                              desired_capabilities=webdriver.DesiredCapabilities.CHROME,
-                              )
-    session = driver.session_id
-    redis_instance.set(f"session_{park_pk}_d{session}", session)
-    park_session = redis_instance.get(f"session_{park_pk}")
-    driver.session_id = park_session.decode()
-    return driver, session
-
-
-def remove_session_driver_in_redis(driver, session, park_pk):
-    driver.session_id = session
-    driver.quit()
-    redis_instance.delete(f"session_{park_pk}_d{session}")
+selenium_session = {}
 
 
 @app.task()
@@ -216,33 +200,24 @@ def update_driver_status(self):
         logger.error(e)
 
 
-@app.task(bind=True) # need uber
-def update_driver_data(self):
+@app.task(bind=True)
+def update_driver_data(self, park_pk, manager_id=None):
+    day = timezone.localtime() - timedelta(days=1)
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
             if acquired:
-                for park in Park.objects.all():
-                    synchronize_drivers_task.apply_async(args=[park.pk])
+                BoltRequest(park_pk, 'Bolt').synchronize()
+                UklonRequest(park_pk, 'Uklon').synchronize()
+                UaGpsSynchronizer().get_vehicle_id()
+                uber_driver = UberSynchronizer(park_pk, 'Uber', selenium_session[park_pk])
+                if manager_id is None:
+                    uber_driver.synchronize()
+                    # uber_driver.try_to_execute('download_trips', 'Trips', day)
+                    # uber_driver.try_to_execute('download_weekly_report', day)
             else:
                 logger.info('passed')
     except Exception as e:
         logger.error(e)
-
-@app.task(bind=True)
-def synchronize_drivers_task(self, park_pk, manager_id=None):
-    day = timezone.localtime() - timedelta(days=1)
-
-    BoltRequest(park_pk, 'Bolt').synchronize()
-    UklonRequest(park_pk, 'Uklon').synchronize()
-    UaGpsSynchronizer().get_vehicle_id()
-
-    driver, session = get_remote_selenium(park_pk)
-    uber_driver = UberSynchronizer(park_pk, 'Uber', driver)
-    if manager_id is None:
-        uber_driver.synchronize()
-        # uber_driver.try_to_execute('download_trips', 'Trips', day)
-        # uber_driver.try_to_execute('download_weekly_report', day)
-    remove_session_driver_in_redis(driver, session, park_pk)
 
 
 @app.task(bind=True)
@@ -447,8 +422,9 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())
     sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(),)
-    sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s())
-    sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
+    for park in Park.objects.all():
+        sender.add_periodic_task(crontab(minute='*/3'), update_driver_data.s(park.pk))
+    # sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s())
     # sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s())
     # sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s())
     # sender.add_periodic_task(crontab(minute=10, hour=5), get_rent_information.s())
@@ -460,7 +436,8 @@ def setup_periodic_tasks(sender, **kwargs):
 
 
 def init_chrome_driver():
+    global selenium_session
     for park in Park.objects.all():
         driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
                                   desired_capabilities=webdriver.DesiredCapabilities.CHROME)
-        redis_instance.set(f"session_{park.pk}", driver.session_id)
+        selenium_session[park.pk] = driver
