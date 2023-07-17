@@ -22,6 +22,7 @@ class Synchronizer:
         self.fleet = fleet
         self.redis = redis_instance
         if chrome_driver is not None:
+            self.logger = logging.getLogger(__name__)
             self.sleep = 5
             self.driver = chrome_driver
 
