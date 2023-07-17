@@ -33,23 +33,7 @@ MEMCACHE_LOCK_EXPIRE = 60 * 10
 MEMCACHE_LOCK_AFTER_FINISHING = 10
 
 logger = get_task_logger(__name__)
-
-
-def get_remote_selenium(park_pk):
-    driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
-                              desired_capabilities=webdriver.DesiredCapabilities.CHROME,
-                              )
-    session = driver.session_id
-    redis_instance.set(f"session_{park_pk}_d{session}", session)
-    park_session = redis_instance.get(f"session_{park_pk}")
-    driver.session_id = park_session.decode()
-    return driver, session
-
-
-def remove_session_driver_in_redis(driver, session, park_pk):
-    driver.session_id = session
-    driver.quit()
-    redis_instance.delete(f"session_{park_pk}_d{session}")
+selenium_session = {}
 
 
 @app.task()
@@ -152,6 +136,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                          mileage=total_km or 0,
                                          efficiency=result)
 
+
 @contextmanager
 def memcache_lock(lock_id, oid):
     timeout_at = tm.monotonic() + MEMCACHE_LOCK_EXPIRE - 3
@@ -210,7 +195,6 @@ def update_driver_status(self, partner_pk):
         logger.error(e)
 
 
-@app.task(bind=True)
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
         with memcache_lock(self.name, self.app.oid) as acquired:
@@ -221,13 +205,11 @@ def update_driver_data(self, partner_pk, manager_id=None):
                 UklonRequest(partner_pk, 'Uklon').synchronize()
                 UaGpsSynchronizer().get_vehicle_id()
 
-                driver, session = get_remote_selenium(partner_pk)
-                uber_driver = UberSynchronizer(partner_pk, 'Uber', driver)
+                uber_driver = UberSynchronizer(partner_pk, 'Uber', selenium_session[partner_pk])
                 if manager_id is None:
                     uber_driver.synchronize()
                     # uber_driver.try_to_execute('download_trips', 'Trips', day)
                     # uber_driver.try_to_execute('download_weekly_report', day)
-                remove_session_driver_in_redis(driver, session, partner_pk)
             else:
                 logger.info('passed')
     except Exception as e:
@@ -435,10 +417,11 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())
     for partner in Partner.objects.all():
-        init_chrome_driver(partner.id)
-        sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(partner.id),)
-        sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(partner.id))
-        sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(partner.id))
+        partner_id = partner.pk
+        init_chrome_driver(partner_id)
+        sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(partner_id))
+        sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(partner_id))
+        sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(partner_id))
         # sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s())
         # sender.add_periodic_task(crontab(minute=30, hour=5), download_uber_trips.s())
         # sender.add_periodic_task(crontab(minute=10, hour=5), get_rent_information.s())
@@ -449,7 +432,7 @@ def setup_periodic_tasks(sender, **kwargs):
         # sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s())
 
 
-def init_chrome_driver(partner_id):
-    driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
-                              desired_capabilities=webdriver.DesiredCapabilities.CHROME)
-    redis_instance.set(f"session_{partner_id}", driver.session_id)
+def init_chrome_driver(partner_pk):
+        driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
+                                  desired_capabilities=webdriver.DesiredCapabilities.CHROME)
+        selenium_session[partner_pk] = driver
