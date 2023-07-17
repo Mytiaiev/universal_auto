@@ -44,7 +44,7 @@ try:
         for permission in group1.permissions.all():
             user.user_permissions.add(permission)
     assign_model_permissions(group1)
-except ProgrammingError:
+except (ProgrammingError, ObjectDoesNotExist):
     pass
 
 
@@ -859,18 +859,13 @@ class CommentAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         return fieldsets
 
 
-@admin.register(Park)
-class ParkAdmin(admin.ModelAdmin):
-    list_display = ('name', 'partner')
-
-
 @admin.register(ParkSettings)
 class ParkSettingsAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if not request.user.is_superuser:
-            qs = qs.filter(park__partner__user=request.user)
+            qs = qs.filter(partner__user=request.user)
         return qs
 
     def get_list_display(self, request):
@@ -884,7 +879,7 @@ class ParkSettingsAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             fieldsets = [
                 ('Деталі',                      {'fields': ['key', 'value',
-                                                            'description', 'park',
+                                                            'description', 'partner',
                                                             ]}),
             ]
         else:

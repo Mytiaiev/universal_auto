@@ -38,7 +38,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         el = WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_1'))))
         el.clear()
-        el.send_keys(ParkSettings.get_value("UBER_PASSWORD", park=self.id))
+        el.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.id))
         el = WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_2'))))
         el.click()
@@ -274,14 +274,14 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, pk)))
             el = self.driver.find_element(By.ID, id)
-            el.send_keys(ParkSettings.get_value("UBER_PASSWORD", park=self.id))
+            el.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.id))
             self.driver.find_element(selector, button).click()
         except Exception as e:
             self.logger.error(str(e))
 
     def login_form(self, id, button, selector):
         element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-        element.send_keys(ParkSettings.get_value("UBER_NAME", park=self.id))
+        element.send_keys(ParkSettings.get_value("UBER_NAME", partner=self.id))
         e = self.driver.find_element(selector, button)
         e.click()
 

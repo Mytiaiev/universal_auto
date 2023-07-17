@@ -47,7 +47,8 @@ def remove_cash_by_manager(update, context):
 
 def get_drivers_from_fleets(update, context):
     query = update.callback_query
-    update_driver_data.delay(query.from_user.id)
+    partner = DriverManager.get_by_chat_id(query.from_user.id).partner
+    update_driver_data.delay(partner.id, query.from_user.id)
     query.edit_message_text(get_drivers_text)
 
 

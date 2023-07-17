@@ -16,8 +16,10 @@ from django.db import IntegrityError
 
 
 class UklonRequest(Synchronizer):
+    variables = ('token', 'type')
+
     def get_header(self) -> dict:
-        type_token, token = self.redis.get(f"{self.id}{self.variables[1]}"), self.redis.get(f"{self.id}{self.variables[0]}")
+        type_token, token = self.redis.get(f"{self.partner_id}{self.variables[1]}"), self.redis.get(f"{self.partner_id}{self.variables[0]}")
         headers = {
             'Authorization': f'{type_token.decode()} {token.decode()}'
          }
@@ -25,22 +27,22 @@ class UklonRequest(Synchronizer):
 
     def park_payload(self) -> dict:
         payload = {
-            'client_id': ParkSettings.get_value(key='CLIENT_ID', park=self.id),
-            'client_secret': ParkSettings.get_value(key='CLIENT_SECRET', park=self.id),
-            'contact': ParkSettings.get_value(key='UKLON_NAME', park=self.id),
+            'client_id': ParkSettings.get_value(key='CLIENT_ID', partner=self.partner_id),
+            'client_secret': ParkSettings.get_value(key='CLIENT_SECRET', partner=self.partner_id),
+            'contact': ParkSettings.get_value(key='UKLON_NAME', partner=self.partner_id),
             'device_id': "38c13dc5-2ef3-4637-99f5-8de26b2e8216",
             'grant_type': "password_mfa",
-            'password': ParkSettings.get_value(key='UKLON_PASSWORD', park=self.id),
+            'password': ParkSettings.get_value(key='UKLON_PASSWORD', partner=self.partner_id),
         }
         return payload
 
     def create_session(self):
         response = requests.post(Service.get_value('UKLON_SESSION'), json=self.park_payload()).json()
-        self.redis.set(f"{self.id}{self.variables[0]}", response["access_token"])
-        self.redis.set(f"{self.id}{self.variables[1]}", response["token_type"])
+        self.redis.set(f"{self.partner_id}{self.variables[0]}", response["access_token"])
+        self.redis.set(f"{self.partner_id}{self.variables[1]}", response["token_type"])
 
     def response_data(self, url: str = None, params: dict = None,  pjson: dict = None) -> dict:
-        if not (self.redis.exists(f"{self.id}{self.variables[1]}") and self.redis.get(f"{self.id}{self.variables[0]}")):
+        if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
             self.create_session()
         while True:
             response = requests.get(
@@ -92,7 +94,7 @@ class UklonRequest(Synchronizer):
         param = self.parameters()
         param['dateFrom'] = str(self.start_report_interval(day).int_timestamp)
         param['dateTo'] = str(self.end_report_interval(day).int_timestamp)
-        url = f"{Service.get_value('UKLON_3')}{ParkSettings.get_value(key='ID_PARK', park=self.id)}"
+        url = f"{Service.get_value('UKLON_3')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         url += Service.get_value('UKLON_4')
         data = self.response_data(url=url, params=param)['items']
         if data:
@@ -149,7 +151,7 @@ class UklonRequest(Synchronizer):
                 first_key: [],
                 second_key: [],
             }
-        url = f"{Service.get_value('UKLON_5')}{ParkSettings.get_value(key='ID_PARK', park=self.id)}"
+        url = f"{Service.get_value('UKLON_5')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         url += Service.get_value('UKLON_6')
         data = self.response_data(url=url, params=self.parameters())
 
@@ -168,7 +170,7 @@ class UklonRequest(Synchronizer):
         drivers = []
         param = self.parameters()
         param['name'], param['phone'], param['status'], param['limit'] = ('', '', 'All', '30')
-        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', park=self.id)}"
+        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         url_1 = url + Service.get_value('UKLON_6')
         url_2 = url + Service.get_value('UKLON_2')
 
@@ -208,10 +210,10 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         login = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_2'))
-        login.send_keys(ParkSettings.get_value("UKLON_NAME", park=self.id))
+        login.send_keys(ParkSettings.get_value("UKLON_NAME", partner=self.partner_id))
         password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
         password.send_keys('')
-        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD", park=self.id))
+        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD", partner=self.partner_id))
         self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_4')).click()
 
     def wait_otp_code(self, user):

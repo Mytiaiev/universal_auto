@@ -1,6 +1,5 @@
 import logging
 import time
-import pendulum
 import requests
 import os
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -10,17 +9,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common import TimeoutException, InvalidSessionIdException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Park
+from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner
 import datetime
 
 LOGGER.setLevel(logging.WARNING)
 
 
 class Synchronizer:
-    variables = ('token', 'type')
 
-    def __init__(self, park_id, fleet, chrome_driver=None):
-        self.id = park_id
+    def __init__(self, partner_id, fleet, chrome_driver=None):
+        self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance
         if chrome_driver is not None:
@@ -65,8 +63,7 @@ class Synchronizer:
                 WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
 
     def get_partner(self) -> object:
-        park = Park.objects.select_related('partner').get(pk=self.id)
-        return park.partner
+        return Partner.objects.get(pk=self.partner_id)
 
     def get_drivers_table(self):
         raise NotImplementedError
@@ -78,21 +75,20 @@ class Synchronizer:
             self.create_driver(**driver)
 
     def create_driver(self, **kwargs):
-        pay_cash, id_, fleet_ = 'pay_cash', 'driver_external_id', 'fleet_name'
         try:
-            fleet = Fleet.objects.get(name=kwargs[fleet_])
-        except Fleet.DoesNotExist:
+            fleet = Fleet.objects.get(name=kwargs['fleet_name'])
+        except ObjectDoesNotExist:
             return
         drivers = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
-                                                              driver_external_id=kwargs[id_],
+                                                              driver_external_id=kwargs['driver_external_id'],
                                                               partner=self.get_partner())
         if not drivers:
             fleets_drivers_vehicles_rate = Fleets_drivers_vehicles_rate.objects.create(
                 fleet=fleet,
                 driver=self.get_or_create_driver(**kwargs),
                 vehicle=self.get_or_create_vehicle(**kwargs),
-                driver_external_id=kwargs[id_],
-                pay_cash=kwargs[pay_cash],
+                driver_external_id=kwargs['driver_external_id'],
+                pay_cash=kwargs['pay_cash'],
                 partner=self.get_partner(),
             )
             fleets_drivers_vehicles_rate.save()
@@ -100,16 +96,16 @@ class Synchronizer:
             self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
         else:
             for fleets_drivers_vehicles_rate in drivers:
-                if fleets_drivers_vehicles_rate.pay_cash != kwargs[pay_cash]:
-                    fleets_drivers_vehicles_rate.pay_cash = kwargs[pay_cash]
-                    fleets_drivers_vehicles_rate.save(update_fields=[pay_cash])
+                if fleets_drivers_vehicles_rate.pay_cash != kwargs['pay_cash']:
+                    fleets_drivers_vehicles_rate.pay_cash = kwargs['pay_cash']
+                    fleets_drivers_vehicles_rate.save(update_fields=['pay_cash'])
                 self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
                 self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
 
     def get_driver_by_name(self, name, second_name, partner):
         try:
             return Driver.objects.get(name=name, second_name=second_name, partner=partner)
-        except Driver.MultipleObjectsReturned:
+        except MultipleObjectsReturned:
             return Driver.objects.filter(name=name, second_name=second_name, partner=partner)[0]
 
     def get_driver_by_phone_or_email(self, phone_number, email, partner):
@@ -117,34 +113,33 @@ class Synchronizer:
             if phone_number:
                 return Driver.objects.get(phone_number__icontains=phone_number[-10::], partner=partner)
             else:
-                raise Driver.DoesNotExist
-        except (Driver.MultipleObjectsReturned, Driver.DoesNotExist):
+                raise ObjectDoesNotExist
+        except (MultipleObjectsReturned, ObjectDoesNotExist):
             try:
                 return Driver.objects.get(email__icontains=email, partner=partner)
-            except Driver.MultipleObjectsReturned:
-                raise Driver.DoesNotExist
+            except MultipleObjectsReturned:
+                raise ObjectDoesNotExist
 
     def get_or_create_driver(self, **kwargs):
-        name, s_name, phone, email = 'name', 'second_name', 'phone_number', 'email'
         try:
-            driver = self.get_driver_by_name(kwargs[name],
-                                             kwargs[s_name],
+            driver = self.get_driver_by_name(kwargs['name'],
+                                             kwargs['second_name'],
                                              partner=self.get_partner())
-        except Driver.DoesNotExist:
+        except ObjectDoesNotExist:
             try:
-                driver = self.get_driver_by_name(kwargs[s_name],
-                                                 kwargs[name],
+                driver = self.get_driver_by_name(kwargs['second_name'],
+                                                 kwargs['name'],
                                                  partner=self.get_partner())
-            except Driver.DoesNotExist:
+            except ObjectDoesNotExist:
                 try:
-                    driver = self.get_driver_by_phone_or_email(kwargs[phone],
-                                                               kwargs[email],
+                    driver = self.get_driver_by_phone_or_email(kwargs['phone_number'],
+                                                               kwargs['email'],
                                                                partner=self.get_partner())
-                except Driver.DoesNotExist:
-                    driver = Driver.objects.create(name=kwargs[name],
-                                                   second_name=kwargs[s_name],
-                                                   phone_number=kwargs[phone],
-                                                   email=kwargs[email],
+                except ObjectDoesNotExist:
+                    driver = Driver.objects.create(name=kwargs['name'],
+                                                   second_name=kwargs['second_name'],
+                                                   phone_number=kwargs['phone_number'],
+                                                   email=kwargs['email'],
                                                    role=Role.DRIVER,
                                                    partner=self.get_partner())
                     try:
@@ -161,7 +156,7 @@ class Synchronizer:
             licence_plate = unk
         try:
             vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-        except Vehicle.DoesNotExist:
+        except ObjectDoesNotExist:
             vehicle = Vehicle.objects.create(
                 name=kwargs[v_name].upper(),
                 licence_plate=licence_plate,
