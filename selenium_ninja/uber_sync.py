@@ -38,7 +38,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         el = WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_1'))))
         el.clear()
-        el.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.id))
+        el.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.partner_id))
         el = WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located((By.ID, UberService.get_value('UBER_PASSWORD_FORM_V3_2'))))
         el.click()
@@ -86,7 +86,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
         return f'{self.payments_order_file_name(self.fleet, pattern, day)}'
 
-    def download_payments_order(self, report_en, report_ua, pattern="Ninja", day=None):
+    def download_payments_order(self, report_en, report_ua, pattern, day=None):
         if os.path.exists(f'{self.payments_order_file_name(self.fleet, pattern, day)}'):
             self.logger.info('Report already downloaded')
             return
@@ -103,18 +103,15 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
             EC.presence_of_element_located((By.XPATH, download_button)))
         WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, download_button))).click()
         time.sleep(self.sleep)
-        if self.remote:
-            self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
-        else:
-            self.get_last_downloaded_file(self.file_pattern(self.fleet, pattern, day))
+        self.get_last_downloaded_file_frome_remote(self.file_pattern(self.fleet, pattern, day))
 
     def save_report(self, day):
         if self.sleep:
             time.sleep(self.sleep)
         items = []
 
-        file_order = self.payments_order_file_name(self.fleet, self.park_name(), day)
-        self.logger.info(self.file_pattern(self.fleet, self.park_name(), day))
+        file_order = self.payments_order_file_name(self.fleet, self.partner_id, day)
+        self.logger.info(self.file_pattern(self.fleet, self.partner_id, day))
         if file_order is not None:
             try:
                 with open(file_order, encoding="utf-8") as file:
@@ -274,14 +271,14 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         try:
             WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, pk)))
             el = self.driver.find_element(By.ID, id)
-            el.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.id))
+            el.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.partner_id))
             self.driver.find_element(selector, button).click()
         except Exception as e:
             self.logger.error(str(e))
 
     def login_form(self, id, button, selector):
         element = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.ID, id)))
-        element.send_keys(ParkSettings.get_value("UBER_NAME", partner=self.id))
+        element.send_keys(ParkSettings.get_value("UBER_NAME", partner=self.partner_id))
         e = self.driver.find_element(selector, button)
         e.click()
 
@@ -438,15 +435,16 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         except WebDriverException as err:
             self.logger.error(err)
 
-    def download_weekly_report(self, day):
+    def download_report(self, day):
         try:
-            report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
+            report = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
             if not report:
                 self.download_payments_order(UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3'),
                                              UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4'),
+                                             pattern=self.partner_id,
                                              day=day)
                 self.save_report(day=day)
-                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
+                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
             return list(report)
         except Exception as err:
             self.logger.error(err)

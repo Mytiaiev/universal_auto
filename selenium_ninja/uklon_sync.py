@@ -85,6 +85,7 @@ class UklonRequest(Synchronizer):
 
     def download_report(self, day):
         report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                         vendor_name=self.fleet,
                                          partner=self.get_partner())
         return list(report)
 
@@ -92,8 +93,8 @@ class UklonRequest(Synchronizer):
         if self.download_report(day):
             return self.download_report(day)
         param = self.parameters()
-        param['dateFrom'] = str(self.start_report_interval(day).int_timestamp)
-        param['dateTo'] = str(self.end_report_interval(day).int_timestamp)
+        param['dateFrom'] = int(self.start_report_interval(day).timestamp())
+        param['dateTo'] = int(self.end_report_interval(day).timestamp())
         url = f"{Service.get_value('UKLON_3')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         url += Service.get_value('UKLON_4')
         data = self.response_data(url=url, params=param)['items']
@@ -107,7 +108,7 @@ class UklonRequest(Synchronizer):
                     total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
                     total_distance=float(
                         0) if 'total_distance_meters' not in i else self.to_float(i['total_distance_meters'], div=1000),
-                    total_amount_cach=self.find_value(i, *('profit', 'order', 'cash', 'amount')),
+                    total_amount_cash=self.find_value(i, *('profit', 'order', 'cash', 'amount')),
                     total_amount_on_card=self.find_value(i, *('profit', 'order', 'wallet', 'amount')),
                     total_amount=self.find_value(i, *('profit', 'order', 'total', 'amount')),
                     tips=self.find_value(i, *('profit', 'tips', 'amount')),

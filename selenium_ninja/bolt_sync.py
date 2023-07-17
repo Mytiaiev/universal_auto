@@ -79,7 +79,7 @@ class BoltRequest(Synchronizer):
         return response.json()
 
     def save_report(self, day):
-        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.get_partner())
         if reports:
             return list(reports)
         # date format str yyyy-mm-dd

@@ -35,10 +35,6 @@ class SeleniumTools:
             if re.search(pattern, file):
                 return file
 
-    def park_name(self):
-        park = Park.objects.get(pk=self.partner)
-        return park.name
-
     def payments_order_file_name(self, fleet, partner, day):
         return self.report_file_name(self.file_pattern(fleet, partner, day))
 
@@ -46,8 +42,6 @@ class SeleniumTools:
     def file_pattern(fleet, partner, day=None):
         return f'{fleet} {day.strftime("%Y%m%d")}-{partner}.csv'
 
-    def remove_session(self):
-        os.remove(self.park_name())
 
     def build_driver(self, headless=True):
         options = webdriver.ChromeOptions()
