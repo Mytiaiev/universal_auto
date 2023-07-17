@@ -16,7 +16,7 @@ from django.dispatch import receiver
 def assign_model_permissions(group):
     models = {
         'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
-        'PaymentsOrder':                {'view': True, 'add': False, 'change': False, 'delete': False},
+        'Payments':                     {'view': True, 'add': False, 'change': False, 'delete': False},
         'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
         'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
         'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
@@ -44,7 +44,7 @@ try:
         for permission in group1.permissions.all():
             user.user_permissions.add(permission)
     assign_model_permissions(group1)
-except (ProgrammingError, ObjectDoesNotExist):
+except ProgrammingError:
     pass
 
 

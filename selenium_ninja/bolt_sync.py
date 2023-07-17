@@ -13,8 +13,8 @@ from selenium_ninja.synchronizer import Synchronizer
 
 
 class BoltRequest(Synchronizer):
-    def __init__(self, partner_id, fleet):
-        super().__init__(partner_id, fleet)
+    def __init__(self):
+        super().__init__()
         self.base_url = BoltService.get_value('REQUEST_BOLT_LOGIN_URL')
         self.param = {"language": "uk-ua", "version": "FO.2.61"}
 
@@ -151,7 +151,7 @@ class BoltRequest(Synchronizer):
         with_client = []
         wait = []
         report = self.get_target_url(f'{self.base_url}getDriversForLiveMap', self.param)
-        if report['data']:
+        if report.get('data'):
             for driver in report['data']['list']:
                 name, second_name = driver['name'].split(' ')
                 if driver['state'] == 'waiting_orders':
