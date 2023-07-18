@@ -184,8 +184,8 @@ def update_driver_data(self, partner_pk, manager_id=None):
         if manager_id is None:
             uber_driver = UberSynchronizer(partner_pk, 'Uber', selenium_session[partner_pk])
             uber_driver.synchronize()
-            uber_driver.download_trips(f'Report{partner_pk}', day)
-            uber_driver.download_report(f'Trips{partner_pk}', day)
+            uber_driver.download_trips(f'Trips{partner_pk}', day)
+            uber_driver.download_report(f'Report{partner_pk}', day)
     except Exception as e:
         logger.error(e)
     return manager_id
