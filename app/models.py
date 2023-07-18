@@ -107,6 +107,7 @@ class UberTrips(models.Model):
     license_plate = models.CharField(max_length=10)
     start_trip = models.DateTimeField(null=True, blank=True)
     end_trip = models.DateTimeField(null=True, blank=True)
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -1003,7 +1004,7 @@ class ParkSettings(models.Model):
     key = models.CharField(max_length=255, verbose_name='Ключ')
     value = models.CharField(max_length=255, verbose_name='Значення')
     description = models.CharField(max_length=255, null=True, verbose_name='Опиc')
-    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Автопарк')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
         verbose_name = 'Налаштування автопарка'
