@@ -248,7 +248,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         if self.sleep:
             time.sleep(self.sleep)
         login = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_2'))
-        login.send_keys(ParkSettings.get_value("UKLON_NAME", partner=self.partner_id))
+        login.send_keys(ParkSettings.get_value("UKLON_NAME", partner=self.partner_id)[4:])
         password = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_LOGIN_3'))
         password.send_keys('')
         password.send_keys(ParkSettings.get_value("UKLON_PASSWORD", partner=self.partner_id))
@@ -316,7 +316,7 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
         self.get_target_element_of_page(url, xpath)
         WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')))).click()
+            EC.presence_of_element_located((By.XPATH, xpath))).click()
         if self.sleep:
             time.sleep(self.sleep)
         WebDriverWait(self.driver, self.sleep).until(
@@ -401,10 +401,12 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
         jobapplication.save()
 
     def detaching_the_driver_from_the_car(self, licence_plate):
-        self.driver.get(NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_1'))
+        url = NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_1')
+        xpath = NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_2')
+        self.get_target_element_of_page(url, xpath)
         search = WebDriverWait(self.driver, self.sleep).until(
             EC.presence_of_element_located(
-                (By.XPATH, NewUklonService.get_value('NEWUKLONS_DETACHING_THE_DRIVER_FROM_THE_CAR_2'))))
+                (By.XPATH, xpath)))
         search.click()
         search.clear()
         search.send_keys(licence_plate)
