@@ -214,10 +214,10 @@ class UklonRequest(Synchronizer):
         param = self.parameters()
         param['name'], param['phone'], param['status'], param['limit'] = ('', '', 'All', '30')
         all_drivers = self.response_data(url=url, params=param)
-        signal = Driver.objects.get(pk=pk).get_external_id(self.fleet)
-        matching_item = next((item for item in all_drivers if item["signal"] == signal), None)
+        signal = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
+        matching_item = next((item for item in all_drivers['items'] if item["signal"] == int(signal)), None)
         if matching_item is not None:
-            url += f'{matching_item["id"]}/restrictions'
+            url += f'/{matching_item["id"]}/restrictions'
             if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
                 self.create_session()
             while True:

@@ -13,7 +13,7 @@ from selenium_ninja.synchronizer import Synchronizer
 
 
 class BoltRequest(Synchronizer):
-    def __init__(self, partner_id, fleet):
+    def __init__(self, partner_id=None, fleet="Bolt"):
         super().__init__(partner_id, fleet)
         self.base_url = BoltService.get_value('REQUEST_BOLT_LOGIN_URL')
         self.param = {"language": "uk-ua", "version": "FO.2.61"}
