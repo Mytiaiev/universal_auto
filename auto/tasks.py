@@ -195,8 +195,8 @@ def update_driver_data(self, partner_pk, manager_id=None):
 def send_on_job_application_on_driver(self, partner_pk, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        UklonSynchronizer(fleet='Uklon', chrome_driver=selenium_session[partner_pk]).add_driver(candidate)
-        BoltRequest(fleet='Bolt').add_driver(candidate)
+        UklonSynchronizer(partner_pk, fleet='Uklon', chrome_driver=selenium_session[partner_pk]).add_driver(candidate)
+        BoltRequest(partner_pk, fleet='Bolt').add_driver(candidate)
         logger.info('The job application has been sent')
     except Exception as e:
         logger.error(e)
@@ -298,7 +298,6 @@ def send_efficiency_report(self, partner_pk):
             bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner_pk), text=message)
 
 
-
 @app.task(bind=True)
 def check_time_order(self, order_id):
     return order_id
@@ -364,30 +363,27 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
             pass
 
 
-@app.task(bind=True)
-def upload_db(self, day):
-    # UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_trips', 'Trips', day)
-    # UberSynchronizer(CHROME_DRIVER.driver, 'Uber').try_to_execute('download_weekly_report', day)
-    # UklonSynchronizer(CHROME_DRIVER.driver, 'Uklon').try_to_execute('download_weekly_report', day)
-    BoltRequest().save_report(day)
-    save_report_to_ninja_payment(day)
-    fleet_reports = Payments.objects.filter(report_from=day)
-    for driver in Driver.objects.all():
-        payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
-        if payments:
-            if not SummaryReport.objects.filter(report_from=day, full_name=driver, partner=driver.partner):
-                report = SummaryReport(report_from=day,
-                                       full_name=driver,
-                                       partner=driver.partner)
-                fields = ("total_rides", "total_distance", "total_amount_cash",
-                          "total_amount_on_card", "total_amount", "tips",
-                          "bonuses", "fee", "total_amount_without_fee", "fares",
-                          "cancels", "compensations", "refunds"
-                          )
-
-                for field in fields:
-                    setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
-                report.save()
+# @app.task(bind=True)
+# def upload_db(self, day):
+#     BoltRequest().save_report(day)
+#     save_report_to_ninja_payment(day)
+#     fleet_reports = Payments.objects.filter(report_from=day)
+#     for driver in Driver.objects.all():
+#         payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
+#         if payments:
+#             if not SummaryReport.objects.filter(report_from=day, full_name=driver, partner=driver.partner):
+#                 report = SummaryReport(report_from=day,
+#                                        full_name=driver,
+#                                        partner=driver.partner)
+#                 fields = ("total_rides", "total_distance", "total_amount_cash",
+#                           "total_amount_on_card", "total_amount", "tips",
+#                           "bonuses", "fee", "total_amount_without_fee", "fares",
+#                           "cancels", "compensations", "refunds"
+#                           )
+#
+#                 for field in fields:
+#                     setattr(report, field, sum(getattr(payment, field, 0) or 0 for payment in payments))
+#                 report.save()
 
 
 @app.on_after_finalize.connect
