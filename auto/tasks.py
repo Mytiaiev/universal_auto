@@ -100,6 +100,7 @@ def download_daily_report(self, partner_pk, day=None):
 
 @app.task(bind=True)
 def get_car_efficiency(self, partner_pk, day=None):
+    partner_obj = Partner.objects.get(id=partner_pk)
     if not day:
         day = timezone.localtime() - timedelta(days=1)
     else:
@@ -126,7 +127,8 @@ def get_car_efficiency(self, partner_pk, day=None):
                                          driver=drivers,
                                          total_kasa=total_kasa,
                                          mileage=total_km or 0,
-                                         efficiency=result)
+                                         efficiency=result,
+                                         partner=partner_obj)
 
 
 @app.task(bind=True)
@@ -225,7 +227,6 @@ def get_rent_information(self, partner_pk):
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
         UklonRequest(partner_pk, 'Uklon').disable_cash(pk, enable)
-        # UklonSynchronizer(partner_pk, 'Uklon', selenium_session[partner_pk]).disable_cash(pk, enable)
         logger.info('disable_uklon_cash')
         BoltRequest(partner_pk).cash_restriction(pk, enable)
         logger.info('disable_bolt_cash')
@@ -236,7 +237,7 @@ def fleets_cash_trips(self, partner_pk, pk, enable):
 @app.task(bind=True)
 def withdraw_uklon(self, partner_pk):
     try:
-        UklonSynchronizer(partner_pk, 'Uklon', selenium_session[partner_pk]).withdraw_money()
+        UklonRequest(partner_pk, 'Uklon').withdraw_money()
     except Exception as e:
         logger.error(e)
 

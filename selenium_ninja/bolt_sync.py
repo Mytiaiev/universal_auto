@@ -172,7 +172,7 @@ class BoltRequest(Synchronizer):
         }
         self.post_target_url(f'{self.base_url}driver/toggleCash', self.param, payload)
         pay_cash = True if enable == 'true' else False
-        Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver).update(pay_cash=pay_cash)
+        Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
 
     def add_driver(self, job_application):
         headers = {
