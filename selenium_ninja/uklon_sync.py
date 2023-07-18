@@ -1,6 +1,8 @@
 import datetime
 import json
 import time
+import uuid
+
 import requests
 import redis
 from selenium.common import TimeoutException
@@ -84,9 +86,6 @@ class UklonRequest(Synchronizer):
 
         return nested_data
 
-    def put_target_url(self, url):
-        pass
-
     def download_report(self, day):
         report = Payments.objects.filter(report_from=self.start_report_interval(day),
                                          vendor_name=self.fleet,
@@ -108,7 +107,7 @@ class UklonRequest(Synchronizer):
                     report_from=self.start_report_interval(day).date(),
                     vendor_name=self.fleet,
                     full_name=f"{i['driver']['last_name']} {i['driver']['first_name']}",
-                    driver_id=str(i['driver']['signal']),
+                    driver_id=str(i['driver']['id']),
                     total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
                     total_distance=float(
                         0) if 'total_distance_meters' not in i else self.to_float(i['total_distance_meters'], div=1000),
@@ -199,7 +198,7 @@ class UklonRequest(Synchronizer):
                 'second_name': driver['last_name'],
                 'email': email.get('email', ''),
                 'phone_number': f"+{driver['phone']}",
-                'driver_external_id': driver['signal'],
+                'driver_external_id': driver['id'],
                 'pay_cash': pay_cash,
                 'licence_plate': self.find_value_str(driver, *('selected_vehicle', 'license_plate')),
                 'vehicle_name': vehicle_name,
@@ -210,36 +209,65 @@ class UklonRequest(Synchronizer):
 
     def disable_cash(self, pk, enable):
         url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
-        url += Service.get_value('UKLON_6')
-        param = self.parameters()
-        param['name'], param['phone'], param['status'], param['limit'] = ('', '', 'All', '30')
-        all_drivers = self.response_data(url=url, params=param)
-        signal = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
-        matching_item = next((item for item in all_drivers['items'] if item["signal"] == int(signal)), None)
-        if matching_item is not None:
-            url += f'/{matching_item["id"]}/restrictions'
-            if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
+        driver_id = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
+        url += f'{Service.get_value("UKLON_6")}/{driver_id}/restrictions'
+        if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
+            self.create_session()
+        while True:
+            headers = self.get_header()
+            headers.update({"Content-Type": "application/json"})
+            payload = {"type": "Cash"}
+            if enable == 'true':
+                response = requests.delete(url=url,
+                                           headers=headers,
+                                           data=json.dumps(payload),
+                                           )
+            else:
+                response = requests.put(url=url,
+                                        headers=headers,
+                                        data=json.dumps(payload),
+                                        )
+            if response.status_code in (401, 403):
                 self.create_session()
-            while True:
-                headers = self.get_header()
-                headers.update({"Content-Type": "application/json"})
-                payload = {"type": "Cash"}
-                if enable == 'true':
-                    response = requests.delete(url=url,
-                                               headers=self.get_header(),
-                                               data=json.dumps(payload),
-                                               )
-                else:
-                    response = requests.put(url=url,
-                                            headers=self.get_header(),
-                                            data=json.dumps(payload),
-                                            )
-                if response.status_code in (401, 403):
-                    self.create_session()
-                else:
-                    pay_cash = True if enable == 'true' else False
-                    Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=signal).update(pay_cash=pay_cash)
-                    break
+            else:
+                pay_cash = True if enable == 'true' else False
+                Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
+                break
+
+    def withdraw_money(self):
+        base_url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url = base_url + f"{Service.get_value('UKLON_7')}"
+        balance = {}
+        items = []
+        if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
+            self.create_session()
+        while True:
+            headers = self.get_header()
+            headers.update({"Content-Type": "application/json"})
+            resp = requests.get(url, headers=headers)
+            if resp.status_code in (401, 403):
+                self.create_session()
+            else:
+                for driver in resp.json()['items']:
+                    balance[driver['driver_id']] = driver['wallet']['balance']['amount'] -\
+                                                   int(ParkSettings.get_value('WITHDRAW_UKLON', partner=self.partner_id)) * 100
+                for key, value in balance.items():
+                    if value > 0:
+                        transfer = str(uuid.uuid4())
+                        items.append({
+                            "transfer_id": f"{transfer}",
+                            "driver_id": key,
+                            "amount": {
+                                "amount": value,
+                                "currency": "UAH"
+                            }})
+                if items:
+                    url2 = base_url + f"{Service.get_value('UKLON_8')}"
+                    payload = {
+                        "items": items
+                    }
+                    requests.post(url2, headers=headers, data=json.dumps(payload))
+                break
 
 
 class UklonSynchronizer(Synchronizer, SeleniumTools):
@@ -278,59 +306,6 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
                 p.subscribe(f'{user.phone_number} code')
             time.sleep(1)
         return otpa
-
-    def disable_cash(self, pk, enable):
-        url = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_1')
-        xpath = NewUklonService.get_value('NEWUKLONS_GET_DRIVERS_TABLE_2')
-        self.get_target_element_of_page(url, xpath)
-        driver = Driver.objects.get(pk=pk)
-        fleet = Fleet.objects.get(name=self.fleet)
-        try:
-            xpath = f'{NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_1")}{driver.second_name} {driver.name}")]'
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, xpath))).click()
-        except TimeoutException:
-            try:
-                xpath = f'{NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_1")}{driver.second_name}")]'
-                WebDriverWait(self.driver, self.sleep).until(
-                    EC.element_to_be_clickable((By.XPATH, xpath))).click()
-            except TimeoutException:
-                self.logger.error(f'No_driver {str(driver)} in {fleet}')
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH,
-                                            NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_8")))).click()
-        check_cash = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value("NEWUKLONS_GET_DRIVERS_TABLE_9"))))
-        if enable not in check_cash.get_attribute("aria-checked"):
-            time.sleep(self.sleep)
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.presence_of_element_located((By.XPATH,
-                                                NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_2")))).click()
-            WebDriverWait(self.driver, self.sleep).until(
-                EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value("NEWUKLONS_DISABLE_CASH_3")))).click()
-        pay_cash = True if enable == 'true' else False
-        Fleets_drivers_vehicles_rate.objects.filter(driver=driver, fleet=fleet).update(pay_cash=pay_cash)
-
-    def withdraw_money(self):
-        url = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_1')
-        xpath = NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_2')
-        self.get_target_element_of_page(url, xpath)
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.presence_of_element_located((By.XPATH, xpath))).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_3')))).click()
-        sum_remain = WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_4'))))
-        clickandclear(sum_remain)
-        sum_remain.send_keys(ParkSettings.get_value("WITHDRAW_UKLON"))
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_5')))).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        WebDriverWait(self.driver, self.sleep).until(
-            EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLONS_WITHDRAW_MONEY_6')))).click()
 
     def add_driver(self, jobapplication):
         url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')

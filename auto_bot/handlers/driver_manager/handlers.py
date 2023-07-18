@@ -108,10 +108,12 @@ def get_report(update, context):
         if result:
             for key in result[0]:
                 if result[0][key]:
-                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
+                    message = "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
                         key, result[0][key], result[1].get(key, 0))
+                else:
+                    message = no_reports_text
         else:
-            message += no_drivers_text
+            message = no_drivers_text
         query.edit_message_text(message)
         query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
