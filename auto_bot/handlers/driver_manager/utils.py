@@ -1,15 +1,13 @@
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 
 from _decimal import Decimal
-from django.db.models import Sum, Avg, FloatField, DecimalField
+from django.db.models import Sum, Avg,  DecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from app.models import Fleets_drivers_vehicles_rate, CarEfficiency, Payments, Driver, SummaryReport, DriverManager, \
+from app.models import CarEfficiency, Driver, SummaryReport, DriverManager, \
     Vehicle
-from auto_bot.handlers.driver_manager.static_text import no_drivers_text
-from auto_bot.main import bot
-from selenium_ninja.uagps_sync import UaGpsSynchronizer
+
 
 
 def validate_date(date_str):
