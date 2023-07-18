@@ -86,7 +86,7 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_14')).click()
         return f'{self.payments_order_file_name(self.fleet, pattern, day)}'
 
-    def download_payments_order(self, report_en, report_ua, pattern, day=None):
+    def download_payments_order(self, report_en, report_ua, pattern, day):
         if os.path.exists(f'{self.payments_order_file_name(self.fleet, pattern, day)}'):
             self.logger.info('Report already downloaded')
             return
@@ -111,7 +111,6 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         items = []
 
         file_order = self.payments_order_file_name(self.fleet, pattern, day)
-        self.logger.info(self.file_pattern(self.fleet, pattern, day))
         if file_order is not None:
             try:
                 with open(file_order, encoding="utf-8") as file:
@@ -134,7 +133,8 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             partner=self.get_partner())
                         try:
                             order.total_rides = UberTrips.objects.filter(report_from=day,
-                                                                         driver_external_id=str(row[0])).count()
+                                                                         driver_external_id=str(row[0]),
+                                                                         partner=self.partner_id).count()
                             order.tips = float(row[9]) if row[9] else 0
                         except IndexError:
                             order.tips = 0
@@ -164,13 +164,13 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 pass
         return items
 
-    def save_trips_report(self, pattern, day=None):
+    def save_trips_report(self, pattern, day):
         items = []
 
-        self.logger.info(self.file_pattern(self.fleet, pattern, day))
-        if self.payments_order_file_name(self.fleet, pattern, day) is not None:
+        file_order = self.payments_order_file_name(self.fleet, pattern, day)
+        if file_order is not None:
             try:
-                with open(self.payments_order_file_name(self.fleet, pattern, day), encoding="utf-8") as file:
+                with open(file_order, encoding="utf-8") as file:
                     reader = csv.reader(file)
                     next(reader)  # Advance past the header
                     for row in reader:
@@ -179,7 +179,8 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             report_from=day,
                             driver_external_id=row[1],
                             license_plate=row[5],
-                            start_trip=start
+                            start_trip=start,
+                            partner=self.get_partner(),
                         )
                         if row[8] != '':
                             end = timezone.make_aware(datetime.datetime.strptime(row[8], "%Y-%m-%d %H:%M:%S"))
@@ -193,7 +194,8 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                         trip = UberTrips(
                             report_from=day,
                             driver_external_id='00000000-0000-0000-0000-000000000000',
-                            license_plate=''
+                            license_plate='',
+                            partner=self.get_partner(),
                         )
                         try:
                             trip.save()
@@ -435,22 +437,21 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         except WebDriverException as err:
             self.logger.error(err)
 
-    def download_weekly_report(self, pattern, day):
+    def download_report(self, pattern, day):
         try:
             report = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
             if not report:
                 self.download_payments_order(UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3'),
                                              UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4'),
-                                             pattern,
-                                             day)
+                                             pattern, day)
                 self.save_report(pattern, day)
-                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet)
+                report = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
             return list(report)
         except Exception as err:
             self.logger.error(err)
 
     def download_trips(self, pattern, day):
-        report = UberTrips.objects.filter(report_from=day)
+        report = UberTrips.objects.filter(report_from=day, partner=self.partner_id)
         if not report:
             self.download_payments_order(UberService.get_value("UBER_GENERATE_TRIPS_1"),
                                          UberService.get_value("UBER_GENERATE_TRIPS_2"),
