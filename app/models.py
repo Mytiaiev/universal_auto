@@ -977,6 +977,7 @@ class CarEfficiency(models.Model):
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
+    partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнер')
 
     class Meta:
         verbose_name = 'Ефективність автомобіля'
