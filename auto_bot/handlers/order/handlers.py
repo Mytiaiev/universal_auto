@@ -346,7 +346,7 @@ def send_time_orders(sender=None, **kwargs):
                              timeorder.phone_number,
                              time=timezone.localtime(timeorder.order_time).time())
 
-        group_msg = bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT'),
+        group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
                                      text=message,
                                      reply_markup=inline_markup_accept(timeorder.pk),
                                      parse_mode=ParseMode.HTML)
