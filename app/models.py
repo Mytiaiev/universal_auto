@@ -20,6 +20,7 @@ class Partner(models.Model):
     def __str__(self):
         if self.user:
             return str(self.user.username)
+        return ''
 
 
 class Payments(models.Model):
