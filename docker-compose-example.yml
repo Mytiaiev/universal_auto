@@ -26,6 +26,8 @@ services:
       UKLON_NAME:
       UKLON_PASSWORD:
       ROLLBAR_TOKEN:
+      ROLLBAR_ENV: #'production' or 'staging'
+      DEVELOPER_CHAT_ID:
       LIQ_PAY_TOKEN:
       LIQPAY_PUBLIC_KEY:
       LIQPAY_PRIVATE_KEY:

@@ -70,11 +70,11 @@ class UaGpsSynchronizer:
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
 
-    def get_rent_distance(self):
+    def get_rent_distance(self, partner_id):
         yesterday = timezone.localtime() - datetime.timedelta(days=1)
         start = timezone.datetime.combine(yesterday, datetime.datetime.min.time()).astimezone()
         end = timezone.datetime.combine(yesterday, datetime.datetime.max.time()).astimezone()
-        for _driver in Driver.objects.all():
+        for _driver in Driver.objects.filter(partner=partner_id):
             if not RentInformation.objects.filter(driver=_driver,
                                                   created_at__date=timezone.localtime().date()):
                 rent_distance = 0
@@ -118,12 +118,14 @@ class UaGpsSynchronizer:
                 RentInformation.objects.create(driver_name=_driver,
                                                driver=_driver,
                                                rent_time=rent_time,
-                                               rent_distance=rent_distance)
+                                               rent_distance=rent_distance,
+                                               partner=partner_id)
 
-    def no_uber_rent_distance(self):
-        drivers = Driver.objects.all()
+    def no_uber_rent_distance(self, partner_id):
+        drivers = Driver.objects.filter(partner=partner_id)
         for driver in drivers:
             rent = RentInformation.objects.filter(driver_name=driver,
+                                                  partner=partner_id,
                                                   created_at__date=timezone.localtime().date()).first()
             driver_id = driver.get_driver_external_id('Uber')
             distance_in_trips = 0

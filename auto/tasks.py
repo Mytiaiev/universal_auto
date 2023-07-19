@@ -27,8 +27,6 @@ from selenium_ninja.uber_sync import UberSynchronizer
 from selenium_ninja.uklon_sync import UklonSynchronizer, UklonRequest
 from scripts.redis_conn import redis_instance
 
-MEMCACHE_LOCK_EXPIRE = 60 * 10
-MEMCACHE_LOCK_AFTER_FINISHING = 10
 
 logger = get_task_logger(__name__)
 selenium_session = {}
@@ -78,8 +76,7 @@ def download_daily_report(self, partner_pk, day=None):
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
-
-    BoltRequest(partner_pk, 'Bolt').save_report(day)
+    BoltRequest(partner_pk).save_report(day)
     UklonRequest(partner_pk, 'Uklon').save_report(day)
     save_report_to_ninja_payment(day, partner_pk)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
@@ -135,7 +132,7 @@ def get_car_efficiency(self, partner_pk, day=None):
 @app.task(bind=True)
 def update_driver_status(self, partner_pk):
     try:
-        bolt_status = BoltRequest(partner_pk, 'Bolt').get_drivers_status()
+        bolt_status = BoltRequest(partner_pk).get_drivers_status()
         logger.info(f'Bolt {bolt_status}')
 
         uklon_status = UklonRequest(partner_pk, 'Uklon').get_driver_status()
@@ -178,7 +175,7 @@ def update_driver_data(self, partner_pk, manager_id=None):
     try:
         day = timezone.localtime() - timedelta(days=1)
 
-        BoltRequest(partner_pk, 'Bolt').synchronize()
+        BoltRequest(partner_pk).synchronize()
         UklonRequest(partner_pk, 'Uklon').synchronize()
         UaGpsSynchronizer().get_vehicle_id()
         if manager_id is None:
@@ -195,8 +192,8 @@ def update_driver_data(self, partner_pk, manager_id=None):
 def send_on_job_application_on_driver(self, partner_pk, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        UklonSynchronizer(partner_pk, fleet='Uklon', chrome_driver=selenium_session[partner_pk]).add_driver(candidate)
-        BoltRequest(partner_pk, fleet='Bolt').add_driver(candidate)
+        UklonSynchronizer(fleet='Uklon', chrome_driver=selenium_session[partner_pk]).add_driver(candidate)
+        BoltRequest().add_driver(candidate)
         logger.info('The job application has been sent')
     except Exception as e:
         logger.error(e)
@@ -213,12 +210,12 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 
 
 @app.task(bind=True)
-def get_rent_information(self):
+def get_rent_information(self, partner_pk):
     try:
         session = UaGpsSynchronizer()
-        session.get_rent_distance()
+        session.get_rent_distance(partner_pk)
         logger.info('write rent report in uagps')
-        session.no_uber_rent_distance()
+        session.no_uber_rent_distance(partner_pk)
         logger.info('uber removed in rent')
     except Exception as e:
         logger.error(e)
@@ -227,9 +224,10 @@ def get_rent_information(self):
 @app.task(bind=True)
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
-        UklonSynchronizer(partner_pk, 'Uklon', selenium_session[partner_pk]).disable_cash(pk, enable)
+        UklonRequest(partner_pk, 'Uklon').disable_cash(pk, enable)
+        # UklonSynchronizer(partner_pk, 'Uklon', selenium_session[partner_pk]).disable_cash(pk, enable)
         logger.info('disable_uklon_cash')
-        BoltRequest(partner_pk, "Bolt").cash_restriction(pk, enable)
+        BoltRequest(partner_pk).cash_restriction(pk, enable)
         logger.info('disable_bolt_cash')
     except Exception as e:
         logger.error(e)
@@ -244,8 +242,9 @@ def withdraw_uklon(self, partner_pk):
 
 
 @app.task(bind=True)
-def manager_paid_weekly(self):
-    return logger.info('send message to manager')
+def manager_paid_weekly(self, partner_pk):
+    logger.info('send message to manager')
+    return partner_pk
 
 
 @app.task(bind=True)
@@ -390,20 +389,19 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
 def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())
-    for partner in Partner.objects.all():
-        if not partner.user.is_superuser:
-            partner_id = partner.pk
-            init_chrome_driver(partner_id)
-            sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(partner_id))
-            sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(partner_id))
-            sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(partner_id))
-            sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
-            sender.add_periodic_task(crontab(minute=10, hour=5), get_rent_information.s())
-            sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
-            sender.add_periodic_task(crontab(minute=30, hour=3), get_car_efficiency.s(partner_id))
-            sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id))
-            sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), send_weekly_report.s(partner_id))
-            sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s())
+    for partner in Partner.objects.exclude(user__is_superuser=True):
+        partner_id = partner.pk
+        init_chrome_driver(partner_id)
+        sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(partner_id))
+        sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(partner_id))
+        sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(partner_id))
+        sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
+        sender.add_periodic_task(crontab(minute=10, hour=5), get_rent_information.s(partner_id))
+        sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
+        sender.add_periodic_task(crontab(minute=30, hour=3), get_car_efficiency.s(partner_id))
+        sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id))
+        sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), send_weekly_report.s(partner_id))
+        sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(partner_id))
 
 
 def init_chrome_driver(partner_pk):
