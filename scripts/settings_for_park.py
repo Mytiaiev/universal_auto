@@ -24,7 +24,7 @@ settings = {
     'SEARCH_TIME': ('180', 'Час пошуку водія (с)'),
     'MINIMUM_PRICE_RADIUS': ('30', 'Мінімальна ціна за радіус (грн)'),
     'MAXIMUM_PRICE_RADIUS': ('1000', 'Максимальна ціна за радіус (грн)'),
-    'MANAGER_ID': ('515224934', 'Тимчасово id менеджера'),
+    'ORDER_CHAT': ('515224934', 'Чат замовлень'),
     'UKLON_TOKEN': ('Enter token for Uklon', 'Код автопарку в Uklon'),
 }
 

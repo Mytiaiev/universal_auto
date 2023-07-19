@@ -25,9 +25,11 @@ from auto_bot.main import bot
 @task_postrun.connect
 def remove_cash_driver(sender=None, **kwargs):
     if sender == manager_paid_weekly:
-        for driver in Driver.objects.filter(vehicle__isnull=False):
-            bot.send_message(chat_id=ParkSettings.get_value("MANAGER_ID"), text=ask_driver_paid(driver),
-                             reply_markup=inline_driver_paid_kb(driver.id))
+        partner_pk = kwargs.get('retval')
+        for manager in DriverManager.objects.filter(partner=partner_pk):
+            for driver in Driver.objects.filter(manager=manager):
+                bot.send_message(chat_id=manager.chat_id, text=ask_driver_paid(driver),
+                                 reply_markup=inline_driver_paid_kb(driver.id))
 
 
 @task_postrun.connect
@@ -41,7 +43,7 @@ def remove_cash_by_manager(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.objects.filter(id=int(data[2])).first()
-    fleets_cash_trips.delay(int(data[2]), enable=data[1])
+    fleets_cash_trips.delay(driver.partner.id, int(data[2]), enable=data[1])
     query.edit_message_text(remove_cash_text(driver, data[1]))
 
 
