@@ -2,9 +2,11 @@ import csv
 import datetime
 import json
 import os
+import pickle
 import time
 
 import redis
+import requests
 from django.db import IntegrityError
 from django.utils import timezone
 from selenium.common import TimeoutException, WebDriverException
@@ -13,7 +15,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from app.models import UberService, ParkSettings, UberTrips, Payments
+from app.models import UberService, ParkSettings, UberTrips, Payments, UberSession, Partner, \
+    Fleets_drivers_vehicles_rate
 from scripts.redis_conn import redis_instance
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.synchronizer import Synchronizer
@@ -33,6 +36,24 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                 self.password_form_v3()
             except TimeoutException:
                 self.otp_code_v2()
+        url = UberService.get_value('UBERS_GET_ALL_VEHICLES_1')
+        xpath = UberService.get_value('UBERS_GET_ALL_VEHICLES_2')
+        self.get_target_element_of_page(url, xpath)
+        time.sleep(self.sleep)
+        sid = None
+        csid = None
+        for cookie in self.driver.get_cookies():
+            if cookie['name'] == 'sid':
+                sid = cookie['value']
+            elif cookie['name'] == 'csid':
+                csid = cookie['value']
+        if sid and csid:
+            UberSession.objects.create(session=sid,
+                                       cook_session=csid,
+                                       partner=self.get_partner()
+                                       )
+        else:
+            self.logger.error(f"Cookie error{sid}, {csid}")
 
     def password_form_v3(self):
         el = WebDriverWait(self.driver, self.sleep).until(
@@ -160,48 +181,6 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
                             order.save()
                         except IntegrityError:
                             pass
-            except FileNotFoundError:
-                pass
-        return items
-
-    def save_trips_report(self, pattern, day):
-        items = []
-
-        file_order = self.payments_order_file_name(self.fleet, pattern, day)
-        if file_order is not None:
-            try:
-                with open(file_order, encoding="utf-8") as file:
-                    reader = csv.reader(file)
-                    next(reader)  # Advance past the header
-                    for row in reader:
-                        start = timezone.make_aware(datetime.datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S"))
-                        trip = UberTrips(
-                            report_from=day,
-                            driver_external_id=row[1],
-                            license_plate=row[5],
-                            start_trip=start,
-                            partner=self.get_partner(),
-                        )
-                        if row[8] != '':
-                            end = timezone.make_aware(datetime.datetime.strptime(row[8], "%Y-%m-%d %H:%M:%S"))
-                            trip.end_trip = end
-                        try:
-                            trip.save()
-                        except IntegrityError:
-                            pass
-                        items.append(trip)
-                    if not items:
-                        trip = UberTrips(
-                            report_from=day,
-                            driver_external_id='00000000-0000-0000-0000-000000000000',
-                            license_plate='',
-                            partner=self.get_partner(),
-                        )
-                        try:
-                            trip.save()
-                        except IntegrityError:
-                            pass
-
             except FileNotFoundError:
                 pass
         return items
@@ -389,54 +368,6 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
 
         return drivers
 
-    def get_driver_status_from_map(self, search_text):
-        raw_data = []
-        try:
-            xpath = "//div[@data-baseweb='table-custom']/div[@tabindex='0']"
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-        except TimeoutException:
-            return raw_data
-        i = 0
-        while True:
-            i += 1
-            try:
-                xpath = "//div[@data-baseweb='typo-labelsmall']"
-                driver_name = WebDriverWait(self.driver, self.sleep).until(
-                    EC.presence_of_element_located((By.XPATH, xpath))).text
-                xpath = "//div[@data-testid='driver-card']"
-                card = WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                payload_str = card.get_attribute('data-tracking-payload')
-                payload_dict = json.loads(payload_str)
-            except TimeoutException:
-                break
-            name_list = [x for x in driver_name.split(' ') if len(x) > 0]
-            name, second_name = '', ''
-            try:
-                name, second_name = name_list[0], name_list[1]
-            except IndexError:
-                pass
-            if payload_dict[f"{search_text}"]:
-                raw_data.append((name, second_name))
-                raw_data.append((second_name, name))
-        return raw_data
-
-    def get_driver_status(self):
-
-        try:
-
-            url = UberService.get_value('UBERS_GET_DRIVER_STATUS_1')
-            # url = f"https://supplier.uber.com/orgs/49dffc54-e8d9-47bd-a1e5-52ce16241cb6/livemap"
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            xpath = UberService.get_value('UBERS_GET_DRIVER_STATUS_2')
-            self.get_target_element_of_page(url, xpath)
-            return {
-                'online': self.get_driver_status_from_map('ONLINE'),
-                'width_client': self.get_driver_status_from_map('IN_PROGRESS'),
-                'wait': self.get_driver_status_from_map('ACCEPTED')
-            }
-        except WebDriverException as err:
-            self.logger.error(err)
-
     def download_report(self, pattern, day):
         try:
             report = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
@@ -450,12 +381,220 @@ class UberSynchronizer(Synchronizer, SeleniumTools):
         except Exception as err:
             self.logger.error(err)
 
-    def download_trips(self, pattern, day):
-        report = UberTrips.objects.filter(report_from=day, partner=self.partner_id)
-        if not report:
-            self.download_payments_order(UberService.get_value("UBER_GENERATE_TRIPS_1"),
-                                         UberService.get_value("UBER_GENERATE_TRIPS_2"),
-                                         pattern, day)
-            self.save_trips_report(pattern, day)
-            report = UberTrips.objects.filter(report_from=day)
-        return list(report)
+
+class UberRequest(Synchronizer):
+
+    def __init__(self, partner_id=None, fleet="Uber"):
+        super().__init__(partner_id, fleet)
+        self.base_url = UberService.get_value('REQUEST_UBER_BASE_URL')
+
+    def get_header(self):
+        obj_session = UberSession.objects.filter(partner=self.partner_id).latest('created_at')
+        headers = {
+            "content-type": "application/json",
+            "x-csrf-token": "x",
+            "cookie": f"sid={obj_session.session}; csid={obj_session.cook_session}"
+        }
+        return headers
+
+    @staticmethod
+    def get_payload(query, variables):
+        data = {
+            'query': query,
+            'variables': variables
+        }
+        return data
+
+    def get_driver_table(self):
+        query = '''
+          query GetDrivers(
+            $orgUUID: ID!,
+            $pagingOptions: PagingOptionsInput!,
+            $filters: GetDriversFiltersInput
+          ) {
+            getDrivers(
+              orgUUID: $orgUUID,
+              pagingOptions: $pagingOptions,
+              filters: $filters
+            ) {
+              orgUUID
+              drivers {
+                ...DriversTableRowFields
+              }
+              pagingResult {
+                nextPageToken
+              }
+            }
+          }
+
+          fragment DriversTableRowFields on Driver {
+            member {
+              user {
+                uuid
+                name {
+                  firstName
+                  lastName
+                }
+                email
+                phone {
+                  countryCode
+                  nationalPhoneNumber
+                }
+              }
+            }
+            associatedVehicles {
+              uuid
+              make
+              model
+              vin
+              year
+              licensePlate
+            }
+          }
+        '''
+        variables = {
+                    "orgUUID": "49dffc54-e8d9-47bd-a1e5-52ce16241cb6",
+                    "pagingOptions": {
+                        "pageSize": 25
+                                    },
+                    "filters": {
+                                "complianceStatuses": [],
+                                "vehicleAssignmentStatuses": [],
+                                "documentStatuses": []
+                                }
+                    }
+        drivers = []
+        data = self.get_payload(query, variables)
+        response = requests.post(self.base_url, headers=self.get_header(), json=data)
+        drivers_data = response.json()['data']['getDrivers']['drivers']
+        for driver in drivers_data:
+            licence_plate = ''
+            vehicle_name = ''
+            vin_code = ''
+            if driver['associatedVehicles']:
+                licence_plate = driver['associatedVehicles'][0]['licensePlate']
+                vehicle_name = driver['associatedVehicles'][0]['make']
+                vin_code = driver['associatedVehicles'][0]['vin']
+            phone = driver['member']['user']['phone']['countryCode'] + driver['member']['user']['phone']['nationalPhoneNumber']
+            drivers.append({'fleet_name': self.fleet,
+                            'name': driver['member']['user']['name']['firstName'],
+                            'second_name': driver['member']['user']['name']['lastName'],
+                            'email': driver['member']['user']['email'],
+                            'phone_number': phone,
+                            'driver_external_id': driver['member']['user']['uuid'],
+                            'licence_plate': licence_plate,
+                            'vehicle_name': vehicle_name,
+                            'vin_code': vin_code})
+        return drivers
+
+    def save_report(self, day):
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.get_partner())
+        if reports:
+            return list(reports)
+        start = int(self.start_report_interval(day).timestamp() * 1000)
+        end = int(self.end_report_interval(day).timestamp() * 1000)
+        query = '''query GetPerformanceReport($performanceReportRequest: PerformanceReportRequest__Input!) {
+                  getPerformanceReport(performanceReportRequest: $performanceReportRequest) {
+                    uuid
+                    totalEarnings
+                    hoursOnline
+                    totalTrips
+                    ... on DriverPerformanceDetail {
+                      cashEarnings
+                      driverAcceptanceRate
+                      driverCancellationRate
+                    }
+                    ... on VehiclePerformanceDetail {
+                      utilization
+                      vehicleIncentiveTarget
+                      vehicleIncentiveCompleted
+                      vehicleIncentiveEnrollmentStatus
+                      vehicleIncentiveUnit
+                    }
+                  }
+                }'''
+        uber_drivers = Fleets_drivers_vehicles_rate.objects.filter(partner=self.partner_id,
+                                                                   fleet__name=self.fleet)
+        drivers_id = [obj.driver_external_id for obj in uber_drivers]
+        variables = {
+                      "performanceReportRequest": {
+                        "orgUUID": "49dffc54-e8d9-47bd-a1e5-52ce16241cb6",
+                        "dimensions": [
+                          "vs:driver"
+                        ],
+                        "dimensionFilterClause": [
+                          {
+                            "dimensionName": "vs:driver",
+                            "operator": "OPERATOR_IN",
+                            "expressions": drivers_id
+                          }
+                        ],
+                        "metrics": [
+                          "vs:TotalEarnings",
+                          "vs:HoursOnline",
+                          "vs:TotalTrips",
+                          "vs:CashEarnings",
+                          "vs:DriverAcceptanceRate",
+                          "vs:DriverCancellationRate"
+                        ],
+                        "timeRange": {
+                          "startsAt": {
+                            "value": start
+                          },
+                          "endsAt": {
+                            "value": end
+                          }
+                        }
+                      }
+                    }
+        data = self.get_payload(query, variables)
+        response = requests.post(self.base_url, headers=self.get_header(), json=data)
+        if response.status_code == 200:
+            for report in response.json()['data']['getPerformanceReport']:
+                if report['totalEarnings']:
+                    driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid']).driver
+                    order = Payments(
+                        report_from=day,
+                        vendor_name=self.fleet,
+                        driver_id=report['uuid'],
+                        full_name=str(driver),
+                        total_amount=round(report['totalEarnings'], 2),
+                        total_amount_without_fee=round(report['totalEarnings'], 2),
+                        total_amount_cash=round(report['cashEarnings'], 2),
+                        total_rides=report['totalTrips'],
+                        partner=self.get_partner())
+                    order.save()
+        else:
+            self.logger.error(f"Failed save uber report {self.get_partner()} {response}")
+
+    def get_drivers_status(self):
+        query = '''query GetDriverEvents($orgUUID: String!) {
+                      getDriverEvents(orgUUID: $orgUUID) {
+                        driverEvents {
+                          driverUUID
+                          driverStatus
+                        }
+                      }
+                    }'''
+        variables = {
+                    "orgUUID": "49dffc54-e8d9-47bd-a1e5-52ce16241cb6"
+                     }
+        with_client = []
+        wait = []
+        data = self.get_payload(query, variables)
+        response = requests.post(self.base_url, headers=self.get_header(), json=data)
+        if response.status_code == 200:
+            drivers = response.json()['data']['getDriverEvents']['driverEvents']
+            if drivers:
+                for rider in drivers:
+                    driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=rider['driverUUID']).driver
+                    name, second_name = driver.name, driver.second_name
+                    if rider["driverStatus"] == "online":
+                        wait.append((name, second_name))
+                        wait.append((second_name, name))
+                    elif rider["driverStatus"] in ("accepted", "in_progress"):
+                        with_client.append((name, second_name))
+                        with_client.append((second_name, name))
+        return {'wait': wait,
+                'with_client': with_client}
+

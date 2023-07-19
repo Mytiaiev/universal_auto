@@ -756,6 +756,13 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         return fieldsets
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser:
+            if db_field.name == 'manager':
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(Order)
 class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):

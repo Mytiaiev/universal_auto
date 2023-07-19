@@ -41,13 +41,6 @@ class Synchronizer:
         #     pass
         return getattr(self, func_name)(*args, **kwargs)
 
-    @staticmethod
-    def download_from_bucket(path, filename):
-        response = requests.get(path)
-        local_path = os.path.join(os.getcwd(), f"Temp/{filename}.jpg")
-        with open(local_path, "wb") as file:
-            file.write(response.content)
-        return local_path
 
     def get_target_element_of_page(self, url, xpath):
         try:
