@@ -69,6 +69,7 @@ uagps_states = {
 }
 
 uber_states = {
+    "REQUEST_UBER_BASE_URL": ("https://supplier.uber.com/graphql", "url"),
     'BASE_URL': ('https://supplier.uber.com', 'url'),
     'UBER_LOGIN_V2_1': ('https://drivers.uber.com/', 'url'),
     'UBER_LOGIN_V2_2.1': ('PHONE_NUMBER_or_EMAIL_ADDRESS', 'ID'),

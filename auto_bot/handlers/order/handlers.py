@@ -391,7 +391,7 @@ def handle_callback_order(update, context):
             order.driver = driver
             order.save()
             if order.status_order == Order.ON_TIME:
-                context.bot.delete_message(chat_id=int(ParkSettings.get_value('DRIVERS_CHAT')),
+                context.bot.delete_message(chat_id=int(ParkSettings.get_value('ORDER_CHAT')),
                                            message_id=int(order.driver_message_id))
                 context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
             else:

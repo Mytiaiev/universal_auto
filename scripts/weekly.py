@@ -1,10 +1,7 @@
-import json
-from datetime import datetime, timedelta
-
-import requests
-
-from auto.tasks import get_car_efficiency
+from selenium_ninja.uklon_sync import UklonRequest
 
 
 def run(*args):
-    pass
+    UklonRequest(4, 'Uklon').detaching_the_driver_from_the_car("AA4427YA")
+
+
