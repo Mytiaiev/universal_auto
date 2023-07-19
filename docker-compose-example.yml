@@ -25,6 +25,7 @@ services:
       BOLT_PASSWORD:
       UKLON_NAME:
       UKLON_PASSWORD:
+      ROLLBAR_TOKEN:
       LIQ_PAY_TOKEN:
       LIQPAY_PUBLIC_KEY:
       LIQPAY_PRIVATE_KEY:
