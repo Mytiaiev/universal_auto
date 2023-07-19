@@ -1,6 +1,10 @@
+import random
+from datetime import timedelta, datetime
+
+from django.db import IntegrityError
 
 from app.models import Driver, Vehicle, Fleets_drivers_vehicles_rate, BoltFleet, UberFleet, NewUklonFleet, \
-    DriverRateLevels, NinjaFleet
+    DriverRateLevels, NinjaFleet, SummaryReport, CarEfficiency
 
 DRIVERS_MAP = {
     'fleets': [
@@ -28,14 +32,14 @@ DRIVERS_MAP = {
             'fleets_drivers_vehicles_rate':
                 [
                     {'fleet': 'Uber', 'driver_external_id': '9a182345-fd18-490f-a908-94f520a9d2d1', 'rate': 0.6},
-                    {'fleet': 'Bolt', 'driver_external_id': '+380936503350', 'rate': 0.6}, 
+                    {'fleet': 'Bolt', 'driver_external_id': '+380936503350', 'rate': 0.6},
                     {'fleet': 'Uklon', 'driver_external_id': '519154', 'rate': 0.4},
                 ]
         },
         {
             'name': 'Сергій',
             'second_name': 'Желамський',
-            'vehicle': {'licence_plate': 'AA3107YA', 'vin_code': 'LS6A2E0F1NA003113', 'name': '2022 Chang\'an Eado'},
+            'vehicle': {'licence_plate': 'AA3107YA', 'vin_code': 'LS6A2E0F1NA089713', 'name': '2022 Chang\'an Eado'},
             'fleets_drivers_vehicles_rate':
                 [
                     {'fleet': 'Uber', 'driver_external_id': 'cd725b41-9e47-4fd0-8a1f-3514ddf6238a', 'rate': 0.50},
@@ -68,7 +72,7 @@ DRIVERS_MAP = {
         {
             'name': 'Володимир',
             'second_name': 'Золотніков',
-            'vehicle': {'licence_plate': 'KA4897BM', 'vin_code': 'VF1RFB00357090131', 'name': '2016 Renault Megane'},
+            'vehicle': {'licence_plate': 'KA4856BM', 'vin_code': 'VF1RFB00357090131', 'name': '2016 Renault Megane'},
             'fleets_drivers_vehicles_rate':
                 [
                     {'fleet': 'Uber', 'driver_external_id': '3b4ff5f9-ae59-465e-8e19-f00970963876', 'rate': 0.60},
@@ -79,7 +83,7 @@ DRIVERS_MAP = {
         {
             'name': 'Євген',
             'second_name': 'Волонкович',
-            'vehicle': {'licence_plate': 'KA8443EA', 'vin_code': 'VF1RFB00357090131', 'name': '2016 Renault Megane'},
+            'vehicle': {'licence_plate': 'KA8443EA', 'vin_code': 'VF1RFB00488090131', 'name': '2016 Renault Megane'},
             'fleets_drivers_vehicles_rate':
                 [
                     {'fleet': 'Bolt', 'driver_external_id': '+380937645871', 'rate': 0.65},
@@ -88,35 +92,15 @@ DRIVERS_MAP = {
         {
             'name': 'Максим',
             'second_name': 'Клочков',
-            'vehicle': {'licence_plate': 'AA4314YA', 'vin_code': 'VF1RFB00357090131', 'name': '2016 Renault Megane'},
+            'vehicle': {'licence_plate': 'AA4314YA', 'vin_code': 'VF1RFB00352390131', 'name': '2016 Renault Megane'},
             'fleets_drivers_vehicles_rate':
                 [
-                
+
                     {'fleet': 'Uber', 'driver_external_id': 'fd19c311-523d-45fd-967f-b4c6408a9500', 'rate': 0.5},
                     {'fleet': 'Bolt', 'driver_external_id': '+380631694021', 'rate': 0.5},
                     {'fleet': 'Uklon', 'driver_external_id': '549340', 'rate': 0.5},
                 ]
-        },  
-        {
-            'name': 'Руслан',
-            'second_name': 'Борисюк',
-            'vehicle': {'licence_plate': 'AA4314YA', 'vin_code': 'VF1RFB00357090131', 'name': '2016 Renault Megane'},
-            'fleets_drivers_vehicles_rate':
-                [
-                    {'fleet': 'Bolt', 'driver_external_id': '+380683922101', 'rate': 0.5},
-                ]
-        },  
-        {
-            'name': 'Ярослав',
-            'second_name': 'Гой',
-            'vehicle': {'licence_plate': 'KA1644CT', 'vin_code': 'VF1RFB00357090131', 'name': '2016 Renault Megane'},
-            'fleets_drivers_vehicles_rate':
-                [
-                    {'fleet': 'Bolt', 'driver_external_id': '+380964415614', 'rate': 0.65},
-                    {'fleet': 'Uklon', 'driver_external_id': '544788', 'rate': 0.35},
-                ]
-        },  
-
+        },
     ],
     'driver_rate_levels': [
         {'fleet': 'Uber', 'threshold_value': 10500, 'rate_delta': -0.05},
@@ -158,13 +142,17 @@ def init_models():
         fleets[item['name']] = fleet
 
     for item in DRIVERS_MAP['drivers']:
-        driver = get_or_create_object(Driver, ['name', 'second_name'], name=item['name'], second_name=item['second_name'])
         vehicle = get_or_create_object(Vehicle, ['licence_plate'],
                                        licence_plate=item['vehicle']['licence_plate'],
                                        vin_code=item['vehicle']['vin_code'],
                                        name=item['vehicle']['name'],
-                                       driver=driver
+
                                        )
+        driver = get_or_create_object(Driver, ['name', 'second_name'],
+                                      name=item['name'],
+                                      second_name=item['second_name'],
+                                      vehicle=vehicle
+                                      )
         for rate in item['fleets_drivers_vehicles_rate']:
             print('+++++++++++++++++++++++++++++++++++++')
             print(driver)
@@ -183,5 +171,89 @@ def init_models():
                              )
 
 
+def generate_random_amount(min_value, max_value):
+    return round(random.uniform(min_value, max_value), 2)
+
+
+def calculate_efficiency(total_amount, total_distance):
+    if total_distance > 0:
+        return round(total_amount / total_distance, 2)
+    else:
+        return 0
+
+
+def generate_reports():
+    today = datetime.now().date()
+
+    drivers_data = DRIVERS_MAP['drivers']
+
+    for driver_data in drivers_data:
+        for i in range(7):
+            report_from = today - timedelta(days=i)
+            full_name = f"{driver_data['name']} {driver_data['second_name']}"
+            total_amount_without_fee = generate_random_amount(500, 5000)
+            total_amount_cash = generate_random_amount(50, 150)
+            total_amount_on_card = round(total_amount_without_fee - total_amount_cash, 2)
+            total_rides = random.randint(3, 10)
+            total_distance = generate_random_amount(50, 250)
+            fee = round((total_amount_cash + total_amount_on_card) * 0.15, 2)
+            total_amount = round(total_amount_cash + total_amount_on_card + fee, 2)
+
+            summary_report = get_or_create_object(
+                SummaryReport,
+                ['report_from', 'full_name'],
+                report_from=report_from,
+                full_name=full_name,
+                total_amount_without_fee=total_amount_without_fee,
+                total_amount_cash=total_amount_cash,
+                total_amount_on_card=total_amount_on_card,
+                total_amount=total_amount,
+                total_rides=total_rides,
+                total_distance=total_distance,
+                fee=fee,
+            )
+            summary_report.save()
+
+
+def update_car_efficiency():
+    today = datetime.now().date()
+    seven_days_ago = today - timedelta(days=7)
+
+    summary_reports = SummaryReport.objects.filter(report_from__range=[seven_days_ago, today])
+
+    for report in summary_reports:
+        total_amount = report.total_amount
+        total_distance = report.total_distance
+
+        try:
+            driver = Driver.objects.get(name=report.full_name.split()[0], second_name=report.full_name.split()[1])
+            vehicle = driver.vehicle
+            licence_plate = vehicle.licence_plate
+        except Driver.DoesNotExist:
+            licence_plate = None
+
+        efficiency = calculate_efficiency(total_amount, total_distance)
+
+        car_efficiency, created = CarEfficiency.objects.get_or_create(
+            report_from=report.report_from,
+            licence_plate=licence_plate,
+            defaults={
+                'driver': report.full_name,
+                'total_kasa': total_amount,
+                'mileage': total_distance,
+                'efficiency': efficiency,
+            }
+        )
+
+        if not created:
+            car_efficiency.driver = report.full_name
+            car_efficiency.total_kasa = total_amount
+            car_efficiency.mileage = total_distance
+            car_efficiency.efficiency = efficiency
+            car_efficiency.save()
+
+
 def run():
     init_models()
+    generate_reports()
+    update_car_efficiency()
