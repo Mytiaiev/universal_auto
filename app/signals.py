@@ -20,12 +20,14 @@ def create_partner(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Partner)
 def create_park_settings(sender, instance, created, **kwargs):
     if created:
-        driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
-                                  desired_capabilities=webdriver.DesiredCapabilities.CHROME)
-        selenium_session[instance.pk] = driver
-        for key in settings_for_partner.keys():
-            response = settings_for_partner[key]
-            ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
+        if not instance.user.is_superuser:
+            if not instance.pk in selenium_session:
+                driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
+                                          desired_capabilities=webdriver.DesiredCapabilities.CHROME)
+                selenium_session[instance.pk] = driver
+                for key in settings_for_partner.keys():
+                    response = settings_for_partner[key]
+                    ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
 
 
 @receiver(pre_save, sender=Driver)
