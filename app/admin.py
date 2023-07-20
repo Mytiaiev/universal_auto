@@ -890,7 +890,7 @@ class ParkSettingsAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['value', 'description',
+            return ['description', 'value',
                     ]
 
     def get_fieldsets(self, request, obj=None):

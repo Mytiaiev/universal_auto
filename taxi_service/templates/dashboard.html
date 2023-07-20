@@ -66,10 +66,40 @@
 				</a>
 			</li>
 			<li class="sidebar-list-item">
-				<a href="#" target="_blank">
+				<a href="#" id="settingsBtn">
 					<span class="material-icons-outlined"></span> Налаштування
 				</a>
 			</li>
+			<div id="settingsWindow" class="settings-window">
+				<div class="settings-content">
+					<span class="close-btn">&times;</span>
+					<h2>Компанії партнерів</h2>
+
+					<form id="uberForm">
+						{% csrf_token %}
+						<label for="uberLogin">Uber</label>
+						<input type="text" id="uberLogin" name="uberLogin" placeholder="Логін Uber" required>
+						<input class="showPassword" type="password" id="uberPassword" name="uberPassword" placeholder="Пароль Uber" required>
+						<button type="button" class="login-btn">Увійти</button>
+					</form>
+
+					<form id="uklonForm">
+						{% csrf_token %}
+						<label for="uklonLogin">Uklon</label>
+						<input type="text" id="uklonLogin" name="uklonLogin" placeholder="Логін Uklon" required>
+						<input class="showPassword" type="password" id="uklonPassword" name="uklonPassword" placeholder="Пароль Uklon" required>
+						<button type="button" class="login-btn">Увійти</button>
+					</form>
+
+					<form id="boltForm">
+						{% csrf_token %}
+						<label for="boltLogin">Bolt</label>
+						<input type="text" id="boltLogin" name="boltLogin" placeholder="Логін Bolt" required>
+						<input class="showPassword" type="password" id="boltPassword" name="boltPassword" placeholder="Пароль Bolt" required>
+						<button type="button" class="login-btn">Увійти</button>
+					</form>
+				</div>
+			</div>
 		</ul>
 	</aside>
 	<!-- End Sidebar -->
