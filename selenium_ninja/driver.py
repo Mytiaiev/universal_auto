@@ -1,3 +1,4 @@
+import re
 import time
 import os
 from datetime import datetime
@@ -223,20 +224,28 @@ class SeleniumTools:
         url = UberService.get_value('BASE_URL')
         self.driver.get(url)
         time.sleep(self.sleep)
+        new_url = self.driver.current_url
+        uuid_pattern = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+        uuid_list = re.findall(uuid_pattern, new_url)
         sid = None
         csid = None
-        for cookie in self.driver.get_cookies():
-            if cookie['name'] == 'sid':
-                sid = cookie['value']
-            elif cookie['name'] == 'csid':
-                csid = cookie['value']
-        if sid and csid:
-            UberSession.objects.create(session=sid,
-                                       cook_session=csid,
-                                       partner=Partner.get_partner(self.partner)
-                                       )
+        if uuid_list:
+            uuid = uuid_list[0]
+            for cookie in self.driver.get_cookies():
+                if cookie['name'] == 'sid':
+                    sid = cookie['value']
+                elif cookie['name'] == 'csid':
+                    csid = cookie['value']
+            if sid and csid:
+                UberSession.objects.create(session=sid,
+                                           cook_session=csid,
+                                           uber_uuid=uuid,
+                                           partner=Partner.get_partner(self.partner)
+                                           )
+            else:
+                self.logger.error(f"Cookie error{sid}, {csid}")
         else:
-            self.logger.error(f"Cookie error{sid}, {csid}")
+            self.logger.error(f"{new_url} without uuid")
 
     def password_form(self):
         input_password = WebDriverWait(self.driver, self.sleep).until(

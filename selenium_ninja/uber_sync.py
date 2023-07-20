@@ -18,6 +18,10 @@ class UberRequest(Synchronizer):
         }
         return headers
 
+    def get_uuid(self):
+        obj_session = UberSession.objects.filter(partner=self.partner_id).latest('created_at')
+        return str(obj_session.uber_uuid)
+
     @staticmethod
     def get_payload(query, variables):
         data = {
@@ -74,7 +78,7 @@ class UberRequest(Synchronizer):
           }
         '''
         variables = {
-                    "orgUUID": "49dffc54-e8d9-47bd-a1e5-52ce16241cb6",
+                    "orgUUID": self.get_uuid(),
                     "pagingOptions": {
                         "pageSize": 25
                                     },
@@ -140,7 +144,7 @@ class UberRequest(Synchronizer):
         drivers_id = [obj.driver_external_id for obj in uber_drivers]
         variables = {
                       "performanceReportRequest": {
-                        "orgUUID": "49dffc54-e8d9-47bd-a1e5-52ce16241cb6",
+                        "orgUUID": self.get_uuid(),
                         "dimensions": [
                           "vs:driver"
                         ],
@@ -199,7 +203,7 @@ class UberRequest(Synchronizer):
                       }
                     }'''
         variables = {
-                    "orgUUID": "49dffc54-e8d9-47bd-a1e5-52ce16241cb6"
+                    "orgUUID": self.get_uuid()
                      }
         with_client = []
         wait = []
