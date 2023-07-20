@@ -37,18 +37,15 @@ class UklonRequest(Synchronizer):
                        data: dict = None,
                        pjson: dict = None,
                        method: str = None):
-        if method == "GET":
-            response = requests.get(url=url, headers=headers, data=data, json=pjson, params=params)
-            return response
-        if method == "PUT":
-            response = requests.put(url=url, headers=headers, data=data, json=pjson, params=params)
-            return response
-        if method == "DELETE":
-            response = requests.delete(url=url, headers=headers, data=data, json=pjson, params=params)
-            return response
         if method == "POST":
             response = requests.post(url=url, headers=headers, data=data, json=pjson, params=params)
-            return response
+        elif method == "PUT":
+            response = requests.put(url=url, headers=headers, data=data, json=pjson, params=params)
+        elif method == "DELETE":
+            response = requests.delete(url=url, headers=headers, data=data, json=pjson, params=params)
+        else:
+            response = requests.get(url=url, headers=headers, data=data, json=pjson, params=params)
+        return response
 
     def response_data(self, url: str = None,
                       params: dict = None,
@@ -57,9 +54,6 @@ class UklonRequest(Synchronizer):
                       pjson: dict = None,
                       method: str = 'GET') -> dict:
 
-        if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}")
-                and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
-    def response_data(self, url: str = None, params: dict = None,  pjson: dict = None) -> dict:
         if not self.redis.exists(f"{self.partner_id}token"):
             self.create_session()
         while True:
@@ -174,7 +168,7 @@ class UklonRequest(Synchronizer):
             }
         url = f"{Service.get_value('UKLON_5')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         url += Service.get_value('UKLON_6')
-        data = self.response_data(url=url, params=self.parameters())
+        data = self.response_data(url, params=self.parameters())
 
         for driver in data['drivers']:
             first_data = (driver['last_name'], driver['first_name'])
@@ -228,58 +222,50 @@ class UklonRequest(Synchronizer):
         url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         driver_id = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
         url += f'{Service.get_value("UKLON_6")}/{driver_id}/restrictions'
-            headers = self.get_header()
-            headers.update({"Content-Type": "application/json"})
-            payload = {"type": "Cash"}
-            if enable == 'true':
-                self.response_data(url=url,
-                                   headers=headers,
-                                   data=payload,
-                                   method='DELETE')
-            else:
-                self.response_data(url=url,
-                                   headers=headers,
-                                   data=payload,
-                                   method='PUT')
-                pay_cash = True if enable == 'true' else False
-                Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
-                break
+        headers = self.get_header()
+        headers.update({"Content-Type": "application/json"})
+        payload = {"type": "Cash"}
+        if enable == 'true':
+            self.response_data(url=url,
+                               headers=headers,
+                               data=payload,
+                               method='DELETE')
+        else:
+            self.response_data(url=url,
+                               headers=headers,
+                               data=payload,
+                               method='PUT')
+        pay_cash = True if enable == 'true' else False
+        Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
 
     def withdraw_money(self):
         base_url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         url = base_url + f"{Service.get_value('UKLON_7')}"
         balance = {}
         items = []
-        if not self.redis.exists(f"{self.partner_id}token"):
-            self.create_session()
-        while True:
-            headers = self.get_header()
-            headers.update({"Content-Type": "application/json"})
-            resp = requests.get(url, headers=headers)
-            if resp.status_code in (401, 403):
-                self.create_session()
-            else:
-                for driver in resp.json()['items']:
-                    balance[driver['driver_id']] = driver['wallet']['balance']['amount'] -\
-                                                   int(ParkSettings.get_value('WITHDRAW_UKLON',
-                                                                              partner=self.partner_id)) * 100
-                for key, value in balance.items():
-                    if value > 0:
-                        transfer = str(uuid.uuid4())
-                        items.append({
-                            "transfer_id": f"{transfer}",
-                            "driver_id": key,
-                            "amount": {
-                                "amount": value,
-                                "currency": "UAH"
-                            }})
-                if items:
-                    url2 = base_url + f"{Service.get_value('UKLON_8')}"
-                    payload = {
-                        "items": items
-                    }
-                    requests.post(url2, headers=headers, data=json.dumps(payload))
-                break
+        headers = self.get_header()
+        headers.update({"Content-Type": "application/json"})
+        resp = self.response_data(url, headers=headers)
+        for driver in resp['items']:
+            balance[driver['driver_id']] = driver['wallet']['balance']['amount'] -\
+                                           int(ParkSettings.get_value('WITHDRAW_UKLON',
+                                                                      partner=self.partner_id)) * 100
+        for key, value in balance.items():
+            if value > 0:
+                transfer = str(uuid.uuid4())
+                items.append({
+                    "transfer_id": f"{transfer}",
+                    "driver_id": key,
+                    "amount": {
+                        "amount": value,
+                        "currency": "UAH"
+                    }})
+        if items:
+            url2 = base_url + f"{Service.get_value('UKLON_8')}"
+            payload = {
+                "items": items
+            }
+            requests.post(url2, headers=headers, data=json.dumps(payload))
 
     def detaching_the_driver_from_the_car(self, licence_plate):
         base_url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
@@ -292,4 +278,4 @@ class UklonRequest(Synchronizer):
         if matching_object:
             id_vehicle = matching_object["id"]
             url += f"/{id_vehicle}/release"
-            requests.post(url, headers=self.get_header())
+            requests.post(url)

@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta
 from auto.tasks import download_daily_report, get_car_efficiency
 
