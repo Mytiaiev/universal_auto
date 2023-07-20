@@ -195,6 +195,7 @@ class SeleniumTools:
 
     def uber_login(self):
         self.driver.get(UberService.get_value('UBER_LOGIN_URL'))
+        time.sleep(self.sleep)
         input_login = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
         clickandclear(input_login)
@@ -215,6 +216,7 @@ class SeleniumTools:
                 WebDriverWait(self.driver, self.sleep).until(
                     ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_6')))).click()
                 self.password_form()
+        time.sleep(self.sleep)
         self.save_uber()
         self.quit()
 
@@ -244,6 +246,7 @@ class SeleniumTools:
         input_password.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.partner))
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
+
 
     def wait_otp_code(self, key):
         p = redis_instance.pubsub()
