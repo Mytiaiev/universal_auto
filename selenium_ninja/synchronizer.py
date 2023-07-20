@@ -1,3 +1,5 @@
+import logging
+
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from scripts.redis_conn import redis_instance
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner
@@ -10,6 +12,8 @@ class Synchronizer:
         self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+        self.logger = logging.getLogger(__name__)
 
     def get_drivers_table(self):
         raise NotImplementedError
@@ -47,12 +51,14 @@ class Synchronizer:
                     fleets_drivers_vehicles_rate.save(update_fields=['pay_cash'])
                 self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
                 self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
+
     @staticmethod
     def get_driver_by_name(name, second_name, partner):
         try:
             return Driver.objects.get(name=name, second_name=second_name, partner=partner)
         except MultipleObjectsReturned:
             return Driver.objects.filter(name=name, second_name=second_name, partner=partner)[0]
+
     @staticmethod
     def get_driver_by_phone_or_email(phone_number, email, partner):
         try:

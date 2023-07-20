@@ -1,5 +1,5 @@
 import requests
-from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate
+from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner
 from selenium_ninja.synchronizer import Synchronizer
 
 
@@ -26,7 +26,7 @@ class UberRequest(Synchronizer):
         }
         return data
 
-    def get_driver_table(self):
+    def get_drivers_table(self):
         query = '''
           query GetDrivers(
             $orgUUID: ID!,
@@ -104,12 +104,13 @@ class UberRequest(Synchronizer):
                             'phone_number': phone,
                             'driver_external_id': driver['member']['user']['uuid'],
                             'licence_plate': licence_plate,
+                            'pay_cash': True,
                             'vehicle_name': vehicle_name,
                             'vin_code': vin_code})
         return drivers
 
     def save_report(self, day):
-        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.get_partner())
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
         if reports:
             return list(reports)
         start = int(self.start_report_interval(day).timestamp() * 1000)
@@ -183,10 +184,10 @@ class UberRequest(Synchronizer):
                         total_amount_without_fee=round(report['totalEarnings'], 2),
                         total_amount_cash=round(report['cashEarnings'], 2),
                         total_rides=report['totalTrips'],
-                        partner=self.get_partner())
+                        partner=Partner.get_partner(self.partner_id))
                     order.save()
         else:
-            self.logger.error(f"Failed save uber report {self.get_partner()} {response}")
+            self.logger.error(f"Failed save uber report {self.partner_id} {response}")
 
     def get_drivers_status(self):
         query = '''query GetDriverEvents($orgUUID: String!) {

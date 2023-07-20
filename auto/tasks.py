@@ -98,13 +98,13 @@ def download_daily_report(self, partner_pk, day=None):
 
 @app.task(bind=True)
 def get_car_efficiency(self, partner_pk, day=None):
-    partner_obj = Partner.objects.get(id=partner_pk)
     if not day:
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
     for vehicle in Vehicle.objects.filter(driver__isnull=False, partner=partner_pk):
         efficiency = CarEfficiency.objects.filter(report_from=day,
+                                                  partner=partner_pk,
                                                   licence_plate=vehicle.licence_plate)
         if not efficiency:
             total_kasa = 0
@@ -126,7 +126,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                          total_kasa=total_kasa,
                                          mileage=total_km or 0,
                                          efficiency=result,
-                                         partner=partner_obj)
+                                         partner=Partner.get_partner(partner_pk))
 
 
 @app.task(bind=True)
