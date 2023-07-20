@@ -1065,6 +1065,7 @@ class UberService(Service):
 class UberSession(models.Model):
     session = models.CharField(max_length=255, verbose_name='Ідентифікатор сесії')
     cook_session = models.CharField(max_length=255, verbose_name='Ідентифікатор cookie')
+    uber_uuid = models.UUIDField(verbose_name="Код автопарку Uber")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
