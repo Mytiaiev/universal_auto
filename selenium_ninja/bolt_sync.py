@@ -147,6 +147,9 @@ class BoltRequest(Synchronizer):
             time.sleep(0.5)
         return driver_list
 
+    def get_vehicles(self):
+        return []
+
     def get_drivers_status(self):
         with_client = []
         wait = []
