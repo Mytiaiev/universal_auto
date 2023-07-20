@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, timedelta
 from _decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
@@ -6,7 +5,6 @@ from django.db import IntegrityError
 from django.utils import timezone
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
-from selenium import webdriver
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner
@@ -17,13 +15,13 @@ from auto_bot.main import bot
 from scripts.conversion import convertion
 from auto.celery import app
 from selenium_ninja.bolt_sync import BoltRequest
+from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
-from selenium_ninja.uber_sync import UberSynchronizer, UberRequest
-from selenium_ninja.uklon_sync import UklonSynchronizer, UklonRequest
+from selenium_ninja.uber_sync import UberRequest
+from selenium_ninja.uklon_sync import UklonRequest
 
 
 logger = get_task_logger(__name__)
-selenium_session = {}
 
 
 @app.task()
@@ -66,7 +64,7 @@ def raw_gps_handler(pk):
 
 @app.task(bind=True)
 def get_uber_session(self, partner_pk):
-    UberSynchronizer(partner_pk, "Uber", selenium_session[partner_pk]).login()
+    SeleniumTools(partner_pk).uber_login()
 
 
 @app.task(bind=True)
@@ -76,7 +74,7 @@ def download_daily_report(self, partner_pk, day=None):
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
     BoltRequest(partner_pk).save_report(day)
-    UklonRequest(partner_pk, 'Uklon').save_report(day)
+    UklonRequest(partner_pk).save_report(day)
     UberRequest(partner_pk).save_report(day)
     save_report_to_ninja_payment(day, partner_pk)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
@@ -137,7 +135,7 @@ def update_driver_status(self, partner_pk):
         bolt_status = BoltRequest(partner_pk).get_drivers_status()
         logger.info(f'Bolt {bolt_status}')
 
-        uklon_status = UklonRequest(partner_pk, 'Uklon').get_driver_status()
+        uklon_status = UklonRequest(partner_pk).get_driver_status()
         logger.info(f'Uklon {uklon_status}')
 
         uber_status = UberRequest(partner_pk).get_drivers_status()
@@ -180,7 +178,7 @@ def update_driver_status(self, partner_pk):
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
         BoltRequest(partner_pk).synchronize()
-        UklonRequest(partner_pk, 'Uklon').synchronize()
+        UklonRequest(partner_pk).synchronize()
         UberRequest(partner_pk).synchronize()
         UaGpsSynchronizer().get_vehicle_id()
     except Exception as e:
@@ -192,7 +190,7 @@ def update_driver_data(self, partner_pk, manager_id=None):
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        UklonSynchronizer(fleet='Uklon', chrome_driver=selenium_session[partner_pk]).add_driver(candidate)
+        SeleniumTools().add_driver(candidate)
         BoltRequest().add_driver(candidate)
         logger.info('The job application has been sent')
     except Exception as e:
@@ -202,7 +200,7 @@ def send_on_job_application_on_driver(self, job_id):
 @app.task(bind=True)
 def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
     try:
-        UklonRequest(partner_pk, 'Uklon').detaching_the_driver_from_the_car(licence_plate)
+        UklonRequest(partner_pk).detaching_the_driver_from_the_car(licence_plate)
         logger.info(f'Car {licence_plate} was detached')
     except Exception as e:
         logger.error(e)
@@ -220,7 +218,7 @@ def get_rent_information(self, partner_pk):
 @app.task(bind=True)
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
-        UklonRequest(partner_pk, 'Uklon').disable_cash(pk, enable)
+        UklonRequest(partner_pk).disable_cash(pk, enable)
         logger.info('disable_uklon_cash')
         BoltRequest(partner_pk).cash_restriction(pk, enable)
         logger.info('disable_bolt_cash')
@@ -231,7 +229,7 @@ def fleets_cash_trips(self, partner_pk, pk, enable):
 @app.task(bind=True)
 def withdraw_uklon(self, partner_pk):
     try:
-        UklonRequest(partner_pk, 'Uklon').withdraw_money()
+        UklonRequest(partner_pk).withdraw_money()
     except Exception as e:
         logger.error(e)
 
@@ -386,7 +384,6 @@ def setup_periodic_tasks(sender, **kwargs):
                              send_time_order.s())
     for partner in Partner.objects.exclude(user__is_superuser=True):
         partner_id = partner.pk
-        init_chrome_driver(partner_id)
         sender.add_periodic_task(crontab(minute='*/1'), update_driver_status.s(partner_id))
         sender.add_periodic_task(crontab(minute=0, hour="*/2"), update_driver_data.s(partner_id))
         sender.add_periodic_task(crontab(minute=0, hour=5), download_daily_report.s(partner_id))
@@ -398,9 +395,3 @@ def setup_periodic_tasks(sender, **kwargs):
         sender.add_periodic_task(crontab(minute=0, hour=6, day_of_week=1), send_weekly_report.s(partner_id))
         sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(partner_id))
         sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), get_uber_session.s(partner_id))
-
-
-def init_chrome_driver(partner_pk):
-    driver = webdriver.Remote(command_executor=os.environ['SELENIUM_HUB_HOST'],
-                              desired_capabilities=webdriver.DesiredCapabilities.CHROME)
-    selenium_session[partner_pk] = driver
