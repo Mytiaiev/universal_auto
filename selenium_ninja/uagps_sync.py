@@ -37,7 +37,7 @@ class UaGpsSynchronizer:
     def generate_report(self, start_time, end_time, vehicle_id):
         rent_distance = 0
         rent_time = datetime.timedelta()
-        parametrs = {
+        parameters = {
             "reportResourceId": 66281,
             "reportObjectId": vehicle_id,
             "reportObjectSecId": 0,
@@ -53,7 +53,7 @@ class UaGpsSynchronizer:
         params = {
             'svc': 'report/exec_report',
             'sid': self.session,
-            'params': f'{json.dumps(parametrs)}'
+            'params': f'{json.dumps(parameters)}'
         }
         try:
             report = requests.get(self.url, params=params)

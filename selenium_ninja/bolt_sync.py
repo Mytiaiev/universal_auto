@@ -7,7 +7,7 @@ import pendulum
 import requests
 from django.db import IntegrityError
 
-from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments
+from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner
 from auto import settings
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -79,7 +79,7 @@ class BoltRequest(Synchronizer):
         return response.json()
 
     def save_report(self, day):
-        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.get_partner())
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
         if reports:
             return list(reports)
         # date format str yyyy-mm-dd
@@ -101,7 +101,7 @@ class BoltRequest(Synchronizer):
                 total_amount_cash=driver['cash_in_hand'],
                 total_amount=driver['gross_revenue'],
                 tips=driver['tips'],
-                partner=self.get_partner(),
+                partner=Partner.get_partner(self.partner_id),
                 bonuses=driver['bonuses'],
                 cancels=driver['cancellation_fees'],
                 fee=-(driver['gross_revenue'] - driver['net_earnings']),
@@ -218,7 +218,8 @@ class BoltRequest(Synchronizer):
             'flow_id': '',
             'web_marketing_data[fbp]': '',
             'web_marketing_data[url]': f"{response['data']['registration_link']}/2",
-            'web_marketing_data[user_agent]': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'web_marketing_data[user_agent]': '''Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+             AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36''',
             'is_fleet_company': '1'
         }
 

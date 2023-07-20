@@ -1,7 +1,7 @@
 import json
 import uuid
 import requests
-from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service
+from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner
 from selenium_ninja.synchronizer import Synchronizer
 from django.db import IntegrityError
 
@@ -107,7 +107,7 @@ class UklonRequest(Synchronizer):
                     fares=float(0),
                     fee=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
                     total_amount_without_fee=self.find_value(i, *('profit', 'total', 'amount')),
-                    partner=self.partner_id,
+                    partner=Partner.get_partner(self.partner_id),
                 )
                 try:
                     order.save()
@@ -129,7 +129,7 @@ class UklonRequest(Synchronizer):
                 fares=0,
                 fee=0,
                 total_amount_without_fee=0,
-                partner=self.partner_id)
+                partner=Partner.get_partner(self.partner_id))
             try:
                 order.save()
             except IntegrityError:
