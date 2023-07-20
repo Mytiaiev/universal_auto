@@ -9,7 +9,6 @@ from app.models import CarEfficiency, Driver, SummaryReport, DriverManager, \
     Vehicle
 
 
-
 def validate_date(date_str):
     try:
         check_date = datetime.strptime(date_str, '%Y-%m-%d')
@@ -59,7 +58,7 @@ def get_daily_report(manager_id=None, start=None, end=None):
     manager = DriverManager.get_by_chat_id(manager_id)
     drivers = Driver.objects.filter(manager=manager)
     if drivers:
-        for driver in Driver.objects.filter(manager=manager):
+        for driver in drivers:
             day_values[driver] = calculate_reports(yesterday, yesterday, driver)[1]
             total_values[driver] = calculate_reports(start, end, driver)[1]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))

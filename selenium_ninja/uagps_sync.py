@@ -3,7 +3,7 @@ import datetime
 import requests
 from _decimal import Decimal
 from django.utils import timezone
-from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, UberTrips
+from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, UberTrips, Partner
 
 
 class UaGpsSynchronizer:
@@ -37,7 +37,7 @@ class UaGpsSynchronizer:
     def generate_report(self, start_time, end_time, vehicle_id):
         rent_distance = 0
         rent_time = datetime.timedelta()
-        parametrs = {
+        parameters = {
             "reportResourceId": 66281,
             "reportObjectId": vehicle_id,
             "reportObjectSecId": 0,
@@ -53,7 +53,7 @@ class UaGpsSynchronizer:
         params = {
             'svc': 'report/exec_report',
             'sid': self.session,
-            'params': f'{json.dumps(parametrs)}'
+            'params': f'{json.dumps(parameters)}'
         }
         try:
             report = requests.get(self.url, params=params)
@@ -74,6 +74,7 @@ class UaGpsSynchronizer:
         yesterday = timezone.localtime() - datetime.timedelta(days=1)
         start = timezone.datetime.combine(yesterday, datetime.datetime.min.time()).astimezone()
         end = timezone.datetime.combine(yesterday, datetime.datetime.max.time()).astimezone()
+        partner_obj = Partner.objects.get(id=partner_id)
         for _driver in Driver.objects.filter(partner=partner_id):
             if not RentInformation.objects.filter(driver=_driver,
                                                   created_at__date=timezone.localtime().date()):
@@ -119,7 +120,7 @@ class UaGpsSynchronizer:
                                                driver=_driver,
                                                rent_time=rent_time,
                                                rent_distance=rent_distance,
-                                               partner=partner_id)
+                                               partner=partner_obj)
 
     def no_uber_rent_distance(self, partner_id):
         drivers = Driver.objects.filter(partner=partner_id)

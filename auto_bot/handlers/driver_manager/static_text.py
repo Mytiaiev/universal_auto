@@ -15,6 +15,7 @@ paid_inline_buttons = (
 get_drivers_text = "Інформація оновиться протягом декількох хвилин."
 update_finished = "Інформація оновлена"
 no_drivers_text = "У вас ще немає водіїв"
+no_reports_text = "У вас ще немає заробітків"
 no_vehicles_text = "У вас ще немає автомобілів"
 choose_period_text = "Оберіть період звіту"
 start_report_text = "Введіть з якої дати отримати звіт (РРРР-ММ-ДД)"
