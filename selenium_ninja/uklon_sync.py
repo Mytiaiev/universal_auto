@@ -20,10 +20,11 @@ class UklonRequest(Synchronizer):
     variables = ('token', 'type')
 
     def get_header(self) -> dict:
-        type_token, token = self.redis.get(f"{self.partner_id}{self.variables[1]}"), self.redis.get(f"{self.partner_id}{self.variables[0]}")
+        type_token, token = self.redis.get(f"{self.partner_id}{self.variables[1]}"), self.redis.get(
+            f"{self.partner_id}{self.variables[0]}")
         headers = {
             'Authorization': f'{type_token.decode()} {token.decode()}'
-         }
+        }
         return headers
 
     def park_payload(self) -> dict:
@@ -42,16 +43,43 @@ class UklonRequest(Synchronizer):
         self.redis.set(f"{self.partner_id}{self.variables[0]}", response["access_token"])
         self.redis.set(f"{self.partner_id}{self.variables[1]}", response["token_type"])
 
-    def response_data(self, url: str = None, params: dict = None,  pjson: dict = None) -> dict:
-        if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
+    @staticmethod
+    def request_method(url: str = None,
+                       headers: dict = None,
+                       params: dict = None,
+                       data: dict = None,
+                       pjson: dict = None,
+                       method: str = None):
+        if method == "GET":
+            response = requests.get(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+        if method == "PUT":
+            response = requests.put(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+        if method == "DELETE":
+            response = requests.delete(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+        if method == "POST":
+            response = requests.post(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+
+    def response_data(self, url: str = None,
+                      params: dict = None,
+                      data: dict = None,
+                      headers: dict = None,
+                      pjson: dict = None,
+                      method: str = 'GET') -> dict:
+
+        if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}")
+                and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
             self.create_session()
         while True:
-            response = requests.get(
-                url=url,
-                headers=self.get_header(),
-                json=pjson,
-                params=params,
-            )
+            response = self.request_method(url=url,
+                                           params=params,
+                                           headers=self.get_header() if headers is None else headers,
+                                           pjson=pjson,
+                                           data=data,
+                                           method=method)
             if response.status_code in (401, 403):
                 self.create_session()
             else:
@@ -153,9 +181,9 @@ class UklonRequest(Synchronizer):
     def get_driver_status(self):
         first_key, second_key = 'width_client', 'wait'
         drivers = {
-                first_key: [],
-                second_key: [],
-            }
+            first_key: [],
+            second_key: [],
+        }
         url = f"{Service.get_value('UKLON_5')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         url += Service.get_value('UKLON_6')
         data = self.response_data(url=url, params=self.parameters())
@@ -186,7 +214,7 @@ class UklonRequest(Synchronizer):
             if driver['restrictions']:
                 pay_cash = False if 'Cash' in driver['restrictions'][0]['restriction_types'] else True
 
-            elif self.find_value_str(driver, *('selected_vehicle', )):
+            elif self.find_value_str(driver, *('selected_vehicle',)):
                 vehicle_name = f"{driver['selected_vehicle']['make']} {driver['selected_vehicle']['model']}"
                 vin_code = self.response_data(f"{url_2}/{driver['selected_vehicle']['vehicle_id']}")
                 vin_code = vin_code.get('vin_code', '')
@@ -210,36 +238,44 @@ class UklonRequest(Synchronizer):
 
     def disable_cash(self, pk, enable):
         url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
-        url += Service.get_value('UKLON_6')
+        driver_id = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
+        url += f'{Service.get_value("UKLON_6")}/{driver_id}/restrictions'
+
+        headers = self.get_header()
+        headers.update({"Content-Type": "application/json"})
+        payload = {"type": "Cash"}
+        if enable == 'true':
+            self.response_data(url=url,
+                               headers=headers,
+                               data=payload,
+                               method='DELETE')
+        else:
+            self.response_data(url=url,
+                               headers=headers,
+                               data=payload,
+                               method='PUT')
+
+        pay_cash = True if enable == 'true' else False
+        Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
+
+    def get_vehicles(self):
+        vehicles = []
+
         param = self.parameters()
-        param['name'], param['phone'], param['status'], param['limit'] = ('', '', 'All', '30')
-        all_drivers = self.response_data(url=url, params=param)
-        signal = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
-        matching_item = next((item for item in all_drivers['items'] if item["signal"] == int(signal)), None)
-        if matching_item is not None:
-            url += f'/{matching_item["id"]}/restrictions'
-            if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}") and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
-                self.create_session()
-            while True:
-                headers = self.get_header()
-                headers.update({"Content-Type": "application/json"})
-                payload = {"type": "Cash"}
-                if enable == 'true':
-                    response = requests.delete(url=url,
-                                               headers=self.get_header(),
-                                               data=json.dumps(payload),
-                                               )
-                else:
-                    response = requests.put(url=url,
-                                            headers=self.get_header(),
-                                            data=json.dumps(payload),
-                                            )
-                if response.status_code in (401, 403):
-                    self.create_session()
-                else:
-                    pay_cash = True if enable == 'true' else False
-                    Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=signal).update(pay_cash=pay_cash)
-                    break
+        param.update({"limit": 30})
+        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url += Service.get_value('UKLON_2')
+        all_vehicles = self.response_data(url=url, params=param)
+        for vehicle in all_vehicles['data']:
+            response = self.response_data(url=f"{url}/{vehicle['id']}")
+
+            vehicles.append({
+                'licence_plate': vehicle['licencePlate'],
+                'vehicle_name': f"{vehicle['about']['maker']['name']} {vehicle['about']['model']['name']}",
+                'vin_code': response.get('vin_code', '')
+            })
+
+        return vehicles
 
 
 class UklonSynchronizer(Synchronizer, SeleniumTools):
@@ -361,10 +397,12 @@ class UklonSynchronizer(Synchronizer, SeleniumTools):
             EC.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        registration_fields = {"firstName": jobapplication.first_name,
-                               "lastName": jobapplication.last_name,
-                               "email": jobapplication.email,
-                               "password": jobapplication.password}
+        registration_fields = {
+            "firstName": jobapplication.first_name,
+            "lastName": jobapplication.last_name,
+            "email": jobapplication.email,
+            "password": jobapplication.password
+        }
         for field, value in registration_fields.items():
             element = self.driver.find_element(By.ID, field)
             clickandclear(element)
