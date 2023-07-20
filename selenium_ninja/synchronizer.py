@@ -1,7 +1,5 @@
-import logging
-
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from scripts.redis_conn import redis_instance
+from scripts.redis_conn import redis_instance, get_logger
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner
 import datetime
 
@@ -12,8 +10,7 @@ class Synchronizer:
         self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger()
 
     def get_drivers_table(self):
         raise NotImplementedError
@@ -167,5 +164,3 @@ class Synchronizer:
         if 'DUP' in text:
             return text[:-3]
         return text
-
-

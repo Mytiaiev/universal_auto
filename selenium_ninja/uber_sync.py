@@ -96,12 +96,12 @@ class UberRequest(Synchronizer):
                 licence_plate = driver['associatedVehicles'][0]['licensePlate']
                 vehicle_name = driver['associatedVehicles'][0]['make']
                 vin_code = driver['associatedVehicles'][0]['vin']
-            phone = driver['member']['user']['phone']['countryCode'] + driver['member']['user']['phone']['nationalPhoneNumber']
+            phone = driver['member']['user']['phone']
             drivers.append({'fleet_name': self.fleet,
                             'name': driver['member']['user']['name']['firstName'],
                             'second_name': driver['member']['user']['name']['lastName'],
                             'email': driver['member']['user']['email'],
-                            'phone_number': phone,
+                            'phone_number': phone['countryCode'] + phone['nationalPhoneNumber'],
                             'driver_external_id': driver['member']['user']['uuid'],
                             'licence_plate': licence_plate,
                             'pay_cash': True,
@@ -219,4 +219,3 @@ class UberRequest(Synchronizer):
                         with_client.append((second_name, name))
         return {'wait': wait,
                 'with_client': with_client}
-

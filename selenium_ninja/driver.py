@@ -1,5 +1,4 @@
 import time
-import logging
 import os
 from datetime import datetime
 
@@ -15,7 +14,7 @@ from selenium.common import TimeoutException
 
 from app.models import ParkSettings, UberService, UberSession, Partner, BoltService, NewUklonService, NewUklonFleet
 from auto import settings
-from scripts.redis_conn import redis_instance
+from scripts.redis_conn import redis_instance, get_logger
 
 
 class SeleniumTools:
@@ -23,8 +22,7 @@ class SeleniumTools:
         self.partner = partner
         self.remote = remote
         self.sleep = sleep
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger()
         if driver:
             if self.remote:
                 self.driver = self.build_remote_driver()
@@ -52,8 +50,8 @@ class SeleniumTools:
         options.add_argument("--start-maximized")
         options.add_argument("--disable-extensions")
         options.add_argument('--disable-dev-shm-usage')
-        options.add_argument(
-            "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
+        options.add_argument('''user-agent=Mozilla/5.0
+         (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36''')
 
         driver = webdriver.Chrome(options=options, port=9514)
         return driver
@@ -71,7 +69,8 @@ class SeleniumTools:
         options.add_argument("--start-maximized")
         options.add_argument("--disable-extensions")
         options.add_argument('--disable-dev-shm-usage')
-        options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36")
+        options.add_argument('''user-agent=Mozilla/5.0
+         (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36''')
 
         capabilities = DesiredCapabilities.CHROME.copy()
         capabilities['acceptInsecureCerts'] = True
@@ -123,7 +122,7 @@ class SeleniumTools:
         self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_4')).click()
         self.quit()
 
-    def add_driver(self, jobapplication):
+    def add_driver(self, job_application):
 
         url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
         self.driver.get(url)
@@ -135,12 +134,12 @@ class SeleniumTools:
             ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
         form_phone_number = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_5'))
         clickandclear(form_phone_number)
-        form_phone_number.send_keys(jobapplication.phone_number[4:])
+        form_phone_number.send_keys(job_application.phone_number[4:])
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
 
         # 2FA
-        code = self.wait_otp_code(f'{jobapplication.phone_number} code')
+        code = self.wait_otp_code(f'{job_application.phone_number} code')
         digits = self.driver.find_elements(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_6'))
         for i, element in enumerate(digits):
             element.send_keys(code[i])
@@ -153,10 +152,10 @@ class SeleniumTools:
             ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
         if self.sleep:
             time.sleep(self.sleep)
-        registration_fields = {"firstName": jobapplication.first_name,
-                               "lastName": jobapplication.last_name,
-                               "email": jobapplication.email,
-                               "password": jobapplication.password}
+        registration_fields = {"firstName": job_application.first_name,
+                               "lastName": job_application.last_name,
+                               "email": job_application.email,
+                               "password": job_application.password}
         for field, value in registration_fields.items():
             element = self.driver.find_element(By.ID, field)
             clickandclear(element)
@@ -165,9 +164,9 @@ class SeleniumTools:
             ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
 
         file_paths = [
-            f"{settings.MEDIA_URL}{jobapplication.photo}",
-            f"{settings.MEDIA_URL}{jobapplication.driver_license_front}",
-            f"{settings.MEDIA_URL}{jobapplication.driver_license_back}",
+            f"{settings.MEDIA_URL}{job_application.photo}",
+            f"{settings.MEDIA_URL}{job_application.driver_license_front}",
+            f"{settings.MEDIA_URL}{job_application.driver_license_back}",
 
         ]
         for i, file_path in enumerate(file_paths):
@@ -189,8 +188,8 @@ class SeleniumTools:
         fleet_code.send_keys(ParkSettings.get_value("UKLON_TOKEN", NewUklonFleet.token))
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-        jobapplication.status_uklon = datetime.now().date()
-        jobapplication.save()
+        job_application.status_uklon = datetime.now().date()
+        job_application.save()
         self.quit()
 
     def uber_login(self):
@@ -247,12 +246,10 @@ class SeleniumTools:
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
 
-
     def wait_otp_code(self, key):
         p = redis_instance.pubsub()
         p.subscribe(key)
         p.ping()
-        otpa = []
         while True:
             try:
                 otp = p.get_message()
@@ -307,11 +304,10 @@ class SeleniumTools:
             WebDriverWait(self.driver, self.sleep).until(
                 ec.presence_of_element_located((By.ID, UberService.get_value('UBER_FORCE_OPT_FORM'))))
             self.driver.find_element(By.ID, UberService.get_value('UBER_FORCE_OPT_FORM')).click()
-        except Exception as e:
+        except TimeoutException:
             pass
 
 
 def clickandclear(element):
     element.click()
     element.clear()
-

@@ -1,5 +1,4 @@
 # Create driver and other
-import time
 from datetime import timedelta, datetime
 
 from celery.signals import task_postrun
@@ -7,7 +6,7 @@ from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
 from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication,\
-    ParkSettings, Payments
+     Payments
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
@@ -17,8 +16,7 @@ from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
-    update_driver_data, send_efficiency_report, send_weekly_report
-from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
+    update_driver_data
 from auto_bot.main import bot
 
 
@@ -108,10 +106,8 @@ def get_report(update, context):
         if result:
             for key in result[0]:
                 if result[0][key]:
-                    message = "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
+                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
                         key, result[0][key], result[1].get(key, 0))
-                else:
-                    message = no_reports_text
         else:
             message = no_drivers_text
         query.edit_message_text(message)
