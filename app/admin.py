@@ -552,8 +552,8 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['id', 'report_from', 'vendor_name',
-                    'driver_id', 'total_rides',
+            return ['id', 'report_from',
+                    'full_name', 'total_rides',
                     'total_distance', 'total_amount_cash',
                     'total_amount_on_card',
                     'total_amount', 'tips',
@@ -567,7 +567,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Інформація про звіт',         {'fields': ['report_from',
                                                             ]}),
-                ('Інформація про водія',        {'fields': ['full_name', 'driver_id',
+                ('Інформація про водія',        {'fields': ['full_name',
                                                             ]}),
                 ('Інформація про поїздки',      {'fields': ['total_rides', 'total_distance',
                                                             ]}),
@@ -584,7 +584,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Інформація про звіт',         {'fields': ['report_from',
                                                             ]}),
-                ('Інформація про водія',        {'fields': ['full_name', 'driver_id',
+                ('Інформація про водія',        {'fields': ['full_name',
                                                             ]}),
                 ('Інформація про поїздки',      {'fields': ['total_rides', 'total_distance',
                                                             ]}),
@@ -755,6 +755,13 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             ]
 
         return fieldsets
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser:
+            if db_field.name == 'manager':
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Order)
