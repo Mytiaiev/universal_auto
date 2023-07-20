@@ -17,6 +17,10 @@ from django.contrib.auth.models import User as AuUser
 class Partner(models.Model):
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
 
+    @classmethod
+    def get_partner(cls, pk):
+        return cls.objects.get(id=pk)
+
     def __str__(self):
         if self.user:
             return str(self.user.username)
