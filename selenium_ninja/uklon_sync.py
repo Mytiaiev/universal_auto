@@ -30,16 +30,45 @@ class UklonRequest(Synchronizer):
         response = requests.post(Service.get_value('UKLON_SESSION'), json=self.park_payload()).json()
         self.redis.set(f"{self.partner_id}token", response["access_token"])
 
+    @staticmethod
+    def request_method(url: str = None,
+                       headers: dict = None,
+                       params: dict = None,
+                       data: dict = None,
+                       pjson: dict = None,
+                       method: str = None):
+        if method == "GET":
+            response = requests.get(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+        if method == "PUT":
+            response = requests.put(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+        if method == "DELETE":
+            response = requests.delete(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+        if method == "POST":
+            response = requests.post(url=url, headers=headers, data=data, json=pjson, params=params)
+            return response
+
+    def response_data(self, url: str = None,
+                      params: dict = None,
+                      data: dict = None,
+                      headers: dict = None,
+                      pjson: dict = None,
+                      method: str = 'GET') -> dict:
+
+        if not (self.redis.exists(f"{self.partner_id}{self.variables[1]}")
+                and self.redis.get(f"{self.partner_id}{self.variables[0]}")):
     def response_data(self, url: str = None, params: dict = None,  pjson: dict = None) -> dict:
         if not self.redis.exists(f"{self.partner_id}token"):
             self.create_session()
         while True:
-            response = requests.get(
-                url=url,
-                headers=self.get_header(),
-                json=pjson,
-                params=params,
-            )
+            response = self.request_method(url=url,
+                                           params=params,
+                                           headers=self.get_header() if headers is None else headers,
+                                           pjson=pjson,
+                                           data=data,
+                                           method=method)
             if response.status_code in (401, 403):
                 self.create_session()
             else:
@@ -173,7 +202,7 @@ class UklonRequest(Synchronizer):
             if driver['restrictions']:
                 pay_cash = False if 'Cash' in driver['restrictions'][0]['restriction_types'] else True
 
-            elif self.find_value_str(driver, *('selected_vehicle', )):
+            elif self.find_value_str(driver, *('selected_vehicle',)):
                 vehicle_name = f"{driver['selected_vehicle']['make']} {driver['selected_vehicle']['model']}"
                 vin_code = self.response_data(f"{url_2}/{driver['selected_vehicle']['vehicle_id']}")
                 vin_code = vin_code.get('vin_code', '')
@@ -199,25 +228,19 @@ class UklonRequest(Synchronizer):
         url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
         driver_id = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
         url += f'{Service.get_value("UKLON_6")}/{driver_id}/restrictions'
-        if not self.redis.exists(f"{self.partner_id}token"):
-            self.create_session()
-        while True:
             headers = self.get_header()
             headers.update({"Content-Type": "application/json"})
             payload = {"type": "Cash"}
             if enable == 'true':
-                response = requests.delete(url=url,
-                                           headers=headers,
-                                           data=json.dumps(payload),
-                                           )
+                self.response_data(url=url,
+                                   headers=headers,
+                                   data=payload,
+                                   method='DELETE')
             else:
-                response = requests.put(url=url,
-                                        headers=headers,
-                                        data=json.dumps(payload),
-                                        )
-            if response.status_code in (401, 403):
-                self.create_session()
-            else:
+                self.response_data(url=url,
+                                   headers=headers,
+                                   data=payload,
+                                   method='PUT')
                 pay_cash = True if enable == 'true' else False
                 Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
                 break
