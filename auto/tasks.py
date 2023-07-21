@@ -357,7 +357,7 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
 
 
 @app.on_after_finalize.connect
-def run_periodic_tasks(sender):
+def run_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())
     for partner in Partner.objects.exclude(user__is_superuser=True):
@@ -369,13 +369,30 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=1), update_driver_data.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=6), download_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=5, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute=10, hour=5), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=7), send_efficiency_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=30, hour=6), get_car_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute=1, hour=7), send_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=6, day_of_week=1), send_weekly_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour=2), update_driver_data.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour=5), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute=55, hour=5, day_of_week=1), send_weekly_report.s(partner_id))
     sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(partner_id))
     sender.add_periodic_task(crontab(minute=55, hour=7, day_of_week=1), get_uber_session.s(partner_id))
+
+
+def remove_periodic_tasks(partner, sender=None):
+    if sender is None:
+        sender = current_app
+    partner_id = partner.pk
+    sender.remove_periodic_task(f"update_driver_status.s({partner_id})")
+    sender.remove_periodic_task(f"update_driver_data.s({partner_id})")
+    sender.remove_periodic_task(f"download_daily_report.s({partner_id})")
+    sender.remove_periodic_task(f"withdraw_uklon.s({partner_id})")
+    sender.remove_periodic_task(f"get_rent_information.s({partner_id})")
+    sender.remove_periodic_task(f"send_efficiency_report.s({partner_id})")
+    sender.remove_periodic_task(f"get_car_efficiency.s({partner_id})")
+    sender.remove_periodic_task(f"send_daily_report.s({partner_id})")
+    sender.remove_periodic_task(f"send_weekly_report.s({partner_id})")
+    sender.remove_periodic_task(f"manager_paid_weekly.s({partner_id})")
+    sender.remove_periodic_task(f"get_uber_session.s({partner_id})")
