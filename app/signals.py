@@ -1,7 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order, setup_periodic_tasks
-from django.db.models.signals import pre_save, post_save
+from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order, setup_periodic_tasks, \
+    remove_periodic_tasks
+from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus, Partner
 from auto_bot.main import bot
@@ -22,6 +23,13 @@ def create_park_settings(sender, instance, created, **kwargs):
         for key in settings_for_partner.keys():
             response = settings_for_partner[key]
             ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
+
+
+@receiver(post_delete, sender=AuUser)
+def delete_park_settings(sender, instance, **kwargs):
+    partner = Partner.objects.filter(user=instance)
+    if partner:
+        remove_periodic_tasks(partner.first())
 
 
 @receiver(pre_save, sender=Driver)
