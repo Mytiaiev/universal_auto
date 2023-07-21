@@ -39,5 +39,5 @@ settings_for_partner = {
     'CLIENT_ID': ('Enter ID', 'Payload з Uklon'),
     'CLIENT_SECRET': ('Enter Secret', 'Payload з Uklon'),
     'DRIVERS_CHAT': ('-863882769', 'Чат водіїв'),
-    'Залишок Uklon': ('150', 'Залишок грн на карті водія Uklon'),
+    'WITHDRAW_UKLON': ('150', 'Залишок грн на карті водія Uklon'),
 }
