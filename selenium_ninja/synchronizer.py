@@ -1,72 +1,21 @@
-import logging
-import time
-import requests
-import os
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from scripts.redis_conn import redis_instance
-from selenium.webdriver.remote.remote_connection import LOGGER
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common import TimeoutException, InvalidSessionIdException
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
+from scripts.redis_conn import redis_instance, get_logger
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner
 import datetime
-
-LOGGER.setLevel(logging.WARNING)
 
 
 class Synchronizer:
 
-    def __init__(self, partner_id, fleet, chrome_driver=None):
+    def __init__(self, partner_id, fleet='Uklon'):
         self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance
-        if chrome_driver is not None:
-            self.logger = logging.getLogger(__name__)
-            self.sleep = 5
-            self.driver = chrome_driver
-
-    def try_to_execute(self, func_name, *args, **kwargs):
-        # if not self.driver.service.is_connectable():
-        #     print('###################### Driver recreating... ########################')
-        #     self.driver = self.build_driver()
-        #     time.sleep(self.sleep)
-        # try:
-        #     WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH, '//div')))
-        # except InvalidSessionIdException:
-        #     print('###################### Session recreating... ########################')
-        #     self.driver = self.build_driver()
-        #     time.sleep(self.sleep)
-        # except TimeoutException:
-        #     pass
-        return getattr(self, func_name)(*args, **kwargs)
-
-    @staticmethod
-    def download_from_bucket(path, filename):
-        response = requests.get(path)
-        local_path = os.path.join(os.getcwd(), f"Temp/{filename}.jpg")
-        with open(local_path, "wb") as file:
-            file.write(response.content)
-        return local_path
-
-    def get_target_element_of_page(self, url, xpath):
-        try:
-            WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-        except TimeoutException:
-            try:
-                self.driver.get(url)
-                time.sleep(self.sleep)
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-            except:
-                self.login()
-                time.sleep(self.sleep)
-                self.driver.get(url)
-                WebDriverWait(self.driver, self.sleep).until(EC.presence_of_element_located((By.XPATH, xpath)))
-
-    def get_partner(self) -> object:
-        return Partner.objects.get(pk=self.partner_id)
+        self.logger = get_logger()
 
     def get_drivers_table(self):
+        raise NotImplementedError
+
+    def get_vehicles(self):
         raise NotImplementedError
 
     def synchronize(self):
@@ -82,7 +31,7 @@ class Synchronizer:
             return
         drivers = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
                                                               driver_external_id=kwargs['driver_external_id'],
-                                                              partner=self.get_partner())
+                                                              partner=self.partner_id)
         if not drivers:
             fleets_drivers_vehicles_rate = Fleets_drivers_vehicles_rate.objects.create(
                 fleet=fleet,
@@ -90,7 +39,7 @@ class Synchronizer:
                 vehicle=self.get_or_create_vehicle(**kwargs),
                 driver_external_id=kwargs['driver_external_id'],
                 pay_cash=kwargs['pay_cash'],
-                partner=self.get_partner(),
+                partner=Partner.get_partner(self.partner_id),
             )
             fleets_drivers_vehicles_rate.save()
             self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
@@ -103,13 +52,15 @@ class Synchronizer:
                 self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
                 self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
 
-    def get_driver_by_name(self, name, second_name, partner):
+    @staticmethod
+    def get_driver_by_name(name, second_name, partner):
         try:
             return Driver.objects.get(name=name, second_name=second_name, partner=partner)
         except MultipleObjectsReturned:
             return Driver.objects.filter(name=name, second_name=second_name, partner=partner)[0]
 
-    def get_driver_by_phone_or_email(self, phone_number, email, partner):
+    @staticmethod
+    def get_driver_by_phone_or_email(phone_number, email, partner):
         try:
             if phone_number:
                 return Driver.objects.get(phone_number__icontains=phone_number[-10::], partner=partner)
@@ -125,24 +76,24 @@ class Synchronizer:
         try:
             driver = self.get_driver_by_name(kwargs['name'],
                                              kwargs['second_name'],
-                                             partner=self.get_partner())
+                                             partner=self.partner_id)
         except ObjectDoesNotExist:
             try:
                 driver = self.get_driver_by_name(kwargs['second_name'],
                                                  kwargs['name'],
-                                                 partner=self.get_partner())
+                                                 partner=self.partner_id)
             except ObjectDoesNotExist:
                 try:
                     driver = self.get_driver_by_phone_or_email(kwargs['phone_number'],
                                                                kwargs['email'],
-                                                               partner=self.get_partner())
+                                                               partner=self.partner_id)
                 except ObjectDoesNotExist:
                     driver = Driver.objects.create(name=kwargs['name'],
                                                    second_name=kwargs['second_name'],
                                                    phone_number=kwargs['phone_number'],
                                                    email=kwargs['email'],
                                                    role=Role.DRIVER,
-                                                   partner=self.get_partner())
+                                                   partner=Partner.get_partner(self.partner_id))
                     try:
                         client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
                         driver.chat_id = client.chat_id
@@ -162,7 +113,7 @@ class Synchronizer:
                 name=kwargs[v_name].upper(),
                 licence_plate=licence_plate,
                 vin_code=kwargs[vin],
-                partner=self.get_partner()
+                partner=Partner.get_partner(self.partner_id)
             )
             vehicle.save()
         return vehicle
@@ -211,9 +162,8 @@ class Synchronizer:
         }
         return params
 
-    def r_dup(self, text):
+    @staticmethod
+    def r_dup(text):
         if 'DUP' in text:
             return text[:-3]
         return text
-
-

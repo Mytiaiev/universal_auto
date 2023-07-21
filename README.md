@@ -13,8 +13,8 @@ If you have error /data/db: permission denied failed to solve run: `sudo chmod -
 8. Run migrations by `docker exec -it universal_auto_web python3 manage.py migrate`
 9. Run to create admin user `docker exec -it universal_auto_web python3 manage.py createsuperuser` 
 10. Open http://localhost/admin/ in browser and auth with user created at step 9
-11. `docker exec -it universal_auto_web python3 manage.py runscript seed_db`
-12. `docker exec -it universal_auto_web python3 manage.py runscript park_settings`
+11. Run `docker exec -it universal_auto_web python3 manage.py runscript seed_db` to create test data
+12. Run `docker exec -it universal_auto_web python3 manage.py runscript park_settings` to create park settings
 
 # How to run report and see results in console?
 ```

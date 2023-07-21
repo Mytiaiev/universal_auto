@@ -17,6 +17,10 @@ from django.contrib.auth.models import User as AuUser
 class Partner(models.Model):
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
 
+    @classmethod
+    def get_partner(cls, pk):
+        return cls.objects.get(id=pk)
+
     def __str__(self):
         if self.user:
             return str(self.user.username)
@@ -1056,6 +1060,14 @@ class UaGpsService(Service):
 
 class UberService(Service):
     pass
+
+
+class UberSession(models.Model):
+    session = models.CharField(max_length=255, verbose_name='Ідентифікатор сесії')
+    cook_session = models.CharField(max_length=255, verbose_name='Ідентифікатор cookie')
+    uber_uuid = models.UUIDField(verbose_name="Код автопарку Uber")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
 
 class Dashboard(models.Model):
