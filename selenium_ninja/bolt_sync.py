@@ -31,50 +31,40 @@ class BoltRequest(Synchronizer):
                                  json=payload)
         self.redis.set(f"{self.partner_id}_{self.fleet}_refresh", response.json()["data"]["refresh_token"])
 
-        return response.json()
+        return response.json()["data"]["refresh_token"]
 
     def get_access_token(self):
         token = self.redis.get(f"{self.partner_id}_{self.fleet}_refresh")
         if token:
-            access_payload = {
-                "refresh_token": token.decode(),
-                "company": {"company_id": "58225",
-                            "company_type": "fleet_company"}
-            }
-
-            response = requests.post(url=f'{self.base_url}getAccessToken',
-                                     params=self.param,
-                                     json=access_payload)
-            if not response.json()['code']:
-                self.redis.set(f"{self.partner_id}_{self.fleet}_token", response.json()["data"]["access_token"])
-            else:
-                self.get_login_token()
-                new_token = self.redis.get(f"{self.partner_id}_{self.fleet}_refresh")
-                new_payload = {
-                    "refresh_token": new_token.decode(),
+            token = token.decode()
+            while True:
+                access_payload = {
+                    "refresh_token": token,
                     "company": {"company_id": "58225",
                                 "company_type": "fleet_company"}
                 }
+
                 response = requests.post(url=f'{self.base_url}getAccessToken',
                                          params=self.param,
-                                         json=new_payload)
-                self.redis.set(f"{self.partner_id}_{self.fleet}_token", response.json()["data"]["access_token"])
+                                         json=access_payload)
 
+                if not response.json()['code']:
+                    return response.json()["data"]["access_token"]
+                else:
+                    token = self.get_login_token()
         else:
             self.get_login_token()
             self.get_access_token()
 
     def get_target_url(self, url, params):
-        self.get_access_token()
-        new_token = self.redis.get(f"{self.partner_id}_{self.fleet}_token")
-        headers = {'Authorization': f'Bearer {new_token.decode()}'}
+        new_token = self.get_access_token()
+        headers = {'Authorization': f'Bearer {new_token}'}
         response = requests.get(url, params=params, headers=headers)
         return response.json()
 
     def post_target_url(self, url, params, json):
-        self.get_access_token()
-        new_token = self.redis.get(f"{self.partner_id}_{self.fleet}_token")
-        headers = {'Authorization': f'Bearer {new_token.decode()}'}
+        new_token = self.get_access_token()
+        headers = {'Authorization': f'Bearer {new_token}'}
         response = requests.post(url, json=json, params=params, headers=headers)
         return response.json()
 
@@ -146,9 +136,6 @@ class BoltRequest(Synchronizer):
             })
             time.sleep(0.5)
         return driver_list
-
-    def get_vehicles(self):
-        return []
 
     def get_drivers_status(self):
         with_client = []

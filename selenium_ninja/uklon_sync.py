@@ -49,7 +49,7 @@ class UklonRequest(Synchronizer):
 
     def response_data(self, url: str = None,
                       params: dict = None,
-                      data: dict = None,
+                      data=None,
                       headers: dict = None,
                       pjson: dict = None,
                       method: str = 'GET') -> dict:
@@ -228,12 +228,12 @@ class UklonRequest(Synchronizer):
         if enable == 'true':
             self.response_data(url=url,
                                headers=headers,
-                               data=payload,
+                               data=json.dumps(payload),
                                method='DELETE')
         else:
             self.response_data(url=url,
                                headers=headers,
-                               data=payload,
+                               data=json.dumps(payload),
                                method='PUT')
         pay_cash = True if enable == 'true' else False
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
