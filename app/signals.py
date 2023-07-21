@@ -1,6 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order
+from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order, setup_periodic_tasks
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus, Partner
@@ -17,7 +17,8 @@ def create_partner(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Partner)
 def create_park_settings(sender, instance, created, **kwargs):
-    if created:
+    if created and not instance.user.is_superuser:
+        setup_periodic_tasks(instance)
         for key in settings_for_partner.keys():
             response = settings_for_partner[key]
             ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
