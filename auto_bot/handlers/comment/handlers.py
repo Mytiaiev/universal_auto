@@ -39,7 +39,5 @@ def save_comment(update, context):
         comment=mark,
         chat_id=update.effective_chat.id)
     order.comment = user_comment
-    if order and order.driver:
-        order.partner = order.driver.partner
     order.save()
     context.user_data['state'] = None
