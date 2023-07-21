@@ -4,6 +4,9 @@ djangorestframework==3.13.1
 django-storages
 google-api-core
 google-auth
+google-auth-httplib2
+google-auth-oauthlib
+google-api-python-client
 rollbar
 google-cloud-core
 google-cloud-storage
