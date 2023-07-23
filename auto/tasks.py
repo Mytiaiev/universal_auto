@@ -159,14 +159,14 @@ def update_driver_status(self, partner_pk):
             park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
                                                   created_at__date=timezone.now().date(), end_at=None)
-            if work_ninja or (driver.name, driver.second_name) in status_online:
+            if (driver.name, driver.second_name) in status_online:
                 current_status = Driver.ACTIVE
-            else:
-                current_status = Driver.OFFLINE
-            if park_status and park_status.status != Driver.ACTIVE:
+            elif park_status and park_status.status != Driver.ACTIVE:
                 current_status = park_status.status
-            if (driver.name, driver.second_name) in status_with_client:
+            elif (driver.name, driver.second_name) in status_with_client:
                 current_status = Driver.WITH_CLIENT
+            else:
+                current_status = Driver.ACTIVE if work_ninja else Driver.OFFLINE
             driver.driver_status = current_status
             driver.save()
             if current_status != Driver.OFFLINE:
@@ -349,7 +349,7 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
             total_amount_cash=total_amount_cash,
             total_amount_on_card=total_amount_card,
             total_amount_without_fee=total_amount,
-            partner=partner_pk)
+            partner=Partner.get_partner(partner_pk))
         try:
             report.save()
         except IntegrityError:
