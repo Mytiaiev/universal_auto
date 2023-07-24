@@ -6,7 +6,8 @@ bolt_states = {
     'BOLT_LOGIN_1': ('email', 'ID'),
     'BOLT_LOGIN_2': ('current-password', 'ID'),
     'BOLT_LOGIN_3': ('//button[@type="submit"]', 'XPATH'),
-    'BOLT_LOGIN_URL': ('https://fleets.bolt.eu/v2/login', 'url')
+    'BOLT_LOGIN_URL': ('https://fleets.bolt.eu/v2/login', 'url'),
+    'CHECK_LOGIN_BOLT': ('//div[@role="tablist"]', 'XPATH'),
 }
 
 newuklon_states = {
@@ -15,6 +16,7 @@ newuklon_states = {
     'UKLON_LOGIN_2': ('//input[@data-cy="phone-number-control"]', 'XPATH'),
     'UKLON_LOGIN_3': ('//input[@data-cy="password"]', 'XPATH'),
     'UKLON_LOGIN_4': ('//button[@data-cy="login-btn"]', 'XPATH'),
+    'CHECK_LOGIN_UKLON': ('//div[@data-cy="side-nav-menu"]', 'XPATH'),
     'NEWUKLON_ADD_DRIVER_1': ('https://partner-registration.uklon.com.ua/registration', 'url'),
     'NEWUKLON_ADD_DRIVER_2': ("//span[text()='Обрати зі списку']", 'XPATH'),
     'NEWUKLON_ADD_DRIVER_3': ("//div[@class='region-name' and contains(text(),'Київ')]", 'XPATH'),
@@ -41,6 +43,7 @@ uber_states = {
     'UBER_LOGIN_4': ('//button[@id="alt-PASSWORD"]', 'xpath'),
     'UBER_LOGIN_5': ('//button[@id="alt-alternate-forms-option-modal"]', 'xpath'),
     'UBER_LOGIN_6': ('//div[@id="bottom-modal-content"]/button[2]', 'xpath'),
+    'CHECK_LOGIN_UBER': ('//div[@data-tracking-name="vehicles"]', 'XPATH'),
 }
 
 states = {

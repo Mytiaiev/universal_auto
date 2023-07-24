@@ -1,10 +1,12 @@
 import json
-from datetime import date, timedelta
+from datetime import timedelta
+
 from django.core.serializers.json import DjangoJSONEncoder
-from django.utils import timezone
-from django.db.models import F
 
 from app.models import *
+from selenium_ninja.driver import SeleniumTools
+from auto.tasks import login_uber
+from celery.signals import task_postrun
 
 
 def active_vehicles_gps():
@@ -60,6 +62,8 @@ def restart_order(id_order, car_delivery_price, action):
         order = Order.objects.get(id=id_order)
         order.checked = False
         order.save()
+
+# Робота з dashboard.html #################
 
 
 def get_dates(period=None):
@@ -199,3 +203,74 @@ def effective_vehicle(period, vehicle):
     result = {'data': car_effective}
 
     return result
+
+
+def login_in(action, login, password, user_id):
+    partner = Partner.objects.get(user_id=user_id)
+    selenium_tools = SeleniumTools(partner=partner)
+    if action == 'Bolt_login':
+        success_login = selenium_tools.bolt_login(login=login, password=password)
+
+        if success_login[0]:
+            bolt_url_id = success_login[1].split('/')[-2]
+            try:
+                bolt_password_setting = ParkSettings.objects.get(key='BOLT_PASSWORD', partner=partner)
+                if bolt_password_setting.value != password:
+                    bolt_password_setting.value = password
+                    bolt_password_setting.save()
+            except ParkSettings.DoesNotExist:
+                ParkSettings.objects.create(key='BOLT_PASSWORD', value=password, partner=partner)
+
+            try:
+                bolt_name_setting = ParkSettings.objects.get(key='BOLT_NAME', partner=partner)
+                if bolt_name_setting.value != login:
+                    bolt_name_setting.value = login
+                    bolt_name_setting.save()
+            except ParkSettings.DoesNotExist:
+                ParkSettings.objects.create(key='BOLT_NAME', value=login, partner=partner)
+
+            try:
+                bolt_url_setting = ParkSettings.objects.get(key='BOLT_URL_ID_PARK', partner=partner)
+                if bolt_url_setting.value != bolt_url_id:
+                    bolt_url_setting.value = bolt_url_id
+                    bolt_url_setting.save()
+            except ParkSettings.DoesNotExist:
+                ParkSettings.objects.create(key='BOLT_URL_ID_PARK', value=bolt_url_id, description='BOLT_URL_ID_Парка', partner=partner)
+
+            return True
+        else:
+            return False
+
+    if action == 'Uklon_login':
+        success_login = selenium_tools.uklon_login(login=login[4:], password=password)
+        if success_login[0]:
+            try:
+                uklon_password_setting = ParkSettings.objects.get(key='UKLON_PASSWORD', partner=partner)
+                if uklon_password_setting.value != password:
+                    uklon_password_setting.value = password
+                    uklon_password_setting.save()
+            except ParkSettings.DoesNotExist:
+                ParkSettings.objects.create(key='UKLON_PASSWORD', value=password, partner=partner)
+
+            try:
+                uklon_name_setting = ParkSettings.objects.get(key='UKLON_NAME', partner=partner)
+                if uklon_name_setting.value != login:
+                    uklon_name_setting.value = login
+                    uklon_name_setting.save()
+            except ParkSettings.DoesNotExist:
+                ParkSettings.objects.create(key='UKLON_NAME', value=login, partner=partner)
+
+            return True
+        else:
+            return False
+
+    if action == 'Uber_login':
+        login_uber.delay(login, password, partner.pk)
+
+
+@task_postrun.connect
+def log_uber(sender=None, **kwargs):
+    if sender == login_uber:
+        result = kwargs.get('retval')
+        if result:
+            ...

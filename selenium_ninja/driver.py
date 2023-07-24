@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver import DesiredCapabilities
-from selenium.common import TimeoutException
+from selenium.common import TimeoutException, NoSuchElementException
 
 from app.models import ParkSettings, UberService, UberSession, Partner, BoltService, NewUklonService, NewUklonFleet
 from auto import settings
@@ -96,32 +96,64 @@ class SeleniumTools:
             self.driver.quit()
             self.driver = None
 
-    def bolt_login(self):
+    def bolt_login(self, login=None, password=None):
         self.driver.get(f"{BoltService.get_value('BOLT_LOGIN_URL')}")
         if self.sleep:
             time.sleep(self.sleep)
         element = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_1'))))
         element.clear()
-        element.send_keys(ParkSettings.get_value("BOLT_NAME", partner=self.partner))
+        if login:
+            element.send_keys(login)
+        else:
+            element.send_keys(ParkSettings.get_value("BOLT_NAME", partner=self.partner))
         element = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_2'))))
         element.clear()
-        element.send_keys(ParkSettings.get_value("BOLT_PASSWORD", partner=self.partner))
+        if password:
+            element.send_keys(password)
+        else:
+            element.send_keys(ParkSettings.get_value("BOLT_PASSWORD", partner=self.partner))
         self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_3')).click()
-        self.quit()
 
-    def uklon_login(self):
+        time.sleep(self.sleep)
+        try:
+            self.driver.find_element(By.XPATH, BoltService.get_value('CHECK_LOGIN_BOLT'))
+            url = self.driver.current_url
+            login_success = True
+        except NoSuchElementException:
+            url = None
+            login_success = False
+        self.quit()
+        return login_success, url
+
+    def uklon_login(self, login=None, password=None):
         self.driver.get(NewUklonService.get_value('UKLON_LOGIN_1'))
         if self.sleep:
             time.sleep(self.sleep)
-        login = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_2'))
-        login.send_keys(ParkSettings.get_value("UKLON_NAME", partner=self.partner)[4:])
-        password = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_3'))
-        clickandclear(password)
-        password.send_keys(ParkSettings.get_value("UKLON_PASSWORD", partner=self.partner))
+        log = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_2'))
+        if login:
+            log.send_keys(login)
+        else:
+            log.send_keys(ParkSettings.get_value("UKLON_NAME", partner=self.partner)[4:])
+        pas = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_3'))
+        if password:
+            clickandclear(pas)
+            pas.send_keys(password)
+        else:
+            clickandclear(pas)
+            pas.send_keys(ParkSettings.get_value("UKLON_PASSWORD", partner=self.partner))
         self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_4')).click()
+        time.sleep(self.sleep)
+        try:
+            self.driver.find_element(By.XPATH, NewUklonService.get_value('CHECK_LOGIN_UKLON'))
+            url = self.driver.current_url
+            login_success = True
+        except NoSuchElementException:
+            url = None
+            login_success = False
         self.quit()
+        return login_success, url
 
     def add_driver(self, job_application):
 
@@ -193,32 +225,54 @@ class SeleniumTools:
         job_application.save()
         self.quit()
 
-    def uber_login(self):
+    def uber_login(self, login=None, password=None):
         self.driver.get(UberService.get_value('UBER_LOGIN_URL'))
         time.sleep(self.sleep)
         input_login = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
         clickandclear(input_login)
-        input_login.send_keys(ParkSettings.get_value("UBER_NAME", partner=self.partner))
+        if login:
+            input_login.send_keys(login)
+        else:
+            input_login.send_keys(ParkSettings.get_value("UBER_NAME", partner=self.partner))
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
         try:
-            self.password_form()
+            if password:
+                self.password_form(password)
+            else:
+                self.password_form()
         except TimeoutException:
             try:
                 el = WebDriverWait(self.driver, self.sleep).until(
                     ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_4'))))
                 el.click()
-                self.password_form()
+                if password:
+                    self.password_form(password)
+                else:
+                    self.password_form()
             except TimeoutException:
                 WebDriverWait(self.driver, self.sleep).until(
                     ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_5')))).click()
                 WebDriverWait(self.driver, self.sleep).until(
                     ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_6')))).click()
-                self.password_form()
+                if password:
+                    self.password_form(password)
+                else:
+                    self.password_form()
         time.sleep(self.sleep)
-        self.save_uber()
+        try:
+            self.driver.get(UberService.get_value('BASE_URL'))
+            time.sleep(self.sleep)
+            self.driver.find_element(By.XPATH, UberService.get_value('CHECK_LOGIN_UBER'))
+            login_success = True
+            url = self.driver.current_url
+            self.save_uber()
+        except NoSuchElementException:
+            login_success = False
+            url = None
         self.quit()
+        return login_success, url
 
     def save_uber(self):
         url = UberService.get_value('BASE_URL')
@@ -247,11 +301,14 @@ class SeleniumTools:
         else:
             self.logger.error(f"{new_url} without uuid")
 
-    def password_form(self):
+    def password_form(self, password=None):
         input_password = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.ID, UberService.get_value('UBER_LOGIN_3'))))
         clickandclear(input_password)
-        input_password.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.partner))
+        if password:
+            input_password.send_keys(password)
+        else:
+            input_password.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.partner))
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
 
