@@ -995,6 +995,7 @@ class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     licence_plate = models.CharField(max_length=24, verbose_name='Номерний знак')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата використання авто')
     end_at = models.DateTimeField(null=True, blank=True, verbose_name='Кінець використання авто')
 

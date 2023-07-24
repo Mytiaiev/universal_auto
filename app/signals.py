@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
+from scripts.google_calendar import create_event, datetime_with_timezone
 
 
 @receiver(post_save, sender=AuUser)
@@ -66,5 +67,18 @@ def take_order_from_client(sender, instance, **kwargs):
     if instance.status_order == Order.WAITING and not instance.checked:
         check_order.delay(instance.id)
     elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
+        g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
+        if g_id:
+            description = f"Адреса посадки: {instance.address}\n" \
+                          f"Місце прибуття: {instance.to_address}\n" \
+                          f"Спосіб оплати: {instance.payment}\n" \
+                          f"Номер телефону: {instance.phone}\n"
+            create_event(
+                f"Замовлення {instance.pk}",
+                description,
+                datetime_with_timezone(instance.order_time),
+                datetime_with_timezone(instance.order_time),
+                ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
+            )
         check_time_order.delay(instance.id)
 

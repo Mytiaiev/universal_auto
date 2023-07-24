@@ -92,6 +92,7 @@ def take_a_day_off_or_sick_leave(update, context):
         event = SICK_DAY
     driver = Driver.get_by_chat_id(update.effective_chat.id)
     check_event = Event.objects.filter(full_name_driver=driver, status_event=False).last()
+    result = f"Водій {driver} взяв {event}"
     if check_event:
         query.edit_message_text(text=f"У вас вже відкритий {check_event.event}.Бажаєте завершити його?")
         query.edit_message_reply_markup(reply_markup=inline_start_driver_kb())
@@ -102,6 +103,8 @@ def take_a_day_off_or_sick_leave(update, context):
             event=event,
             chat_id=driver.chat_id)
         query.edit_message_text(text=f'Ваш <<{event}>> розпочато.')
+        context.bot.send_message(chat_id=driver.manager.chat_id, text=result)
+
 
 # @task_postrun.connect
 # def send_day_rent(sender, **kwargs):
