@@ -42,7 +42,7 @@ def create_event(summary, description, s_date, e_date, calendar_id):
     }
     print(event)
     event = service.events().insert(calendarId=calendar_id, body=event).execute()
-    return f"Подія '{event['summary']}' {event['start']} була успішно зареєстрована."
+    return f"Подія '{event['summary']}' була успішно зареєстрована."
 
 
 def create_calendar(summary, description, service=create_connect()):
@@ -61,7 +61,11 @@ def create_calendar(summary, description, service=create_connect()):
     return calendar_id
 
 
-def datetime_with_timezone(datetime):
+def datetime_with_timezone(datetime_):
     """'2023-07-24 15:45:00+00:00' -> '2023-07-24T15:45:00'
     """
+    input_datetime_str = datetime_
+    input_datetime = datetime.fromisoformat(input_datetime_str.replace('Z', ''))
+    output_datetime_str = input_datetime.strftime('%Y-%m-%dT%H:%M:%S')
 
+    return output_datetime_str
