@@ -210,10 +210,8 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 @app.task(bind=True)
 def get_rent_information(self, partner_pk):
     try:
-        rent_obj = UaGpsSynchronizer().get_rent_distance(partner_pk)
-        json_rent = serialize('json', [rent_obj, ], use_natural_foreign_keys=True)
+        UaGpsSynchronizer().get_rent_distance(partner_pk)
         logger.info('write rent report in uagps')
-        return json_rent
     except Exception as e:
         logger.error(e)
 
@@ -380,7 +378,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute=0, hour=2), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=5), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour='*/1'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id))
