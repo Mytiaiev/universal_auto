@@ -190,11 +190,13 @@ def order_create(update, context):
         query.edit_message_text(
             f'Замовлення прийняте, сума замовлення {order.sum} грн\n '
             f'Очікуйте водія о {order.order_time.time()}')
+        check_order.delay(order.id)
     else:
         order.status_order = Order.WAITING
         order.save()
         bot.delete_message(chat_id=user.chat_id,
                            message_id=query.message.message_id)
+        check_time_order.delay(order.id)
 
 
 @task_postrun.connect
@@ -208,7 +210,6 @@ def send_order_to_driver(sender=None, **kwargs):
                                        order.sum,
                                        increase=order.car_delivery_price)
         count = 0
-        order.checked = True
         order.save()
         msg = text_to_client(order, client_msg)
         while count < 3:
@@ -284,8 +285,8 @@ def increase_order_price(update, context):
     if query.data != "Continue_search":
         order.car_delivery_price += int(query.data)
         order.sum += int(query.data)
-    order.checked = False
     order.save()
+    check_order.delay(order.id)
 
 
 def time_order(update, context):
@@ -313,9 +314,10 @@ def order_on_time(update, context):
             else:
                 order = Order.objects.filter(chat_id_client=user.chat_id,
                                              status_order=Order.WAITING).last()
-                order.status_order, order.order_time, order.checked = Order.ON_TIME, conv_time, False
+                order.status_order, order.order_time = Order.ON_TIME, conv_time
                 order.save()
                 update.message.reply_text(order_complete)
+                check_time_order.delay(order.id)
         else:
             update.message.reply_text(small_time_delta)
             context.user_data['state'] = TIME_ORDER
@@ -347,7 +349,7 @@ def send_time_orders(sender=None, **kwargs):
                                      text=message,
                                      reply_markup=inline_markup_accept(timeorder.pk),
                                      parse_mode=ParseMode.HTML)
-        timeorder.driver_message_id, timeorder.checked = group_msg.message_id, True
+        timeorder.driver_message_id = group_msg.message_id
         timeorder.save()
 
 
@@ -361,6 +363,18 @@ def client_reject_order(update, context):
             context.bot.delete_message(chat_id=order.chat_id_client,
                                        message_id=query.message.message_id + i)
     except:
+        pass
+    try:
+        driver_chat_id = order.driver.chat_id
+        driver = Driver.get_by_chat_id(chat_id=driver_chat_id)
+        message_id = order.driver_message_id
+        bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
+        bot.send_message(
+            chat_id=driver_chat_id,
+            text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
+        )
+        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
+    except Exception:
         pass
     text_to_client(order=order,
                    text=client_cancel,
@@ -430,8 +444,9 @@ def handle_order(update, context):
                                               message_id=order.client_message_id,
                                               reply_markup=None)
         text_to_client(order, driver_cancel)
-        order.status_order, order.driver, order.checked = Order.WAITING, None, False
+        order.status_order, order.driver = Order.WAITING, None
         order.save()
+        check_order.delay(order.id)
     elif data[0] == "Client_on_site":
         if not context.user_data.get('recheck'):
             redis_instance.set(f'running_{order.id}', 0)

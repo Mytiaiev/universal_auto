@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from _decimal import Decimal
 from celery import current_app
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.serializers import serialize
 from django.db import IntegrityError
 from django.utils import timezone
 from celery.schedules import crontab
@@ -12,7 +13,6 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
-from auto_bot.main import bot
 from scripts.conversion import convertion
 from auto.celery import app
 from selenium_ninja.bolt_sync import BoltRequest
@@ -210,8 +210,10 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 @app.task(bind=True)
 def get_rent_information(self, partner_pk):
     try:
-        UaGpsSynchronizer().get_rent_distance(partner_pk)
+        rent_obj = UaGpsSynchronizer().get_rent_distance(partner_pk)
+        json_rent = serialize('json', [rent_obj, ], use_natural_foreign_keys=True)
         logger.info('write rent report in uagps')
+        return json_rent
     except Exception as e:
         logger.error(e)
 
@@ -246,6 +248,7 @@ def send_weekly_report(self, partner_pk):
     end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
     start = end - timedelta(days=6)
     message = ''
+    drivers_dict = {}
     balance = 0
     for manager in DriverManager.objects.filter(partner=partner_pk):
         drivers = Driver.objects.filter(manager=manager)
@@ -258,17 +261,19 @@ def send_weekly_report(self, partner_pk):
                     driver_message += f"{driver} каса: {result[1]}\n"
                     driver_message += f'Зарплата за тиждень: {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
                     if driver.chat_id:
-                        bot.send_message(chat_id=driver.chat_id, text=driver_message)
+                        drivers_dict[driver.chat_id] = driver_message
                     message += driver_message
                     message += "*" * 39 + '\n'
             manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
             manager_message += message
-            bot.send_message(chat_id=manager.chat_id, text=manager_message)
+            drivers_dict[manager.chat_id] = manager_message
+    return drivers_dict
 
 
 @app.task(bind=True)
 def send_daily_report(self, partner_pk):
     message = ''
+    dict_msg = {}
     for manager in DriverManager.objects.filter(chat_id__isnull=False, partner=partner_pk):
         result = get_daily_report(manager_id=manager.chat_id)
         if result:
@@ -277,18 +282,21 @@ def send_daily_report(self, partner_pk):
                     num = "\U0001f3c6" if num == 1 else num
                     message += "{}.{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
                         num, key, result[0][key], result[1].get(key, 0))
-            bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner_pk), text=message)
+            dict_msg[partner_pk] = message
+    return dict_msg
 
 
 @app.task(bind=True)
 def send_efficiency_report(self, partner_pk):
     message = ''
+    dict_msg = {}
     for manager in DriverManager.objects.filter(chat_id__isnull=False, partner=partner_pk):
         result = get_efficiency(manager_id=manager.chat_id)
         if result:
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
-            bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner_pk), text=message)
+            dict_msg[partner_pk] = message
+    return dict_msg
 
 
 @app.task(bind=True)

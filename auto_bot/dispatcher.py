@@ -1,8 +1,8 @@
+import queue
 import re
 
 from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler, Dispatcher
 from app.models import Driver
-from auto.settings import DEBUG
 from auto_bot.main import bot
 from auto_bot.states import text
 # handlers
@@ -38,6 +38,7 @@ from auto_bot.handlers.driver.static_text import SERVICEABLE, BROKEN
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
+
 
 # Conversations
 debt_conversation = ConversationHandler(
@@ -221,6 +222,5 @@ def setup_dispatcher(dp):
 
     return dp
 
-
-n_workers = 0 if DEBUG else 4
-dispatcher = setup_dispatcher(Dispatcher(bot, update_queue=None, workers=n_workers, use_context=True))
+update_queue = queue.Queue()
+dispatcher = setup_dispatcher(Dispatcher(bot, update_queue))
