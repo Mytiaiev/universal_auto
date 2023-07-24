@@ -4,8 +4,7 @@ from auto.tasks import send_on_job_application_on_driver, check_order, check_tim
     remove_periodic_tasks
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
-from app.models import Driver, Order, StatusChange, JobApplication, RentInformation, ParkSettings, ParkStatus, Partner
-from auto_bot.main import bot
+from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import create_event, datetime_with_timezone
@@ -63,19 +62,6 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
         send_on_job_application_on_driver.delay(instance.id)
 
 
-# @receiver(post_save, sender=RentInformation)
-# def send_day_rent(sender, instance, **kwargs):
-#     try:
-#         chat_id = instance.driver.chat_id
-#         # if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
-#         #     rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
-#         #     message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
-#         #      вартість оренди {rent_cost}грн"""
-#         #     bot.send_message(chat_id=chat_id, text=message)
-#     except:
-#         pass
-
-
 @receiver(post_save, sender=Order)
 def take_order_from_client(sender, instance, **kwargs):
     if instance.status_order == Order.WAITING and not instance.checked:
@@ -96,20 +82,3 @@ def take_order_from_client(sender, instance, **kwargs):
             )
         check_time_order.delay(instance.id)
 
-
-@receiver(pre_save, sender=Order)
-def reject_order_client(sender, instance, **kwargs):
-
-    if instance.status_order == Order.CANCELED:
-        try:
-            driver_chat_id = instance.driver.chat_id
-            driver = Driver.get_by_chat_id(chat_id=driver_chat_id)
-            message_id = instance.driver_message_id
-            bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
-            bot.send_message(
-                chat_id=driver_chat_id,
-                text=f'Вибачте, замовлення за адресою {instance.from_address} відхилено клієнтом.'
-            )
-            ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
-        except Exception:
-            pass

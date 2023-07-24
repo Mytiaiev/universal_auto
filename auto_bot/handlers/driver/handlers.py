@@ -1,10 +1,13 @@
 import datetime
 
+from celery.signals import task_postrun
+from django.core.serializers import deserialize
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
 from app.models import Driver, Vehicle, Report_of_driver_debt, Event, ParkStatus
+from auto.tasks import get_rent_information
 from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard
 from auto_bot.handlers.driver.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, inline_start_driver_kb
@@ -102,3 +105,19 @@ def take_a_day_off_or_sick_leave(update, context):
         query.edit_message_text(text=f'Ваш <<{event}>> розпочато.')
         context.bot.send_message(chat_id=driver.manager.chat_id, text=result)
 
+
+# @task_postrun.connect
+# def send_day_rent(sender, **kwargs):
+#     if sender == get_rent_information:
+#         rent_json = kwargs.get('retval')
+#         try:
+#             deserialized_objects = list(deserialize('json', rent_json))
+#             instance = deserialized_objects[0].object
+#             chat_id = instance.driver.chat_id
+            # if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
+            #     rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
+            #     message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
+            #      вартість оренди {rent_cost}грн"""
+            #     bot.send_message(chat_id=chat_id, text=message)
+        # except:
+        #     pass

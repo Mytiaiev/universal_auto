@@ -19,7 +19,6 @@ from django.contrib import admin
 from django.urls import path, include
 from app.views import *
 from auto import settings
-from scripts.bot import webhook
 from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
@@ -34,6 +33,3 @@ urlpatterns = [
     path('webhook/', csrf_exempt(TelegramBotWebhookView.as_view())),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
-

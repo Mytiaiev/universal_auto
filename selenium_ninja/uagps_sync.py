@@ -116,32 +116,12 @@ class UaGpsSynchronizer:
                         rent_distance += report[0]
                         rent_time += report[1]
 
-                RentInformation.objects.create(driver_name=_driver,
-                                               driver=_driver,
-                                               rent_time=rent_time,
-                                               rent_distance=rent_distance,
-                                               partner=partner_obj)
-
-    def no_uber_rent_distance(self, partner_id):
-        drivers = Driver.objects.filter(partner=partner_id)
-        for driver in drivers:
-            rent = RentInformation.objects.filter(driver_name=driver,
-                                                  partner=partner_id,
-                                                  created_at__date=timezone.localtime().date()).first()
-            driver_id = driver.get_driver_external_id('Uber')
-            distance_in_trips = 0
-            if driver_id and rent:
-                vehicle = Vehicle.objects.filter(driver=driver).first()
-                trips = UberTrips.objects.filter(driver_external_id=driver_id,
-                                                 created_at__date=timezone.localtime().date(),
-                                                 end_trip__isnull=False)
-                for trip in trips:
-                    trip_distance = self.generate_report(self.get_timestamp(timezone.localtime(trip.start_trip)),
-                                                         self.get_timestamp(timezone.localtime(trip.end_trip)),
-                                                         vehicle.gps_id)
-                    distance_in_trips += trip_distance[0]
-                rent.rent_distance -= Decimal(distance_in_trips)
-                rent.save()
+                rent_info = RentInformation.objects.create(driver_name=_driver,
+                                                           driver=_driver,
+                                                           rent_time=rent_time,
+                                                           rent_distance=rent_distance,
+                                                           partner=partner_obj)
+                return rent_info
 
     def total_per_day(self, licence_plate, day):
         start = datetime.datetime.combine(day, datetime.time.min)
