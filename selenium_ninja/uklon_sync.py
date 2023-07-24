@@ -52,7 +52,7 @@ class UklonRequest(Synchronizer):
                       data=None,
                       headers: dict = None,
                       pjson: dict = None,
-                      method: str = 'GET') -> dict:
+                      method: str = None) -> dict:
 
         if not self.redis.exists(f"{self.partner_id}token"):
             self.create_session()
@@ -265,7 +265,7 @@ class UklonRequest(Synchronizer):
             payload = {
                 "items": items
             }
-            requests.post(url2, headers=headers, data=json.dumps(payload))
+            self.response_data(url=url2, headers=headers, data=json.dumps(payload), method='POST')
 
     def detaching_the_driver_from_the_car(self, licence_plate):
         base_url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
@@ -278,4 +278,23 @@ class UklonRequest(Synchronizer):
         if matching_object:
             id_vehicle = matching_object["id"]
             url += f"/{id_vehicle}/release"
-            requests.post(url)
+            self.response_data(url=url, method='POST')
+
+    def get_vehicles(self):
+        vehicles = []
+
+        param = self.parameters()
+        param.update({"limit": 30})
+        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url += Service.get_value('UKLON_2')
+        all_vehicles = self.response_data(url=url, params=param)
+        for vehicle in all_vehicles['data']:
+            response = self.response_data(url=f"{url}/{vehicle['id']}")
+
+            vehicles.append({
+                'licence_plate': vehicle['licencePlate'],
+                'vehicle_name': f"{vehicle['about']['maker']['name']} {vehicle['about']['model']['name']}",
+                'vin_code': response.get('vin_code', '')
+            })
+
+        return vehicles
