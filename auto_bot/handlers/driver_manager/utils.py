@@ -51,7 +51,10 @@ def calculate_reports(start, end, driver):
 def get_daily_report(manager_id=None, start=None, end=None):
     yesterday = timezone.localtime().date() - timedelta(days=1)
     if not start and not end:
-        start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        if timezone.localtime().weekday():
+            start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        else:
+            start = timezone.localtime().date() - timedelta(weeks=1)
         end = yesterday
     total_values = {}
     day_values = {}
@@ -80,7 +83,10 @@ def calculate_efficiency(licence_plate, start, end):
 def get_efficiency(manager_id=None, start=None, end=None):
     yesterday = timezone.localtime().date() - timedelta(days=1)
     if not start and not end:
-        start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        if timezone.localtime().weekday():
+            start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        else:
+            start = timezone.localtime().date() - timedelta(weeks=1)
         end = yesterday
     effective_vehicle = {}
     report = {}
