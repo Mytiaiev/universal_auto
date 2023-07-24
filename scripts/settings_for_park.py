@@ -26,6 +26,7 @@ settings = {
     'MAXIMUM_PRICE_RADIUS': ('1000', 'Максимальна ціна за радіус (грн)'),
     'ORDER_CHAT': ('515224934', 'Чат замовлень'),
     'UKLON_TOKEN': ('Enter token for Uklon', 'Код автопарку в Uklon'),
+    'GOOGLE_ID_ORDER_CALENDAR': ('Введіть ID календаря для замовлень', 'ID календаря Ninja'),
 }
 
 settings_for_partner = {
@@ -40,4 +41,5 @@ settings_for_partner = {
     'CLIENT_SECRET': ('Enter Secret', 'Payload з Uklon'),
     'DRIVERS_CHAT': ('-863882769', 'Чат водіїв'),
     'WITHDRAW_UKLON': ('150', 'Залишок грн на карті водія Uklon'),
+    'GOOGLE_ID_OFF_DAY_CALENDAR': ('Введіть ID календаря для вихідних водіїв', 'ID календаря автопарку (Вихідні водіїв)'),
 }

@@ -260,3 +260,6 @@ class BoltRequest(Synchronizer):
                       params=params, data=encoded)
         job_application.status_bolt = datetime.datetime.now().date()
         job_application.save()
+
+    def get_vehicles(self):
+        return []

@@ -153,11 +153,11 @@ def update_driver_status(self, partner_pk):
         if uber_status is not None:
             status_online = status_online.union(set(uber_status['wait']))
             status_with_client = status_with_client.union(set(uber_status['with_client']))
-        drivers = Driver.objects.filter(deleted_at=None)
+        drivers = Driver.objects.filter(deleted_at=None, partner=partner_pk)
         for driver in drivers:
             last_status = timezone.localtime() - timedelta(minutes=1)
             park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
-            work_ninja = UseOfCars.objects.filter(user_vehicle=driver,
+            work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,
                                                   created_at__date=timezone.now().date(), end_at=None)
             if (driver.name, driver.second_name) in status_online:
                 current_status = Driver.ACTIVE
