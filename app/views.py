@@ -19,7 +19,7 @@ from scripts.driversrating import DriversRatingMixin
 from app.models import VehicleGPS, Vehicle
 
 
-@app.task(ignore_result=True, queue='bot_tasks')
+@app.task(ignore_result=True)
 def process_telegram_event(update_json):
     update = Update.de_json(update_json, bot)
     dispatcher.process_update(update)
