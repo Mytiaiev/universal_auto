@@ -222,5 +222,6 @@ def setup_dispatcher(dp):
 
     return dp
 
+
 update_queue = queue.Queue()
 dispatcher = setup_dispatcher(Dispatcher(bot, update_queue))

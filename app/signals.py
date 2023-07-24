@@ -4,7 +4,7 @@ from auto.tasks import send_on_job_application_on_driver, check_order, check_tim
     remove_periodic_tasks
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
-from app.models import Driver,  StatusChange, JobApplication, ParkSettings, Partner
+from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
 
@@ -61,10 +61,10 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
         send_on_job_application_on_driver.delay(instance.id)
 
 
-# @receiver(post_save, sender=Order)
-# def take_order_from_client(sender, instance, **kwargs):
-#     if instance.status_order == Order.WAITING and not instance.checked:
-#         check_order.delay(instance.id)
-#     elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
-#         check_time_order.delay(instance.id)
+@receiver(post_save, sender=Order)
+def take_order_from_client(sender, instance, **kwargs):
+    if instance.status_order == Order.WAITING and not instance.checked:
+        check_order.delay(instance.id)
+    elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
+        check_time_order.delay(instance.id)
 

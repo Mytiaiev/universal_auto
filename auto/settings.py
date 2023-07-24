@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 from pathlib import Path
 from google.oauth2 import service_account
 import os
-import logging
 import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -149,4 +148,3 @@ CELERY_RESULT_BACKEND = os.environ['CELERY_RESULT_BACKEND']
 CELERY_IMPORTS = [
     'auto.tasks',
 ]
-logging.getLogger('telegram.bot').setLevel(logging.WARNING)

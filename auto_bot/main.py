@@ -10,7 +10,6 @@ from scripts.redis_conn import redis_instance
 bot_token = os.environ['TELEGRAM_TOKEN']
 webhook_url = f'{os.environ["WEBHOOK_URL"]}/webhook/'
 bot = Bot(token=bot_token)
-updater = Updater(bot_token, use_context=True)
 
 
 def setup_webhook():
