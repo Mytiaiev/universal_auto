@@ -1,6 +1,6 @@
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode
-from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus
+from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus, Partner
 from auto.tasks import detaching_the_driver_from_the_car
 from auto_bot.handlers.driver.static_text import V_ID
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
@@ -12,6 +12,7 @@ def status(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     driver = Driver.get_by_chat_id(chat_id)
+    partner = Partner.get_partner(driver.partner)
     vehicle = Vehicle.objects.filter(driver=driver)
     event = Event.objects.filter(full_name_driver=driver, status_event=False).last()
     if event:
@@ -27,7 +28,8 @@ def status(update, context):
             UseOfCars.objects.create(
                 user_vehicle=driver,
                 chat_id=chat_id,
-                licence_plate=vehicle[0].licence_plate)
+                licence_plate=vehicle[0].licence_plate,
+                partner=partner)
             driver.driver_status = Driver.ACTIVE
             driver.save()
             ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
@@ -78,7 +80,7 @@ def get_vehicle_of_driver(update, context):
 def finish_job_main(update, context):
     query = update.callback_query
     driver = Driver.get_by_chat_id(update.effective_chat.id)
-    record = UseOfCars.objects.filter(user_vehicle=driver,
+    record = UseOfCars.objects.filter(chat_id=update.effective_chat.id,
                                       created_at__date=timezone.now().date(), end_at=None).first()
     if record:
         record.end_at = timezone.now()

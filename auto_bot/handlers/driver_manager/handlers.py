@@ -2,11 +2,12 @@
 from datetime import timedelta, datetime
 
 from celery.signals import task_postrun
+from django.core.serializers import deserialize
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
 from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
-    Payments, ParkSettings
+    Payments, ParkSettings, RentInformation
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
@@ -16,7 +17,7 @@ from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
-    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report
+    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, get_rent_information
 from auto_bot.main import bot
 
 
@@ -35,6 +36,19 @@ def update_drivers(sender=None, **kwargs):
     if sender == update_driver_data:
         if kwargs.get('retval'):
             bot.send_message(chat_id=kwargs.get('retval'), text=update_finished, reply_markup=inline_manager_kb())
+
+
+@task_postrun.connect
+def rent_drivers(sender=None, **kwargs):
+    if sender == get_rent_information:
+        message = ''
+        rents = RentInformation.objects.filter(created_at__date=timezone.localtime().date())
+        if rents:
+            for rent in rents:
+                message += f"Водій - {rent.driver_name} оренда {rent.rent_distance}\n"
+        else:
+            message = 'no_rent'
+        bot.send_message(chat_id=515224934, text=message)
 
 
 def remove_cash_by_manager(update, context):
