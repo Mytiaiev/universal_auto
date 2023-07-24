@@ -56,6 +56,8 @@ class PostRequestView(View):
             return handler.handle_update_order(request)
         elif action in ['increase_price', 'continue_search']:
             return handler.handler_restarting_order(request)
+        elif action in ['Uber_login', 'Uklon_login', 'Bolt_login']:
+            return handler.success_login(request)
         else:
             return handler.handle_unknown_action(request)
 

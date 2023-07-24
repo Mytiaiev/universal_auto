@@ -24,7 +24,7 @@ function closeSidebar() {
 let barChartOptions = {
 	series: [{
 		data: [10, 8, 6, 4, 2],
-		name: "Products",
+		name: "Заробіток: ",
 	}],
 	chart: {
 		type: "bar",
@@ -438,7 +438,7 @@ $(document).ready(function () {
 	$("#uberForm button").click(function () {
 		let uberLogin = $("#uberLogin").val();
 		let uberPassword = $("#uberPassword").val();
-		let action = 'Uber';
+		let action = 'Uber_login';
 		sendLoginDataToServer(action, uberLogin, uberPassword);
 	});
 
@@ -446,7 +446,7 @@ $(document).ready(function () {
 	$("#uklonForm button").click(function () {
 		let uklonLogin = $("#uklonLogin").val();
 		let uklonPassword = $("#uklonPassword").val();
-		let action = 'Uklon';
+		let action = 'Uklon_login';
 		sendLoginDataToServer(action, uklonLogin, uklonPassword);
 	});
 
@@ -454,7 +454,7 @@ $(document).ready(function () {
 	$("#boltForm button").click(function () {
 		let boltLogin = $("#boltLogin").val();
 		let boltPassword = $("#boltPassword").val();
-		let action = 'Bolt';
+		let action = 'Bolt_login';
 		sendLoginDataToServer(action, boltLogin, boltPassword);
 	});
 
@@ -469,7 +469,39 @@ $(document).ready(function () {
 				password: password,
 			},
 			success: function (response) {
-				console.log("Відповідь сервера:", response);
+				console.log(response.data);
+				console.log(action);
+				if (response.data === true) {
+					if (action === 'Bolt_login') {
+						$("#boltForm input").hide();
+						$("#boltForm .login-btn").hide();
+						$(".opt").hide();
+						$("#boltForm").append("<span class='successful-message'>Вхід Успішний!</span>");
+					}
+					if (action === "Uber_login") {
+						$("#uberForm input").hide();
+						$("#uberForm .login-btn").hide();
+						$(".opt").hide();
+						$("#uberForm").append("<span class='successful-message'>Вхід Успішний!</span>");
+					}
+					if (action === "Uklon_login") {
+						$("#uklonForm input").hide();
+						$("#uklonForm .login-btn").hide();
+						$(".opt").hide();
+						$("#uklonForm").append("<span class='successful-message'>Вхід Успішний!</span>");
+					}
+				} else {
+					if (action === "Bolt_login") {
+						$("#boltLogin").val("Вказано неправильний логін або пароль");
+						$("#boltPassword").val("Вказано неправильний логін або пароль");
+					} else if (action === "Uber_login") {
+						$("#uberLogin").val("Вказано неправильний логін або пароль");
+						$("#uberPassword").val("Вказано неправильний логін або пароль");
+					} else if (action === "Uklon_login") {
+						$("#uklonLogin").val("Вказано неправильний логін або пароль");
+						$("#uklonPassword").val("Вказано неправильний логін або пароль");
+					}
+				}
 			}
 		});
 	}

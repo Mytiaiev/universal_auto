@@ -319,6 +319,37 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         logger.info(e)
 
 
+@app.task(bind=True)
+def login_uber(self, login, password, partner_pk):
+    log_uber = SeleniumTools(partner_pk).uber_login(login, password)
+    partner = Partner.get_partner(partner_pk)
+
+    if log_uber[0]:
+        try:
+            uber_password_setting = ParkSettings.objects.get(
+                key='UBER_PASSWORD', partner=partner_pk)
+            if uber_password_setting.value != password:
+                uber_password_setting.value = password
+                uber_password_setting.save()
+        except ParkSettings.DoesNotExist:
+            ParkSettings.objects.create(key='UBER_PASSWORD', value=password,
+                                        partner=partner)
+
+        try:
+            uber_name_setting = ParkSettings.objects.get(key='UBER_NAME',
+                                                         partner=partner)
+            if uber_name_setting.value != login:
+                uber_name_setting.value = login
+                uber_name_setting.save()
+        except ObjectDoesNotExist:
+            ParkSettings.objects.create(key='UBER_NAME', value=login,
+                                        partner=partner)
+
+        return True
+    else:
+        return False
+
+
 def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=fleet_name, partner=partner_pk)
     if reports:
@@ -357,7 +388,7 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
 
 
 @app.on_after_finalize.connect
-def run_periodic_tasks(sender):
+def run_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
                              send_time_order.s())
     for partner in Partner.objects.exclude(user__is_superuser=True):

@@ -51,6 +51,17 @@ class PostRequestHandler:
 
         return JsonResponse({}, status=200)
 
+    def success_login(self, request):
+        action = request.POST.get('action')
+        login = request.POST.get('login')
+        password = request.POST.get('password')
+        user_pk = request.user.pk
+
+        success_login = login_in(action, login, password, user_pk)
+        json_data = JsonResponse({'data': success_login}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)
 
