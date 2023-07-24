@@ -1,15 +1,16 @@
 import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from auto.settings import BASE_DIR
 
 
 def create_connect():
-    main_dir = os.path.dirname(os.getcwd())
+    # main_dir = os.path.dirname(os.getcwd())
     SCOPES = ['https://www.googleapis.com/auth/calendar']
-    SERVICE_ACCOUNT_FILE = f"{main_dir}/credentials.json"
+    # SERVICE_ACCOUNT_FILE = f"{main_dir}/credentials.json"
 
     credentials = service_account.Credentials.from_service_account_file(
-                            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+                            os.path.join(BASE_DIR, "credentials.json"), scopes=SCOPES)
 
     service = build('calendar', 'v3', credentials=credentials)
     return service
@@ -39,9 +40,9 @@ def create_event(summary, description, s_date, e_date, calendar_id):
             'timeZone': 'Europe/Kiev',
         },
     }
-
+    print(event)
     event = service.events().insert(calendarId=calendar_id, body=event).execute()
-    return f"Подія '{event['summary']}' була успішно зареєстрована."
+    return f"Подія '{event['summary']}' {event['start']} була успішно зареєстрована."
 
 
 def create_calendar(summary, description, service=create_connect()):
@@ -58,3 +59,26 @@ def create_calendar(summary, description, service=create_connect()):
     created_calendar = service.calendars().insert(body=calendar).execute()
     calendar_id = created_calendar['id']
     return calendar_id
+
+
+def datetime_with_timezone(datetime):
+    """'2023-07-24 15:45:00+00:00' -> '2023-07-24T15:45:00'
+    """
+
+# '2023-07-24 15:45:00+00:00'
+l = create_event('Тестове замовлення', 'замовлення на Паті', '2023-07-21T10:00:00', '2023-07-21T11:00:00', 'primary')
+# #
+# # k = '91c711c3c756dc3a32217cf3baff1125d7f0f0c9700b655bf5c88cd5d4f34214@group.calendar.google.com'
+# # main_dir = os.path.dirname(os.getcwd())
+# # SCOPES = ['https://www.googleapis.com/auth/calendar']
+# # SERVICE_ACCOUNT_FILE = f"{main_dir}/credentials.json"
+# #
+# # credentials = service_account.Credentials.from_service_account_file(
+# #         SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+# #
+# # service = build('calendar', 'v3', credentials=credentials)
+# #
+# # # created_calendar = service.calendars().insert(body=calendar).execute()
+# # # calendar_id = created_calendar['id']
+# # l = service.calendarList().list().execute()
+print(l)
