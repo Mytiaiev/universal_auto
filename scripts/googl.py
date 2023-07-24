@@ -2,29 +2,59 @@ import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-main_dir = os.path.dirname(os.getcwd())
 
-SCOPES = ['https://www.googleapis.com/auth/calendar']
-SERVICE_ACCOUNT_FILE = f"{main_dir}/credentials.json"
+def create_connect():
+    main_dir = os.path.dirname(os.getcwd())
+    SCOPES = ['https://www.googleapis.com/auth/calendar']
+    SERVICE_ACCOUNT_FILE = f"{main_dir}/credentials.json"
 
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    credentials = service_account.Credentials.from_service_account_file(
+                            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
-service = build('calendar', 'v3', credentials=credentials)
-events_result = service.events().list(calendarId='primary', maxResults=10).execute()
+    service = build('calendar', 'v3', credentials=credentials)
+    return service
 
-event = {
-    'summary': 'Тестове замовлення',
-    'description': 'замовлення на Паті',
-    'start': {
-        'dateTime': '2023-07-21T10:00:00',
-        'timeZone': 'Europe/Kiev',
-    },
-    'end': {
-        'dateTime': '2023-07-21T11:00:00',
-        'timeZone': 'Europe/Kiev',
-    },
-}
 
-event = service.events().insert(calendarId='primary', body=event).execute()
-print(f"Подія '{event['summary']}' була успішно зареєстрована.")
+def create_event(summary, description, s_date, e_date, calendar_id):
+    """
+        Create event in Google Calendar
+    summary: str
+    description:str
+    s_date: datetime
+    e_date datetime
+    calendar_id: str
+    rv: str
+    ex. date : '2023-07-31T10:00:00'
+    """
+    service = create_connect()
+    event = {
+        'summary': summary,
+        'description': description,
+        'start': {
+            'dateTime': s_date,
+            'timeZone': 'Europe/Kiev',
+        },
+        'end': {
+            'dateTime': e_date,
+            'timeZone': 'Europe/Kiev',
+        },
+    }
+
+    event = service.events().insert(calendarId=calendar_id, body=event).execute()
+    return f"Подія '{event['summary']}' була успішно зареєстрована."
+
+
+def create_calendar(summary, description, service=create_connect()):
+    """     Create calendar
+    summary: str Calendar name
+    description: str Description calendar
+    rv: str Id calendar
+    """
+
+    calendar = {
+        'summary': summary,
+        'description': description
+    }
+    created_calendar = service.calendars().insert(body=calendar).execute()
+    calendar_id = created_calendar['id']
+    return calendar_id
