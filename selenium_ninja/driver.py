@@ -147,13 +147,11 @@ class SeleniumTools:
         time.sleep(self.sleep)
         try:
             self.driver.find_element(By.XPATH, NewUklonService.get_value('CHECK_LOGIN_UKLON'))
-            url = self.driver.current_url
             login_success = True
         except NoSuchElementException:
-            url = None
             login_success = False
         self.quit()
-        return login_success, url
+        return login_success
 
     def add_driver(self, job_application):
 
@@ -266,13 +264,11 @@ class SeleniumTools:
             time.sleep(self.sleep)
             self.driver.find_element(By.XPATH, UberService.get_value('CHECK_LOGIN_UBER'))
             login_success = True
-            url = self.driver.current_url
             self.save_uber()
         except NoSuchElementException:
             login_success = False
-            url = None
         self.quit()
-        return login_success, url
+        return login_success
 
     def save_uber(self):
         url = UberService.get_value('BASE_URL')

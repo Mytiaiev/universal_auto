@@ -469,8 +469,6 @@ $(document).ready(function () {
 				password: password,
 			},
 			success: function (response) {
-				console.log(response.data);
-				console.log(action);
 				if (response.data === true) {
 					if (action === 'Bolt_login') {
 						$("#boltForm input").hide();
