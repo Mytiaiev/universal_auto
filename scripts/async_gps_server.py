@@ -4,7 +4,9 @@ import re
 
 from asgiref.sync import sync_to_async
 from auto.tasks import raw_gps_handler
-from app.models import RawGPS
+from django.db import connection
+from django.utils.timezone import now
+
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -34,11 +36,27 @@ class PackageHandler:
             return self.answer_bad_login
 
     async def _d_handler(self, **kwargs):
-        if len(self.imei) and len(kwargs['msg']):
-            obj = await sync_to_async(RawGPS.objects.create)(imei=self.imei, client_ip=kwargs['addr'][0],
-                                                             client_port=kwargs['addr'][1], data=kwargs['msg'])
-            raw_gps_handler.delay(obj.id)
-            return self.answer_data
+        if self.imei and kwargs['msg']:
+            imei,  client_ip, client_port = self.imei, kwargs['addr'][0], kwargs['addr'][1]
+            data, created_at = kwargs['msg'], now()
+            try:
+                async with sync_to_async(connection.cursor)() as cursor:
+                    query = """
+                                INSERT INTO app_rawgps (imei, client_ip, client_port, data, created_at)
+                                VALUES (%s, %s, %s, %s, %s)
+                            """
+                    params = (imei, client_ip, client_port, data, created_at)
+                    await sync_to_async(cursor.execute)(query, params)
+
+                    await sync_to_async(connection.commit)()
+                    obj_id = await sync_to_async(cursor.lastrowid)()
+
+                raw_gps_handler.delay(obj_id)
+
+                return self.answer_data
+
+            except connection.DatabaseError:
+                return self.answer_bad_data
         else:
             return self.answer_bad_data
 

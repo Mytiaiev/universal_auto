@@ -20,6 +20,7 @@ from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberRequest
 from selenium_ninja.uklon_sync import UklonRequest
+from django.db import connection
 
 
 logger = get_task_logger(__name__)
@@ -28,39 +29,91 @@ logger = get_task_logger(__name__)
 @app.task()
 def raw_gps_handler(pk):
     try:
-        raw = RawGPS.objects.get(id=pk)
-    except ObjectDoesNotExist:
-        return f'{ObjectDoesNotExist}: id={pk}'
-    data = raw.data.split(';')
-    try:
-        lat, lon = convertion(data[2]), convertion(data[4])
-    except ValueError:
-        lat, lon = 0, 0
-    try:
-        vehicle = Vehicle.objects.get(gps_imei=raw.imei)
-    except ObjectDoesNotExist:
-        return f'{ObjectDoesNotExist}: gps_imei={raw.imei}'
-    try:
-        date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = timezone.make_aware(date_time)
-    except ValueError as err:
-        return f'{ValueError} {err}'
-    try:
-        kwa = {
-            'date_time': date_time,
-            'vehicle': vehicle,
-            'lat': float(lat),
-            'lat_zone': data[3],
-            'lon': float(lon),
-            'lon_zone': data[5],
-            'speed': float(data[6]),
-            'course': float(data[7]),
-            'height': float(data[8]),
-            'raw_data': raw,
-        }
-        VehicleGPS.objects.create(**kwa)
-    except ValueError as err:
-        return f'{ValueError} {err}'
+        with connection.cursor() as cursor:
+            query = """
+                SELECT id, imei, data FROM app_rawgps WHERE id = %s
+            """
+            cursor.execute(query, [pk])
+            row = cursor.fetchone()
+
+            if not row:
+                return f'ObjectDoesNotExist: id={pk}'
+
+            obj_id, imei, data = row
+
+            data = data.split(';')
+
+            try:
+                lat, lon = convertion(data[2]), convertion(data[4])
+            except ValueError:
+                lat, lon = 0, 0
+
+            query = """
+                SELECT id FROM app_vehicle WHERE gps_imei = %s
+            """
+            cursor.execute(query, [imei])
+            row = cursor.fetchone()
+
+            if not row:
+                return f'ObjectDoesNotExist: gps_imei={imei}'
+
+            vehicle_id = row[0]
+
+            try:
+                date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
+                date_time = timezone.make_aware(date_time)
+            except ValueError as err:
+                return f'ValueError {err}'
+
+            query = """
+                INSERT INTO app_vehiclegps (date_time, vehicle_id, lat, lat_zone, lon, lon_zone, speed, course, height, raw_data_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+
+            params = (date_time, vehicle_id, float(lat), data[3], float(lon), data[5], float(data[6]), float(data[7]), float(data[8]), obj_id)
+            cursor.execute(query, params)
+
+            connection.commit()
+
+    except connection.DatabaseError as err:
+        return f'DatabaseError {err}'
+
+# @app.task()
+# def raw_gps_handler(pk):
+#     try:
+#         raw = RawGPS.objects.get(id=pk)
+#     except ObjectDoesNotExist:
+#         return f'{ObjectDoesNotExist}: id={pk}'
+#     data = raw.data.split(';')
+#     try:
+#         lat, lon = convertion(data[2]), convertion(data[4])
+#     except ValueError:
+#         lat, lon = 0, 0
+#     try:
+#         vehicle = Vehicle.objects.get(gps_imei=raw.imei)
+#     except ObjectDoesNotExist:
+#         return f'{ObjectDoesNotExist}: gps_imei={raw.imei}'
+#     try:
+#         date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
+#         date_time = timezone.make_aware(date_time)
+#     except ValueError as err:
+#         return f'{ValueError} {err}'
+#     try:
+#         kwa = {
+#             'date_time': date_time,
+#             'vehicle': vehicle,
+#             'lat': float(lat),
+#             'lat_zone': data[3],
+#             'lon': float(lon),
+#             'lon_zone': data[5],
+#             'speed': float(data[6]),
+#             'course': float(data[7]),
+#             'height': float(data[8]),
+#             'raw_data': raw,
+#         }
+#         VehicleGPS.objects.create(**kwa)
+#     except ValueError as err:
+#         return f'{ValueError} {err}'
 
 
 @app.task(bind=True)
