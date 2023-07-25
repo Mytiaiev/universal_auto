@@ -21,6 +21,7 @@ pendulum
 python-telegram-bot==13.13
 honcho
 redis
+asyncpg
 psycopg2-binary
 dj-database-url
 pytest==7.1.3
