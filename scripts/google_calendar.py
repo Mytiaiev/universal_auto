@@ -8,12 +8,14 @@ def create_connect():
     # main_dir = os.path.dirname(os.getcwd())
     SCOPES = ['https://www.googleapis.com/auth/calendar']
     # SERVICE_ACCOUNT_FILE = f"{main_dir}/credentials.json"
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+                                os.path.join(BASE_DIR, "credentials.json"), scopes=SCOPES)
+        service = build('calendar', 'v3', credentials=credentials)
+        return service
+    except FileNotFoundError:
+        pass
 
-    credentials = service_account.Credentials.from_service_account_file(
-                            os.path.join(BASE_DIR, "credentials.json"), scopes=SCOPES)
-
-    service = build('calendar', 'v3', credentials=credentials)
-    return service
 
 
 def create_event(summary, description, s_date, e_date, calendar_id):

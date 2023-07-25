@@ -23,6 +23,8 @@ class Synchronizer:
         vehicles = self.get_vehicles()
         print(f'Received {self.__class__.__name__} vehicles: {len(vehicles)}')
         print(f'Received {self.__class__.__name__} drivers: {len(drivers)}')
+        for driver in drivers:
+            self.create_driver(**driver)
         for vehicle in vehicles:
             self.get_or_create_vehicle(**vehicle)
 
