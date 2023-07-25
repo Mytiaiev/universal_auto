@@ -12,7 +12,7 @@ def status(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     driver = Driver.get_by_chat_id(chat_id)
-    partner = Partner.get_partner(driver.partner)
+    partner = Partner.get_partner(driver.partner.pk)
     vehicle = Vehicle.objects.filter(driver=driver)
     event = Event.objects.filter(full_name_driver=driver, status_event=False).last()
     if event:
