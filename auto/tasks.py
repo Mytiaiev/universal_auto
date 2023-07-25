@@ -31,7 +31,7 @@ def raw_gps_handler(pk):
     try:
         with connection.cursor() as cursor:
             query = """
-                SELECT id, imei, data FROM RawGPS WHERE id = %s
+                SELECT id, imei, data FROM app_rawgps WHERE id = %s
             """
             cursor.execute(query, [pk])
             row = cursor.fetchone()
@@ -49,7 +49,7 @@ def raw_gps_handler(pk):
                 lat, lon = 0, 0
 
             query = """
-                SELECT id FROM Vehicle WHERE gps_imei = %s
+                SELECT id FROM app_vehicle WHERE gps_imei = %s
             """
             cursor.execute(query, [imei])
             row = cursor.fetchone()
@@ -66,7 +66,7 @@ def raw_gps_handler(pk):
                 return f'ValueError {err}'
 
             query = """
-                INSERT INTO VehicleGPS (date_time, vehicle_id, lat, lat_zone, lon, lon_zone, speed, course, height, raw_data_id)
+                INSERT INTO app_vehiclegps (date_time, vehicle_id, lat, lat_zone, lon, lon_zone, speed, course, height, raw_data_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
 

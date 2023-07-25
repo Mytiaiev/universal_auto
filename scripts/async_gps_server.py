@@ -43,7 +43,7 @@ class PackageHandler:
             try:
                 with connection.cursor() as cursor:
                     query = """
-                                INSERT INTO RawGPS (imei, client_ip, client_port, data, created_at)
+                                INSERT INTO app_rawgps (imei, client_ip, client_port, data, created_at)
                                 VALUES (%s, %s, %s, %s, %s)
                             """
                     params = (imei, client_ip, client_port, data, created_at)
