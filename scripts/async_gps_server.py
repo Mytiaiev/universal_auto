@@ -4,7 +4,6 @@ import re
 
 from asgiref.sync import sync_to_async
 from auto.tasks import raw_gps_handler
-from app.models import RawGPS
 from django.db import connection
 from django.utils.timezone import now
 
@@ -41,16 +40,16 @@ class PackageHandler:
             imei,  client_ip, client_port = self.imei, kwargs['addr'][0], kwargs['addr'][1]
             data, created_at = kwargs['msg'], now()
             try:
-                with connection.cursor() as cursor:
+                async with sync_to_async(connection.cursor)() as cursor:
                     query = """
                                 INSERT INTO app_rawgps (imei, client_ip, client_port, data, created_at)
                                 VALUES (%s, %s, %s, %s, %s)
                             """
                     params = (imei, client_ip, client_port, data, created_at)
-                    cursor.execute(query, params)
+                    await sync_to_async(cursor.execute)(query, params)
 
-                    connection.commit()
-                    obj_id = cursor.lastrowid
+                    await sync_to_async(connection.commit)()
+                    obj_id = await sync_to_async(cursor.lastrowid)()
 
                 raw_gps_handler.delay(obj_id)
 
