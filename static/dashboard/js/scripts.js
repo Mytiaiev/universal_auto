@@ -512,12 +512,15 @@ $(document).ready(function () {
 					if (action === "Bolt_login") {
 						$("#boltLogin").val("Вказано неправильний логін або пароль");
 						$("#boltPassword").val("Вказано неправильний логін або пароль");
+						$("#boltForm .login-btn").show();
 					} else if (action === "Uber_login") {
 						$("#uberLogin").val("Вказано неправильний логін або пароль");
 						$("#uberPassword").val("Вказано неправильний логін або пароль");
+						$("#uberForm .login-btn").show();
 					} else if (action === "Uklon_login") {
 						$("#uklonLogin").val("Вказано неправильний логін або пароль");
 						$("#uklonPassword").val("Вказано неправильний логін або пароль");
+						$("#uklonForm .login-btn").show();
 					}
 				}
 				hideLoader($("#" + form));
