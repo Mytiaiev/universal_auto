@@ -5,8 +5,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from app.models import *
 from selenium_ninja.driver import SeleniumTools
-from auto.tasks import login_uber
-from celery.signals import task_postrun
 
 
 def active_vehicles_gps():
@@ -207,7 +205,7 @@ def effective_vehicle(period, vehicle):
 
 def login_in(action, login, password, user_id):
     partner = Partner.objects.get(user_id=user_id)
-    selenium_tools = SeleniumTools(partner=partner)
+    selenium_tools = SeleniumTools(partner=partner.pk)
     if action == 'Bolt_login':
         success_login = selenium_tools.bolt_login(login=login, password=password)
 
@@ -243,7 +241,7 @@ def login_in(action, login, password, user_id):
 
     if action == 'Uklon_login':
         success_login = selenium_tools.uklon_login(login=login[4:], password=password)
-        if success_login[0]:
+        if success_login:
             try:
                 uklon_password_setting = ParkSettings.objects.get(key='UKLON_PASSWORD', partner=partner)
                 if uklon_password_setting.value != password:
@@ -265,12 +263,24 @@ def login_in(action, login, password, user_id):
             return False
 
     if action == 'Uber_login':
-        login_uber.delay(login, password, partner.pk)
+        success_login = selenium_tools.uber_login(login=login, password=password)
+        if success_login:
+            try:
+                uber_password_setting = ParkSettings.objects.get(key='UBER_PASSWORD', partner=partner)
+                if uber_password_setting.value != password:
+                    uber_password_setting.value = password
+                    uber_password_setting.save()
+            except ParkSettings.DoesNotExist:
+                ParkSettings.objects.create(key='UBER_PASSWORD', value=password, partner=partner)
 
+            try:
+                uber_name_setting = ParkSettings.objects.get(key='UBER_NAME', partner=partner)
+                if uber_name_setting.value != login:
+                    uber_name_setting.value = login
+                    uber_name_setting.save()
+            except ParkSettings.DoesNotExist:
+                ParkSettings.objects.create(key='UBER_NAME', value=login, partner=partner)
 
-@task_postrun.connect
-def log_uber(sender=None, **kwargs):
-    if sender == login_uber:
-        result = kwargs.get('retval')
-        if result:
-            ...
+            return True
+        else:
+            return False
