@@ -53,17 +53,18 @@ class UaGpsSynchronizer:
         params = {
             'svc': 'report/exec_report',
             'sid': self.session,
-            'params': f'{json.dumps(parameters)}'
+            'params': json.dumps(parameters)
         }
         try:
             report = requests.get(self.url, params=params)
+            print(report.json())
             raw_time = report.json()['reportResult']['stats'][4][1]
             clean_time = [int(i) for i in raw_time.split(':')]
             rent_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
             raw_distance = report.json()['reportResult']['stats'][5][1]
-            rent_distance = float(raw_distance.split(' ')[0])
-        except:
-            pass
+            rent_distance = Decimal(raw_distance.split(' ')[0])
+        except Exception as e:
+            print(e)
         return rent_distance, rent_time
 
     @staticmethod
@@ -113,7 +114,7 @@ class UaGpsSynchronizer:
                     rent_distance += report[0]
                     rent_time += report[1]
             rent_today = RentInformation.objects.filter(driver=_driver,
-                                                        created_at__date=timezone.localtime().date())
+                                                        created_at__date=timezone.localtime().date()).first()
             if not rent_today:
                 RentInformation.objects.create(driver_name=_driver,
                                                driver=_driver,
