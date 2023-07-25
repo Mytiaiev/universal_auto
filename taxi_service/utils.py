@@ -240,7 +240,7 @@ def login_in(action, login, password, user_id):
             return False
 
     if action == 'Uklon_login':
-        success_login = selenium_tools.uklon_login(login=login, password=password)
+        success_login = selenium_tools.uklon_login(login=login[4:], password=password)
         if success_login:
             try:
                 uklon_password_setting = ParkSettings.objects.get(key='UKLON_PASSWORD', partner=partner)
