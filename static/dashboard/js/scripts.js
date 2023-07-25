@@ -403,6 +403,9 @@ $(document).ready(function () {
 			q: 'quarter'
 		}[val];
 	}
+});
+
+$(document).ready(function () {
 
 	// Обробка натискання на кнопку "Налаштування"
 
@@ -439,7 +442,9 @@ $(document).ready(function () {
 		let uberLogin = $("#uberLogin").val();
 		let uberPassword = $("#uberPassword").val();
 		let action = 'Uber_login';
-		sendLoginDataToServer(action, uberLogin, uberPassword);
+		let form = "uberForm";
+		showLoader($("#uberForm"));
+		sendLoginDataToServer(action, uberLogin, uberPassword, form);
 	});
 
 	// Обробка натискання на кнопку "Увійти" в формі логіну Uklon
@@ -447,7 +452,9 @@ $(document).ready(function () {
 		let uklonLogin = $("#uklonLogin").val();
 		let uklonPassword = $("#uklonPassword").val();
 		let action = 'Uklon_login';
-		sendLoginDataToServer(action, uklonLogin, uklonPassword);
+		let form = "uklonForm";
+		showLoader($("#uklonForm"));
+		sendLoginDataToServer(action, uklonLogin, uklonPassword, form);
 	});
 
 	// Обробка натискання на кнопку "Увійти" в формі логіну Bolt
@@ -455,10 +462,23 @@ $(document).ready(function () {
 		let boltLogin = $("#boltLogin").val();
 		let boltPassword = $("#boltPassword").val();
 		let action = 'Bolt_login';
-		sendLoginDataToServer(action, boltLogin, boltPassword);
+		let form = "boltForm";
+		showLoader($("#boltForm"));
+		sendLoginDataToServer(action, boltLogin, boltPassword, form);
 	});
 
-	function sendLoginDataToServer(action, login, password) {
+	function showLoader(form) {
+    form.find(".login-btn").hide();
+    form.find(".loader-login").show();
+  }
+
+  function hideLoader(form) {
+    form.find(".loader-login").hide();
+  }
+
+
+	function sendLoginDataToServer(action, login, password, form) {
+
 		$.ajax({
 			type: "POST",
 			url: ajaxPostUrl,
@@ -500,6 +520,7 @@ $(document).ready(function () {
 						$("#uklonPassword").val("Вказано неправильний логін або пароль");
 					}
 				}
+				hideLoader($("#" + form));
 			}
 		});
 	}
