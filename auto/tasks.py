@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 from _decimal import Decimal
 from celery import current_app
 from django.core.exceptions import ObjectDoesNotExist
@@ -12,7 +13,12 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
-from scripts.conversion import convertion
+from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot
+from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
+    search_driver_2, no_driver_in_radius, order_customer_text, driver_arrived
+from auto_bot.handlers.order.utils import text_to_client
+from auto_bot.main import bot
+from scripts.conversion import convertion, haversine, get_location_from_db, geocode, get_route_price
 from auto.celery import app
 from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
@@ -158,12 +164,12 @@ def update_driver_status(self, partner_pk):
             park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,
                                                   created_at__date=timezone.now().date(), end_at=None)
-            if (driver.name, driver.second_name) in status_online:
-                current_status = Driver.ACTIVE
+            if (driver.name, driver.second_name) in status_with_client:
+                current_status = Driver.WITH_CLIENT
             elif park_status and park_status.status != Driver.ACTIVE:
                 current_status = park_status.status
-            elif (driver.name, driver.second_name) in status_with_client:
-                current_status = Driver.WITH_CLIENT
+            elif (driver.name, driver.second_name) in status_online:
+                current_status = Driver.ACTIVE
             else:
                 current_status = Driver.ACTIVE if work_ninja else Driver.OFFLINE
             driver.driver_status = current_status
@@ -309,6 +315,135 @@ def send_time_order(self):
 @app.task(bind=True)
 def check_order(self, order_id):
     return order_id
+
+
+@app.task
+def order_create_task(context, phone, chat_id, payment, message_id):
+    if 'from_address' not in context:
+        context['from_address'] = context['location_address']
+    else:
+        from_place = context['addresses_first'].get(context['from_address'])
+        context['latitude'], context['longitude'] = geocode(from_place, ParkSettings.get_value('GOOGLE_API_KEY'))
+
+    distance_price = get_route_price(context['latitude'], context['longitude'],
+                                     context['destination_lat'], context['destination_long'],
+                                     ParkSettings.get_value('GOOGLE_API_KEY'))
+
+    order_data = {
+        'from_address': context['from_address'],
+        'latitude': context['latitude'],
+        'longitude': context['longitude'],
+        'to_the_address': context['to_the_address'],
+        'to_latitude': context['destination_lat'],
+        'to_longitude': context['destination_long'],
+        'phone_number': phone,
+        'chat_id_client': chat_id,
+        'payment_method': payment,
+        'client_message_id': message_id,
+        'sum': distance_price[0],
+        'distance_google': round(distance_price[1], 2)
+    }
+
+    if 'time_order' in context:
+        order_data['status_order'] = Order.ON_TIME
+        order_data['order_time'] = context['time_order']
+        bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]} грн\n'
+                                                    f'Очікуйте водія о {context["time_order"]}', message_id=message_id)
+    else:
+        order_data['status_order'] = Order.WAITING
+
+    Order.objects.create(**order_data)
+
+
+@app.task(bind=True, max_retries=3)
+def search_driver_for_order(self, order_pk):
+    try:
+        order = Order.objects.get(id=order_pk)
+        client_msg = client_order_info(order.from_address,
+                                       order.to_the_address,
+                                       order.payment_method,
+                                       order.phone_number,
+                                       order.sum,
+                                       increase=order.car_delivery_price)
+        if self.request.retries == self.max_retries:
+            if order.chat_id_client:
+                bot.edit_message_text(chat_id=order.chat_id_client,
+                                      text=no_driver_in_radius,
+                                      reply_markup=inline_search_kb(),
+                                      message_id=order.client_message_id)
+            return
+        if self.request.retries == 0:
+            text_to_client(order, client_msg, message_id=order.client_message_id)
+        elif self.request.retries == 1:
+            text_to_client(order, search_driver_1, message_id=order.client_message_id)
+        else:
+            text_to_client(order, search_driver_2, message_id=order.client_message_id)
+        drivers = Driver.objects.filter(chat_id__isnull=False)
+        for driver in drivers:
+            record = UseOfCars.objects.filter(user_vehicle=driver,
+                                              created_at__date=timezone.now().date(),
+                                              end_at=None).last()
+            if record:
+                if driver.driver_status == Driver.ACTIVE:
+                    driver.driver_status = Driver.GET_ORDER
+                    driver.save()
+                    vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
+                    driver_lat, driver_long = get_location_from_db(vehicle)
+                    distance = haversine(float(driver_lat), float(driver_long),
+                                         float(order.latitude), float(order.longitude))
+                    radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
+                             order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
+                    if distance <= radius:
+                        message = order_info(order.pk, order.from_address, order.to_the_address,
+                                             order.payment_method, order.phone_number)
+                        markup = inline_markup_accept(order.pk)
+                        accept_message = bot.send_message(chat_id=driver.chat_id,
+                                                          text=message,
+                                                          reply_markup=markup)
+                        end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
+                        while time.time() < end_time:
+                            upd_driver = Driver.objects.get(id=driver.id)
+                            instance = Order.objects.get(id=order.id)
+                            if instance.driver == upd_driver:
+                                return
+                        bot.delete_message(chat_id=driver.chat_id,
+                                           message_id=accept_message.message_id)
+                        bot.send_message(chat_id=driver.chat_id,
+                                         text=decline_order)
+                    driver.driver_status = Driver.ACTIVE
+                    driver.save()
+                else:
+                    continue
+        self.retry(args=[order_pk], countdown=30)
+    except ObjectDoesNotExist as e:
+        logger.error(e)
+
+
+@app.task(bind=True, max_retries=90)
+def send_map_to_client(self, order_pk, query_id, licence_plate, client_msg, message):
+    order = Order.objects.get(id=order_pk)
+    if order.chat_id_client:
+        try:
+            latitude, longitude = get_location_from_db(licence_plate)
+            distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
+            if order.status_order in (Order.CANCELED, Order.WAITING):
+                bot.stopMessageLiveLocation(message.chat_id, message.message_id)
+                return
+            elif distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
+                text_to_client(order, driver_arrived, delete_id=client_msg)
+                bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
+                                              message_id=query_id,
+                                              reply_markup=inline_client_spot(order_pk))
+                bot.stopMessageLiveLocation(message.chat_id, message.message_id)
+                return
+            else:
+                bot.editMessageLiveLocation(message.chat_id, message.message_id, latitude=latitude, longitude=longitude)
+                self.retry(args=[order_pk, query_id, licence_plate, client_msg, message], countdown=30)
+        except Exception as e:
+            logger.error(msg=str(e))
+            self.retry(args=[order_pk, query_id, licence_plate, client_msg, message], countdown=30)
+        if self.request.retries >= self.max_retries:
+            bot.stopMessageLiveLocation(message.chat_id, message.message_id)
 
 
 @app.task(bind=True)
