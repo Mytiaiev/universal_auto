@@ -8,7 +8,7 @@ from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange
 
 class UaGpsSynchronizer:
 
-    def __init__(self, url=f'{UaGpsService.get_value("BASE_URL")}'):
+    def __init__(self, url=UaGpsService.get_value("BASE_URL")):
         self.url = url
         self.session = self.get_session()
 
@@ -16,7 +16,7 @@ class UaGpsSynchronizer:
 
         params = {
             'svc': 'token/login',
-            'params': json.dumps({"token": f"{ParkSettings.get_value('UAGPS_TOKEN')}"})
+            'params': json.dumps({"token": ParkSettings.get_value('UAGPS_TOKEN')})
         }
         login = requests.get(self.url, params=params)
         return login.json()['eid']
@@ -57,7 +57,6 @@ class UaGpsSynchronizer:
         }
         try:
             report = requests.get(self.url, params=params)
-            print(report.json())
             raw_time = report.json()['reportResult']['stats'][4][1]
             clean_time = [int(i) for i in raw_time.split(':')]
             rent_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
@@ -100,7 +99,8 @@ class UaGpsSynchronizer:
                                                        vehicle.gps_id)
                     rent_distance += last_report[0]
                     rent_time += last_report[1]
-                    statuses = rent_statuses.filter(name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT])
+                    statuses = rent_statuses.filter(name__in=[Driver.ACTIVE, Driver.OFFLINE,
+                                                              Driver.RENT, Driver.GET_ORDER])
                     for st in statuses:
                         status_report = self.generate_report(self.get_timestamp(timezone.localtime(st.start_time)),
                                                              self.get_timestamp(timezone.localtime(st.end_time)),
