@@ -223,3 +223,6 @@ class UberRequest(Synchronizer):
                         with_client.append((second_name, name))
         return {'wait': wait,
                 'with_client': with_client}
+
+    def get_vehicles(self):
+        return []

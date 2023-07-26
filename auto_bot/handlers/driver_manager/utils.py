@@ -51,7 +51,10 @@ def calculate_reports(start, end, driver):
 def get_daily_report(manager_id=None, start=None, end=None):
     yesterday = timezone.localtime().date() - timedelta(days=1)
     if not start and not end:
-        start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        if timezone.localtime().weekday():
+            start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        else:
+            start = timezone.localtime().date() - timedelta(weeks=1)
         end = yesterday
     total_values = {}
     day_values = {}
@@ -68,17 +71,22 @@ def get_daily_report(manager_id=None, start=None, end=None):
 def calculate_efficiency(licence_plate, start, end):
     efficiency_objects = CarEfficiency.objects.filter(report_from__range=(start, end),
                                                       licence_plate=licence_plate)
-    average_efficiency = efficiency_objects.aggregate(avg_efficiency=Avg('efficiency'))['avg_efficiency']
+    total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
     total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
-    formatted_efficiency = float('{:.2f}'.format(average_efficiency)) if average_efficiency is not None else 0.00
+    efficiency = 0
+    if total_distance:
+        efficiency = float('{:.2f}'.format(total_kasa/total_distance))
     formatted_distance = float('{:.2f}'.format(total_distance)) if total_distance is not None else 0.00
-    return formatted_efficiency, formatted_distance
+    return efficiency, formatted_distance
 
 
 def get_efficiency(manager_id=None, start=None, end=None):
     yesterday = timezone.localtime().date() - timedelta(days=1)
     if not start and not end:
-        start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        if timezone.localtime().weekday():
+            start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        else:
+            start = timezone.localtime().date() - timedelta(weeks=1)
         end = yesterday
     effective_vehicle = {}
     report = {}

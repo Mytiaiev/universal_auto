@@ -1,10 +1,13 @@
 import asyncio
 import logging
+import os
 import re
-
+import asyncpg
 from asgiref.sync import sync_to_async
 from auto.tasks import raw_gps_handler
-from app.models import RawGPS
+from django.db import connection
+from django.utils.timezone import now
+
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -34,13 +37,34 @@ class PackageHandler:
             return self.answer_bad_login
 
     async def _d_handler(self, **kwargs):
-        if len(self.imei) and len(kwargs['msg']):
-            obj = await sync_to_async(RawGPS.objects.create)(imei=self.imei, client_ip=kwargs['addr'][0],
-                                                             client_port=kwargs['addr'][1], data=kwargs['msg'])
-            raw_gps_handler.delay(obj.id)
-            return self.answer_data
+        if self.imei and kwargs['msg']:
+            imei,  client_ip, client_port = self.imei, kwargs['addr'][0], kwargs['addr'][1]
+            data, created_at = kwargs['msg'], await sync_to_async(now)()
+            try:
+                database_url = os.environ.get('DATABASE_URL')
+                conn = await asyncpg.connect(dsn=database_url)
+                query = """
+                            INSERT INTO app_rawgps (imei, client_ip, client_port, data, created_at)
+                            VALUES ($1, $2, $3, $4, $5)
+                        """
+                await conn.execute(query, imei, client_ip, client_port, data, created_at)
+                obj_id = await conn.fetchval("SELECT lastval();")
+                obj_id = int(obj_id)
+                await conn.close()
+                raw_gps_handler.delay(obj_id)
+
+                return self.answer_data
+            except (Exception, asyncpg.PostgresError) as error:
+
+                print("Error inserting GPS data:", error)
+
+                return self.answer_bad_data
         else:
             return self.answer_bad_data
+
+    @staticmethod
+    async def async_cursor():
+        return connection.cursor()
 
     async def _p_handler(self, **kwargs):
         return self.answer_ping
