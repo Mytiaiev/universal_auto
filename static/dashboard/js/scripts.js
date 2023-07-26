@@ -407,15 +407,38 @@ $(document).ready(function () {
 
 $(document).ready(function () {
 
-	// Обробка натискання на кнопку "Налаштування"
-
-	$("#settingsBtn").click(function () {
+	if (sessionStorage.getItem('settings') === 'true') {
 		$("#settingsWindow").fadeIn();
+	}
+
+	$("#settingBtn").click(function () {
+		sessionStorage.setItem('settings', 'true');
+		$("#settingsWindow").fadeIn();
+
+		const forms = ['uberForm', 'boltForm', 'uklonForm'];
+
+		forms.forEach((formName) => {
+			if (localStorage.getItem(formName.substring(0, formName.length - 4)) === 'true') {
+				$("#" + formName + " input").hide();
+				$("#" + formName + " .login-btn").hide();
+				$(".opt").hide();
+				$("#" + formName).append("<span class='successful-message'>Вхід Успішний!</span>");
+				$("#" + formName).append("<button class='logout-btn' data-form='" + formName + "'>Вийти</button>");
+			}
+		});
 	});
 
 
+	$(document).on("click", ".logout-btn", function () {
+		let formName = $(this).data('form');
+		localStorage.removeItem(formName.substring(0, formName.length - 4));
+		location.reload();
+	});
+
 	$(".close-btn").click(function () {
 		$("#settingsWindow").fadeOut();
+		sessionStorage.setItem('settings', 'false');
+		location.reload();
 	});
 
 	$(function () {
@@ -437,44 +460,33 @@ $(document).ready(function () {
 		});
 	});
 
-	// Обробка натискання на кнопку "Увійти" в формі логіну Uber
+	function handlerLoginClick(formName, action) {
+		let login = $("#" + formName + "Login").val();
+		let password = $("#" + formName + "Password").val();
+		showLoader($("#" + formName + "Form"));
+		sendLoginDataToServer(action, login, password, formName);
+	}
+
 	$("#uberForm button").click(function () {
-		let uberLogin = $("#uberLogin").val();
-		let uberPassword = $("#uberPassword").val();
-		let action = 'Uber_login';
-		let form = "uberForm";
-		showLoader($("#uberForm"));
-		sendLoginDataToServer(action, uberLogin, uberPassword, form);
+		handlerLoginClick('uber', 'Uber_login');
 	});
 
-	// Обробка натискання на кнопку "Увійти" в формі логіну Uklon
-	$("#uklonForm button").click(function () {
-		let uklonLogin = $("#uklonLogin").val();
-		let uklonPassword = $("#uklonPassword").val();
-		let action = 'Uklon_login';
-		let form = "uklonForm";
-		showLoader($("#uklonForm"));
-		sendLoginDataToServer(action, uklonLogin, uklonPassword, form);
-	});
-
-	// Обробка натискання на кнопку "Увійти" в формі логіну Bolt
 	$("#boltForm button").click(function () {
-		let boltLogin = $("#boltLogin").val();
-		let boltPassword = $("#boltPassword").val();
-		let action = 'Bolt_login';
-		let form = "boltForm";
-		showLoader($("#boltForm"));
-		sendLoginDataToServer(action, boltLogin, boltPassword, form);
+		handlerLoginClick('bolt', 'Bolt_login');
+	});
+
+	$("#uklonForm button").click(function () {
+		handlerLoginClick('uklon', 'Uklon_login');
 	});
 
 	function showLoader(form) {
-    form.find(".login-btn").hide();
-    form.find(".loader-login").show();
-  }
+		form.find(".login-btn").hide();
+		form.find(".loader-login").show();
+	}
 
-  function hideLoader(form) {
-    form.find(".loader-login").hide();
-  }
+	function hideLoader(form) {
+		form.find(".loader-login").hide();
+	}
 
 
 	function sendLoginDataToServer(action, login, password, form) {
@@ -490,40 +502,44 @@ $(document).ready(function () {
 			},
 			success: function (response) {
 				if (response.data === true) {
+					localStorage.setItem(form, 'true');
 					if (action === 'Bolt_login') {
 						$("#boltForm input").hide();
 						$("#boltForm .login-btn").hide();
 						$(".opt").hide();
 						$("#boltForm").append("<span class='successful-message'>Вхід Успішний!</span>");
+						$("#boltForm").append("<button class='logout-btn' data-form='Uklon_login'>Вийти</button>");
 					}
 					if (action === "Uber_login") {
 						$("#uberForm input").hide();
 						$("#uberForm .login-btn").hide();
 						$(".opt").hide();
 						$("#uberForm").append("<span class='successful-message'>Вхід Успішний!</span>");
+						$("#uberForm").append("<button class='logout-btn' data-form='Uklon_login'>Вийти</button>");
 					}
 					if (action === "Uklon_login") {
 						$("#uklonForm input").hide();
 						$("#uklonForm .login-btn").hide();
 						$(".opt").hide();
 						$("#uklonForm").append("<span class='successful-message'>Вхід Успішний!</span>");
+						$("#uklonForm").append("<button class='logout-btn' data-form='Uklon_login'>Вийти</button>");
 					}
 				} else {
 					if (action === "Bolt_login") {
-						$("#boltLogin").val("Вказано неправильний логін або пароль");
-						$("#boltPassword").val("Вказано неправильний логін або пароль");
+						$("#boltLogin").val("Вказано неправильний логін або пароль").addClass("error-message");
+						$("#boltPassword").val("Вказано неправильний логін або пароль").addClass("error-message");
 						$("#boltForm .login-btn").show();
 					} else if (action === "Uber_login") {
-						$("#uberLogin").val("Вказано неправильний логін або пароль");
-						$("#uberPassword").val("Вказано неправильний логін або пароль");
+						$("#uberLogin").val("Вказано неправильний логін або пароль").addClass("error-message");
+						$("#uberPassword").val("Вказано неправильний логін або пароль").addClass("error-message");
 						$("#uberForm .login-btn").show();
 					} else if (action === "Uklon_login") {
-						$("#uklonLogin").val("Вказано неправильний логін або пароль");
-						$("#uklonPassword").val("Вказано неправильний логін або пароль");
+						$("#uklonLogin").val("Вказано неправильний логін або пароль").addClass("error-message");
+						$("#uklonPassword").val("Вказано неправильний логін або пароль").addClass("error-message");
 						$("#uklonForm .login-btn").show();
 					}
 				}
-				hideLoader($("#" + form));
+				hideLoader($("#" + form + "Form"));
 			}
 		});
 	}
