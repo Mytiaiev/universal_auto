@@ -20,9 +20,13 @@ class Synchronizer:
 
     def synchronize(self):
         drivers = self.get_drivers_table()
+        vehicles = self.get_vehicles()
+        print(f'Received {self.__class__.__name__} vehicles: {len(vehicles)}')
         print(f'Received {self.__class__.__name__} drivers: {len(drivers)}')
         for driver in drivers:
             self.create_driver(**driver)
+        for vehicle in vehicles:
+            self.get_or_create_vehicle(**vehicle)
 
     def create_driver(self, **kwargs):
         try:
@@ -107,7 +111,7 @@ class Synchronizer:
         if not licence_plate:
             licence_plate = unk
         try:
-            vehicle = Vehicle.objects.get(licence_plate=licence_plate)
+            vehicle = Vehicle.objects.get(licence_plate=licence_plate, partner=self.partner_id)
         except ObjectDoesNotExist:
             vehicle = Vehicle.objects.create(
                 name=kwargs[v_name].upper(),

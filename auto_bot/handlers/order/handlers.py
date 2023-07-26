@@ -362,6 +362,18 @@ def client_reject_order(update, context):
                                        message_id=query.message.message_id + i)
     except:
         pass
+    try:
+        driver_chat_id = order.driver.chat_id
+        driver = Driver.get_by_chat_id(chat_id=driver_chat_id)
+        message_id = order.driver_message_id
+        bot.delete_message(chat_id=driver_chat_id, message_id=message_id)
+        bot.send_message(
+            chat_id=driver_chat_id,
+            text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
+        )
+        ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
+    except Exception:
+        pass
     text_to_client(order=order,
                    text=client_cancel,
                    button=inline_comment_for_client())

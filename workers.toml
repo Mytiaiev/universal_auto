@@ -7,8 +7,8 @@ kill_timeout = 5
 [experimental]
    auto_rollback = true
 [processes]
-  worker = "celery -A auto worker --loglevel=warning --without-gossip --pool=solo"
-  beat   = "celery -A auto beat -l WARNING"
+  worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo"
+  beat   = "celery -A auto beat -l INFO"
 [[services]]
   auto_stop_machines = true
   auto_start_machines = true
