@@ -16,9 +16,9 @@ from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_time_order_kb
+    inline_time_order_kb, inline_comment_for_client
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
-    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text
+    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, trip_paymented
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, geocode, get_route_price
@@ -509,6 +509,26 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         text_to_client(order=instance, text=f'Сума до cплати: {instance.sum} грн\n {complete_order_text}')
         message = driver_complete_text(instance.sum)
         bot.edit_message_text(chat_id=instance.driver.chat_id, message_id=query, text=message)
+    except Exception as e:
+        logger.info(e)
+
+
+@app.task(bind=True)
+def check_payment_status_tg(order_pk, query_id, portmone):
+    try:
+        while True:
+            time.sleep(5)
+            status = portmone.payment.get_status(order_pk)
+            if status == 'success':
+                order = Order.objects.filter(pk=order_pk).first()
+                bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=trip_paymented)
+                message = driver_complete_text(order.sum)
+                bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
+                text_to_client(order, complete_order_text, button=inline_comment_for_client())
+                ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+                order.status_order = Order.COMPLETED
+                order.partner = order.driver.partner
+                order.save()
     except Exception as e:
         logger.info(e)
 

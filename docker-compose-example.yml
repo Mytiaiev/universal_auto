@@ -28,17 +28,13 @@ services:
       ROLLBAR_TOKEN:
       ROLLBAR_ENV: #'production' or 'staging'
       DEVELOPER_CHAT_ID:
-      LIQ_PAY_TOKEN:
-      LIQPAY_PUBLIC_KEY:
-      LIQPAY_PRIVATE_KEY:
+      PORTMONE_API_KEY:
+      PORTMONE_PAYEE_ID:
       UKLON_TOKEN:
       UAGPS_LOGIN:
       UAGPS_PASSWORD:
       PRIVAT24_NAME:              #lenght = 9 ex: 632587413
       PRIVAT24_PASSWORD:
-      PORTMONE_LOGIN:
-      PORTMONE_PASSWORD:
-      PORTMONE_PAYEE_ID:
       GOOGLE_API_KEY:
       MOBIZON_DOMAIN: "https://api.mobizon.ua/service/message/sendsmsmessage"
       MOBIZON_API_KEY:
