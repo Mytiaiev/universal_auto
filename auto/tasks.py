@@ -7,15 +7,18 @@ from django.db import IntegrityError
 from django.utils import timezone
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
+from telegram import ParseMode
+from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
-from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot
+from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
+    inline_time_order_kb
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
-    search_driver_2, no_driver_in_radius, order_customer_text, driver_arrived
+    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, geocode, get_route_price
@@ -304,17 +307,42 @@ def send_efficiency_report(self, partner_pk):
 
 @app.task(bind=True)
 def check_time_order(self, order_id):
-    return order_id
+    try:
+        instance = Order.objects.get(pk=order_id)
+    except ObjectDoesNotExist:
+        return
+    message = order_info(instance.pk,
+                         instance.from_address,
+                         instance.to_the_address,
+                         instance.payment_method,
+                         instance.phone_number,
+                         price=instance.sum,
+                         distance=instance.distance_google,
+                         time=timezone.localtime(instance.order_time).time())
+
+    group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
+                                 text=message,
+                                 reply_markup=inline_markup_accept(instance.pk),
+                                 parse_mode=ParseMode.HTML)
+    instance.driver_message_id, instance.checked = group_msg.message_id, True
+    instance.save()
 
 
 @app.task(bind=True)
 def send_time_order(self):
-    return logger.info('sending_time_orders')
+    logger.info('sending_time_orders')
+    accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
+    for order in accepted_orders:
+        if timezone.localtime() < order.order_time < (timezone.localtime() + timedelta(minutes=int(
+                ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
+            markup = inline_time_order_kb(order.id)
+            text = order_info(order.pk, order.from_address, order.to_the_address,
+                              order.payment_method, order.phone_number,
+                              time=timezone.localtime(order.order_time).time(),
+                              price=order.sum, distance=order.distance_google)
 
-
-@app.task(bind=True)
-def check_order(self, order_id):
-    return order_id
+            bot.send_message(chat_id=order.driver.chat_id, text=text,
+                             reply_markup=markup, parse_mode=ParseMode.HTML)
 
 
 @app.task
@@ -325,8 +353,11 @@ def order_create_task(context, phone, chat_id, payment, message_id):
         from_place = context['addresses_first'].get(context['from_address'])
         context['latitude'], context['longitude'] = geocode(from_place, ParkSettings.get_value('GOOGLE_API_KEY'))
 
+    destination_place = context['addresses_second'].get(context['to_the_address'])
+    destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
+
     distance_price = get_route_price(context['latitude'], context['longitude'],
-                                     context['destination_lat'], context['destination_long'],
+                                     destination_lat, destination_long,
                                      ParkSettings.get_value('GOOGLE_API_KEY'))
 
     order_data = {
@@ -334,8 +365,8 @@ def order_create_task(context, phone, chat_id, payment, message_id):
         'latitude': context['latitude'],
         'longitude': context['longitude'],
         'to_the_address': context['to_the_address'],
-        'to_latitude': context['destination_lat'],
-        'to_longitude': context['destination_long'],
+        'to_latitude': destination_lat,
+        'to_longitude': destination_long,
         'phone_number': phone,
         'chat_id_client': chat_id,
         'payment_method': payment,
@@ -405,6 +436,9 @@ def search_driver_for_order(self, order_pk):
                             upd_driver = Driver.objects.get(id=driver.id)
                             instance = Order.objects.get(id=order.id)
                             if instance.driver == upd_driver:
+                                bot.edit_message_text(chat_id=order.chat_id_client,
+                                                      text=client_msg,
+                                                      message_id=order.client_message_id)
                                 return
                         bot.delete_message(chat_id=driver.chat_id,
                                            message_id=accept_message.message_id)
@@ -420,30 +454,37 @@ def search_driver_for_order(self, order_pk):
 
 
 @app.task(bind=True, max_retries=90)
-def send_map_to_client(self, order_pk, query_id, licence_plate, client_msg, message):
+def send_map_to_client(self, order_pk, query_id, vehicle, client_msg, message, chat):
     order = Order.objects.get(id=order_pk)
     if order.chat_id_client:
         try:
-            latitude, longitude = get_location_from_db(licence_plate)
+            latitude, longitude = get_location_from_db(vehicle)
             distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
             if order.status_order in (Order.CANCELED, Order.WAITING):
-                bot.stopMessageLiveLocation(message.chat_id, message.message_id)
+                bot.stopMessageLiveLocation(chat, message)
                 return
             elif distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
+                bot.stopMessageLiveLocation(chat, message)
                 text_to_client(order, driver_arrived, delete_id=client_msg)
                 bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                               message_id=query_id,
-                                              reply_markup=inline_client_spot(order_pk))
-                bot.stopMessageLiveLocation(message.chat_id, message.message_id)
-                return
+                                              reply_markup=inline_client_spot(order_pk, message))
             else:
-                bot.editMessageLiveLocation(message.chat_id, message.message_id, latitude=latitude, longitude=longitude)
-                self.retry(args=[order_pk, query_id, licence_plate, client_msg, message], countdown=30)
+                bot.editMessageLiveLocation(chat, message, latitude=latitude, longitude=longitude)
+                self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=20)
+        except BadRequest as e:
+            if "Message can't be edited" in str(e):
+                pass
+            else:
+                raise self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=30) from e
+        except StopIteration:
+            pass
         except Exception as e:
             logger.error(msg=str(e))
-            self.retry(args=[order_pk, query_id, licence_plate, client_msg, message], countdown=30)
+            self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=30)
         if self.request.retries >= self.max_retries:
-            bot.stopMessageLiveLocation(message.chat_id, message.message_id)
+            bot.stopMessageLiveLocation(chat, message)
+        return message
 
 
 @app.task(bind=True)
@@ -454,7 +495,20 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
     try:
         result = UaGpsSynchronizer().generate_report(start_trip_with_client, end, gps_id)
         minutes = delta.total_seconds() // 60
-        return order, query, minutes, result[0]
+        instance = Order.objects.filter(pk=order).first()
+        instance.distance_gps = result[0]
+        price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
+                            int(ParkSettings.get_value('COST_PER_KM'))) / 60
+        price_per_minute = price_per_minute * minutes
+        price_per_distance = round(int(ParkSettings.get_value('COST_PER_KM')) * result[0])
+        if price_per_distance > price_per_minute:
+            instance.sum = int(price_per_distance) + int(instance.car_delivery_price)
+        else:
+            instance.sum = int(price_per_minute) + int(instance.car_delivery_price)
+        instance.save()
+        text_to_client(order=instance, text=f'Сума до cплати: {instance.sum} грн\n {complete_order_text}')
+        message = driver_complete_text(instance.sum)
+        bot.edit_message_text(chat_id=instance.driver.chat_id, message_id=query, text=message)
     except Exception as e:
         logger.info(e)
 
