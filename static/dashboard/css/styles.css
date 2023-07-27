@@ -411,7 +411,7 @@ body {
   cursor: pointer;
 }
 
-.opt {
+.opt-boltForm, .opt-uberForm, .opt-uklonForm {
   margin-top: -45px;
   margin-bottom: 40px;
 }
