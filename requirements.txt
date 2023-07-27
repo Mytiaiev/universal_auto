@@ -8,6 +8,7 @@ google-auth-httplib2
 google-auth-oauthlib
 google-api-python-client
 rollbar
+portmone_python
 google-cloud-core
 google-cloud-storage
 google-crc32c

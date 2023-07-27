@@ -1,9 +1,12 @@
+import os
 import re
 import datetime
+from uuid import uuid4
+
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
-from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
+from auto.tasks import get_distance_trip, order_create_task, send_map_to_client, check_payment_status_tg
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order,\
     inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb,\
@@ -12,6 +15,7 @@ from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db
 from auto_bot.handlers.order.static_text import *
+from portmone_python import Portmone
 
 
 def continue_order(update, context):
@@ -362,65 +366,52 @@ def handle_order(update, context):
             s, e = int(timezone.localtime(status_driver.created_at).timestamp()), int(timezone.localtime().timestamp())
             get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)
         else:
-            message = driver_complete_text(order.sum)
-            query.edit_message_text(text=message)
-            text_to_client(order, complete_order_text, button=inline_comment_for_client())
+            context.user_data.clear()
+            if order.payment_method == price_inline_buttons[4].split()[1]:
+                message = driver_complete_text(order.sum)
+                query.edit_message_text(text=message)
+                text_to_client(order, complete_order_text, button=inline_comment_for_client())
+                order.status_order = Order.COMPLETED
+                order.partner = order.driver.partner
+                order.save()
+            else:
+                payment_id = str(uuid4())
 
-        # if order.payment_method == PAYCARD:
-        #     payment_id = str(uuid4())
-        #     payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
-        #                     os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
-        #     liqpay_cert_path = os.environ["LIQPAY_CERF"]
-        #     liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"],
-        #                            ssl_cert=liqpay_cert_path)
-        #
-        #     response = liqpay_client.api("request",
-        #                                  data={
-        #                                      "action": "status",
-        #                                      "version": "3",
-        #                                      "order_id": payment_id
-        #                                  },
-        #                                  headers={
-        #                                      "Content-Type": "application/json",
-        #                                      "Accept": "application/json",
-        #                                  },
-        #                                  cert=liqpay_cert_path,
-        #                                  verify=True
-        #                                  )
-        #
-        #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
-        # else:
-        context.user_data.clear()
-        order.status_order = Order.COMPLETED
-        order.partner = order.driver.partner
-        order.save()
+                portmone = Portmone(os.environ["PORTMONE_API_KEY"], os.environ["PORTMONE_PAYEE_ID"])
+
+                payment_data = {
+                    "order_id": payment_id,
+                    "description": payment_description,
+                    "currency": payment_currency,
+                    "amount": order.sum,
+                    "success_url": "https://example.com/success",
+                    "failure_url": "https://example.com/failure",
+                    "lang": "uk"
+                }
+
+                while True:
+                    payment_response = portmone.payment.create(payment_data)
+                    if payment_response["status"] == "success":
+                        break
+
+                payment_request(update,
+                                context,
+                                order.chat_id_client,
+                                os.environ["PORTMONE_API_KEY"],
+                                os.environ["BOT_URL_IMAGE_TAXI"],
+                                payment_id,
+                                1)
+
+                check_payment_status_tg.delay(data[1], query.message.message_id, portmone)
 
 
 def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
-    title = 'Послуга особистого водія'
-    description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
-    payload = 'Додаткові дані для ідентифікації користувача'
-    currency = 'UAH'
-    prices = [LabeledPrice(label='Ціна', amount=int(price) * 100)]
+    prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
     need_shipping_address = False
 
     # Sending a request for payment
-    context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
-                             provider_token=provider_token, currency=currency, start_parameter=start_parameter,
-                             prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
-                             photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
-
-
-'''@task_postrun.connect
-def check_payment_status(sender=None, **kwargs):
-    if sender == check_payment_status_tg:
-        rep = kwargs.get("retval")
-        query_id, order_id, status_payment = rep
-        if status_payment:
-            order = Order.objects.filter(pk=order_id).first()
-            bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
-            bot.send_message(chat_id=order.chat_id_client,
-                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
-            order.status_order = Order.COMPLETED
-            order.save()
-            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)'''
+    context.bot.send_invoice(chat_id=chat_id_client, title=payment_title, description=payment_description,
+                             payload=payment_payload, provider_token=provider_token, currency=payment_currency,
+                             start_parameter=start_parameter, prices=prices, photo_url=url,
+                             need_shipping_address=need_shipping_address, photo_width=615,
+                             photo_height=512, photo_size=50000, is_flexible=False)

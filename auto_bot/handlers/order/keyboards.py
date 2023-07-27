@@ -11,8 +11,8 @@ share_location = [
 def inline_payment_kb():
     keyboard = [
         [InlineKeyboardButton(price_inline_buttons[4], callback_data="Cash_payment 0")],
+        [InlineKeyboardButton(price_inline_buttons[5], callback_data="Card_payment 1")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Right_place")]
-        # [InlineKeyboardButton(price_inline_buttons[5], callback_data="Card_payment 1")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
