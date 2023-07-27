@@ -15,14 +15,15 @@ def buttons_addresses(address):
         return None
 
 
-def text_to_client(order=None, text=None, button=None, delete_id=None):
-    message_id = None
+def text_to_client(order=None, text=None, button=None, delete_id=None, message_id=None):
     if order.chat_id_client:
         if delete_id:
             bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=delete_id, reply_markup=None)
-
-        message = bot.send_message(chat_id=order.chat_id_client, text=text, reply_markup=button)
-        message_id = message.message_id
+        if message_id:
+            bot.edit_message_text(chat_id=order.chat_id_client, text=text, reply_markup=button, message_id=message_id)
+        else:
+            message = bot.send_message(chat_id=order.chat_id_client, text=text, reply_markup=button)
+            message_id = message.message_id
     else:
         params = {
             "recipient": order.phone_number[1:],

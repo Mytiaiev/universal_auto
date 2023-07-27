@@ -1,22 +1,17 @@
 import re
 import datetime
-import threading
-import time
-from celery.signals import task_postrun
 from django.utils import timezone
-from telegram import ReplyKeyboardRemove, ParseMode, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
-from auto.tasks import logger, get_distance_trip, check_time_order, check_order, send_time_order
+from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
-from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_spot_keyboard, inline_client_spot, \
-    inline_route_keyboard, inline_finish_order, inline_repeat_keyboard, inline_reject_order, inline_time_order_kb, \
-    inline_increase_price_kb, inline_search_kb, inline_start_order_kb, share_location, inline_location_kb, \
-    inline_payment_kb, inline_comment_for_client
+from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order,\
+    inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb,\
+    share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
-from scripts.conversion import get_address, geocode, get_location_from_db, get_route_price, haversine
+from scripts.conversion import get_address, get_location_from_db
 from auto_bot.handlers.order.static_text import *
-from scripts.redis_conn import redis_instance
 
 
 def continue_order(update, context):
@@ -159,107 +154,10 @@ def order_create(update, context):
     button_text = query.message.reply_markup.inline_keyboard[data][0].text
     payment = button_text.split(' ')[1]
     user = Client.get_by_chat_id(update.effective_chat.id)
-    destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
-    destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
-    if not context.user_data.get('from_address'):
-        context.user_data['from_address'] = context.user_data['location_address']
-    else:
-        from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
-        context.user_data['latitude'], context.user_data['longitude'] = geocode(from_place,
-                                                                                ParkSettings.get_value(
-                                                                                    'GOOGLE_API_KEY'))
-    distance_price = get_route_price(context.user_data['latitude'], context.user_data['longitude'],
-                                     destination_lat, destination_long,
-                                     ParkSettings.get_value('GOOGLE_API_KEY'))
-    order = Order.objects.create(from_address=context.user_data['from_address'],
-                                 latitude=context.user_data['latitude'],
-                                 longitude=context.user_data['longitude'],
-                                 to_the_address=context.user_data['to_the_address'],
-                                 to_latitude=destination_lat,
-                                 to_longitude=destination_long,
-                                 phone_number=user.phone_number,
-                                 chat_id_client=user.chat_id,
-                                 payment_method=payment,
-                                 sum=distance_price[0],
-                                 distance_google=round(distance_price[1], 2))
 
-    if context.user_data.get('time_order'):
-        order.status_order = Order.ON_TIME
-        order.order_time = context.user_data['time_order']
-        order.save()
-        query.edit_message_text(
-            f'Замовлення прийняте, сума замовлення {order.sum} грн\n '
-            f'Очікуйте водія о {order.order_time.time()}')
-    else:
-        order.status_order = Order.WAITING
-        order.save()
-        bot.delete_message(chat_id=user.chat_id,
-                           message_id=query.message.message_id)
-
-
-@task_postrun.connect
-def send_order_to_driver(sender=None, **kwargs):
-    if sender == check_order:
-        order = Order.objects.filter(id=kwargs.get('retval'), status_order=Order.WAITING, checked=False).first()
-        client_msg = client_order_info(order.from_address,
-                                       order.to_the_address,
-                                       order.payment_method,
-                                       order.phone_number,
-                                       order.sum,
-                                       increase=order.car_delivery_price)
-        count = 0
-        order.checked = True
-        order.save()
-        msg = text_to_client(order, client_msg)
-        while count < 3:
-            if count == 1:
-                msg_1 = text_to_client(order, search_driver_1)
-            elif count == 2:
-                msg_2 = text_to_client(order, search_driver_2)
-            drivers = Driver.objects.filter(chat_id__isnull=False)
-            for driver in drivers:
-                record = UseOfCars.objects.filter(user_vehicle=driver,
-                                                  created_at__date=timezone.now().date(),
-                                                  end_at=None).last()
-                if record:
-                    if driver.driver_status == Driver.ACTIVE:
-                        vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-                        driver_lat, driver_long = get_location_from_db(vehicle)
-                        distance = haversine(float(driver_lat), float(driver_long),
-                                             float(order.latitude), float(order.longitude))
-                        radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
-                                 order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
-                        if distance <= radius:
-                            message = order_info(order.pk, order.from_address, order.to_the_address,
-                                                 order.payment_method, order.phone_number)
-                            markup = inline_markup_accept(order.pk)
-                            accept_message = bot.send_message(chat_id=driver.chat_id,
-                                                              text=message,
-                                                              reply_markup=markup)
-                            end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
-                            while time.time() < end_time:
-                                upd_driver = Driver.objects.get(id=driver.id)
-                                instance = Order.objects.get(id=order.id)
-                                if instance.driver == upd_driver:
-                                    return
-                            bot.delete_message(chat_id=driver.chat_id,
-                                               message_id=accept_message.message_id)
-                            bot.send_message(chat_id=driver.chat_id,
-                                             text=decline_order)
-                    else:
-                        continue
-            time.sleep(int(ParkSettings.get_value("SEARCH_TIME", 180)) / 3)
-            count += 1
-            if count == 3 and order.chat_id_client:
-                try:
-                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg)
-                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg_1)
-                    bot.delete_message(chat_id=order.chat_id_client, message_id=msg_2)
-                except:
-                    pass
-                bot.send_message(chat_id=order.chat_id_client,
-                                 text=no_driver_in_radius,
-                                 reply_markup=inline_search_kb())
+    order_create_task.delay(context.user_data, user.phone_number,
+                            user.chat_id, payment, query.message.message_id)
+    query.edit_message_text(creating_order_text)
 
 
 def increase_search_radius(update, context):
@@ -277,8 +175,6 @@ def ask_client_action(update, context):
 def increase_order_price(update, context):
     query = update.callback_query
     chat_id = query.from_user.id
-    context.bot.delete_message(chat_id=query.message.chat_id,
-                               message_id=query.message.message_id)
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order=Order.WAITING).last()
     if query.data != "Continue_search":
@@ -322,33 +218,6 @@ def order_on_time(update, context):
     else:
         update.message.reply_text(wrong_time_format)
         context.user_data['state'] = TIME_ORDER
-
-
-@task_postrun.connect
-def send_time_orders(sender=None, **kwargs):
-    if sender == check_time_order:
-        timeorder = Order.objects.only('pk',
-                                       'from_address',
-                                       'to_the_address',
-                                       'payment_method',
-                                       'phone_number',
-                                       'order_time',
-                                       ).filter(id=kwargs.get('retval'),
-                                                checked=False,
-                                                status_order=Order.ON_TIME).first()
-        message = order_info(timeorder.pk,
-                             timeorder.from_address,
-                             timeorder.to_the_address,
-                             timeorder.payment_method,
-                             timeorder.phone_number,
-                             time=timezone.localtime(timeorder.order_time).time())
-
-        group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
-                                     text=message,
-                                     reply_markup=inline_markup_accept(timeorder.pk),
-                                     parse_mode=ParseMode.HTML)
-        timeorder.driver_message_id, timeorder.checked = group_msg.message_id, True
-        timeorder.save()
 
 
 def client_reject_order(update, context):
@@ -402,7 +271,9 @@ def handle_callback_order(update, context):
             if order.status_order == Order.ON_TIME:
                 context.bot.delete_message(chat_id=int(ParkSettings.get_value('ORDER_CHAT')),
                                            message_id=int(order.driver_message_id))
-                context.bot.send_message(chat_id=driver.chat_id, text=time_order_accepted)
+                context.bot.send_message(chat_id=driver.chat_id,
+                                         text=time_order_accepted(order.from_address,
+                                                                  timezone.localtime(order.order_time).time()))
             else:
                 ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
                 message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
@@ -415,14 +286,12 @@ def handle_callback_order(update, context):
                 order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
                 order.client_message_id = client_msg
                 order.save()
-                try:
-                    redis_instance.set(f'running_{order.id}', 1)
-                    r = threading.Thread(target=send_map_to_client,
-                                         args=(update, context, order, query.message.message_id, vehicle, client_msg),
-                                         daemon=True)
-                    r.start()
-                except:
-                    pass
+                if order.chat_id_client:
+                    lat, long = get_location_from_db(vehicle)
+                    bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
+                    message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
+                    send_map_to_client.delay(order.id, query.message.message_id,
+                                             vehicle.pk, client_msg, message.message_id, message.chat_id)
         else:
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
 
@@ -445,8 +314,12 @@ def handle_order(update, context):
         order.status_order, order.driver, order.checked = Order.WAITING, None, False
         order.save()
     elif data[0] == "Client_on_site":
+        try:
+            context.bot.delete_message(order.chat_id_client, message_id=data[2])
+            context.bot.delete_message(order.chat_id_client, message_id=int(data[2])-1)
+        except:
+            pass
         if not context.user_data.get('recheck'):
-            redis_instance.set(f'running_{order.id}', 0)
             ParkStatus.objects.create(driver=driver,
                                       status=Driver.WITH_CLIENT)
         message = order_info(order.id,
@@ -551,80 +424,3 @@ def check_payment_status(sender=None, **kwargs):
             order.status_order = Order.COMPLETED
             order.save()
             ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)'''
-
-
-@task_postrun.connect
-def notify_driver(sender=None, **kwargs):
-    if sender == send_time_order:
-        accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
-        for order in accepted_orders:
-            if timezone.localtime() < order.order_time < (timezone.localtime() + datetime.timedelta(minutes=int(
-                    ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
-                markup = inline_time_order_kb(order.id)
-                text = order_info(order.pk, order.from_address, order.to_the_address,
-                                  order.payment_method, order.phone_number,
-                                  time=timezone.localtime(order.order_time).time())
-
-                bot.send_message(chat_id=order.driver.chat_id, text=text,
-                                 reply_markup=markup, parse_mode=ParseMode.HTML)
-
-
-@task_postrun.connect
-def change_sum_trip(sender=None, **kwargs):
-    if sender == get_distance_trip:
-        rep = kwargs.get("retval")
-        order_id, query_id, minutes_of_trip, distance = rep
-        order = Order.objects.filter(pk=order_id).first()
-        order.distance_gps = distance
-        price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
-                            int(ParkSettings.get_value('COST_PER_KM'))) / 60
-        price_per_minute = price_per_minute * minutes_of_trip
-        price_per_distance = round(int(ParkSettings.get_value('COST_PER_KM')) * distance)
-        if price_per_distance > price_per_minute:
-            order.sum = int(price_per_distance) + int(order.car_delivery_price)
-        else:
-            order.sum = int(price_per_minute) + int(order.car_delivery_price)
-        order.save()
-        text_to_client(order=order, text=f'Сума до cплати: {order.sum} грн\n {complete_order_text}')
-        message = driver_complete_text(order.sum)
-        bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
-
-
-def send_map_to_client(update, context, order, query_id, licence_plate, client_msg):
-    if order.chat_id_client:
-        lat, long = get_location_from_db(licence_plate)
-        context.bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
-        m = context.bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
-    context.user_data['flag'] = True
-    while redis_instance.get(f'running_{order.id}').decode():
-        latitude, longitude = get_location_from_db(licence_plate)
-        if order.status_order in (Order.CANCELED, Order.WAITING):
-            context.bot.stopMessageLiveLocation(m.chat_id, m.message_id)
-            redis_instance.set(f'running_{order.id}', 0)
-            return
-        if context.user_data['flag']:
-            distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
-            if distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
-                text_to_client(order, driver_arrived, delete_id=client_msg)
-                context.bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                                      message_id=query_id,
-                                                      reply_markup=inline_client_spot(pk=order.id))
-                context.bot.stopMessageLiveLocation(m.chat_id, m.message_id)
-                context.user_data['flag'] = False
-                redis_instance.set(f'running_{order.id}', 0)
-                return
-        try:
-            if order.chat_id_client:
-                if redis_instance.get(f'running_{order.id}').decode():
-                    context.bot.editMessageLiveLocation(m.chat_id, m.message_id, latitude=latitude,
-                                                        longitude=longitude)
-                else:
-                    context.bot.stopMessageLiveLocation(m.chat_id, m.message_id)
-            time.sleep(10)
-        except Exception as e:
-            logger.error(msg=str(e))
-            time.sleep(30)
-    if order.chat_id_client:
-        context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id)
-        context.bot.delete_message(chat_id=m.chat_id, message_id=m.message_id - 1)
-        return
