@@ -3,12 +3,12 @@ import datetime
 import requests
 from _decimal import Decimal
 from django.utils import timezone
-from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, UberTrips, Partner
+from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner
 
 
 class UaGpsSynchronizer:
 
-    def __init__(self, url=f'{UaGpsService.get_value("BASE_URL")}'):
+    def __init__(self, url=UaGpsService.get_value("BASE_URL")):
         self.url = url
         self.session = self.get_session()
 
@@ -16,7 +16,7 @@ class UaGpsSynchronizer:
 
         params = {
             'svc': 'token/login',
-            'params': json.dumps({"token": f"{ParkSettings.get_value('UAGPS_TOKEN')}"})
+            'params': json.dumps({"token": ParkSettings.get_value('UAGPS_TOKEN')})
         }
         login = requests.get(self.url, params=params)
         return login.json()['eid']
@@ -57,7 +57,6 @@ class UaGpsSynchronizer:
         }
         try:
             report = requests.get(self.url, params=params)
-            print(report.json())
             raw_time = report.json()['reportResult']['stats'][4][1]
             clean_time = [int(i) for i in raw_time.split(':')]
             rent_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
@@ -76,54 +75,46 @@ class UaGpsSynchronizer:
         end = timezone.localtime()
         partner_obj = Partner.objects.get(id=partner_id)
         for _driver in Driver.objects.filter(partner=partner_id):
+            road_distance = 0
             rent_distance = 0
-            rent_time = datetime.timedelta()
+            road_time = datetime.timedelta()
             # car that have worked at that day
             vehicle = _driver.vehicle
             if vehicle:
-                rent_statuses = StatusChange.objects.filter(driver=_driver.id,
+                road_statuses = StatusChange.objects.filter(driver=_driver.id,
                                                             vehicle=vehicle,
-                                                            start_time__gte=timezone.localtime(start),
-                                                            end_time__lte=timezone.localtime(end))
-                if rent_statuses:
-                    first_status = rent_statuses.first()
-                    first_report = self.generate_report(self.get_timestamp(timezone.localtime(start)),
-                                                        self.get_timestamp(
-                                                            timezone.localtime(first_status.start_time)),
-                                                        vehicle.gps_id)
-                    rent_distance += first_report[0]
-                    rent_time += first_report[1]
-
-                    last_status = rent_statuses.last()
-                    last_report = self.generate_report(self.get_timestamp(timezone.localtime(last_status.end_time)),
-                                                       self.get_timestamp(timezone.localtime(end)),
-                                                       vehicle.gps_id)
-                    rent_distance += last_report[0]
-                    rent_time += last_report[1]
-                    statuses = rent_statuses.filter(name__in=[Driver.ACTIVE, Driver.OFFLINE, Driver.RENT])
-                    for st in statuses:
-                        status_report = self.generate_report(self.get_timestamp(timezone.localtime(st.start_time)),
-                                                             self.get_timestamp(timezone.localtime(st.end_time)),
-                                                             vehicle.gps_id)
-                        rent_distance += status_report[0]
-                        rent_time += status_report[1]
+                                                            name=Driver.WITH_CLIENT,
+                                                            start_time__gte=timezone.localtime(start))
+                if road_statuses:
+                    for status in road_statuses:
+                        if status.end_time is not None:
+                            report = self.generate_report(self.get_timestamp(timezone.localtime(status.start_time)),
+                                                          self.get_timestamp(timezone.localtime(status.end_time)),
+                                                          vehicle.gps_id)
+                        else:
+                            report = self.generate_report(self.get_timestamp(timezone.localtime(status.start_time)),
+                                                          self.get_timestamp(timezone.localtime(end)),
+                                                          vehicle.gps_id)
+                        road_distance += report[0]
+                        road_time += report[1]
+                    total = self.total_per_day(vehicle.licence_plate, end)[0]
+                    rent_distance = total - road_distance
                 else:
                     report = self.generate_report(self.get_timestamp(timezone.localtime(start)),
                                                   self.get_timestamp(timezone.localtime(end)),
                                                   vehicle.gps_id)
-                    rent_distance += report[0]
-                    rent_time += report[1]
+                    rent_distance = report[0]
             rent_today = RentInformation.objects.filter(driver=_driver,
                                                         created_at__date=timezone.localtime().date()).first()
             if not rent_today:
                 RentInformation.objects.create(driver_name=_driver,
                                                driver=_driver,
-                                               rent_time=rent_time,
+                                               rent_time=road_time,
                                                rent_distance=rent_distance,
                                                partner=partner_obj)
             else:
                 rent_today.rent_distance = rent_distance
-                rent_today.rent_time = rent_time
+                rent_today.rent_time = road_time
                 rent_today.save()
 
     def total_per_day(self, licence_plate, day):

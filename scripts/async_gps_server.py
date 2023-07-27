@@ -62,10 +62,6 @@ class PackageHandler:
         else:
             return self.answer_bad_data
 
-    @staticmethod
-    async def async_cursor():
-        return connection.cursor()
-
     async def _p_handler(self, **kwargs):
         return self.answer_ping
 
