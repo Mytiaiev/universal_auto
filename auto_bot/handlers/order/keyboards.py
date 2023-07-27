@@ -70,9 +70,9 @@ def inline_markup_accept(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_client_spot(pk=None):
+def inline_client_spot(pk=None, message=None):
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Client_on_site {pk}")]]
+        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Client_on_site {pk} {message}")]]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -117,6 +117,6 @@ def inline_reject_order(pk=None):
 
 def inline_time_order_kb(pk=None):
     keyboard = [
-        [InlineKeyboardButton(timeorder_inline_buttons[0], callback_data=f"Start_route {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Start_route {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)

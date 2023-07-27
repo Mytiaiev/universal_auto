@@ -190,18 +190,19 @@ body {
 }
 
 .car-select {
-    position: absolute;
-    right: 30px;
-    top: 91px;
-    z-index: 99;
+  position: absolute;
+  right: 30px;
+  top: 91px;
+  z-index: 99;
 }
+
 .car-select select {
-    outline: 0 none;
-    background: #000;
-    color: #fff;
-    padding: 6px;
-    border-radius: 10px;
-    border: 1px solid #505050;
+  outline: 0 none;
+  background: #000;
+  color: #fff;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #505050;
 }
 
 .chart-btns {
@@ -214,13 +215,16 @@ body {
   flex: 1;
   text-align: center;
 }
+
 .chart-btns .radio_btn input:checked + label {
   background: #fff;
   color: #000;
 }
+
 .chart-btns .radio_btn input {
   display: none
 }
+
 .chart-btns .radio_btn label {
   display: block;
   padding: 5px 10px;
@@ -316,4 +320,122 @@ body {
   height: 100%;
   background-color: #5cb85c;
   border-radius: 10px;
+}
+
+/* Стилі для вікна з налаштуваннями(логін партнерів) */
+
+.settings-window {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+}
+
+.settings-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #263043;
+  padding: 20px;
+  border-radius: 25px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  max-width: 400px;
+  width: 90%;
+}
+
+.settings-content h2 {
+  text-align: center;
+  color: #3e8f3e;
+  margin-bottom: 20px;
+}
+
+.settings-content form {
+  margin-bottom: 20px;
+}
+
+.settings-content form label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.settings-content form input {
+  width: 100%;
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+}
+
+.settings-content .login-btn {
+  padding: 8px 15px;
+  border-radius: 5px;
+  border: none;
+  background-color: #3e8f3e;
+  color: #fff;
+  cursor: pointer;
+  margin-left: auto;
+  display: block;
+}
+
+.settings-content .logout-btn {
+  padding: 8px 15px;
+  border-radius: 5px;
+  border: none;
+  background-color: #3e8f3e;
+  color: #fff;
+  cursor: pointer;
+  margin-left: auto;
+  display: block;
+}
+
+
+.settings-content .login-btn:hover {
+  background-color: #36a936;
+}
+
+.settings-content .logout-btn:hover {
+  background-color: #36a936;
+}
+
+.close-btn {
+  color: #fff;
+  font-size: 30px;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  cursor: pointer;
+}
+
+.opt-boltForm, .opt-uberForm, .opt-uklonForm {
+  margin-top: -45px;
+  margin-bottom: 40px;
+}
+
+.error-message {
+  color: red;
+}
+
+.loader-login {
+  display: none;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

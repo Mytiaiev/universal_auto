@@ -43,14 +43,15 @@ def update_drivers(sender=None, **kwargs):
 @task_postrun.connect
 def rent_drivers(sender=None, **kwargs):
     if sender == get_rent_information:
-        message = ''
+        day = datetime.now().date()
+        message = f'Оренда за {day}:\n'
         rents = RentInformation.objects.filter(created_at__date=timezone.localtime().date())
         if rents:
             for rent in rents:
-                message += f"Водій - {rent.driver_name} оренда {rent.rent_distance}\n"
+                message += f"{rent.driver_name}:{rent.rent_distance}\n"
         else:
             message = 'no_rent'
-        bot.send_message(chat_id=515224934, text=message)
+        bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'), text=message)
 
 
 def remove_cash_by_manager(update, context):

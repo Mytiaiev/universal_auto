@@ -1,10 +1,14 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import F
 from django.utils import timezone
-from auto.tasks import send_on_job_application_on_driver, check_order, check_time_order, setup_periodic_tasks, \
-    remove_periodic_tasks
+
+from auto.tasks import send_on_job_application_on_driver, check_time_order, setup_periodic_tasks, \
+    remove_periodic_tasks, search_driver_for_order
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order
+from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
+from auto_bot.main import bot
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import create_event, datetime_with_timezone
@@ -41,11 +45,10 @@ def create_status_change(sender, instance, **kwargs):
         return
     if old_instance.driver_status != instance.driver_status:
         # update the end time of the previous status change
-        prev_status_change = StatusChange.objects.filter(driver=instance, end_time=None).first()
-        if prev_status_change:
-            prev_status_change.end_time = timezone.now()
-            prev_status_change.duration = prev_status_change.end_time - prev_status_change.start_time
-            prev_status_change.save()
+        prev_status_changes = StatusChange.objects.filter(driver=instance, end_time=None)
+        prev_status_changes.update(end_time=timezone.now(), duration=F('end_time') - F('start_time'))
+        if prev_status_changes.count() > 1:
+            bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=f'Multiple status for driver {instance.id} deleted')
         # driver_status has changed, create new status change
         status_change = StatusChange(
             driver=instance,
@@ -65,8 +68,11 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Order)
 def take_order_from_client(sender, instance, **kwargs):
     if instance.status_order == Order.WAITING and not instance.checked:
-        check_order.delay(instance.id)
+        instance.checked = True
+        instance.save()
+        search_driver_for_order.delay(instance.pk)
     elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
+        check_time_order.delay(instance.pk)
         g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
         if g_id:
             description = f"Адреса посадки: {instance.address}\n" \
@@ -80,5 +86,4 @@ def take_order_from_client(sender, instance, **kwargs):
                 datetime_with_timezone(instance.order_time),
                 ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
             )
-        check_time_order.delay(instance.id)
 

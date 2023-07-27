@@ -7,16 +7,21 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1.0">
 	<title>Admin Dashboard</title>
 	<!-- Montserrat Font -->
-	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
-				rel="stylesheet">
+	<link
+			href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
+			rel="stylesheet">
 	<!-- Material Icons -->
-	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+				rel="stylesheet">
 	<!-- Custom CSS -->
 	<link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
-	<link href="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.css" rel="stylesheet">
+	<link
+			href="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.css"
+			rel="stylesheet">
 
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+	<script
+			src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 </head>
 <body>
 <div class="grid-container">
@@ -41,7 +46,8 @@
 	<aside id="sidebar">
 		<div class="sidebar-title">
 			<a class="navbar-brand" href="{% url 'index' %}">
-				<img src="{% static 'app/images/logo.svg' %}" width="142" height="50" alt="Ninja Taxi">
+				<img src="{% static 'app/images/logo.svg' %}" width="142" height="50"
+						 alt="Ninja Taxi">
 			</a>
 		</div>
 		<ul class="sidebar-list">
@@ -66,10 +72,59 @@
 				</a>
 			</li>
 			<li class="sidebar-list-item">
-				<a href="#" target="_blank">
+				<span id="settingBtn" class="clickable">
 					<span class="material-icons-outlined"></span> Налаштування
-				</a>
+				</span>
 			</li>
+			<div id="settingsWindow" class="settings-window">
+				<div class="settings-content">
+					<span class="close-btn">&times;</span>
+					<h2>Компанії партнерів</h2>
+
+					<form id="uberForm">
+						{% csrf_token %}
+						<label for="uberLogin">Uber</label>
+						<input type="text" id="uberLogin" name="uberLogin" placeholder="Логін Uber" required>
+						<input class="showPassword uberPassword" type="password" id="uberPassword" name="uberPassword" placeholder="Пароль Uber" required>
+						<button type="button" class="login-btn">Увійти</button>
+						<div class="loader-login"></div>
+					</form>
+
+					<p class="opt-uberForm">
+						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordUber">
+						<label for="showPasswordUber">Показати пароль</label>
+					</p>
+
+					<form id="uklonForm">
+						{% csrf_token %}
+						<label for="uklonLogin">Uklon</label>
+						<input type="text" id="uklonLogin" name="uklonLogin" placeholder="Логін Uklon" value="+380" required>
+						<input class="showPassword uklonPassword" type="password" id="uklonPassword" name="uklonPassword" placeholder="Пароль Uklon" required>
+						<button type="button" class="login-btn">Увійти</button>
+						<div class="loader-login"></div>
+					</form>
+
+					<p class="opt-uklonForm">
+						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordUklon">
+						<label for="showPasswordUklon">Показати пароль</label>
+					</p>
+
+					<form id="boltForm">
+						{% csrf_token %}
+						<label for="boltLogin">Bolt</label>
+						<input type="text" id="boltLogin" name="boltLogin" placeholder="Логін Bolt" required>
+						<input class="showPassword boltPassword" type="password" id="boltPassword" name="boltPassword" placeholder="Пароль Bolt" required>
+						<button type="button" class="login-btn">Увійти</button>
+						<div class="loader-login"></div>
+					</form>
+
+					<p class="opt-boltForm">
+						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordBolt">
+						<label for="showPasswordBolt">Показати пароль</label>
+					</p>
+
+				</div>
+			</div>
 		</ul>
 	</aside>
 	<!-- End Sidebar -->
@@ -101,7 +156,8 @@
 					<h2>Загальна ефективність авто за період</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
-				<h3>{{ average_effective_vehicle.1 }} по {{ average_effective_vehicle.2 }}</h3>
+				<h3>{{ average_effective_vehicle.1 }}
+					по {{ average_effective_vehicle.2 }}</h3>
 				<h3>{{ average_effective_vehicle.0 }} грн/км</h3>
 			</div>
 			<div class="card">
@@ -119,7 +175,8 @@
 				<div id="bar-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
-						<input id="radio-1" type="radio" name="effective-amount" value="d" checked>
+						<input id="radio-1" type="radio" name="effective-amount" value="d"
+									 checked>
 						<label for="radio-1">день</label>
 					</div>
 					<div class="radio_btn">
@@ -149,7 +206,8 @@
 				<div id="area-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
-						<input id="radio-5" type="radio" name="effective-period" value="w" checked>
+						<input id="radio-5" type="radio" name="effective-period" value="w"
+									 checked>
 						<label for="radio-5">тиждень</label>
 					</div>
 					<div class="radio_btn">
@@ -166,7 +224,8 @@
 			<div class="payback-car">
 				<div class="car-item">
 					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
 					</div>
 					<div class="car-details">
 						<h3>Водій: Іванов Іван</h3>
@@ -181,7 +240,8 @@
 
 				<div class="car-item">
 					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
 					</div>
 					<div class="car-details">
 						<h3>Водій: Петров Петро</h3>
@@ -196,7 +256,8 @@
 
 				<div class="car-item">
 					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
 					</div>
 					<div class="car-details">
 						<h3>Водій: Сидорова Олена</h3>
@@ -211,7 +272,8 @@
 
 				<div class="car-item">
 					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
 					</div>
 					<div class="car-details">
 						<h3>Водій: Коваленко Микола</h3>
@@ -231,12 +293,14 @@
 
 <!-- Scripts -->
 <script>
-  var ajaxPostUrl = "{% url 'post_request' %}";
-  var ajaxGetUrl = "{% url 'get_request' %}";
+	let ajaxPostUrl = "{% url 'post_request' %}";
+	let ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 <!-- ApexCharts -->
-<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
+<script
+		src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js"></script>
+<script
+		src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
 <script src="{% static 'dashboard/js/scripts.js' %}"></script>
 </body>
 </html>
