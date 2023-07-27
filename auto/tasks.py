@@ -426,7 +426,7 @@ def search_driver_for_order(self, order_pk):
                              order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
                     if distance <= radius:
                         message = order_info(order.pk, order.from_address, order.to_the_address,
-                                             order.payment_method, order.phone_number)
+                                             order.payment_method, order.phone_number, order.sum, order.distance_google)
                         markup = inline_markup_accept(order.pk)
                         accept_message = bot.send_message(chat_id=driver.chat_id,
                                                           text=message,
@@ -473,7 +473,7 @@ def send_map_to_client(self, order_pk, query_id, vehicle, client_msg, message, c
                 bot.editMessageLiveLocation(chat, message, latitude=latitude, longitude=longitude)
                 self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=20)
         except BadRequest as e:
-            if "Message can't be edited" in str(e):
+            if "Message can't be edited" in str(e) or order.status_order in (Order.CANCELED, Order.WAITING):
                 pass
             else:
                 raise self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=30) from e
