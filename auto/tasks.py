@@ -15,11 +15,13 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
+from auto_bot.handlers.main.keyboards import inline_start_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_time_order_kb
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text
 from auto_bot.handlers.order.utils import text_to_client
+from auto_bot.handlers.status.static_text import please_start_text
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, geocode, get_route_price
 from auto.celery import app
@@ -178,6 +180,12 @@ def update_driver_status(self, partner_pk):
             driver.driver_status = current_status
             driver.save()
             if current_status != Driver.OFFLINE:
+                if not work_ninja:
+                    try:
+                        bot.send_message(chat_id=driver.chat_id, text=please_start_text,
+                                         reply_markup=inline_start_driver_kb().inline_keyboard[0][0])
+                    except:
+                        pass
                 logger.info(f'{driver}: {current_status}')
     except Exception as e:
         logger.error(e)
