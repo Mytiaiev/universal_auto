@@ -1,7 +1,7 @@
 import requests
 from app.models import VehicleGPS, ParkSettings
 import re
-from shapely.geometry import Point, Polygon, LineString, MultiLineString
+from shapely.geometry import Point, Polygon, LineString
 from shapely.ops import split
 import os
 from math import radians, sin, cos, sqrt, atan2
@@ -99,8 +99,8 @@ def coord_to_link(end_lat, end_lng):
     return f"https://www.waze.com/ul?ll={end_lat},{end_lng}&navigate=yes"
 
 
-def get_location_from_db(licence_plate):
-    gps = VehicleGPS.objects.filter(vehicle=licence_plate).last()
+def get_location_from_db(vehicle):
+    gps = VehicleGPS.objects.filter(vehicle=vehicle).last()
     latitude, longitude = str(gps.lat), str(gps.lon)
     return latitude, longitude
 

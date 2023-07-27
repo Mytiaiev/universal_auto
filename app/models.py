@@ -294,6 +294,7 @@ class Vehicle(models.Model):
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
+    GET_ORDER = 'Приймаю замовлення'
     WAIT_FOR_CLIENT = 'Очікую клієнта'
     OFFLINE = 'Не працюю'
     RENT = 'Орендую авто'
