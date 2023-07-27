@@ -414,40 +414,41 @@ def search_driver_for_order(self, order_pk):
             record = UseOfCars.objects.filter(user_vehicle=driver,
                                               created_at__date=timezone.now().date(),
                                               end_at=None).last()
-            if record:
-                if driver.driver_status == Driver.ACTIVE:
-                    driver.driver_status = Driver.GET_ORDER
-                    driver.save()
-                    vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-                    driver_lat, driver_long = get_location_from_db(vehicle)
-                    distance = haversine(float(driver_lat), float(driver_long),
-                                         float(order.latitude), float(order.longitude))
-                    radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
-                             order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
-                    if distance <= radius:
-                        message = order_info(order.pk, order.from_address, order.to_the_address,
-                                             order.payment_method, order.phone_number, order.sum, order.distance_google)
-                        markup = inline_markup_accept(order.pk)
-                        accept_message = bot.send_message(chat_id=driver.chat_id,
-                                                          text=message,
-                                                          reply_markup=markup)
-                        end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
-                        while time.time() < end_time:
-                            upd_driver = Driver.objects.get(id=driver.id)
-                            instance = Order.objects.get(id=order.id)
-                            if instance.driver == upd_driver:
-                                bot.edit_message_text(chat_id=order.chat_id_client,
-                                                      text=client_msg,
-                                                      message_id=order.client_message_id)
-                                return
-                        bot.delete_message(chat_id=driver.chat_id,
-                                           message_id=accept_message.message_id)
-                        bot.send_message(chat_id=driver.chat_id,
-                                         text=decline_order)
-                    driver.driver_status = Driver.ACTIVE
-                    driver.save()
-                else:
-                    continue
+            if record and driver.driver_status == Driver.ACTIVE:
+                ParkStatus.objects.create(driver=driver, status=Driver.GET_ORDER)
+                driver.driver_status = Driver.GET_ORDER
+                driver.save()
+                vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
+                driver_lat, driver_long = get_location_from_db(vehicle)
+                distance = haversine(float(driver_lat), float(driver_long),
+                                     float(order.latitude), float(order.longitude))
+                radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
+                         order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
+                if distance <= radius:
+                    message = order_info(order.pk, order.from_address, order.to_the_address,
+                                         order.payment_method, order.phone_number, order.sum, order.distance_google)
+                    markup = inline_markup_accept(order.pk)
+                    accept_message = bot.send_message(chat_id=driver.chat_id,
+                                                      text=message,
+                                                      reply_markup=markup)
+                    end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
+                    while time.time() < end_time:
+                        upd_driver = Driver.objects.get(id=driver.id)
+                        instance = Order.objects.get(id=order.id)
+                        if instance.driver == upd_driver:
+                            bot.edit_message_text(chat_id=order.chat_id_client,
+                                                  text=client_msg,
+                                                  message_id=order.client_message_id)
+                            return
+                    bot.delete_message(chat_id=driver.chat_id,
+                                       message_id=accept_message.message_id)
+                    bot.send_message(chat_id=driver.chat_id,
+                                     text=decline_order)
+                ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
+                driver.driver_status = Driver.ACTIVE
+                driver.save()
+            else:
+                continue
         self.retry(args=[order_pk], countdown=30)
     except ObjectDoesNotExist as e:
         logger.error(e)
