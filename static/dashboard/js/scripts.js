@@ -478,10 +478,26 @@ $(document).ready(function () {
 	});
 
 	function handlerLoginClick(formName, action) {
-		let login = $("#" + formName + "Login").val();
-		let password = $("#" + formName + "Password").val();
-		showLoader($("#" + formName + "Form"));
-		sendLoginDataToServer(action, login, password, formName);
+		let form = $("#" + formName + "Form");
+		let loginField = $("#" + formName + "Login")
+		let passwordField = $("#" + formName + "Password")
+		let login = loginField.val();
+		let password = passwordField.val();
+
+		if (form[0].checkValidity()) {
+			showLoader(form);
+			sendLoginDataToServer(action, login, password, formName);
+		} else {
+			if (login === "") {
+				loginField.attr("placeholder", "Обов'язково до заповнення");
+			}
+			if (password === "") {
+				passwordField.attr("placeholder", "Обов'язково до заповнення");
+			}
+
+			loginField.addClass("error-message");
+			passwordField.addClass("error-message");
+		}
 	}
 
 	$("#uberForm .login-btn").click(function () {
