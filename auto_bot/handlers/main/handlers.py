@@ -114,6 +114,7 @@ rollbar.init(access_token=os.environ.get('ROLLBAR_TOKEN'),
 
 
 def error_handler(update, context) -> None:
+    """Log the error and send a rollbar message to notify the developer."""
     if not os.environ.get('DEBUG'):
         rollbar.report_exc_info()
     else:
