@@ -4,6 +4,7 @@ NOT_CORRECT_AUTO = '- НІ -'
 CORRECT_CHOICE = 'Так'
 NOT_CORRECT_CHOICE = 'Ні'
 finish_job = 'Ви закінчили працювати, до зустрічі'
+please_start_text = 'Розпочніть, будь ласка, роботу'
 already_start_job = 'Ви вже успішно розпочали роботу'
 already_finish_job = 'Ви вже закінчили працювати'
 already_in_use_text = 'Це авто вже використовує інший водій. Спробуйте інше авто.' \

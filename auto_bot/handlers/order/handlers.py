@@ -154,10 +154,9 @@ def order_create(update, context):
     button_text = query.message.reply_markup.inline_keyboard[data][0].text
     payment = button_text.split(' ')[1]
     user = Client.get_by_chat_id(update.effective_chat.id)
-
+    query.edit_message_text(creating_order_text)
     order_create_task.delay(context.user_data, user.phone_number,
                             user.chat_id, payment, query.message.message_id)
-    query.edit_message_text(creating_order_text)
 
 
 def increase_search_radius(update, context):
