@@ -1,7 +1,9 @@
 # Create driver and other
 from datetime import timedelta, datetime
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from celery.signals import task_postrun
+from django.core.paginator import Paginator
 from django.core.serializers import deserialize
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove
@@ -12,7 +14,7 @@ from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
-    inline_efficiency_report_kb
+    inline_efficiency_report_kb, inline_partner_vehicles, inline_partner_drivers
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
@@ -77,6 +79,41 @@ def get_efficiency_report(update, context):
     query = update.callback_query
     query.edit_message_text(choose_period_text)
     query.edit_message_reply_markup(inline_efficiency_report_kb())
+
+
+def get_partner_vehicles(update, context):
+    query = update.callback_query
+    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    vehicles = Vehicle.objects.filter(partner=manager.partner, manager=manager)
+    if vehicles:
+        query.edit_message_text(partner_vehicles)
+        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles))
+    else:
+        query.edit_message_text(no_vehicles_text)
+
+
+def get_partner_drivers(update, context):
+    query = update.callback_query
+    pk_vehicle = query.data.split()[1]
+    query.edit_message_text(partner_vehicles)
+    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
+    if drivers:
+        query.edit_message_text(partner_drivers)
+        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(drivers, pk_vehicle))
+    else:
+        query.edit_message_text(no_drivers_text)
+
+
+def pin_partner_vehicle_to_driver(update, context):
+    query = update.callback_query
+    data = query.data.split()
+    driver_pk, vehicle_pk = data[1], data[2]
+    driver_obj = Driver.objects.get(pk=driver_pk)
+    vehicle_obj = Vehicle.objects.get(pk=vehicle_pk)
+    driver_obj.vehicle = vehicle_obj
+    driver_obj.save()
+    query.edit_message_text(pin_vehicle_to_driver(driver_obj, vehicle_obj))
 
 
 def get_weekly_report(update, context):
