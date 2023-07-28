@@ -81,6 +81,12 @@ def inline_start_driver_kb():
     ]
     return InlineKeyboardMarkup(keyboard)
 
+def spam_driver_kb():
+    keyboard = [
+        [InlineKeyboardButton(main_buttons[4], callback_data="Start_work")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
 
 def inline_finish_driver_kb():
     keyboard = [

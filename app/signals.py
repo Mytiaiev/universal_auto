@@ -73,17 +73,17 @@ def take_order_from_client(sender, instance, **kwargs):
         search_driver_for_order.delay(instance.pk)
     elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
         check_time_order.delay(instance.pk)
-        g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
-        if g_id:
-            description = f"Адреса посадки: {instance.address}\n" \
-                          f"Місце прибуття: {instance.to_address}\n" \
-                          f"Спосіб оплати: {instance.payment}\n" \
-                          f"Номер телефону: {instance.phone}\n"
-            create_event(
-                f"Замовлення {instance.pk}",
-                description,
-                datetime_with_timezone(instance.order_time),
-                datetime_with_timezone(instance.order_time),
-                ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
-            )
+        # g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
+        # if g_id:
+        #     description = f"Адреса посадки: {instance.address}\n" \
+        #                   f"Місце прибуття: {instance.to_address}\n" \
+        #                   f"Спосіб оплати: {instance.payment}\n" \
+        #                   f"Номер телефону: {instance.phone}\n"
+        #     create_event(
+        #         f"Замовлення {instance.pk}",
+        #         description,
+        #         datetime_with_timezone(instance.order_time),
+        #         datetime_with_timezone(instance.order_time),
+        #         ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
+        #     )
 
