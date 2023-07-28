@@ -8,7 +8,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      celery:
+        condition: service_healthy
+      flower:
+        condition: service_healthy
     build: .
+    env_file:
+      .env
     ports:
       - "8000:8000"
       - "80:80"
@@ -16,44 +22,6 @@ services:
     volumes:
       - .:/app
 
-    environment:
-      TELEGRAM_TOKEN: <add Your telegram token here>
-      WEBHOOK_URL: <add Your domain>
-      UBER_NAME:
-      UBER_PASSWORD:
-      BOLT_NAME:
-      BOLT_PASSWORD:
-      UKLON_NAME:
-      UKLON_PASSWORD:
-      ROLLBAR_TOKEN:
-      ROLLBAR_ENV: #'production' or 'staging'
-      DEVELOPER_CHAT_ID:
-      LIQ_PAY_TOKEN:
-      LIQPAY_PUBLIC_KEY:
-      LIQPAY_PRIVATE_KEY:
-      UKLON_TOKEN:
-      UAGPS_LOGIN:
-      UAGPS_PASSWORD:
-      PRIVAT24_NAME:              #lenght = 9 ex: 632587413
-      PRIVAT24_PASSWORD:
-      PORTMONE_LOGIN:
-      PORTMONE_PASSWORD:
-      PORTMONE_PAYEE_ID:
-      GOOGLE_API_KEY:
-      MOBIZON_DOMAIN: "https://api.mobizon.ua/service/message/sendsmsmessage"
-      MOBIZON_API_KEY:
-      REDIS_URL: redis://redis
-      DATABASE_URL: "postgres://universal_auto_dev:pass@postgres:5432/universal_auto_dev"
-      SECRET_KEY:
-      UDP_IP: 0.0.0.0
-      CELERY_BROKER_URL: redis://redis
-      CELERY_RESULT_BACKEND: redis://redis
-      SELENIUM_HUB_HOST: http://chrome:4444/wd/hub
-      BOT_PROD_ENV: "True"
-      BOT_URL_IMAGE_TAXI: <str>
-      DEBUG: "False"
-      ALLOWED_HOSTS: "127.0.0.1 0.0.0.0 localhost"
-      CSRF_TRUSTED_ORIGINS: "http://127.0.0.1 http://168.220.93.200 http://localhost"
 
   redis:
     container_name: universal_auto_redis
@@ -120,8 +88,41 @@ services:
       - "4444:4444"
     restart: always
     environment:
-      JAVA_OPTS: -Dwebdriver.chrome.whitelistedIps=
-      SE_NODE_SESSION_TIMEOUT: 999999999
-      SE_NODE_MAX_SESSIONS: 10
-      SE_NODE_MAX_INSTANCES: 5
-      SE_START_VNC: "false"
+      SE_NODE_SESSION_TIMEOUT: 600
+      SE_NODE_MAX_SESSIONS: 6
+      SE_NODE_MAX_INSTANCES: 7
+
+  celery:
+    container_name: universal_auto_celery
+    platform: linux/amd64
+    depends_on:
+      - postgres
+      - redis
+    build: .
+    env_file:
+      .env
+    command: celery -A auto worker --beat --loglevel=info --pool=solo
+    healthcheck:
+      test: [ "CMD-SHELL", "celery -A auto inspect ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  flower:
+    container_name: universal_auto_flower
+    image: mher/flower:latest
+    platform: linux/amd64
+    build: .
+    env_file:
+      .env
+    depends_on:
+      - redis
+      - celery
+    command: celery -A auto flower --address=0.0.0.0 --port=5566 --inspect
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail http://localhost:5566 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+      - "5566:5566"
