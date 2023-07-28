@@ -15,7 +15,7 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
-from auto_bot.handlers.main.keyboards import inline_start_driver_kb
+from auto_bot.handlers.main.keyboards import spam_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_time_order_kb
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
@@ -183,7 +183,7 @@ def update_driver_status(self, partner_pk):
                 if not work_ninja:
                     try:
                         bot.send_message(chat_id=driver.chat_id, text=please_start_text,
-                                         reply_markup=inline_start_driver_kb().inline_keyboard[0][0])
+                                         reply_markup=spam_driver_kb())
                     except:
                         pass
                 logger.info(f'{driver}: {current_status}')
@@ -444,9 +444,12 @@ def search_driver_for_order(self, order_pk):
                         upd_driver = Driver.objects.get(id=driver.id)
                         instance = Order.objects.get(id=order.id)
                         if instance.driver == upd_driver:
-                            bot.edit_message_text(chat_id=order.chat_id_client,
-                                                  text=client_msg,
-                                                  message_id=order.client_message_id)
+                            try:
+                                bot.edit_message_text(chat_id=order.chat_id_client,
+                                                      text=client_msg,
+                                                      message_id=order.client_message_id)
+                            except BadRequest as e:
+                                logger.info(e)
                             return
                     bot.delete_message(chat_id=driver.chat_id,
                                        message_id=accept_message.message_id)
