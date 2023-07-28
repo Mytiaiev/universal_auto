@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 import time
+import hashlib
+import requests
 from _decimal import Decimal
 from celery import current_app
 from django.core.exceptions import ObjectDoesNotExist
@@ -514,13 +516,13 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
 
 
 @app.task(bind=True)
-def check_payment_status_tg(order_pk, query_id, portmone):
+def check_payment_status_tg(order_pk, query_id, portmone, data_):
     try:
+        order = Order.objects.filter(pk=order_pk).first()
         while True:
             time.sleep(5)
-            status = portmone.payment.get_status(order_pk)
-            if status == 'success':
-                order = Order.objects.filter(pk=order_pk).first()
+            response = portmone.checkout_status()
+            if (response['RESULT'] or response.status) in ("0", "PAYED"):
                 bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=trip_paymented)
                 message = driver_complete_text(order.sum)
                 bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
