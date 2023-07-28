@@ -15,7 +15,7 @@ from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db
 from auto_bot.handlers.order.static_text import *
-from portmone_python import Portmone
+from payments_portmone import PortmoneProvider
 
 
 def continue_order(update, context):
@@ -375,43 +375,80 @@ def handle_order(update, context):
                 order.partner = order.driver.partner
                 order.save()
             else:
-                payment_id = str(uuid4())
+                merchant_id = 'PortmoneDirectTest'
+                merchant_password = "PortmoneDirect"
+                payee_id = "your_payee_id"
 
-                portmone = Portmone(os.environ["PORTMONE_API_KEY"], os.environ["PORTMONE_PAYEE_ID"])
+                description = "Оплата замовлення"
+                currency = "UAH"
+                success_url = "https://example.com/success"  # Замініть на реальний URL
+                failure_url = "https://example.com/failure"  # Замініть на реальний URL
 
-                payment_data = {
-                    "order_id": payment_id,
-                    "description": payment_description,
-                    "currency": payment_currency,
-                    "amount": order.sum,
-                    "success_url": "https://example.com/success",
-                    "failure_url": "https://example.com/failure",
-                    "lang": "uk"
+                # Формуємо дані для оплати
+                data = {
+                    "payee_id": payee_id,
+                    "order_id": str(order_id),
+                    "merchant_id": merchant_id,
+                    "amount": str(amount),
+                    "currency": currency,
+                    "description": description,
+                    "success_url": success_url,
+                    "failure_url": failure_url,
                 }
 
-                while True:
-                    payment_response = portmone.payment.create(payment_data)
-                    if payment_response["status"] == "success":
-                        break
+                sorted_data = sorted(data.items())
 
-                payment_request(update,
-                                context,
-                                order.chat_id_client,
-                                os.environ["PORTMONE_API_KEY"],
-                                os.environ["BOT_URL_IMAGE_TAXI"],
-                                payment_id,
-                                1)
+                data_string = "".join([f"{key}{value}" for key, value in sorted_data])
 
-                check_payment_status_tg.delay(data[1], query.message.message_id, portmone)
+                data_string += merchant_password
+
+                signature = hashlib.md5(data_string.encode("utf-8")).hexdigest()
+
+                data["signature"] = signature
+
+                response = requests.post("https://www.portmone.com.ua/gateway/", data=data)
+
+                if response.status_code == 200:
+                    payment_link = response.text
+                    return payment_link
+
+                # payment_id = str(uuid4())
+
+                # portmone = Portmone(os.environ["PORTMONE_API_KEY"], os.environ["PORTMONE_PAYEE_ID"])
+                # payment_data = {
+                #     "order_id": payment_id,
+                #     "description": payment_description,
+                #     "currency": payment_currency,
+                #     "amount": order.sum,
+                #     "success_url": "https://example.com/success",
+                #     "failure_url": "https://example.com/failure",
+                #     "lang": "uk"
+                # }
+                #
+                # while True:
+                #     payment_response = portmone.payment.create(payment_data)
+                #     if payment_response["status"] == "success":
+                #         break
+                #
+                # payment_request(update,
+                #                 context,
+                #                 order.chat_id_client,
+                #                 os.environ["PORTMONE_API_KEY"],
+                #                 os.environ["BOT_URL_IMAGE_TAXI"],
+                #                 payment_id,
+                #                 1)
+                #
+                # check_payment_status_tg.delay(data[1], query.message.message_id, portmone)
 
 
-def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
-    prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
-    need_shipping_address = False
+# def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
+#     prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
+#     need_shipping_address = False
+#
+#     # Sending a request for payment
+#     context.bot.send_invoice(chat_id=chat_id_client, title=payment_title, description=payment_description,
+#                              payload=payment_payload, provider_token=provider_token, currency=payment_currency,
+#                              start_parameter=start_parameter, prices=prices, photo_url=url,
+#                              need_shipping_address=need_shipping_address, photo_width=615,
+#                              photo_height=512, photo_size=50000, is_flexible=False)
 
-    # Sending a request for payment
-    context.bot.send_invoice(chat_id=chat_id_client, title=payment_title, description=payment_description,
-                             payload=payment_payload, provider_token=provider_token, currency=payment_currency,
-                             start_parameter=start_parameter, prices=prices, photo_url=url,
-                             need_shipping_address=need_shipping_address, photo_width=615,
-                             photo_height=512, photo_size=50000, is_flexible=False)
