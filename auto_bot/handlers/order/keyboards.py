@@ -120,3 +120,11 @@ def inline_time_order_kb(pk=None):
         [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Start_route {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
+
+
+def inline_payment_card(payment_url):
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[10], url=payment_url)],
+        ]
+    return InlineKeyboardMarkup(keyboard)
+

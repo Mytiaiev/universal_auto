@@ -28,7 +28,8 @@ services:
       ROLLBAR_TOKEN:
       ROLLBAR_ENV: #'production' or 'staging'
       DEVELOPER_CHAT_ID:
-      PORTMONE_API_KEY:
+      PORTMONE_PASSWORD:
+      PORTMONE_LOGIN:
       PORTMONE_PAYEE_ID:
       UKLON_TOKEN:
       UAGPS_LOGIN:

@@ -1,6 +1,6 @@
 from telegram import ReplyKeyboardRemove
 from app.models import Owner
-from app.portmone.generate_link import Portmone
+from app.portmone.portmone import Portmone
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 from auto_bot.handlers.owner.keyboards import payments_buttons, data_buttons, commission_buttons
 from auto_bot.handlers.owner.static_text import *
