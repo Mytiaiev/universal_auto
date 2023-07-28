@@ -84,11 +84,10 @@ def get_efficiency_report(update, context):
 def get_partner_vehicles(update, context):
     query = update.callback_query
     manager = DriverManager.get_by_chat_id(query.from_user.id)
-    vehicles = Vehicle.objects.filter(partner=manager.partner)
+    vehicles = Vehicle.objects.filter(partner=manager.partner, manager=manager)
     if vehicles:
         query.edit_message_text(partner_vehicles)
-        inline_ = inline_partner_vehicles(vehicles)
-        query.edit_message_reply_markup(reply_markup=inline_)
+        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles))
     else:
         query.edit_message_text(no_vehicles_text)
 
@@ -98,11 +97,10 @@ def get_partner_drivers(update, context):
     pk_vehicle = query.data.split()[1]
     query.edit_message_text(partner_vehicles)
     manager = DriverManager.get_by_chat_id(query.from_user.id)
-    drivers = Driver.objects.filter(partner=manager.partner)
+    drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
     if drivers:
         query.edit_message_text(partner_drivers)
-        inline_ = inline_partner_drivers(drivers, pk_vehicle)
-        query.edit_message_reply_markup(reply_markup=inline_)
+        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(drivers, pk_vehicle))
     else:
         query.edit_message_text(no_drivers_text)
 
