@@ -21,7 +21,7 @@ def status(update, context):
         context.bot.send_message(chat_id=chat_id, text=f"Ваш {event.event} завершено.")
     if len(vehicle) == 1:
         if UseOfCars.objects.filter(chat_id=chat_id,
-                                    created_at__date=timezone.now().date(),
+                                    created_at__date=timezone.localtime().date(),
                                     end_at=None):
             query.edit_message_text(text=already_start_job)
         else:
@@ -81,9 +81,9 @@ def finish_job_main(update, context):
     query = update.callback_query
     driver = Driver.get_by_chat_id(update.effective_chat.id)
     record = UseOfCars.objects.filter(chat_id=update.effective_chat.id,
-                                      created_at__date=timezone.now().date(), end_at=None).first()
+                                      created_at__date=timezone.localtime().date(), end_at=None).first()
     if record:
-        record.end_at = timezone.now()
+        record.end_at = timezone.localtime()
         driver.driver_status = Driver.OFFLINE
         driver.save()
         record.save()
@@ -99,7 +99,7 @@ def correct_or_not_auto(update, context):
     option = update.message.text
     if option == f'{CORRECT_AUTO}':
         record = UseOfCars.objects.filter(licence_plate=context.user_data['vehicle'],
-                                          created_at__date=timezone.now().date(),
+                                          created_at__date=timezone.localtime().date(),
                                           end_at=None)
         if record:
             update.message.reply_text(already_in_use_text)
@@ -127,7 +127,7 @@ def correct_choice(update, context):
         context.user_data['vehicle'] = None
     if context.user_data['vehicle'] is not None:
         record = UseOfCars.objects.filter(licence_plate=context.user_data['vehicle'],
-                                          created_at__date=timezone.now().date(),
+                                          created_at__date=timezone.localtime().date(),
                                           end_at=None)
         if record:
             update.message.reply_text(already_in_use_text)

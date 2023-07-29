@@ -8,7 +8,7 @@ from django.utils import timezone
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from telegram import ParseMode
-from telegram.error import BadRequest
+from telegram.error import BadRequest, Unauthorized
 
 from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner
@@ -21,10 +21,11 @@ from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_searc
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text
 from auto_bot.handlers.order.utils import text_to_client
-from auto_bot.handlers.status.static_text import please_start_text
+from auto_bot.handlers.status.static_text import please_start_text, unblock_text
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, geocode, get_route_price
 from auto.celery import app
+from scripts.redis_conn import redis_instance
 from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
@@ -168,7 +169,7 @@ def update_driver_status(self, partner_pk):
             last_status = timezone.localtime() - timedelta(minutes=1)
             park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,
-                                                  created_at__date=timezone.now().date(), end_at=None)
+                                                  created_at__date=timezone.localtime().date(), end_at=None)
             if (driver.name, driver.second_name) in status_with_client:
                 current_status = Driver.WITH_CLIENT
             elif park_status and park_status.status != Driver.ACTIVE:
@@ -184,8 +185,13 @@ def update_driver_status(self, partner_pk):
                     try:
                         bot.send_message(chat_id=driver.chat_id, text=please_start_text,
                                          reply_markup=spam_driver_kb())
-                    except:
-                        pass
+                    except Unauthorized:
+                        if not redis_instance.exists(f"{driver}_block"):
+                            bot.send_message(chat_id=ParkSettings.get_value("DRIVERS_CHAT", partner=partner_pk),
+                                             text=f"{driver} {unblock_text}")
+                            redis_instance.set(f"{driver}_block", 'blocked', ex=3600)
+                    except Exception as e:
+                        logger.info(e)
                 logger.info(f'{driver}: {current_status}')
     except Exception as e:
         logger.error(e)
@@ -353,45 +359,48 @@ def send_time_order(self):
                              reply_markup=markup, parse_mode=ParseMode.HTML)
 
 
-@app.task
-def order_create_task(context, phone, chat_id, payment, message_id):
-    if 'from_address' not in context:
-        context['from_address'] = context['location_address']
-    else:
-        from_place = context['addresses_first'].get(context['from_address'])
-        context['latitude'], context['longitude'] = geocode(from_place, ParkSettings.get_value('GOOGLE_API_KEY'))
+@app.task(bind=True, max_retries=3)
+def order_create_task(self, context, phone, chat_id, payment, message_id):
+    try:
+        if 'from_address' not in context:
+            context['from_address'] = context['location_address']
+        else:
+            from_place = context['addresses_first'].get(context['from_address'])
+            context['latitude'], context['longitude'] = geocode(from_place, ParkSettings.get_value('GOOGLE_API_KEY'))
 
-    destination_place = context['addresses_second'].get(context['to_the_address'])
-    destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
+        destination_place = context['addresses_second'].get(context['to_the_address'])
+        destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
 
-    distance_price = get_route_price(context['latitude'], context['longitude'],
-                                     destination_lat, destination_long,
-                                     ParkSettings.get_value('GOOGLE_API_KEY'))
+        distance_price = get_route_price(context['latitude'], context['longitude'],
+                                         destination_lat, destination_long,
+                                         ParkSettings.get_value('GOOGLE_API_KEY'))
 
-    order_data = {
-        'from_address': context['from_address'],
-        'latitude': context['latitude'],
-        'longitude': context['longitude'],
-        'to_the_address': context['to_the_address'],
-        'to_latitude': destination_lat,
-        'to_longitude': destination_long,
-        'phone_number': phone,
-        'chat_id_client': chat_id,
-        'payment_method': payment,
-        'client_message_id': message_id,
-        'sum': distance_price[0],
-        'distance_google': round(distance_price[1], 2)
-    }
+        order_data = {
+            'from_address': context['from_address'],
+            'latitude': context['latitude'],
+            'longitude': context['longitude'],
+            'to_the_address': context['to_the_address'],
+            'to_latitude': destination_lat,
+            'to_longitude': destination_long,
+            'phone_number': phone,
+            'chat_id_client': chat_id,
+            'payment_method': payment,
+            'client_message_id': message_id,
+            'sum': distance_price[0],
+            'distance_google': round(distance_price[1], 2)
+        }
 
-    if 'time_order' in context:
-        order_data['status_order'] = Order.ON_TIME
-        order_data['order_time'] = context['time_order']
-        bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]} грн\n'
-                                                    f'Очікуйте водія о {context["time_order"]}', message_id=message_id)
-    else:
-        order_data['status_order'] = Order.WAITING
+        if 'time_order' in context:
+            order_data['status_order'] = Order.ON_TIME
+            order_data['order_time'] = context['time_order']
+            bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]} грн\n'
+                                                        f'Очікуйте водія о {context["time_order"]}', message_id=message_id)
+        else:
+            order_data['status_order'] = Order.WAITING
 
-    Order.objects.create(**order_data)
+        Order.objects.create(**order_data)
+    except Exception as e:
+        bot.send_message(chat_id=515224934, text=str(e))
 
 
 @app.task(bind=True, max_retries=3)
