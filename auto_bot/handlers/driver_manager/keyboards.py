@@ -23,6 +23,20 @@ def inline_earning_report_kb():
     return InlineKeyboardMarkup(keyboard)
 
 
+def inline_partner_vehicles(vehicles):
+    keyboard = [
+        [InlineKeyboardButton(f"{vehicle}", callback_data=f"select_vehicle {vehicle.id}")] for vehicle in vehicles]
+    keyboard.append([InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")])
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_partner_drivers(drivers, pk_vehicle):
+    keyboard = [
+        [InlineKeyboardButton(f"{str(driver).split()[0][0]}.{str(driver).split()[1]}",
+                              callback_data=f"select_driver {driver.id} {pk_vehicle}")] for driver in drivers]
+    return InlineKeyboardMarkup(keyboard)
+
+
 def inline_efficiency_report_kb():
     keyboard = [
         [InlineKeyboardButton(report_period[1], callback_data="Efficiency_daily")],

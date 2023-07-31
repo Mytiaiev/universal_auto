@@ -50,6 +50,7 @@ def inline_manager_kb():
         [InlineKeyboardButton(manager_main_buttons[0], callback_data="Update_drivers")],
         [InlineKeyboardButton(manager_main_buttons[1], callback_data="Get_report")],
         [InlineKeyboardButton(manager_main_buttons[2], callback_data="Get_efficiency_report")],
+        [InlineKeyboardButton(manager_main_buttons[3], callback_data="Pin_vehicle_to_driver")],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_manager")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -77,6 +78,12 @@ def inline_start_driver_kb():
     keyboard = [
         [InlineKeyboardButton(main_buttons[4], callback_data="Start_work")],
         [InlineKeyboardButton(main_buttons[6], callback_data="More_driver")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def spam_driver_kb():
+    keyboard = [
+        [InlineKeyboardButton(main_buttons[4], callback_data="Start_work")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
