@@ -1,10 +1,8 @@
 # Create driver and other
 from datetime import timedelta, datetime
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 
 from celery.signals import task_postrun
-from django.core.paginator import Paginator
-from django.core.serializers import deserialize
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
@@ -19,7 +17,7 @@ from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
-    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, get_rent_information
+    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report
 from auto_bot.main import bot
 
 
@@ -38,20 +36,6 @@ def update_drivers(sender=None, **kwargs):
     if sender == update_driver_data:
         if kwargs.get('retval'):
             bot.send_message(chat_id=kwargs.get('retval'), text=update_finished, reply_markup=inline_manager_kb())
-
-
-@task_postrun.connect
-def rent_drivers(sender=None, **kwargs):
-    if sender == get_rent_information:
-        day = datetime.now().date()
-        message = f'Оренда за {day}:\n'
-        rents = RentInformation.objects.filter(created_at__date=timezone.localtime().date())
-        if rents:
-            for rent in rents:
-                message += f"{rent.driver_name}:{rent.rent_distance}\n"
-        else:
-            message = 'no_rent'
-        bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'), text=message)
 
 
 def remove_cash_by_manager(update, context):
@@ -95,12 +79,11 @@ def get_partner_vehicles(update, context):
 def get_partner_drivers(update, context):
     query = update.callback_query
     pk_vehicle = query.data.split()[1]
-    query.edit_message_text(partner_vehicles)
     manager = DriverManager.get_by_chat_id(query.from_user.id)
     drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
     if drivers:
         query.edit_message_text(partner_drivers)
-        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(drivers, pk_vehicle))
+        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(pin_vehicle_callback, drivers, pk_vehicle))
     else:
         query.edit_message_text(no_drivers_text)
 
@@ -123,6 +106,7 @@ def get_weekly_report(update, context):
     message = ''
     balance = 0
     manager = DriverManager.get_by_chat_id(query.from_user.id)
+    rent = int(ParkSettings.get_value('RENT_PRICE', partner=manager.partner.pk))
     drivers = Driver.objects.filter(manager=manager)
     if drivers:
         for driver in drivers:
@@ -130,14 +114,25 @@ def get_weekly_report(update, context):
             if result:
                 balance += result[0]
                 message += f"{driver} каса :{result[1]}\n"
+                if result[5]:
+                    message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
                 if driver.schema == "HALF":
+                    message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
+                        result[1], driver.rate, result[2])
                     if result[4]:
-                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - План {result[4]} = {result[3]}\n'
-                    else:
-                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} = {result[3]}\n'
+                        message += f" - План {result[4]}"
+                    if result[6]:
+                        message += f" - Оренда {result[6]}"
                 elif driver.schema == "RENT":
-                    message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - Оренда {driver.rental} = {result[3]}\n'
+                    message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
+                        result[1], driver.rate, result[2], driver.rental)
+                    if result[6]:
+                        message += f" - Оренда {result[6]}"
+                else:
+                    pass
+                message += f" = {result[3]}\n"
                 message += "*" * 39 + '\n'
+
             else:
                 message += f"Заробітки відсутні {driver}\n"
     else:
@@ -158,8 +153,8 @@ def get_report(update, context):
         if result:
             for key in result[0]:
                 if result[0][key]:
-                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
-                        key, result[0][key], result[1].get(key, 0))
+                    message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
+                        key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
         else:
             message = no_drivers_text
         query.edit_message_text(message)

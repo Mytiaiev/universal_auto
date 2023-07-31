@@ -1,6 +1,4 @@
 settings = {
-    'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
-    'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
     'TARIFF_IN_THE_CITY': ('15', 'Тариф в місті (грн)'),
     'TARIFF_OUTSIDE_THE_CITY': ('30', 'Тариф за містом (грн)'),
     'TARIFF_CAR_DISPATCH': ('7', 'Тариф за доставку авто за км (грн)'),
@@ -30,6 +28,8 @@ settings = {
 }
 
 settings_for_partner = {
+    'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
+    'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
     'UKLON_NAME': ('Enter username for Uklon', 'Ім\'я користувача Uklon'),
     'UKLON_PASSWORD': ('Enter password for Uklon', 'Пароль користувача Uklon'),
     'UBER_NAME': ('Enter username for Uber', 'Ім\'я користувача Uber'),

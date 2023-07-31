@@ -173,7 +173,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(get_partner_drivers,
                                         pattern=re.compile("^select_vehicle [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(pin_partner_vehicle_to_driver,
-                                        pattern=re.compile("^select_driver [0-9]+ [0-9]+$")))
+                                        pattern=re.compile("^pin_vehicle [0-9]+ [0-9]+$")))
 
     # Returns status cars
     dp.add_handler(CommandHandler("car_status", broken_car))
