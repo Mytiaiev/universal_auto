@@ -1,17 +1,14 @@
 import os
 import re
 import datetime
-import hashlib
-import requests
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
-from app.portmone.portmone import Portmone
-from auto.tasks import get_distance_trip, order_create_task, send_map_to_client, check_payment_status_tg
+from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
     inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb, \
-    share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client, inline_payment_card
+    share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db
@@ -299,6 +296,26 @@ def handle_callback_order(update, context):
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
 
 
+def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, payload, price: int):
+    prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
+
+    # Sending a request for payment
+    context.bot.send_invoice(chat_id=chat_id_client,
+                             title=payment_title,
+                             description=payment_description,
+                             payload=payload,
+                             provider_token=provider_token,
+                             currency=payment_currency,
+                             start_parameter=start_parameter,
+                             prices=prices,
+                             photo_url=url,
+                             need_shipping_address=False,
+                             photo_width=615,
+                             photo_height=512,
+                             photo_size=50000,
+                             is_flexible=False)
+
+
 def handle_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
@@ -365,7 +382,6 @@ def handle_order(update, context):
             s, e = int(timezone.localtime(status_driver.created_at).timestamp()), int(timezone.localtime().timestamp())
             get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)
         else:
-            context.user_data.clear()
             if order.payment_method == price_inline_buttons[4].split()[1]:
                 message = driver_complete_text(order.sum)
                 query.edit_message_text(text=message)
@@ -373,15 +389,40 @@ def handle_order(update, context):
                 order.status_order = Order.COMPLETED
                 order.partner = order.driver.partner
                 order.save()
+                context.user_data.clear()
             else:
-                json = {
-                    'order_id': str(order.pk),
-                    'payment_description': payment_description,
-                }
+                query.edit_message_reply_markup(reply_markup=None)
 
-                portmone = Portmone(order.sum, **json)
-                payment_link = portmone.create_link()
-                query.edit_message_text(text=payment_title)
-                query.edit_message_reply_markup(reply_markup=inline_payment_card(payment_link))
-                check_payment_status_tg.delay(data[1], query.message.message_id, portmone)
+                payment_request(update,
+                                context,
+                                order.chat_id_client,
+                                os.environ["PAYMENT_TOKEN"],
+                                os.environ["BOT_URL_IMAGE_TAXI"],
+                                order.pk,
+                                f'{order.pk} {query.message.message_id}',
+                                order.sum)
+
+
+def precheckout_callback(update, context):
+    query = update.pre_checkout_query
+    data = query.invoice_payload.split()
+    order = Order.objects.filter(chat_id_client=query.from_user.id).last()
+    if data[0] == f'{order.pk}':
+        query.answer(ok=True)
+        context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data[1], text=trip_paymented)
+        text_to_client(order, complete_order_text, button=inline_comment_for_client())
+        ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
+        order.status_order = Order.COMPLETED
+        order.partner = order.driver.partner
+        order.save()
+        context.user_data.clear()
+    else:
+        query.answer(ok=False, error_message=error_payment)
+
+
+
+
+
+
+
 
