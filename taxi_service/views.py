@@ -58,6 +58,8 @@ class PostRequestView(View):
             return handler.handler_restarting_order(request)
         elif action in ['Uber_login', 'Uklon_login', 'Bolt_login']:
             return handler.success_login(request)
+        elif action == 'login_invest':
+            return handler.success_login_investor(request)
         else:
             return handler.handle_unknown_action(request)
 
@@ -75,6 +77,8 @@ class GetRequestView(View):
             return handler.handle_get_drivers_cash(request)
         elif action == 'effective_vehicle':
             return handler.handle_effective_vehicle(request)
+        elif action == 'is_logged_in':
+            return handler.handle_is_logged_in(request)
         else:
             return handler.handle_unknown_action(request)
 

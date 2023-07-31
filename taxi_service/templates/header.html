@@ -96,6 +96,7 @@
 										<button>{% trans "Замовити" %}</button>
 									</a>
 									<span id="loginBtn" class="clickable fa fa-user">Увійти</span>
+									<span id="loggedInUser" class="clickable" style="display: none;"></span>
 								</div>
 							</div>
 						</section>
@@ -106,20 +107,21 @@
 				<span id="closeLoginForm" class="close-btn">&times;</span>
 				<h2>Кабінет інвестора</h2>
 				<form id="loginRadioForm">
+					{% csrf_token %}
 					<input type="radio" name="loginType" value="login" id="loginRadio" checked>
 					<label for="loginRadio">Увійти</label>
 					<input type="radio" name="loginType" value="changePassword" id="changePasswordRadio">
 					<label for="changePasswordRadio">Змінити пароль</label>
 				</form>
 				<form id="loginFormFields">
+					{% csrf_token %}
 					<input type="text" id="login" placeholder="Логін">
 					<input type="password" id="password" placeholder="Пароль">
-					<button onclick="login()">Увійти</button>
-					<button onclick="loginWithGoogle()">Google</button>
+					<button id="login-invest" type="button">Увійти</button>
+					<button id="login-invest-google" type="button">Google</button>
 					<input type="password" id="newPassword" placeholder="Новий пароль" style="display: none;">
 					<input type="password" id="confirmPassword" placeholder="Підтвердження пароля" style="display: none;">
-					<button onclick="changePassword()" style="display: none;">Змінити
-					</button>
+					<button id="change-password" type="button" style="display: none;">Змінити</button>
 				</form>
 			</div>
 		</nav>

@@ -62,6 +62,15 @@ class PostRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
+    def success_login_investor(self, request):
+        login = request.POST.get('login')
+        password = request.POST.get('password')
+
+        success_login = login_in_investor(request, login, password)
+        json_data = JsonResponse({'data': success_login}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)
 
@@ -94,6 +103,14 @@ class GetRequestHandler:
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
+
+    def handle_is_logged_in(self, request):
+        if request.user.is_authenticated:
+            user_name = request.user.username
+            response_data = {'is_logged_in': True, 'user_name': user_name}
+        else:
+            response_data = {'is_logged_in': False}
+        return JsonResponse(response_data, safe=False)
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)
