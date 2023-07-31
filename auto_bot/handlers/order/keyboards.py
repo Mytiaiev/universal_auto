@@ -122,9 +122,5 @@ def inline_time_order_kb(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_payment_card(payment_url):
-    keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[10], url=payment_url)],
-        ]
-    return InlineKeyboardMarkup(keyboard)
+
 

@@ -536,26 +536,6 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         logger.info(e)
 
 
-@app.task(bind=True)
-def check_payment_status_tg(order_pk, query_id, portmone, data_):
-    try:
-        order = Order.objects.filter(pk=order_pk).first()
-        while True:
-            time.sleep(5)
-            response = portmone.checkout_status()
-            if (response['RESULT'] or response.status) in ("0", "PAYED"):
-                bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=trip_paymented)
-                message = driver_complete_text(order.sum)
-                bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=message)
-                text_to_client(order, complete_order_text, button=inline_comment_for_client())
-                ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
-                order.status_order = Order.COMPLETED
-                order.partner = order.driver.partner
-                order.save()
-    except Exception as e:
-        logger.info(e)
-
-
 def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=fleet_name, partner=partner_pk)
     if reports:
