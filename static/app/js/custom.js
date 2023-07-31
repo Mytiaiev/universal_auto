@@ -1058,46 +1058,82 @@ $(window).on('load', function () {
 });
 
 
-$("#loginBtn").click(function() {
-    $("#loginForm").fadeIn();
+// login-invest
+
+$(document).ready(function () {
+
+	$.ajax({
+		url: ajaxGetUrl,
+		type: "GET",
+		data: {
+			action: "is_logged_in"
+		},
+		success: function (data) {
+			if (data.is_logged_in === true) {
+				let userName = data.user_name;
+				$("#loginBtn").hide();
+				$("#loggedInUser").text(userName).show();
+			} else {
+				$("#loginBtn").show();
+				$("#loggedInUser").hide();
+			}
+		}
+	})
+
+	$("#loggedInUser").click(function () {
+		window.location.href = "/dashboard/";
+	});
+
+	$("#loginBtn").click(function () {
+		$("#loginForm").fadeIn();
+	});
+
+	$("#closeLoginForm").click(function () {
+		$("#loginForm").fadeOut();
+	});
+
+	$("input[name='loginType']").on("change", function () {
+
+		if (this.value === "login") {
+			$("#loginFormFields").show();
+			$("#newPassword").hide();
+			$("#confirmPassword").hide();
+			$("#change-password").hide();
+			$("#login-invest").show();
+			$("#login-invest-google").show();
+		} else if (this.value === "changePassword") {
+			$("#loginFormFields").show();
+			$("#newPassword").show();
+			$("#confirmPassword").show();
+			$("#login-invest").hide();
+			$("#login-invest-google").hide();
+			$("#change-password").show();
+
+		}
+	});
+
+	$("#login-invest").click(function () {
+		let login = $("#login").val();
+		let password = $("#password").val();
+		let action = 'login_invest';
+
+		$.ajax({
+			url: ajaxPostUrl,
+			type: 'POST',
+			data: {
+				action: action,
+				login: login,
+				password: password,
+				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+			},
+			success: function (data) {
+				if (data.data['success'] === true) {
+					let userName = data.data['user_name'];
+					$("#loginBtn").hide();
+					$("#loggedInUser").text(userName).show();
+					$("#loginForm").fadeOut();
+				}
+			}
+		});
+	});
 });
-
-$("#closeLoginForm").click(function() {
-    $("#loginForm").fadeOut();
-});
-
-$("input[name='loginType']").on("change", function () {
-	const loginFormFields = $("#loginFormFields");
-	const newPasswordField = $("#newPassword");
-	const confirmPasswordField = $("#confirmPassword");
-	const changePasswordBtn = $("button[onclick='changePassword()']");
-
-	if (this.value === "login") {
-		$("#loginFormFields").show();
-		$("#newPassword").hide();
-		$("#confirmPassword").hide();
-		$("button[onclick='changePassword()']").hide();
-		$("button[onclick='login()']").show();
-		$("button[onclick='loginWithGoogle()']").show();
-	} else if (this.value === "changePassword") {
-		$("#loginFormFields").show();
-		$("#newPassword").show();
-		$("#confirmPassword").show();
-		$("button[onclick='login()']").hide();
-		$("button[onclick='loginWithGoogle()']").hide();
-		$("button[onclick='changePassword()']").show();
-
-	}
-});
-
-function login() {
-	// Код для обробки входу користувача
-}
-
-function loginWithGoogle() {
-	// Код для обробки входу через Google
-}
-
-function changePassword() {
-	// Код для обробки зміни пароля
-}
