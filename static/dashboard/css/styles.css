@@ -439,3 +439,27 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/*стилі для виходу з акаунта*/
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+#account_circle {
+  font-size: 30px;
+  color: #fff;
+  margin-right: 20px;
+}
+
+#logout-dashboard {
+  padding: 8px 15px;
+  border-radius: 5px;
+  border: none;
+  background-color: #3e8f3e;
+  color: #fff;
+  cursor: pointer;
+  margin-left: auto;
+  display: block;
+}

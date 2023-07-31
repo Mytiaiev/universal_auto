@@ -1,5 +1,6 @@
 from django.http import JsonResponse, HttpResponse
 from django.forms.models import model_to_dict
+from django.contrib.auth import logout
 
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import *
@@ -70,6 +71,10 @@ class PostRequestHandler:
         json_data = JsonResponse({'data': success_login}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
+
+    def logout_investor(self, request):
+        logout(request)
+        return JsonResponse({'logged_out': True})
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)

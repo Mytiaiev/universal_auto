@@ -1070,9 +1070,8 @@ $(document).ready(function () {
 		},
 		success: function (data) {
 			if (data.is_logged_in === true) {
-				let userName = data.user_name;
 				$("#loginBtn").hide();
-				$("#loggedInUser").text(userName).show();
+				$("#loggedInUser").text('Кабінет Інвестора').show();
 			} else {
 				$("#loginBtn").show();
 				$("#loggedInUser").hide();
@@ -1128,9 +1127,8 @@ $(document).ready(function () {
 			},
 			success: function (data) {
 				if (data.data['success'] === true) {
-					let userName = data.data['user_name'];
 					$("#loginBtn").hide();
-					$("#loggedInUser").text(userName).show();
+					$("#loggedInUser").text('Кабінет Інвестора').show();
 					$("#loginForm").fadeOut();
 				}
 			}
