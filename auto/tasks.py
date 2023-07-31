@@ -14,7 +14,8 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
-from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
+from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency, \
+    generate_message_weekly
 from auto_bot.handlers.main.keyboards import spam_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_time_order_kb
@@ -262,45 +263,7 @@ def manager_paid_weekly(self, partner_pk):
 
 @app.task(bind=True)
 def send_weekly_report(self, partner_pk):
-    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
-    start = end - timedelta(days=6)
-    message = ''
-    drivers_dict = {}
-    balance = 0
-    rent = int(ParkSettings.get_value('RENT_PRICE', partner=partner_pk))
-    for manager in DriverManager.objects.filter(partner=partner_pk):
-        drivers = Driver.objects.filter(manager=manager)
-        if drivers:
-            for driver in drivers:
-                driver_message = ''
-                result = calculate_reports(start, end, driver)
-                balance += result[0]
-                driver_message += f"{driver} каса: {result[1]}\n"
-                if result[5]:
-                    driver_message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
-                if driver.schema == "HALF":
-                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
-                        result[1], driver.rate, result[2])
-                    if result[4]:
-                        driver_message += f" - План {result[4]}"
-                    if result[6]:
-                        driver_message += f" - Оренда {result[6]}"
-                elif driver.schema == "RENT":
-                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
-                        result[1], driver.rate, result[2], driver.rental)
-                    if result[6]:
-                        driver_message += f" - Оренда {result[6]}"
-                else:
-                    pass
-                driver_message += f" = {result[3]}\n"
-                if driver.chat_id:
-                    drivers_dict[driver.chat_id] = driver_message
-                message += driver_message
-                message += "*" * 39 + '\n'
-            manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
-            manager_message += message
-            drivers_dict[manager.chat_id] = manager_message
-    return drivers_dict
+    return generate_message_weekly(partner_pk)
 
 
 @app.task(bind=True)
@@ -313,7 +276,7 @@ def send_daily_report(self, partner_pk):
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
                     num = "\U0001f3c6" if num == 1 else num
-                    message += "{}.{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f} (+{:.2f})\n".format(
+                    message += "{}.{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
                         num, key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
             dict_msg[partner_pk] = message
     return dict_msg

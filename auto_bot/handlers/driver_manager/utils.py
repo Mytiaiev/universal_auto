@@ -60,7 +60,7 @@ def calculate_reports(start, end, driver):
             salary = '%.2f' % (kasa * driver.rate - cash - driver.rental - rent_value)
         else:
             pass
-    return balance, kasa, cash, salary, '%.2f' % incomplete, rent, rent_value
+    return balance, kasa, cash, salary, incomplete, rent, rent_value
 
 
 def get_daily_report(manager_id=None, start=None, end=None):
@@ -85,6 +85,48 @@ def get_daily_report(manager_id=None, start=None, end=None):
             total_values[driver], total_rent[driver] = total_report[1], total_report[5]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
         return sort_report, day_values, total_rent, rent_daily
+
+
+def generate_message_weekly(partner_pk):
+    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+    start = end - timedelta(days=6)
+    drivers_dict = {}
+    balance = 0
+    rent = int(ParkSettings.get_value('RENT_PRICE', partner=partner_pk))
+    for manager in DriverManager.objects.filter(partner=partner_pk):
+        message = ''
+        drivers = Driver.objects.filter(manager=manager)
+        if drivers:
+            for driver in drivers:
+                driver_message = ''
+                result = calculate_reports(start, end, driver)
+                balance += result[0]
+                driver_message += f"{driver} каса: {result[1]}\n"
+                if result[5]:
+                    driver_message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
+                if driver.schema == "HALF":
+                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
+                        result[1], driver.rate, result[2])
+                    if result[4]:
+                        driver_message += " - План {:.2f}".format(result[4])
+                    if result[6]:
+                        driver_message += f" - Оренда {result[6]}"
+                elif driver.schema == "RENT":
+                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
+                        result[1], driver.rate, result[2], driver.rental)
+                    if result[6]:
+                        driver_message += f" - Оренда {result[6]}"
+                else:
+                    pass
+                driver_message += f" = {result[3]}\n"
+                if driver.chat_id:
+                    drivers_dict[driver.chat_id] = driver_message
+                message += driver_message
+                message += "*" * 39 + '\n'
+            manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
+            manager_message += message
+            drivers_dict[manager.chat_id] = manager_message
+    return drivers_dict
 
 
 def calculate_efficiency(licence_plate, start, end):
