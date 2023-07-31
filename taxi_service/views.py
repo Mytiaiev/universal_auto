@@ -60,6 +60,8 @@ class PostRequestView(View):
             return handler.success_login(request)
         elif action == 'login_invest':
             return handler.success_login_investor(request)
+        elif action == 'logout_invest':
+            return handler.logout_investor(request)
         else:
             return handler.handle_unknown_action(request)
 
