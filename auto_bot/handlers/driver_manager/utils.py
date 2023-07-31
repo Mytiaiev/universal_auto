@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 
 from _decimal import Decimal
-from django.db.models import Sum, Avg,  DecimalField
+from django.db.models import Sum, Avg, DecimalField, ExpressionWrapper, F
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from app.models import CarEfficiency, Driver, SummaryReport, DriverManager, \
-    Vehicle
+    Vehicle, RentInformation, ParkSettings
 
 
 def validate_date(date_str):
@@ -21,6 +21,19 @@ def validate_date(date_str):
         return False
 
 
+def calculate_rent(start, end, driver):
+    end_time = datetime.combine(end, datetime.max.time())
+    rent_report = RentInformation.objects.filter(
+        rent_distance__gt=int(ParkSettings.get_value("FREE_RENT", partner=driver.partner.pk)),
+        created_at__range=(start, end_time),
+        driver=driver)
+    overall_rent = ExpressionWrapper(F('rent_distance')
+                                     - int(ParkSettings.get_value("FREE_RENT", partner=driver.partner.pk)),
+                                     output_field=DecimalField())
+    total_rent = rent_report.aggregate(distance=Sum(overall_rent))['distance']
+    return total_rent
+
+
 def calculate_reports(start, end, driver):
     incomplete = 0
     balance = 0
@@ -31,21 +44,23 @@ def calculate_reports(start, end, driver):
         kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
     cash = driver_report.aggregate(
         cash=Coalesce(Sum('total_amount_cash'), 0, output_field=DecimalField()))['cash']
+    rent = calculate_rent(start, end, driver) or 0
+    rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', partner=driver.partner.pk))
     if kasa:
         if driver.schema == "HALF":
             if kasa < driver.plan:
-                balance = driver.rental
+                balance = driver.rental + rent_value
                 incomplete = (driver.plan - kasa) * Decimal(1 - driver.rate)
-                salary = '%.2f' % (kasa * driver.rate - cash - incomplete)
+                salary = '%.2f' % (kasa * driver.rate - cash - incomplete - rent_value)
             else:
-                balance = kasa * driver.rate
-                salary = '%.2f' % (kasa * driver.rate - cash)
+                balance = kasa * driver.rate + rent_value
+                salary = '%.2f' % (kasa * driver.rate - cash - rent_value)
         elif driver.schema == "RENT":
-            balance = driver.rental
-            salary = '%.2f' % (kasa * driver.rate - cash - driver.rental)
+            balance = driver.rental + rent_value
+            salary = '%.2f' % (kasa * driver.rate - cash - driver.rental - rent_value)
         else:
             pass
-    return balance, kasa, cash, salary, '%.2f' % incomplete
+    return balance, kasa, cash, salary, '%.2f' % incomplete, rent, rent_value
 
 
 def get_daily_report(manager_id=None, start=None, end=None):
@@ -58,14 +73,18 @@ def get_daily_report(manager_id=None, start=None, end=None):
         end = yesterday
     total_values = {}
     day_values = {}
+    rent_daily = {}
+    total_rent = {}
     manager = DriverManager.get_by_chat_id(manager_id)
     drivers = Driver.objects.filter(manager=manager)
     if drivers:
         for driver in drivers:
-            day_values[driver] = calculate_reports(yesterday, yesterday, driver)[1]
-            total_values[driver] = calculate_reports(start, end, driver)[1]
+            daily_report = calculate_reports(yesterday, yesterday, driver)
+            total_report = calculate_reports(start, end, driver)
+            day_values[driver],  rent_daily[driver] = daily_report[1], daily_report[5]
+            total_values[driver], total_rent[driver] = total_report[1], total_report[5]
         sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
-        return sort_report, day_values
+        return sort_report, day_values, total_rent, rent_daily
 
 
 def calculate_efficiency(licence_plate, start, end):

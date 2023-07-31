@@ -166,14 +166,11 @@ def update_driver_status(self, partner_pk):
             status_with_client = status_with_client.union(set(uber_status['with_client']))
         drivers = Driver.objects.filter(deleted_at=None, partner=partner_pk)
         for driver in drivers:
-            last_status = timezone.localtime() - timedelta(minutes=1)
-            park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
+            active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,
                                                   created_at__date=timezone.localtime().date(), end_at=None)
-            if (driver.name, driver.second_name) in status_with_client:
+            if active_order or (driver.name, driver.second_name) in status_with_client:
                 current_status = Driver.WITH_CLIENT
-            elif park_status and park_status.status != Driver.ACTIVE:
-                current_status = park_status.status
             elif (driver.name, driver.second_name) in status_online:
                 current_status = Driver.ACTIVE
             else:
@@ -270,20 +267,36 @@ def send_weekly_report(self, partner_pk):
     message = ''
     drivers_dict = {}
     balance = 0
+    rent = int(ParkSettings.get_value('RENT_PRICE', partner=partner_pk))
     for manager in DriverManager.objects.filter(partner=partner_pk):
         drivers = Driver.objects.filter(manager=manager)
         if drivers:
             for driver in drivers:
                 driver_message = ''
                 result = calculate_reports(start, end, driver)
-                if result:
-                    balance += result[0]
-                    driver_message += f"{driver} каса: {result[1]}\n"
-                    driver_message += f'Зарплата за тиждень: {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
-                    if driver.chat_id:
-                        drivers_dict[driver.chat_id] = driver_message
-                    message += driver_message
-                    message += "*" * 39 + '\n'
+                balance += result[0]
+                driver_message += f"{driver} каса: {result[1]}\n"
+                if result[5]:
+                    driver_message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
+                if driver.schema == "HALF":
+                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
+                        result[1], driver.rate, result[2])
+                    if result[4]:
+                        driver_message += f" - План {result[4]}"
+                    if result[6]:
+                        driver_message += f" - Оренда {result[6]}"
+                elif driver.schema == "RENT":
+                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
+                        result[1], driver.rate, result[2], driver.rental)
+                    if result[6]:
+                        driver_message += f" - Оренда {result[6]}"
+                else:
+                    pass
+                driver_message += f" = {result[3]}\n"
+                if driver.chat_id:
+                    drivers_dict[driver.chat_id] = driver_message
+                message += driver_message
+                message += "*" * 39 + '\n'
             manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
             manager_message += message
             drivers_dict[manager.chat_id] = manager_message
@@ -300,8 +313,8 @@ def send_daily_report(self, partner_pk):
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
                     num = "\U0001f3c6" if num == 1 else num
-                    message += "{}.{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
-                        num, key, result[0][key], result[1].get(key, 0))
+                    message += "{}.{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f} (+{:.2f})\n".format(
+                        num, key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
             dict_msg[partner_pk] = message
     return dict_msg
 
