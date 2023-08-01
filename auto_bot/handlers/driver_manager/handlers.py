@@ -209,7 +209,8 @@ def send_into_group(sender=None, **kwargs):
     if sender in (send_daily_report, send_efficiency_report):
         messages = kwargs.get('retval')
         for partner, message in messages.items():
-            bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
+            if message:
+                bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
 
 
 @task_postrun.connect
