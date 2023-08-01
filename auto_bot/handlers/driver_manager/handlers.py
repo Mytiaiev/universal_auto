@@ -1,20 +1,17 @@
 # Create driver and other
-from datetime import timedelta, datetime
-
-
+from datetime import datetime
 from celery.signals import task_postrun
-from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
 from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
-    Payments, ParkSettings, RentInformation
+    Payments, ParkSettings
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
     inline_efficiency_report_kb, inline_partner_vehicles, inline_partner_drivers
 from auto_bot.handlers.driver_manager.static_text import *
-from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency, \
+from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_date, get_efficiency, \
     generate_message_weekly
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \

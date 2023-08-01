@@ -120,3 +120,11 @@ def inline_time_order_kb(pk=None):
         [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Start_route {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
+
+
+def inline_choose_date_kb():
+    keyboard = [
+        [InlineKeyboardButton(date_inline_buttons[0], callback_data="Today_order")],
+        [InlineKeyboardButton(date_inline_buttons[1], callback_data="Tomorrow_order")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
