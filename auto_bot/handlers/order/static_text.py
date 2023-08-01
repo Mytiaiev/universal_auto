@@ -42,6 +42,7 @@ payment_currency = 'UAH'
 payment_price = 'Ціна'
 trip_paymented = 'Поїздка оплачена'
 error_payment = "Спробуйте ще раз"
+order_date_text = "Оберіть, коли Ви бажаєте здійснити поїздку"
 
 order_inline_buttons = (
     "\u274c Відхилити",
@@ -77,6 +78,11 @@ price_inline_buttons = (
     "\U0001f4b8 Картка"
 )
 
+date_inline_buttons = (
+    "\U000023F1 Сьогодні",
+    "\U0001F5D3 Завтра"
+)
+
 
 def price_info(in_city, out_city):
     message = f"Наші тарифи:\nВ місті - {in_city} грн/км\n" + \
@@ -84,17 +90,17 @@ def price_info(in_city, out_city):
     return message
 
 
-def order_info(number, address, to_address, payment, phone, price=None, distance=None, time=None):
+def order_info(number, address, to_address, payment, phone, price, distance, time=None):
     time_message = f"<u>Замовлення на певний час {number}:</u>\n" \
                    f"<b>Час подачі:{time}</b>\n"
     now_message = f"Отримано нове замовлення {number}:\n"
     message = f"Адреса посадки: {address}\n" \
               f"Місце прибуття: {to_address}\n" \
               f"Спосіб оплати: {payment}\n" \
-              f"Номер телефону: {phone}\n"
-    if price is not None:
-        message += f"Загальна вартість: {price} грн\n" + f"Довжина маршруту: {distance} км"
-    elif time is not None:
+              f"Номер телефону: {phone}\n" \
+              f"Загальна вартість: {price} грн\n" \
+              f"Довжина маршруту: {distance} км"
+    if time is not None:
         message = time_message + message
     else:
         message = now_message + message
