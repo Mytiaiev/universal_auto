@@ -274,8 +274,8 @@ def send_daily_report(self, partner_pk):
         if result:
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
-                    num = "\U0001f3c6" if num == 1 else num
-                    message += "{}.{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
+                    num = "\U0001f3c6" if num == 1 else f"{num}."
+                    message += "{}{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
                         num, key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
             dict_msg[partner_pk] = message
     return dict_msg
@@ -563,7 +563,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=2), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=1), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute=59, hour='*/1'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
