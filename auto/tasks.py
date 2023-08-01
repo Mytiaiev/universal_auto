@@ -369,8 +369,9 @@ def order_create_task(self, context, phone, chat_id, payment, message_id):
         if 'time_order' in context:
             order_data['status_order'] = Order.ON_TIME
             order_data['order_time'] = context['time_order']
-            bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]} грн\n'
-                                                        f'Очікуйте водія о {context["time_order"]}', message_id=message_id)
+            order_time = context['time_order'].strftime("%Y-%m-%d %H:%M")
+            bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]}грн\n'
+                                                        f'Очікуйте водія {order_time}', message_id=message_id)
         else:
             order_data['status_order'] = Order.WAITING
 
@@ -562,7 +563,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=2), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour=1), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute=59, hour='*/1'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
