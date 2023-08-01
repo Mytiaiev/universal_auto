@@ -30,10 +30,10 @@ def inline_partner_vehicles(vehicles):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_partner_drivers(drivers, pk_vehicle):
+def inline_partner_drivers(callback, drivers, pk_vehicle=None):
     keyboard = [
         [InlineKeyboardButton(f"{str(driver).split()[0][0]}.{str(driver).split()[1]}",
-                              callback_data=f"select_driver {driver.id} {pk_vehicle}")] for driver in drivers]
+                              callback_data=f"{callback} {driver.id} {pk_vehicle}")] for driver in drivers]
     return InlineKeyboardMarkup(keyboard)
 
 
