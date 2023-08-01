@@ -22,7 +22,7 @@ from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_s
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
-    ask_client_action, handle_order
+    ask_client_action, handle_order, choose_date_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
     more_function, start_query
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
@@ -114,7 +114,8 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(cancel_order, pattern="Cancel_no_comment"))
     dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))
     dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
-    dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order|No_driver_time_order"))
+    dp.add_handler(CallbackQueryHandler(choose_date_order, pattern="On_time_order"))
+    dp.add_handler(CallbackQueryHandler(time_order, pattern="Today_order|Tomorrow_order|No_driver_time_order"))
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
     dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,

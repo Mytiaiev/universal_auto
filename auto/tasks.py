@@ -14,8 +14,7 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
-from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency, \
-    generate_message_weekly
+from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly
 from auto_bot.handlers.main.keyboards import spam_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_time_order_kb
@@ -301,14 +300,15 @@ def check_time_order(self, order_id):
         instance = Order.objects.get(pk=order_id)
     except ObjectDoesNotExist:
         return
+    order_time = timezone.localtime(instance.order_time)
     message = order_info(instance.pk,
                          instance.from_address,
                          instance.to_the_address,
                          instance.payment_method,
                          instance.phone_number,
-                         price=instance.sum,
-                         distance=instance.distance_google,
-                         time=timezone.localtime(instance.order_time).time())
+                         instance.sum,
+                         instance.distance_google,
+                         time=order_time.strftime("%Y-%m-%d %H:%M"))
 
     group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
                                  text=message,
@@ -327,9 +327,9 @@ def send_time_order(self):
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
             markup = inline_time_order_kb(order.id)
             text = order_info(order.pk, order.from_address, order.to_the_address,
-                              order.payment_method, order.phone_number,
-                              time=timezone.localtime(order.order_time).time(),
-                              price=order.sum, distance=order.distance_google)
+                              order.payment_method, order.phone_number, order.sum,
+                              order.distance_google,
+                              time=timezone.localtime(order.order_time).time())
 
             bot.send_message(chat_id=order.driver.chat_id, text=text,
                              reply_markup=markup, parse_mode=ParseMode.HTML)
