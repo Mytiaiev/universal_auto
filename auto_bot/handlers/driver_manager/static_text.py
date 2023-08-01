@@ -24,6 +24,7 @@ invalid_data_text = "Невірні дані, спробуйте ще раз"
 invalid_end_data_text = "Невірна кінцева дата, введіть ще раз"
 partner_vehicles = "Оберіть авто"
 partner_drivers = "Оберіть водія"
+pin_vehicle_callback = "pin_vehicle"
 
 
 report_period = ("Минулий тиждень",

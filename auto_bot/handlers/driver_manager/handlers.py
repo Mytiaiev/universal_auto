@@ -1,25 +1,21 @@
 # Create driver and other
-from datetime import timedelta, datetime
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
+from datetime import datetime
 from celery.signals import task_postrun
-from django.core.paginator import Paginator
-from django.core.serializers import deserialize
-from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
 from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
-    Payments, ParkSettings, RentInformation
+    Payments, ParkSettings
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
     inline_efficiency_report_kb, inline_partner_vehicles, inline_partner_drivers
 from auto_bot.handlers.driver_manager.static_text import *
-from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, validate_date, get_efficiency
+from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_date, get_efficiency, \
+    generate_message_weekly
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
-    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, get_rent_information
+    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report
 from auto_bot.main import bot
 
 
@@ -38,20 +34,6 @@ def update_drivers(sender=None, **kwargs):
     if sender == update_driver_data:
         if kwargs.get('retval'):
             bot.send_message(chat_id=kwargs.get('retval'), text=update_finished, reply_markup=inline_manager_kb())
-
-
-@task_postrun.connect
-def rent_drivers(sender=None, **kwargs):
-    if sender == get_rent_information:
-        day = datetime.now().date()
-        message = f'Оренда за {day}:\n'
-        rents = RentInformation.objects.filter(created_at__date=timezone.localtime().date())
-        if rents:
-            for rent in rents:
-                message += f"{rent.driver_name}:{rent.rent_distance}\n"
-        else:
-            message = 'no_rent'
-        bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'), text=message)
 
 
 def remove_cash_by_manager(update, context):
@@ -95,12 +77,11 @@ def get_partner_vehicles(update, context):
 def get_partner_drivers(update, context):
     query = update.callback_query
     pk_vehicle = query.data.split()[1]
-    query.edit_message_text(partner_vehicles)
     manager = DriverManager.get_by_chat_id(query.from_user.id)
     drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
     if drivers:
         query.edit_message_text(partner_drivers)
-        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(drivers, pk_vehicle))
+        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(pin_vehicle_callback, drivers, pk_vehicle))
     else:
         query.edit_message_text(no_drivers_text)
 
@@ -118,32 +99,9 @@ def pin_partner_vehicle_to_driver(update, context):
 
 def get_weekly_report(update, context):
     query = update.callback_query
-    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
-    start = end - timedelta(days=6)
-    message = ''
-    balance = 0
     manager = DriverManager.get_by_chat_id(query.from_user.id)
-    drivers = Driver.objects.filter(manager=manager)
-    if drivers:
-        for driver in drivers:
-            result = calculate_reports(start, end, driver)
-            if result:
-                balance += result[0]
-                message += f"{driver} каса :{result[1]}\n"
-                if driver.schema == "HALF":
-                    if result[4]:
-                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - План {result[4]} = {result[3]}\n'
-                    else:
-                        message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} = {result[3]}\n'
-                elif driver.schema == "RENT":
-                    message += f'Зарплата за тиждень {result[1]}*{driver.rate} - Готівка {result[2]} - Оренда {driver.rental} = {result[3]}\n'
-                message += "*" * 39 + '\n'
-            else:
-                message += f"Заробітки відсутні {driver}\n"
-    else:
-        message = no_drivers_text
-    owner_message = f'Ваш тижневий баланс: %.2f\n' % balance
-    owner_message += message
+    messages = generate_message_weekly(manager.partner.pk)
+    owner_message = messages.get(str(query.from_user.id)) or no_drivers_text
     query.edit_message_text(owner_message)
 
 
@@ -158,8 +116,8 @@ def get_report(update, context):
         if result:
             for key in result[0]:
                 if result[0][key]:
-                    message += "{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
-                        key, result[0][key], result[1].get(key, 0))
+                    message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
+                        key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
         else:
             message = no_drivers_text
         query.edit_message_text(message)
@@ -186,9 +144,9 @@ def create_period_report(update, context):
         end = datetime.strptime(data, '%Y-%m-%d')
         if start > end:
             start, end = end, start
-        sort_report, day_values = get_daily_report(update.message.chat_id, start, end)
+        report = get_daily_report(update.message.chat_id, start, end)[0]
         message = ''
-        for key, value in sort_report.items():
+        for key, value in report.items():
             message += "{} {:.2f}\n".format(key, value)
         update.message.reply_text(message, reply_markup=inline_manager_kb())
     else:
@@ -251,7 +209,8 @@ def send_into_group(sender=None, **kwargs):
     if sender in (send_daily_report, send_efficiency_report):
         messages = kwargs.get('retval')
         for partner, message in messages.items():
-            bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
+            if message:
+                bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
 
 
 @task_postrun.connect

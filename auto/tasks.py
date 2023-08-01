@@ -14,7 +14,7 @@ from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplicatio
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
-from auto_bot.handlers.driver_manager.utils import calculate_reports, get_daily_report, get_efficiency
+from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly
 from auto_bot.handlers.main.keyboards import spam_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_time_order_kb
@@ -166,14 +166,11 @@ def update_driver_status(self, partner_pk):
             status_with_client = status_with_client.union(set(uber_status['with_client']))
         drivers = Driver.objects.filter(deleted_at=None, partner=partner_pk)
         for driver in drivers:
-            last_status = timezone.localtime() - timedelta(minutes=1)
-            park_status = ParkStatus.objects.filter(driver=driver, created_at__gte=last_status).first()
+            active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,
                                                   created_at__date=timezone.localtime().date(), end_at=None)
-            if (driver.name, driver.second_name) in status_with_client:
+            if active_order or (driver.name, driver.second_name) in status_with_client:
                 current_status = Driver.WITH_CLIENT
-            elif park_status and park_status.status != Driver.ACTIVE:
-                current_status = park_status.status
             elif (driver.name, driver.second_name) in status_online:
                 current_status = Driver.ACTIVE
             else:
@@ -265,29 +262,7 @@ def manager_paid_weekly(self, partner_pk):
 
 @app.task(bind=True)
 def send_weekly_report(self, partner_pk):
-    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
-    start = end - timedelta(days=6)
-    message = ''
-    drivers_dict = {}
-    balance = 0
-    for manager in DriverManager.objects.filter(partner=partner_pk):
-        drivers = Driver.objects.filter(manager=manager)
-        if drivers:
-            for driver in drivers:
-                driver_message = ''
-                result = calculate_reports(start, end, driver)
-                if result:
-                    balance += result[0]
-                    driver_message += f"{driver} каса: {result[1]}\n"
-                    driver_message += f'Зарплата за тиждень: {result[1]}*{driver.rate}- Готівка {result[2]} = {result[3]}\n'
-                    if driver.chat_id:
-                        drivers_dict[driver.chat_id] = driver_message
-                    message += driver_message
-                    message += "*" * 39 + '\n'
-            manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
-            manager_message += message
-            drivers_dict[manager.chat_id] = manager_message
-    return drivers_dict
+    return generate_message_weekly(partner_pk)
 
 
 @app.task(bind=True)
@@ -299,9 +274,9 @@ def send_daily_report(self, partner_pk):
         if result:
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
-                    num = "\U0001f3c6" if num == 1 else num
-                    message += "{}.{}\n Всього: {:.2f} Учора: (+{:.2f})\n".format(
-                        num, key, result[0][key], result[1].get(key, 0))
+                    num = "\U0001f3c6" if num == 1 else f"{num}."
+                    message += "{}{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
+                        num, key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
             dict_msg[partner_pk] = message
     return dict_msg
 
@@ -325,14 +300,15 @@ def check_time_order(self, order_id):
         instance = Order.objects.get(pk=order_id)
     except ObjectDoesNotExist:
         return
+    order_time = timezone.localtime(instance.order_time)
     message = order_info(instance.pk,
                          instance.from_address,
                          instance.to_the_address,
                          instance.payment_method,
                          instance.phone_number,
-                         price=instance.sum,
-                         distance=instance.distance_google,
-                         time=timezone.localtime(instance.order_time).time())
+                         instance.sum,
+                         instance.distance_google,
+                         time=order_time.strftime("%Y-%m-%d %H:%M"))
 
     group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
                                  text=message,
@@ -351,9 +327,9 @@ def send_time_order(self):
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
             markup = inline_time_order_kb(order.id)
             text = order_info(order.pk, order.from_address, order.to_the_address,
-                              order.payment_method, order.phone_number,
-                              time=timezone.localtime(order.order_time).time(),
-                              price=order.sum, distance=order.distance_google)
+                              order.payment_method, order.phone_number, order.sum,
+                              order.distance_google,
+                              time=timezone.localtime(order.order_time).time())
 
             bot.send_message(chat_id=order.driver.chat_id, text=text,
                              reply_markup=markup, parse_mode=ParseMode.HTML)
@@ -393,8 +369,9 @@ def order_create_task(self, context, phone, chat_id, payment, message_id):
         if 'time_order' in context:
             order_data['status_order'] = Order.ON_TIME
             order_data['order_time'] = context['time_order']
-            bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]} грн\n'
-                                                        f'Очікуйте водія о {context["time_order"]}', message_id=message_id)
+            order_time = context['time_order'].strftime("%Y-%m-%d %H:%M")
+            bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]}грн\n'
+                                                        f'Очікуйте водія {order_time}', message_id=message_id)
         else:
             order_data['status_order'] = Order.WAITING
 
@@ -586,7 +563,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=2), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=0, day_of_week=1), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute=59, hour='*/1'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
