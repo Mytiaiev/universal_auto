@@ -113,9 +113,13 @@ class UaGpsSynchronizer:
                                                rent_distance=rent_distance,
                                                partner=partner_obj)
             else:
-                rent_today.rent_distance = rent_distance
-                rent_today.rent_time = road_time
-                rent_today.save()
+                rent_distance -= rent_today.rent_distance
+                road_time -= rent_today.rent_time
+                RentInformation.objects.create(driver_name=_driver,
+                                               driver=_driver,
+                                               rent_time=road_time,
+                                               rent_distance=rent_distance,
+                                               partner=partner_obj)
 
     def total_per_day(self, licence_plate, day):
         start = datetime.datetime.combine(day, datetime.time.min)

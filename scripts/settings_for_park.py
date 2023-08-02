@@ -1,6 +1,4 @@
 settings = {
-    'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
-    'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
     'TARIFF_IN_THE_CITY': ('15', 'Тариф в місті (грн)'),
     'TARIFF_OUTSIDE_THE_CITY': ('30', 'Тариф за містом (грн)'),
     'TARIFF_CAR_DISPATCH': ('7', 'Тариф за доставку авто за км (грн)'),
@@ -27,9 +25,12 @@ settings = {
     'ORDER_CHAT': ('515224934', 'Чат замовлень'),
     'UKLON_TOKEN': ('Enter token for Uklon', 'Код автопарку в Uklon'),
     'GOOGLE_ID_ORDER_CALENDAR': ('Введіть ID календаря для замовлень', 'ID календаря Ninja'),
+    'DEVELOPER_CHAT_ID': ('-900290422', 'Чат для розробників')
 }
 
 settings_for_partner = {
+    'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
+    'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
     'UKLON_NAME': ('Enter username for Uklon', 'Ім\'я користувача Uklon'),
     'UKLON_PASSWORD': ('Enter password for Uklon', 'Пароль користувача Uklon'),
     'UBER_NAME': ('Enter username for Uber', 'Ім\'я користувача Uber'),

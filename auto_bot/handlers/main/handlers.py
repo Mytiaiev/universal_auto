@@ -10,7 +10,8 @@ from telegram.ext import ConversationHandler
 
 from app.models import User, Client, UseOfCars
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
-    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb
+    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb, \
+    inline_about_us, inline_contract_offer
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
@@ -95,6 +96,8 @@ def update_phone_number(update, context):
 
 def get_about_us(update, context):
     query = update.callback_query
+    query.edit_message_text(text=more_func_text)
+    query.edit_message_reply_markup(reply_markup=inline_about_us())
 
 
 def get_privacy_police(update, context):
@@ -102,7 +105,9 @@ def get_privacy_police(update, context):
 
 
 def get_contact_offer(update, context):
-    pass
+    query = update.callback_query
+    query.edit_message_text(text=more_func_text)
+    query.edit_message_reply_markup(reply_markup=inline_contract_offer('About_us'))
 
 
 def helptext(update, context):
@@ -129,30 +134,34 @@ def error_handler(update, context) -> None:
     """Log the error and send a rollbar message to notify the developer."""
     if not os.environ.get('DEBUG'):
         rollbar.report_exc_info()
-    else:
-        """Log the error and send a telegram message to notify the developer."""
-        # Log the error before we do anything else, so we can see it even if something breaks.
-        logger.error(msg="Exception while handling an update:", exc_info=context.error)
+    error(update, context)
 
-        # traceback.format_exception returns the usual python message about an exception, but as a
-        # list of strings rather than a single string, so we have to join them together.
-        tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
-        tb_string = ''.join(tb_list)
 
-        # Build the message with some markup and additional information about what happened.
-        # You might need to add some logic to deal with messages longer than the 4096 character limit.
-        update_str = update.to_dict() if isinstance(update, Update) else str(update)
-        message = (
-            f'An exception was raised while handling an update\n'
-            f'<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}'
-            '</pre>\n\n'
-            f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n'
-            f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n'
-            f'<pre>{html.escape(tb_string)}</pre>'
-        )
+def error(update, context):
+    """Log the error and send a telegram message to notify the developer."""
+    # Log the error before we do anything else, so we can see it even if something breaks.
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
 
-        # Finally, send the message
-        context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message, parse_mode=ParseMode.HTML)
+    # traceback.format_exception returns the usual python message about an exception, but as a
+    # list of strings rather than a single string, so we have to join them together.
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_string = ''.join(tb_list)
+
+    # Build the message with some markup and additional information about what happened.
+    # You might need to add some logic to deal with messages longer than the 4096 character limit.
+    update_str = update.to_dict() if isinstance(update, Update) else str(update)
+    message = (
+        f'An exception was raised while handling an update\n'
+        f'<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}'
+        '</pre>\n\n'
+        f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n'
+        f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n'
+        f'<pre>{html.escape(tb_string)}</pre>'
+    )
+
+    # Finally, send the message
+    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message, parse_mode=ParseMode.HTML)
+
 
 
 def menu(update, context):
