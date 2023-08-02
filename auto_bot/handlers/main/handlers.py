@@ -93,6 +93,18 @@ def update_phone_number(update, context):
     context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=inline_user_kb())
 
 
+def get_about_us(update, context):
+    query = update.callback_query
+
+
+def get_privacy_police(update, context):
+    pass
+
+
+def get_contact_offer(update, context):
+    pass
+
+
 def helptext(update, context):
     update.message.reply_text(help_text)
 
