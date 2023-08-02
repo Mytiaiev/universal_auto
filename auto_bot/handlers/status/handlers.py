@@ -1,6 +1,6 @@
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, ParseMode
-from app.models import Vehicle, Driver, UseOfCars, Event, ParkStatus, Partner
+from app.models import Vehicle, Driver, UseOfCars, ParkStatus, Partner
 from auto.tasks import detaching_the_driver_from_the_car
 from auto_bot.handlers.driver.static_text import V_ID
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
@@ -14,11 +14,6 @@ def status(update, context):
     driver = Driver.get_by_chat_id(chat_id)
     partner = Partner.get_partner(driver.partner.pk)
     vehicle = Vehicle.objects.filter(driver=driver)
-    event = Event.objects.filter(full_name_driver=driver, status_event=False).last()
-    if event:
-        event.status_event = True
-        event.save()
-        context.bot.send_message(chat_id=chat_id, text=f"Ваш {event.event} завершено.")
     if len(vehicle) == 1:
         if UseOfCars.objects.filter(chat_id=chat_id,
                                     created_at__date=timezone.localtime().date(),

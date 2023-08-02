@@ -867,8 +867,11 @@ class Report_of_driver_debt(models.Model):
 
 
 class Event(models.Model):
+    SICK_DAY = "Лікарняний"
+    DAY_OFF = "Вихідний"
     full_name_driver = models.CharField(max_length=255, verbose_name='Водій')
     event = models.CharField(max_length=20, verbose_name='Подія')
+    event_date = models.DateTimeField(null=True, blank=True, verbose_name='Час події')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     status_event = models.BooleanField(default=False, verbose_name='Працює')
 
@@ -876,8 +879,8 @@ class Event(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
-        verbose_name = 'Подія'
-        verbose_name_plural = 'Події'
+        verbose_name = 'Відпочинок і лікування'
+        verbose_name_plural = 'Відпочинки і лікування'
 
 
 class SubscribeUsers(models.Model):

@@ -36,7 +36,7 @@ from selenium_ninja.uklon_sync import UklonRequest
 logger = get_task_logger(__name__)
 
 
-@app.task()
+@app.task(queue='gps_tasks')
 def raw_gps_handler(pk):
     try:
         raw = RawGPS.objects.get(id=pk)
@@ -74,12 +74,12 @@ def raw_gps_handler(pk):
         return f'{ValueError} {err}'
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def get_uber_session(self, partner_pk):
     SeleniumTools(partner_pk).uber_login()
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
     if day is None:
         day = timezone.localtime() - timedelta(days=1)
@@ -108,7 +108,7 @@ def download_daily_report(self, partner_pk, day=None):
                 report.save()
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def get_car_efficiency(self, partner_pk, day=None):
     if not day:
         day = timezone.localtime() - timedelta(days=1)
@@ -141,7 +141,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                          partner=Partner.get_partner(partner_pk))
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def update_driver_status(self, partner_pk):
     try:
         bolt_status = BoltRequest(partner_pk).get_drivers_status()
@@ -194,7 +194,7 @@ def update_driver_status(self, partner_pk):
         logger.error(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
         BoltRequest(partner_pk).synchronize()
@@ -206,7 +206,7 @@ def update_driver_data(self, partner_pk, manager_id=None):
     return manager_id
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
@@ -217,7 +217,7 @@ def send_on_job_application_on_driver(self, job_id):
         logger.error(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
     try:
         UklonRequest(partner_pk).detaching_the_driver_from_the_car(licence_plate)
@@ -226,7 +226,7 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
         logger.error(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def get_rent_information(self, partner_pk):
     try:
         UaGpsSynchronizer().get_rent_distance(partner_pk)
@@ -235,7 +235,7 @@ def get_rent_information(self, partner_pk):
         logger.error(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
         UklonRequest(partner_pk).disable_cash(pk, enable)
@@ -246,7 +246,7 @@ def fleets_cash_trips(self, partner_pk, pk, enable):
         logger.error(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def withdraw_uklon(self, partner_pk):
     try:
         UklonRequest(partner_pk).withdraw_money()
@@ -254,18 +254,18 @@ def withdraw_uklon(self, partner_pk):
         logger.error(e)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def manager_paid_weekly(self, partner_pk):
     logger.info('send message to manager')
     return partner_pk
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def send_weekly_report(self, partner_pk):
     return generate_message_weekly(partner_pk)
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def send_daily_report(self, partner_pk):
     message = ''
     dict_msg = {}
@@ -281,7 +281,7 @@ def send_daily_report(self, partner_pk):
     return dict_msg
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def send_efficiency_report(self, partner_pk):
     message = ''
     dict_msg = {}
@@ -294,7 +294,7 @@ def send_efficiency_report(self, partner_pk):
     return dict_msg
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def check_time_order(self, order_id):
     try:
         instance = Order.objects.get(pk=order_id)
@@ -318,7 +318,7 @@ def check_time_order(self, order_id):
     instance.save()
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def send_time_order(self):
     logger.info('sending_time_orders')
     accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
@@ -335,7 +335,7 @@ def send_time_order(self):
                              reply_markup=markup, parse_mode=ParseMode.HTML)
 
 
-@app.task(bind=True, max_retries=3)
+@app.task(bind=True, max_retries=3, queue='beat_tasks')
 def order_create_task(self, context, phone, chat_id, payment, message_id):
     try:
         if 'from_address' not in context:
@@ -380,7 +380,7 @@ def order_create_task(self, context, phone, chat_id, payment, message_id):
         bot.send_message(chat_id=515224934, text=str(e))
 
 
-@app.task(bind=True, max_retries=3)
+@app.task(bind=True, max_retries=3, queue='beat_tasks')
 def search_driver_for_order(self, order_pk):
     try:
         order = Order.objects.get(id=order_pk)
@@ -451,7 +451,7 @@ def search_driver_for_order(self, order_pk):
         logger.error(e)
 
 
-@app.task(bind=True, max_retries=90)
+@app.task(bind=True, max_retries=90, queue='beat_tasks')
 def send_map_to_client(self, order_pk, query_id, vehicle, client_msg, message, chat):
     order = Order.objects.get(id=order_pk)
     if order.chat_id_client:
@@ -485,7 +485,7 @@ def send_map_to_client(self, order_pk, query_id, vehicle, client_msg, message, c
         return message
 
 
-@app.task(bind=True)
+@app.task(bind=True, queue='beat_tasks')
 def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
     start = datetime.fromtimestamp(start_trip_with_client)
     format_end = datetime.fromtimestamp(end)
@@ -551,7 +551,7 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
 @app.on_after_finalize.connect
 def run_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             send_time_order.s())
+                             send_time_order.s(), queue='beat_tasks')
     for partner in Partner.objects.exclude(user__is_superuser=True):
         setup_periodic_tasks(partner, sender)
 
@@ -561,16 +561,19 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=2), update_driver_data.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour='*/2'), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute=59, hour='*/1'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=5, day_of_week=1), send_weekly_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1), manager_paid_weekly.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=7, day_of_week=1), get_uber_session.s(partner_id))
+    sender.add_periodic_task(crontab(minute=0, hour=2), update_driver_data.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=0, hour='*/2'), withdraw_uklon.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=59, hour='*/1'), get_rent_information.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=55, hour=5, day_of_week=1),
+                             send_weekly_report.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1),
+                             manager_paid_weekly.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute=55, hour=7, day_of_week=1),
+                             get_uber_session.s(partner_id), queue='beat_tasks')
 
 
 def remove_periodic_tasks(partner, sender=None):
