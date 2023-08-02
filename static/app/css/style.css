@@ -2088,7 +2088,7 @@ body .btn-one {
 /*form login*/
 
 
-.nav-item .btn-box span{
+.nav-item .btn-box span {
   color: #A8C465FF;
   display: flex;
   gap: 5px;
@@ -2125,6 +2125,7 @@ body .btn-one {
 
 #loginRadioForm {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   margin-bottom: 10px;
   margin-top: 25px;
@@ -2132,23 +2133,26 @@ body .btn-one {
   align-items: center;
 }
 
+#loginRadioForm label {
+  /*flex: 1;*/
+  max-width: 50%;
+}
+
+.login-form input[type="radio"] + label {
+  color: black;
+}
+
 .login-form input[type="radio"]:checked + label {
-  background-color: #E96F24;
+  text-decoration-line: underline;
+  text-decoration-color: #E96F24;
 }
 
-.login-form label {
-  display: inline-block;
-  cursor: pointer;
-  padding: 0px 15px;
-  line-height: 35px;
-  border: 1px solid #E96F24;
-  border-radius: 25px;
-  user-select: none;
-}
-
-#changePasswordRadio, #loginRadio {
+#changePasswordRadio,
+#loginRadio,
+#forgotPasswordRadio {
   display: none;
 }
+
 
 #loginFormFields input {
   display: flex;
@@ -2163,6 +2167,20 @@ body .btn-one {
   border: 1px solid #ccc;
   border-radius: 25px;
   margin-bottom: 10px;
+}
+
+.opt {
+  display: flex;
+}
+
+#showPassword {
+  margin-top: -8px !important;
+  margin-right: 10px;
+}
+
+
+#loginFormFields input[type="checkbox"] {
+  margin-top: 10px;
 }
 
 #loginFormFields button {
@@ -2184,4 +2202,19 @@ body .btn-one {
 
 .clickable .fa-user {
   cursor: pointer;
+}
+
+
+/* binotel hack */
+a#bingc-phone-button {
+    left: auto !important;
+    right: 2%;
+}
+#bingc-phone-button div.bingc-phone-button-tooltip {
+  right: 5px !important;
+  left: auto !important;
+}
+#bingc-phone-button div.bingc-phone-button-tooltip svg.bingc-phone-button-arrow {
+  left: auto !important;
+  right: 29px;
 }
