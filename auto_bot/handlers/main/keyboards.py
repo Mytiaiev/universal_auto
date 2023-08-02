@@ -2,7 +2,7 @@ from django.utils import timezone
 from telegram import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.models import UseOfCars
-from auto_bot.handlers.main.static_text import main_buttons, driver_option_buttons, manager_main_buttons
+from auto_bot.handlers.main.static_text import main_buttons, driver_option_buttons, manager_main_buttons, about_us
 from auto_bot.handlers.order.static_text import order_inline_buttons
 
 contact_keyboard = [
@@ -40,7 +40,17 @@ def inline_driver_func_kb():
 def inline_user_kb():
     keyboard = [
         [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
-        [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")]
+        [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")],
+        [InlineKeyboardButton(main_buttons[7], callback_data="About_us")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_about_us(url1, url2):
+    keyboard = [
+        [InlineKeyboardButton(about_us[0], url=url1)],
+        [InlineKeyboardButton(about_us[1], url=url2)],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
