@@ -1,16 +1,12 @@
-import datetime
-
-from celery.signals import task_postrun
-from django.core.serializers import deserialize
+from datetime import datetime, timedelta
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
 from app.models import Driver, Vehicle, Report_of_driver_debt, Event, ParkStatus
-from auto.tasks import get_rent_information
-from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard
+from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard, inline_dates_kb
 from auto_bot.handlers.driver.static_text import *
-from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, inline_start_driver_kb
+from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 
 
 def status_car(update, context):
@@ -84,40 +80,30 @@ def save_debt_report(update, context):
         return 'WAIT_FOR_DEBT_PHOTO'
 
 
+def choose_day_off_or_sick(update, context):
+    query = update.callback_query
+    data = query.data.split()[0]
+    context.user_data['driver'] = Driver.get_by_chat_id(update.effective_chat.id)
+    if data == "Off":
+        day = timezone.localtime() + timedelta(days=2)
+    else:
+        day = timezone.localtime()
+    query.edit_message_text(select_off_text)
+    query.edit_message_reply_markup(inline_dates_kb(data, day))
+
+
 def take_a_day_off_or_sick_leave(update, context):
     query = update.callback_query
-    if query.data.split()[0] == "Off":
-        event = DAY_OFF
-    else:
-        event = SICK_DAY
-    driver = Driver.get_by_chat_id(update.effective_chat.id)
-    check_event = Event.objects.filter(full_name_driver=driver, status_event=False).last()
-    result = f"Водій {driver} взяв {event}"
-    if check_event:
-        query.edit_message_text(text=f"У вас вже відкритий {check_event.event}.Бажаєте завершити його?")
-        query.edit_message_reply_markup(reply_markup=inline_start_driver_kb())
-    else:
-        ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
-        Event.objects.create(
-            full_name_driver=driver,
-            event=event,
-            chat_id=driver.chat_id)
-        query.edit_message_text(text=f'Ваш <<{event}>> розпочато.')
-        context.bot.send_message(chat_id=driver.manager.chat_id, text=result)
-
-
-# @task_postrun.connect
-# def send_day_rent(sender, **kwargs):
-#     if sender == get_rent_information:
-#         rent_json = kwargs.get('retval')
-#         try:
-#             deserialized_objects = list(deserialize('json', rent_json))
-#             instance = deserialized_objects[0].object
-#             chat_id = instance.driver.chat_id
-            # if instance.rent_distance > 20 and instance.driver.driver_status != Driver.OFFLINE:
-            #     rent_cost = int((instance.rent_distance-ParkSettings.get_value('FREE_RENT', 20))*ParkSettings.get_value('RENT_PRICE', 15))
-            #     message = f"""Ваша оренда сьогодні {instance.rent_distance} км,
-            #      вартість оренди {rent_cost}грн"""
-            #     bot.send_message(chat_id=chat_id, text=message)
-        # except:
-        #     pass
+    event_str, date_str = query.data.split()
+    event = Event.DAY_OFF if event_str == "Off" else Event.SICK_DAY
+    driver = context.user_data['driver']
+    selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    result = f"Водій {driver} взяв {event} на {selected_date}"
+    ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
+    Event.objects.create(
+        full_name_driver=context.user_data['driver'],
+        event=event,
+        event_date=selected_date,
+        chat_id=driver.chat_id)
+    query.edit_message_text(text=f'Ви взяли {event} на {selected_date}.')
+    context.bot.send_message(chat_id=driver.manager.chat_id, text=result)

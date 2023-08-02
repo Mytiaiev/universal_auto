@@ -317,7 +317,7 @@ def handle_order(update, context):
         context.bot.edit_message_reply_markup(chat_id=order.chat_id_client,
                                               message_id=order.client_message_id,
                                               reply_markup=None)
-        text_to_client(order, driver_cancel)
+        order.client_message_id = text_to_client(order, driver_cancel)
         order.status_order, order.driver, order.checked = Order.WAITING, None, False
         order.save()
     elif data[0] == "Client_on_site":

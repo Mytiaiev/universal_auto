@@ -8,8 +8,8 @@ kill_timeout = 5
   auto_rollback = true
   auto_scale_delay = "10s"
 [processes]
-  worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo"
-  beat   = "celery -A auto beat -l INFO"
+  worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q beat_tasks"
+  gps_worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q gps_tasks"
 [[services]]
   auto_stop_machines = true
   auto_start_machines = true
@@ -20,7 +20,3 @@ kill_timeout = 5
     hard_limit = 10
     soft_limit = 5
     type = "connections"
-  [services.autoscale]
-    min_processes = 1
-    max_processes = 10
-    enabled = true
