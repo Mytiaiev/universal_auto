@@ -8,10 +8,10 @@ from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 
-from app.models import User, Client, UseOfCars
+from app.models import User, Client, UseOfCars, ParkSettings
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
     inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb, \
-    inline_about_us, inline_contract_offer
+    inline_about_us
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
@@ -97,17 +97,8 @@ def update_phone_number(update, context):
 def get_about_us(update, context):
     query = update.callback_query
     query.edit_message_text(text=more_func_text)
-    query.edit_message_reply_markup(reply_markup=inline_about_us())
-
-
-def get_privacy_police(update, context):
-    pass
-
-
-def get_contact_offer(update, context):
-    query = update.callback_query
-    query.edit_message_text(text=more_func_text)
-    query.edit_message_reply_markup(reply_markup=inline_contract_offer('About_us'))
+    query.edit_message_reply_markup(reply_markup=inline_about_us(url1=ParkSettings.get_value('PRIVACY_POLICE'),
+                                                                 url2=ParkSettings.get_value('CONTRACT_OFFER')))
 
 
 def helptext(update, context):

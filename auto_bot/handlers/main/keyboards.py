@@ -46,28 +46,11 @@ def inline_user_kb():
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_about_us():
+def inline_about_us(url1, url2):
     keyboard = [
-        [InlineKeyboardButton(about_us[0], callback_data="Privacy_police")],
-        [InlineKeyboardButton(about_us[1], callback_data="Contract_offer")],
+        [InlineKeyboardButton(about_us[0], url=url1)],
+        [InlineKeyboardButton(about_us[1], url=url2)],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
-
-def inline_contract_offer(callback_data):
-    keyboard = [
-        [InlineKeyboardButton(about_us[2], callback_data="Change_and_return")],
-        [InlineKeyboardButton(about_us[3], callback_data="Order_and_use")],
-        [InlineKeyboardButton(about_us[4], callback_data="Order_cancel_")],
-        [InlineKeyboardButton(about_us[5], callback_data="Delivery")],
-        [InlineKeyboardButton(about_us[6], callback_data="Back_and_bring_out")],
-        [InlineKeyboardButton(about_us[7], callback_data="Desc_company")],
-        [InlineKeyboardButton(about_us[8], callback_data="F_L_address")],
-        [InlineKeyboardButton(about_us[9], callback_data="IPN")],
-        [InlineKeyboardButton(about_us[10], callback_data="Support_service")],
-        [InlineKeyboardButton(about_us[11], callback_data="Email_addresses")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data=callback_data)]
     ]
     return InlineKeyboardMarkup(keyboard)
 
