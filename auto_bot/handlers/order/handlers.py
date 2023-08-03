@@ -294,11 +294,11 @@ def handle_callback_order(update, context):
                 order.client_message_id = client_msg
                 order.save()
                 if order.chat_id_client:
-                    lat, long = get_location_from_db(vehicle)
+                    lat, long = get_location_from_db(record.licence_plate)
                     bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
                     message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
                     send_map_to_client.delay(order.id, query.message.message_id,
-                                             vehicle.pk, client_msg, message.message_id, message.chat_id)
+                                             record.licence_plate, client_msg, message.message_id, message.chat_id)
         else:
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
 
@@ -317,7 +317,7 @@ def handle_order(update, context):
         context.bot.edit_message_reply_markup(chat_id=order.chat_id_client,
                                               message_id=order.client_message_id,
                                               reply_markup=None)
-        text_to_client(order, driver_cancel)
+        order.client_message_id = text_to_client(order, driver_cancel)
         order.status_order, order.driver, order.checked = Order.WAITING, None, False
         order.save()
     elif data[0] == "Client_on_site":

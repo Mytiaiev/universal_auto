@@ -226,13 +226,16 @@ class DriverManager(User):
 
 
 class Vehicle(models.Model):
-
     name = models.CharField(max_length=255, verbose_name='Назва')
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
+    registration = models.CharField(null=True, max_length=12, unique=True, verbose_name='Номер документа')
     vin_code = models.CharField(max_length=17)
     gps_id = models.IntegerField(default=0)
     gps_imei = models.CharField(max_length=100, default='')
+    coord_time = models.DateTimeField(null=True, verbose_name="Час отримання координат")
+    lat = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Широта")
+    lon = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Довгота")
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -246,14 +249,6 @@ class Vehicle(models.Model):
 
     def __str__(self) -> str:
         return f'{self.licence_plate}'
-
-    @staticmethod
-    def get_by_numberplate(licence_plate):
-        try:
-            vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-            return vehicle
-        except ObjectDoesNotExist:
-            return None
 
     @staticmethod
     def name_validator(name):
@@ -867,17 +862,18 @@ class Report_of_driver_debt(models.Model):
 
 
 class Event(models.Model):
+    SICK_DAY = "Лікарняний"
+    DAY_OFF = "Вихідний"
     full_name_driver = models.CharField(max_length=255, verbose_name='Водій')
     event = models.CharField(max_length=20, verbose_name='Подія')
+    event_date = models.DateTimeField(null=True, blank=True, verbose_name='Час події')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
-    status_event = models.BooleanField(default=False, verbose_name='Працює')
-
     created_at = models.DateTimeField(auto_now_add=True, editable=False, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
-        verbose_name = 'Подія'
-        verbose_name_plural = 'Події'
+        verbose_name = 'Відпочинок і лікування'
+        verbose_name_plural = 'Відпочинки і лікування'
 
 
 class SubscribeUsers(models.Model):
