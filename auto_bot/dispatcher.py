@@ -9,7 +9,8 @@ from auto_bot.states import text
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
     get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, \
     driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report, get_earning_report, \
-    get_efficiency_report, get_report, get_efficiency_auto
+    get_efficiency_report, get_report, get_efficiency_auto, get_partner_vehicles, get_partner_drivers, \
+    pin_partner_vehicle_to_driver
 from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
@@ -21,9 +22,9 @@ from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_s
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     cancel_order, order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
-    ask_client_action, handle_order
+    ask_client_action, handle_order, choose_date_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
-    more_function, start_query
+    more_function, start_query, get_about_us
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -113,7 +114,8 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(cancel_order, pattern="Cancel_no_comment"))
     dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))
     dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
-    dp.add_handler(CallbackQueryHandler(time_order, pattern="On_time_order|No_driver_time_order"))
+    dp.add_handler(CallbackQueryHandler(choose_date_order, pattern="On_time_order"))
+    dp.add_handler(CallbackQueryHandler(time_order, pattern="Today_order|Tomorrow_order|No_driver_time_order"))
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
     dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order,
@@ -168,6 +170,14 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(get_report, pattern="Daily_report|Custom_report"))
     dp.add_handler(CallbackQueryHandler(get_efficiency_auto, pattern="Efficiency_daily|Efficiency_custom"))
     dp.add_handler(CallbackQueryHandler(get_efficiency_report, pattern="Get_efficiency_report"))
+    dp.add_handler(CallbackQueryHandler(get_partner_vehicles, pattern="Pin_vehicle_to_driver"))
+    dp.add_handler(CallbackQueryHandler(get_partner_drivers,
+                                        pattern=re.compile("^select_vehicle [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(pin_partner_vehicle_to_driver,
+                                        pattern=re.compile("^pin_vehicle [0-9]+ [0-9]+$")))
+
+    dp.add_handler(CallbackQueryHandler(get_about_us, pattern="About_us"))
+
     # Returns status cars
     dp.add_handler(CommandHandler("car_status", broken_car))
     # Viewing status driver

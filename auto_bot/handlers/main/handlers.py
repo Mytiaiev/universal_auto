@@ -8,9 +8,10 @@ from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 
-from app.models import User, Client, UseOfCars
+from app.models import User, Client, UseOfCars, ParkSettings
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
-    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb
+    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb, \
+    inline_about_us
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
@@ -93,6 +94,13 @@ def update_phone_number(update, context):
     context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=inline_user_kb())
 
 
+def get_about_us(update, context):
+    query = update.callback_query
+    query.edit_message_text(text=more_func_text)
+    query.edit_message_reply_markup(reply_markup=inline_about_us(url1=ParkSettings.get_value('PRIVACY_POLICE'),
+                                                                 url2=ParkSettings.get_value('CONTRACT_OFFER')))
+
+
 def helptext(update, context):
     update.message.reply_text(help_text)
 
@@ -114,7 +122,13 @@ rollbar.init(access_token=os.environ.get('ROLLBAR_TOKEN'),
 
 
 def error_handler(update, context) -> None:
+    """Log the error and send a rollbar message to notify the developer."""
+    if not os.environ.get('DEBUG'):
+        rollbar.report_exc_info()
+    error(update, context)
 
+
+def error(update, context):
     """Log the error and send a telegram message to notify the developer."""
     # Log the error before we do anything else, so we can see it even if something breaks.
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
@@ -138,6 +152,7 @@ def error_handler(update, context) -> None:
 
     # Finally, send the message
     context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message, parse_mode=ParseMode.HTML)
+
 
 
 def menu(update, context):

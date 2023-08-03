@@ -22,11 +22,15 @@ start_report_text = "Введіть з якої дати отримати зві
 end_report_text = "Введіть по яку дату отримати звіт (РРРР-ММ-ДД)"
 invalid_data_text = "Невірні дані, спробуйте ще раз"
 invalid_end_data_text = "Невірна кінцева дата, введіть ще раз"
+partner_vehicles = "Оберіть авто"
+partner_drivers = "Оберіть водія"
+pin_vehicle_callback = "pin_vehicle"
 
 
 report_period = ("Минулий тиждень",
                  "Поточний тиждень",
                  "Вибрати період")
+
 
 def ask_driver_paid(driver):
     message = f"Чи розрахувався водій {driver} за минулий тиждень?"
@@ -39,3 +43,7 @@ def remove_cash_text(driver, enable):
     else:
         message = f"Готівка вимкнена {driver}."
     return message
+
+
+def pin_vehicle_to_driver(driver, vehicle):
+    return f"Водію - {driver} прикріплено авто {vehicle}"

@@ -5,7 +5,8 @@ kill_timeout = 5
 [env]
   DEBUG = 0
 [experimental]
-   auto_rollback = true
+  auto_rollback = true
+  auto_scale_delay = "10s"
 [processes]
   worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo"
   beat   = "celery -A auto beat -l INFO"
@@ -14,9 +15,12 @@ kill_timeout = 5
   auto_start_machines = true
   processes = ['worker']
   protocol = "tcp"
+
   [services.concurrency]
     hard_limit = 10
     soft_limit = 5
     type = "connections"
- 
-
+  [services.autoscale]
+    min_processes = 1
+    max_processes = 10
+    enabled = true
