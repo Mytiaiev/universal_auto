@@ -1,13 +1,13 @@
 import re
-import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
 from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
-from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order,\
-    inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb,\
-    share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client
+from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
+    inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb, \
+    share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client, inline_choose_date_kb
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db
@@ -154,10 +154,9 @@ def order_create(update, context):
     button_text = query.message.reply_markup.inline_keyboard[data][0].text
     payment = button_text.split(' ')[1]
     user = Client.get_by_chat_id(update.effective_chat.id)
-
+    query.edit_message_text(creating_order_text)
     order_create_task.delay(context.user_data, user.phone_number,
                             user.chat_id, payment, query.message.message_id)
-    query.edit_message_text(creating_order_text)
 
 
 def increase_search_radius(update, context):
@@ -184,9 +183,15 @@ def increase_order_price(update, context):
     order.save()
 
 
+def choose_date_order(update, context):
+    query = update.callback_query
+    query.edit_message_text(order_date_text)
+    query.edit_message_reply_markup(inline_choose_date_kb())
+
+
 def time_order(update, context):
     query = update.callback_query
-    if query.data == "On_time_order":
+    if query.data in ("Today_order", "Tomorrow_order"):
         context.user_data['time_order'] = query.data
     context.user_data['state'] = TIME_ORDER
     query.edit_message_text(text=ask_time_text)
@@ -198,20 +203,22 @@ def order_on_time(update, context):
 
     if re.match(pattern, user_time):
         format_time = timezone.datetime.strptime(user_time, '%H:%M').time()
-        min_time = timezone.localtime().replace(tzinfo=None) + datetime.timedelta(minutes=int(
-                                                                       ParkSettings.get_value('TIME_ORDER_MIN', 60)))
-        conv_time = timezone.datetime.combine(timezone.localtime(), format_time)
-
-        if min_time <= conv_time:
-            if context.user_data.get('time_order') is not None:
-                context.user_data['time_order'] = conv_time
-                from_address(update, context)
-            else:
+        if context.user_data.get('time_order') == "Tomorrow_order":
+            tomorrow = datetime.now() + timedelta(days=1)
+            order_time = datetime.combine(tomorrow.date(), format_time)
+        else:
+            order_time = datetime.combine(datetime.now().date(), format_time)
+        time_difference = order_time - datetime.now()
+        if time_difference.total_seconds() / 60 > int(ParkSettings.get_value('TIME_ORDER_MIN', 60)):
+            if context.user_data.get('time_order') is None:
                 order = Order.objects.filter(chat_id_client=user.chat_id,
                                              status_order=Order.WAITING).last()
-                order.status_order, order.order_time, order.checked = Order.ON_TIME, conv_time, False
+                order.status_order, order.order_time, order.checked = Order.ON_TIME, order_time, False
                 order.save()
                 update.message.reply_text(order_complete)
+            else:
+                context.user_data['time_order'] = timezone.make_aware(order_time)
+                from_address(update, context)
         else:
             update.message.reply_text(small_time_delta)
             context.user_data['state'] = TIME_ORDER
