@@ -47,23 +47,25 @@ class PostRequestView(View):
         action = request.POST.get('action')
 
         if action == 'order':
-            return handler.handle_order_form(request)
+            return handler.handler_order_form(request)
         elif action == 'subscribe':
-            return handler.handle_subscribe_form(request)
+            return handler.handler_subscribe_form(request)
         elif action == 'send_comment':
-            return handler.handle_comment_form(request)
+            return handler.handler_comment_form(request)
         elif action in ['order_sum', 'user_opt_out']:
-            return handler.handle_update_order(request)
+            return handler.handler_update_order(request)
         elif action in ['increase_price', 'continue_search']:
             return handler.handler_restarting_order(request)
         elif action in ['Uber_login', 'Uklon_login', 'Bolt_login']:
-            return handler.success_login(request)
+            return handler.handler_success_login(request)
         elif action == 'login_invest':
-            return handler.success_login_investor(request)
+            return handler.handler_success_login_investor(request)
         elif action == 'logout_invest':
-            return handler.logout_investor(request)
+            return handler.handler_logout_investor(request)
+        elif action == 'change_password':
+            return handler.handler_change_password(request)
         else:
-            return handler.handle_unknown_action(request)
+            return handler.handler_unknown_action(request)
 
 
 class GetRequestView(View):

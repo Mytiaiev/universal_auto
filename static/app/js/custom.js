@@ -1085,6 +1085,8 @@ $(document).ready(function () {
 
 	$("#loginBtn").click(function () {
 		$("#loginForm").fadeIn();
+		$("#loginRadio").hide();
+		$("label[for='loginRadio']").hide();
 	});
 
 	$("#closeLoginForm").click(function () {
@@ -1100,6 +1102,11 @@ $(document).ready(function () {
 			$("#change-password").hide();
 			$("#login-invest").show();
 			$("#login-invest-google").show();
+
+			$("label[for='loginRadio']").hide();
+			$("label[for='changePasswordRadio']").show();
+			$("label[for='forgotPasswordRadio']").show();
+
 		} else if (this.value === "changePassword") {
 			$("#loginFormFields").show();
 			$("#newPassword").show();
@@ -1107,6 +1114,15 @@ $(document).ready(function () {
 			$("#login-invest").hide();
 			$("#login-invest-google").hide();
 			$("#change-password").show();
+
+			$("label[for='loginRadio']").show();
+			$("label[for='forgotPasswordRadio']").hide();
+
+		} else if (this.value === "forgotPassword") {
+
+
+			$("label[for='loginRadio']").show();
+			$("label[for='changePasswordRadio']").hide();
 
 		}
 	});
@@ -1130,8 +1146,73 @@ $(document).ready(function () {
 					$("#loginBtn").hide();
 					$("#loggedInUser").text('Кабінет Інвестора').show();
 					$("#loginForm").fadeOut();
+				} else {
+					$("#login").val("Невірний логін або пароль").addClass("error-message");
+					$("#password").val("Невірний логін або пароль").addClass("error-message");
 				}
 			}
 		});
 	});
+
+	$("#change-password").click(function () {
+		let login = $("#login").val();
+		let password = $("#password").val();
+		let newPassword = $("#newPassword").val();
+		let confirmPassword = $("#confirmPassword").val();
+		let action = 'change_password';
+
+		if (newPassword !== confirmPassword) {
+			$("#newPassword").val("Пароль не співпадає").addClass("error-message");
+			$("#confirmPassword").val("Пароль не співпадає").addClass("error-message");
+		} else {
+			$.ajax({
+				url: ajaxPostUrl,
+				type: 'POST',
+				data: {
+					action: action,
+					login: login,
+					password: password,
+					newPassword: newPassword,
+					csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+				},
+				success: function (data) {
+					if (data.data['success'] === true) {
+						$("#loginBtn").hide();
+						$("#loggedInUser").text('Кабінет Інвестора').show();
+						$("#loginForm").fadeOut();
+					} else {
+						$("#login").val("Невірний логін або пароль").addClass("error-message");
+						$("#password").val("Невірний логін або пароль").addClass("error-message");
+					}
+				}
+			});
+		}
+	});
+
+	// $("#login-invest-google").click(function () {
+	// 	signInWithGoogle();
+	// });
+
+	// function signInWithGoogle() {
+	// 	gapi.load('auth2', function () {
+	// 		gapi.auth2.init({
+	// 			client_id: '300126065073-tic8iuc9vactfjcej4tttiakbpdf1bg2.apps.googleusercontent.com',
+	// 		}).then(function (auth2) {
+	// 			auth2.signIn().then(function (googleUser) {
+	// 				let accessToken = googleUser.getAuthResponse().access_token;
+	//
+	// 				let userId = profile.getId();
+	// 				let userName = profile.getName();
+	// 				let userEmail = profile.getEmail();
+	// 				let userProfileImage = profile.getImageUrl();
+	//
+	// 				console.log(accessToken);
+	// 				console.log(userId);
+	// 				console.log(userName);
+	// 				console.log(userEmail);
+	// 				console.log(userProfileImage);
+	// 			});
+	// 		});
+	// 	});
+	// }
 });

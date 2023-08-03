@@ -380,7 +380,7 @@ $(document).ready(function () {
 	});
 
 	$('input[name="effective-period"]').change(function () {
-		const selectedEffective = $(this).valconst
+		const selectedEffective = $(this).val();
 		const vehicleId = $('#vehicle-select').val();
 		const period = getPeriod(selectedEffective);
 

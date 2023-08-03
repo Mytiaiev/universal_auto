@@ -1,7 +1,7 @@
 {% load static %}
 {% load i18n %}
 
-<html lang="uk">
+<html lang="uk" xmlns="http://www.w3.org/1999/html">
 
 <head>
 	<!-- Basic -->
@@ -106,24 +106,52 @@
 			<div id="loginForm" class="login-form">
 				<span id="closeLoginForm" class="close-btn">&times;</span>
 				<h2>Кабінет інвестора</h2>
-				<form id="loginRadioForm">
-					{% csrf_token %}
-					<input type="radio" name="loginType" value="login" id="loginRadio" checked>
-					<label for="loginRadio">Увійти</label>
-					<input type="radio" name="loginType" value="changePassword" id="changePasswordRadio">
-					<label for="changePasswordRadio">Змінити пароль</label>
-				</form>
 				<form id="loginFormFields">
 					{% csrf_token %}
 					<input type="text" id="login" placeholder="Логін">
 					<input type="password" id="password" placeholder="Пароль">
+					<div class="opt">
+						<input type="checkbox" id="showPassword">
+						<label for="showPassword">Показати пароль</label>
+					</div>
+					<input type="text" id="newPassword" placeholder="Новий пароль" style="display: none;">
+					<input type="text" id="confirmPassword" placeholder="Підтвердження пароля" style="display: none;">
 					<button id="login-invest" type="button">Увійти</button>
-					<button id="login-invest-google" type="button">Google</button>
-					<input type="password" id="newPassword" placeholder="Новий пароль" style="display: none;">
-					<input type="password" id="confirmPassword" placeholder="Підтвердження пароля" style="display: none;">
+					<!-- <button id="login-invest-google" type="button">Google</button> -->
+					<div id="g_id_onload"
+							 data-client_id="300126065073-tic8iuc9vactfjcej4tttiakbpdf1bg2.apps.googleusercontent.com"
+							 data-context="signin"
+							 data-ux_mode="popup"
+							 data-callback="zbsCallback"
+							 data-auto_prompt="false">
+					</div>
+
+					<div class="g_id_signin"
+							 data-type="standard"
+							 data-shape="pill"
+							 data-theme="filled_black"
+							 data-text="signin_with"
+							 data-size="medium"
+							 data-logo_alignment="left">
+					</div>
 					<button id="change-password" type="button" style="display: none;">Змінити</button>
+				</form>
+				<form id="loginRadioForm">
+					{% csrf_token %}
+					<input type="radio" name="loginType" value="login" id="loginRadio" checked>
+					<label for="loginRadio">Увійти до кабінету</label>
+					<input type="radio" name="loginType" value="changePassword" id="changePasswordRadio">
+					<label for="changePasswordRadio">Змінити пароль</label>
+					<input type="radio" name="loginType" value="forgotPassword" id="forgotPasswordRadio">
+					<label for="forgotPasswordRadio">Забув пароль</label>
 				</form>
 			</div>
 		</nav>
 	</div>
 </header>
+
+<script>
+	function zbsCallback(response) {
+		console.log(response);
+	}
+</script>
