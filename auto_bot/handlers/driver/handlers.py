@@ -31,7 +31,7 @@ def change_status_car(update, context):
     number_car = context.user_data['licence_place']
     numberplates = [i.licence_plate for i in Vehicle.objects.all()]
     if number_car in numberplates:
-        vehicle = Vehicle.get_by_numberplate(number_car)
+        vehicle = Vehicle.objects.get(licence_plate=number_car)
         vehicle.car_status = context.user_data['status']
         vehicle.save()
         numberplates.clear()

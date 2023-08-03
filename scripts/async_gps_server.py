@@ -5,7 +5,6 @@ import re
 import asyncpg
 from asgiref.sync import sync_to_async
 from auto.tasks import raw_gps_handler
-from django.db import connection
 from django.utils.timezone import now
 
 
@@ -40,9 +39,9 @@ class PackageHandler:
         if self.imei and kwargs['msg']:
             imei,  client_ip, client_port = self.imei, kwargs['addr'][0], kwargs['addr'][1]
             data, created_at = kwargs['msg'], await sync_to_async(now)()
+            database_url = os.environ.get('DATABASE_URL')
+            conn = await asyncpg.connect(dsn=database_url)
             try:
-                database_url = os.environ.get('DATABASE_URL')
-                conn = await asyncpg.connect(dsn=database_url)
                 query = """
                             INSERT INTO app_rawgps (imei, client_ip, client_port, data, created_at)
                             VALUES ($1, $2, $3, $4, $5)
@@ -55,10 +54,10 @@ class PackageHandler:
 
                 return self.answer_data
             except (Exception, asyncpg.PostgresError) as error:
-
                 print("Error inserting GPS data:", error)
-
                 return self.answer_bad_data
+            finally:
+                await conn.close()
         else:
             return self.answer_bad_data
 

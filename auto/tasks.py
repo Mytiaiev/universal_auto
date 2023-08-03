@@ -10,7 +10,7 @@ from celery.utils.log import get_task_logger
 from telegram import ParseMode
 from telegram.error import BadRequest, Unauthorized
 
-from app.models import RawGPS, Vehicle, VehicleGPS, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
+from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
@@ -47,31 +47,15 @@ def raw_gps_handler(pk):
         lat, lon = convertion(data[2]), convertion(data[4])
     except ValueError:
         lat, lon = 0, 0
-    try:
-        vehicle = Vehicle.objects.get(gps_imei=raw.imei)
-    except ObjectDoesNotExist:
-        return f'{ObjectDoesNotExist}: gps_imei={raw.imei}'
+
     try:
         date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = timezone.make_aware(date_time)
+        date_time = timezone.make_aware(date_time, timezone.get_current_timezone())
     except ValueError as err:
-        return f'{ValueError} {err}'
-    try:
-        kwa = {
-            'date_time': date_time,
-            'vehicle': vehicle,
-            'lat': float(lat),
-            'lat_zone': data[3],
-            'lon': float(lon),
-            'lon_zone': data[5],
-            'speed': float(data[6]),
-            'course': float(data[7]),
-            'height': float(data[8]),
-            'raw_data': raw,
-        }
-        VehicleGPS.objects.create(**kwa)
-    except ValueError as err:
-        return f'{ValueError} {err}'
+        return f'Error converting date and time: {err}'
+    updated = Vehicle.objects.filter(gps_imei=raw.imei).update(lat=lat, lon=lon, coord_time=date_time)
+    if not updated:
+        return f'No vehicle found with gps_imei={raw.imei}'
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -412,8 +396,7 @@ def search_driver_for_order(self, order_pk):
                 ParkStatus.objects.create(driver=driver, status=Driver.GET_ORDER)
                 driver.driver_status = Driver.GET_ORDER
                 driver.save()
-                vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-                driver_lat, driver_long = get_location_from_db(vehicle)
+                driver_lat, driver_long = get_location_from_db(record.licence_plate)
                 distance = haversine(float(driver_lat), float(driver_long),
                                      float(order.latitude), float(order.longitude))
                 radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
@@ -452,11 +435,11 @@ def search_driver_for_order(self, order_pk):
 
 
 @app.task(bind=True, max_retries=90, queue='beat_tasks')
-def send_map_to_client(self, order_pk, query_id, vehicle, client_msg, message, chat):
+def send_map_to_client(self, order_pk, query_id, licence, client_msg, message, chat):
     order = Order.objects.get(id=order_pk)
     if order.chat_id_client:
         try:
-            latitude, longitude = get_location_from_db(vehicle)
+            latitude, longitude = get_location_from_db(licence)
             distance = haversine(float(latitude), float(longitude), float(order.latitude), float(order.longitude))
             if order.status_order in (Order.CANCELED, Order.WAITING):
                 bot.stopMessageLiveLocation(chat, message)
@@ -469,17 +452,17 @@ def send_map_to_client(self, order_pk, query_id, vehicle, client_msg, message, c
                                               reply_markup=inline_client_spot(order_pk, message))
             else:
                 bot.editMessageLiveLocation(chat, message, latitude=latitude, longitude=longitude)
-                self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=20)
+                self.retry(args=[order_pk, query_id, licence, client_msg, message, chat], countdown=20)
         except BadRequest as e:
             if "Message can't be edited" in str(e) or order.status_order in (Order.CANCELED, Order.WAITING):
                 pass
             else:
-                raise self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=30) from e
+                raise self.retry(args=[order_pk, query_id, licence, client_msg, message, chat], countdown=30) from e
         except StopIteration:
             pass
         except Exception as e:
             logger.error(msg=str(e))
-            self.retry(args=[order_pk, query_id, vehicle, client_msg, message, chat], countdown=30)
+            self.retry(args=[order_pk, query_id, licence, client_msg, message, chat], countdown=30)
         if self.request.retries >= self.max_retries:
             bot.stopMessageLiveLocation(chat, message)
         return message

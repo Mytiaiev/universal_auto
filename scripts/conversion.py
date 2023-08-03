@@ -1,29 +1,26 @@
 import requests
-from app.models import VehicleGPS, ParkSettings
+from app.models import ParkSettings, Vehicle
 import re
 from shapely.geometry import Point, Polygon, LineString
 from shapely.ops import split
-import os
 from math import radians, sin, cos, sqrt, atan2
 
 
 def convertion(coordinates: str):
     """ ex from (5045.4321 or 05045.4321) to 50.123456 or 050.123456
         (-5045.4321 or -05045.4321) to -50.123456 or -050.123456 """
-    flag = False
-    if coordinates[0] == '-':
+    is_negative = coordinates.startswith('-')
+    if is_negative:
         coordinates = coordinates[1:]
-        flag = True
-    if len(coordinates) == 9:
-        index = 2
-    elif len(coordinates) == 10:
-        index = 3
+    index = 2 if len(coordinates) == 9 else 3
 
     degrees, minutes = coordinates[:index], coordinates[index:]
     result = float(degrees) + float(minutes) / 60
+    if is_negative:
+        result = -result
+
     result = round(result, 6)
-    if flag:
-        result = float(f'-{str(result)}')
+
     return result
 
 
@@ -99,8 +96,8 @@ def coord_to_link(end_lat, end_lng):
     return f"https://www.waze.com/ul?ll={end_lat},{end_lng}&navigate=yes"
 
 
-def get_location_from_db(vehicle):
-    gps = VehicleGPS.objects.filter(vehicle=vehicle).last()
+def get_location_from_db(licence_plate):
+    gps = Vehicle.objects.get(licence_plate=licence_plate)
     latitude, longitude = str(gps.lat), str(gps.lon)
     return latitude, longitude
 
