@@ -622,28 +622,28 @@
   </section>
 <script>
 jQuery(document).ready(function($) {
-   $('.tabs__title').click(function(){
-    const t = $(this);
-    const id = t.data('target');
-    const tabs = t.siblings('.tabs__title');
+	 $('.tabs__title').click(function(){
+		 const t = $(this);
+		 const id = t.data('target');
+		 const tabs = t.siblings('.tabs__title');
 
-    if(!t.hasClass('is-active')) {
-     t.addClass('is-active');
-     tabs.removeClass('is-active');
-     $('.tabs__content').removeClass('is-active');
-     $(`.tabs__content[data-target="${id}"]`).addClass('is-active');
+		 if(!t.hasClass('is-active')) {
+			 t.addClass('is-active');
+			 tabs.removeClass('is-active');
+			 $('.tabs__content').removeClass('is-active');
+			 $(`.tabs__content[data-target="${id}"]`).addClass('is-active');
 
-     window.location.hash = id;
-    }
-    return false;
-   });
+			 window.location.hash = id;
+		 }
+		 return false;
+	 });
 
-  window.onload = function() {
-   const hash = window.location.hash.slice(1);
-   if(hash) {
-    $(`.tabs__title[data-target="${hash}"]`).click();
-   }
-  }
+	window.onload = function() {
+		const hash = window.location.hash.slice(1);
+		if(hash) {
+			$(`.tabs__title[data-target="${hash}"]`).click();
+		}
+	}
 });
 </script>
   {% endblock %}

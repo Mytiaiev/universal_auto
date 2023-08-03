@@ -380,7 +380,7 @@ $(document).ready(function () {
 	});
 
 	$('input[name="effective-period"]').change(function () {
-		const selectedEffective = $(this).valconst
+		const selectedEffective = $(this).val();
 		const vehicleId = $('#vehicle-select').val();
 		const period = getPeriod(selectedEffective);
 
@@ -576,4 +576,38 @@ $(document).ready(function () {
 			}
 		});
 	}
+});
+
+$(document).ready(function () {
+
+	$.ajax({
+		url: ajaxGetUrl,
+		type: "GET",
+		data: {
+			action: "is_logged_in"
+		},
+		success: function (data) {
+			if (data.is_logged_in === true) {
+				let userName = data.user_name;
+				$("#account_circle").text(userName).show();
+				$("#logout-dashboard").show();
+			}
+		}
+	})
+
+	$("#logout-dashboard").click(function () {
+		$.ajax({
+			type: "POST",
+			url: ajaxPostUrl,
+			data: {
+				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
+				action: "logout_invest",
+			},
+			success: function (response) {
+				if (response.logged_out === true) {
+					window.location.href = "/";
+				}
+			}
+		});
+	});
 });
