@@ -357,9 +357,8 @@ class ReportOfDriverDebtAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('full_name_driver', 'event', 'status_event', 'event_date')
-    list_filter = ('full_name_driver', 'event', 'status_event')
-    list_editable = ['status_event']
+    list_display = ('full_name_driver', 'event', 'event_date')
+    list_filter = ('full_name_driver', 'event', 'event_date')
 
     fieldsets = [
         (None, {'fields': ['full_name_driver', 'event', 'chat_id', 'event_date']}),
@@ -734,7 +733,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'type',
                                                             ]}),
-                ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei',
+                ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei', 'lat', 'lon',
                                                             'car_status', 'gps_id',
                                                             ]}),
                 ('Додатково',                   {'fields': ['partner', 'manager',
