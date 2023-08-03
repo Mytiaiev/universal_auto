@@ -24,7 +24,7 @@ from auto_bot.handlers.order.handlers import continue_order, to_the_address, fro
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
     ask_client_action, handle_order, choose_date_order
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
-    more_function, start_query
+    more_function, start_query, get_about_us
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -177,6 +177,8 @@ def setup_dispatcher(dp):
                                         pattern=re.compile("^select_vehicle [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(pin_partner_vehicle_to_driver,
                                         pattern=re.compile("^pin_vehicle [0-9]+ [0-9]+$")))
+
+    dp.add_handler(CallbackQueryHandler(get_about_us, pattern="About_us"))
 
     # Returns status cars
     dp.add_handler(CommandHandler("car_status", broken_car))

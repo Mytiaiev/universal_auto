@@ -148,3 +148,5 @@ CELERY_RESULT_BACKEND = os.environ['CELERY_RESULT_BACKEND']
 CELERY_IMPORTS = [
     'auto.tasks',
 ]
+
+SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"

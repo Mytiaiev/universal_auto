@@ -1,11 +1,12 @@
 from django.http import JsonResponse, HttpResponse
 from django.forms.models import model_to_dict
+from django.contrib.auth import logout
 
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import *
 
 class PostRequestHandler:
-    def handle_order_form(self, request):
+    def handler_order_form(self, request):
         order_form = MainOrderForm(request.POST)
         if order_form.is_valid():
             save_form = order_form.save(
@@ -18,7 +19,7 @@ class PostRequestHandler:
         else:
             return JsonResponse(order_form.errors, status=400)
 
-    def handle_subscribe_form(self, request):
+    def handler_subscribe_form(self, request):
         sub_form = SubscriberForm(request.POST)
         if sub_form.is_valid():
             sub_form.save()
@@ -26,7 +27,7 @@ class PostRequestHandler:
         else:
             return JsonResponse(sub_form.errors, status=400)
 
-    def handle_comment_form(self, request):
+    def handler_comment_form(self, request):
         comment_form = CommentForm(request.POST)
         if comment_form.is_valid():
             comment_form.save()
@@ -35,7 +36,7 @@ class PostRequestHandler:
             return JsonResponse(
                 {'success': False, 'errors': 'Щось пішло не так!'})
 
-    def handle_update_order(self, request):
+    def handler_update_order(self, request):
         id_order = request.POST.get('idOrder')
         action = request.POST.get('action')
 
@@ -51,7 +52,7 @@ class PostRequestHandler:
 
         return JsonResponse({}, status=200)
 
-    def success_login(self, request):
+    def handler_success_login(self, request):
         action = request.POST.get('action')
         login = request.POST.get('login')
         password = request.POST.get('password')
@@ -62,7 +63,30 @@ class PostRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_unknown_action(self, request):
+    def handler_success_login_investor(self, request):
+        login = request.POST.get('login')
+        password = request.POST.get('password')
+
+        success_login = login_in_investor(request, login, password)
+        json_data = JsonResponse({'data': success_login}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
+    def handler_logout_investor(self, request):
+        logout(request)
+        return JsonResponse({'logged_out': True})
+
+    def handler_change_password(self, request):
+        login = request.POST.get('login')
+        password = request.POST.get('password')
+        new_password = request.POST.get('newPassword')
+
+        change = change_password_investor(request, login, password, new_password)
+        json_data = JsonResponse({'data': change}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
+    def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
 
 
@@ -94,6 +118,14 @@ class GetRequestHandler:
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
+
+    def handle_is_logged_in(self, request):
+        if request.user.is_authenticated:
+            user_name = request.user.username
+            response_data = {'is_logged_in': True, 'user_name': user_name}
+        else:
+            response_data = {'is_logged_in': False}
+        return JsonResponse(response_data, safe=False)
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)

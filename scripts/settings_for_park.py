@@ -25,6 +25,9 @@ settings = {
     'ORDER_CHAT': ('515224934', 'Чат замовлень'),
     'UKLON_TOKEN': ('Enter token for Uklon', 'Код автопарку в Uklon'),
     'GOOGLE_ID_ORDER_CALENDAR': ('Введіть ID календаря для замовлень', 'ID календаря Ninja'),
+    'DEVELOPER_CHAT_ID': ('-900290422', 'Чат для розробників'),
+    'PRIVACY_POLICE': ('url', 'Політика конфіденційності'),
+    'CONTRACT_OFFER': ('url', 'Договір оферти'),
 }
 
 settings_for_partner = {

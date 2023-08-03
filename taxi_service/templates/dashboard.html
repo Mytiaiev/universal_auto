@@ -35,10 +35,10 @@
 			<span class="material-icons-outlined">search</span>
 		</div>
 		<div class="header-right">
-			<span class="material-icons-outlined">notifications</span>
-			<span class="material-icons-outlined">email</span>
-			<span class="material-icons-outlined">account_circle</span>
+			<span id="account_circle"></span>
+			<button id="logout-dashboard" type="button">Вийти</button>
 		</div>
+
 	</header>
 	<!-- End Header -->
 
@@ -84,42 +84,54 @@
 					<form id="uberForm">
 						{% csrf_token %}
 						<label for="uberLogin">Uber</label>
-						<input type="text" id="uberLogin" name="uberLogin" placeholder="Логін Uber" required>
-						<input class="showPassword uberPassword" type="password" id="uberPassword" name="uberPassword" placeholder="Пароль Uber" required>
+						<input type="text" id="uberLogin" name="uberLogin"
+									 placeholder="Логін Uber" required>
+						<input class="showPassword uberPassword" type="password"
+									 id="uberPassword" name="uberPassword"
+									 placeholder="Пароль Uber" required>
 						<button type="button" class="login-btn">Увійти</button>
 						<div class="loader-login"></div>
 					</form>
 
 					<p class="opt-uberForm">
-						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordUber">
+						<input type="checkbox" class="showPasswordCheckbox"
+									 id="showPasswordUber">
 						<label for="showPasswordUber">Показати пароль</label>
 					</p>
 
 					<form id="uklonForm">
 						{% csrf_token %}
 						<label for="uklonLogin">Uklon</label>
-						<input type="text" id="uklonLogin" name="uklonLogin" placeholder="Логін Uklon" value="+380" required>
-						<input class="showPassword uklonPassword" type="password" id="uklonPassword" name="uklonPassword" placeholder="Пароль Uklon" required>
+						<input type="text" id="uklonLogin" name="uklonLogin"
+									 placeholder="Логін Uklon" value="+380" required>
+						<input class="showPassword uklonPassword" type="password"
+									 id="uklonPassword" name="uklonPassword"
+									 placeholder="Пароль Uklon" required>
 						<button type="button" class="login-btn">Увійти</button>
 						<div class="loader-login"></div>
 					</form>
 
 					<p class="opt-uklonForm">
-						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordUklon">
+						<input type="checkbox" class="showPasswordCheckbox"
+									 id="showPasswordUklon">
 						<label for="showPasswordUklon">Показати пароль</label>
 					</p>
 
 					<form id="boltForm">
 						{% csrf_token %}
 						<label for="boltLogin">Bolt</label>
-						<input type="text" id="boltLogin" name="boltLogin" placeholder="Логін Bolt" required>
-						<input class="showPassword boltPassword" type="password" id="boltPassword" name="boltPassword" placeholder="Пароль Bolt" required>
+						<input type="text" id="boltLogin" name="boltLogin"
+									 placeholder="Логін Bolt" required>
+						<input class="showPassword boltPassword" type="password"
+									 id="boltPassword" name="boltPassword"
+									 placeholder="Пароль Bolt" required>
 						<button type="button" class="login-btn">Увійти</button>
 						<div class="loader-login"></div>
 					</form>
 
 					<p class="opt-boltForm">
-						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordBolt">
+						<input type="checkbox" class="showPasswordCheckbox"
+									 id="showPasswordBolt">
 						<label for="showPasswordBolt">Показати пароль</label>
 					</p>
 
