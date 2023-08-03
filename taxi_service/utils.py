@@ -322,3 +322,16 @@ def login_in_investor(request, login_name, password):
 			return {'success': False, 'message': 'User is not active'}
 	else:
 		return {'success': False, 'message': 'User is not found'}
+
+
+def change_password_investor(request, login, password, new_password):
+	user = authenticate(username=login, password=password)
+	if user is not None:
+		if user.is_active:
+			user.set_password(new_password)
+			user.save()
+			return {'success': True}
+		else:
+			return {'success': False, 'message': 'User is not active'}
+	else:
+		return {'success': False, 'message': 'User is not found'}
