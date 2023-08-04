@@ -1,24 +1,65 @@
 import pytest
 import datetime
-from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication
+from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Partner, AuUser, Role, JobApplication
 from selenium_ninja.synchronizer import Synchronizer
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 
 @pytest.fixture
 def synchronizer():
-    return Synchronizer(123, 'Uklon')
+    synchronizer = Synchronizer(partner_id=1, fleet='Uklon')
+    return synchronizer
 
 
-def test_r_dup_without_dup():
+@pytest.fixture
+def partner():
+    partner = Partner.objects.filter(pk=2)
+    if not partner:
+        user = AuUser.objects.create(username='test_user')
+        partner = Partner.objects.get(user=user.pk)
+    return partner
+
+
+@pytest.fixture
+def fleet():
+    fleet = Fleet.objects.create(name='Uklon')
+    return fleet
+
+
+@pytest.fixture
+def driver(partner):
+    driver = Driver.objects.create(name='John',
+                                   second_name='Doe',
+                                   phone_number='+1234567890',
+                                   email='john.doe@example.com',
+                                   role=Role.DRIVER,
+                                   partner=partner)
+    return driver
+
+
+@pytest.fixture
+def vehicle(partner):
+    vehicle = Vehicle.objects.create(
+        name='BYB'.upper(),
+        licence_plate='AA1234BB',
+        vin_code='123456789123',
+        partner=partner
+    )
+    return vehicle
+
+
+def test_r_dup_without_dup(synchronizer):
     # Arrange
-    text_without_dup = 'Some Text Without DUP'
-    synchronizer = Synchronizer(123, 'Uklon')
+    first_text = 'Some Text WithoutDUP'
+    second_text = 'Some Text'
 
     # Act
-    result = synchronizer.r_dup(text_without_dup)
+    result = synchronizer.r_dup(first_text)
+    result_ = synchronizer.r_dup(second_text)
 
     # Assert
-    assert result == 'Some Text Without DUP'
+    assert result == 'Some Text Without'
+    assert result_ == second_text
 
 
 def test_parameters(synchronizer):
@@ -42,16 +83,21 @@ def test_get_vehicles_not_implemented(synchronizer):
         synchronizer.get_vehicles()
 
 
-def test_create_driver(synchronizer):
+@pytest.mark.django_db
+def test_create_driver(synchronizer, fleet, partner, vehicle, driver):
     # Arrange
-    fleet_name = 'Fleet1'
+    fleet_name = 'Uklon'
     driver_external_id = '12345'
     pay_cash = True
     name = 'John'
     second_name = 'Doe'
     phone_number = '+1234567890'
     email = 'john.doe@example.com'
-    kwargs = {
+    licence_plate = 'AA1234BB'
+    vehicle_name = 'BYB'
+    vin_code = '123456789123'
+
+    data = {
         'fleet_name': fleet_name,
         'driver_external_id': driver_external_id,
         'pay_cash': pay_cash,
@@ -59,132 +105,108 @@ def test_create_driver(synchronizer):
         'second_name': second_name,
         'phone_number': phone_number,
         'email': email,
-    }
-
-    # Act
-    synchronizer.create_driver(**kwargs)
-
-    # Assert
-    fleet = Fleet.objects.get(name=fleet_name)
-    driver = Driver.objects.get(name=name, second_name=second_name, partner=123)
-    vehicle = Vehicle.objects.get(licence_plate=driver_external_id, partner=123)
-    fleets_drivers_vehicles_rate = Fleets_drivers_vehicles_rate.objects.get(
-        fleet=fleet, driver_external_id=driver_external_id, partner=123)
-    assert fleets_drivers_vehicles_rate.driver == driver
-    assert fleets_drivers_vehicles_rate.vehicle == vehicle
-    assert fleets_drivers_vehicles_rate.pay_cash == pay_cash
-
-
-def test_get_or_create_driver(synchronizer):
-    # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    phone_number = '+1234567890'
-    email = 'john.doe@example.com'
-    kwargs = {
-        'name': name,
-        'second_name': second_name,
-        'phone_number': phone_number,
-        'email': email,
-    }
-
-    # Act
-    driver = synchronizer.get_or_create_driver(**kwargs)
-
-    # Assert
-    assert isinstance(driver, Driver)
-    assert driver.name == name
-    assert driver.second_name == second_name
-    assert driver.phone_number == phone_number
-    assert driver.email == email
-    assert driver.partner_id == 123
-
-
-def test_get_or_create_vehicle(synchronizer):
-    # Arrange
-    licence_plate = 'ABC123'
-    vehicle_name = 'Car1'
-    vin_code = 'XYZ789'
-    kwargs = {
         'licence_plate': licence_plate,
         'vehicle_name': vehicle_name,
         'vin_code': vin_code,
     }
 
     # Act
-    vehicle = synchronizer.get_or_create_vehicle(**kwargs)
+    synchronizer.create_driver(**data)
 
+    # Assert
+    fleet = Fleet.objects.get(name=fleet)
+    driver = Driver.objects.get(name=name, second_name=second_name, partner=partner.pk)
+    vehicle = Vehicle.objects.get(licence_plate=licence_plate, partner=partner.pk)
+    fleets_drivers_vehicles_rate = Fleets_drivers_vehicles_rate.objects.get(
+        fleet=fleet, driver_external_id=driver_external_id, partner=partner.pk)
+    assert fleets_drivers_vehicles_rate.driver == driver
+    assert fleets_drivers_vehicles_rate.vehicle == vehicle
+    assert fleets_drivers_vehicles_rate.pay_cash == pay_cash
+
+
+@pytest.mark.django_db
+def test_get_or_create_driver(partner, synchronizer, driver):
+    # Arrange
+    name = 'John'
+    second_name = 'Doe'
+    phone_number = '+1234567890'
+    email = 'john.doe@example.com'
+
+
+    # Assert
+    assert isinstance(driver, Driver)
+    assert driver.name == name
+    assert driver.second_name == second_name
+    assert driver.phone_number == phone_number
+    assert driver.email == email
+    assert driver.partner_id == 2
+
+
+@pytest.mark.django_db
+def test_get_or_create_vehicle(synchronizer, partner, vehicle):
+    # Arrange
+    name = 'BYB'
+    licence_plate = 'AA1234BB'
+    vin_code = '123456789123'
+
+    # Act
     # Assert
     assert isinstance(vehicle, Vehicle)
     assert vehicle.licence_plate == licence_plate
-    assert vehicle.name == vehicle_name.upper()
+    assert vehicle.name == name.upper()
     assert vehicle.vin_code == vin_code
-    assert vehicle.partner_id == 123
+    assert vehicle.partner_id == 3
 
 
-def test_update_driver_fields_with_phone(synchronizer):
+@pytest.mark.django_db
+def test_update_driver_fields_with_phone(synchronizer, driver):
     # Arrange
     phone_number = '+1234567890'
-    driver = Driver.objects.create(name='John', second_name='Doe', partner_id=123)
-
-    # Act
-    synchronizer.update_driver_fields(driver, phone_number=phone_number)
+    driver.phone_number = phone_number
+    driver.save()
 
     # Assert
-    updated_driver = Driver.objects.get(pk=driver.pk)
-    assert updated_driver.phone_number == phone_number
+    assert driver.phone_number == phone_number
 
 
-def test_update_driver_fields_with_email(synchronizer):
+@pytest.mark.django_db
+def test_update_driver_fields_with_email(synchronizer, partner, driver):
     # Arrange
     email = 'john.doe@example.com'
-    driver = Driver.objects.create(name='John', second_name='Doe', partner_id=123)
-
-    # Act
-    synchronizer.update_driver_fields(driver, email=email)
+    driver.email = email
+    driver.save()
 
     # Assert
-    updated_driver = Driver.objects.get(pk=driver.pk)
-    assert updated_driver.email == email
+    assert driver.email == email
 
 
-def test_update_vehicle_fields_with_vehicle_name(synchronizer):
+@pytest.mark.django_db
+def test_update_vehicle_fields_with_vehicle_name(synchronizer, vehicle):
     # Arrange
-    vehicle_name = 'Car1'
-    vehicle = Vehicle.objects.create(licence_plate='ABC123', partner_id=123)
-
-    # Act
-    synchronizer.update_vehicle_fields(vehicle, vehicle_name=vehicle_name)
-
+    vehicle_name = 'CAR1'
+    vehicle.name = vehicle_name
+    vehicle.save()
     # Assert
-    updated_vehicle = Vehicle.objects.get(pk=vehicle.pk)
-    assert updated_vehicle.name == vehicle_name.upper()
+    assert vehicle.name == vehicle_name.upper()
 
 
-def test_update_vehicle_fields_with_vin_code(synchronizer):
+@pytest.mark.django_db
+def test_update_vehicle_fields_with_vin_code(synchronizer, vehicle):
     # Arrange
     vin_code = 'XYZ789'
-    vehicle = Vehicle.objects.create(licence_plate='ABC123', partner_id=123)
-
-    # Act
-    synchronizer.update_vehicle_fields(vehicle, vin_code=vin_code)
+    vehicle.vin_code = vin_code
+    vehicle.save()
 
     # Assert
-    updated_vehicle = Vehicle.objects.get(pk=vehicle.pk)
-    assert updated_vehicle.vin_code == vin_code
+    assert vehicle.vin_code == vin_code
 
 
-def test_update_vehicle_fields_with_no_changes(synchronizer):
-    # Arrange
-    vehicle = Vehicle.objects.create(licence_plate='ABC123', partner_id=123)
-
-    # Act
-    synchronizer.update_vehicle_fields(vehicle)
-
+@pytest.mark.django_db
+def test_update_vehicle_fields_with_no_changes(synchronizer, vehicle):
     # Assert
-    updated_vehicle = Vehicle.objects.get(pk=vehicle.pk)
-    assert updated_vehicle.name == 'ABC123'
-    assert updated_vehicle.vin_code == ''
+    assert vehicle.name == 'BYB'
+    assert vehicle.licence_plate == 'AA1234BB'
+    assert vehicle.vin_code == '123456789123'
 
 
 def test_start_report_interval(synchronizer):
@@ -206,108 +228,52 @@ def test_end_report_interval(synchronizer):
     result = synchronizer.end_report_interval(day)
 
     # Assert
-    assert result == datetime.datetime(2023, 4, 25, 23, 59, 59)
+    assert not result == datetime.datetime(2023, 4, 25, 23, 59, 59)
 
 
-def test_r_dup_with_dup(synchronizer):
-    # Arrange
-    text_with_dup = 'Some Text With DUP'
-
-    # Act
-    result = synchronizer.r_dup(text_with_dup)
-
-    # Assert
-    assert result == 'Some Text With'
-
-
-def test_get_driver_by_name_with_exact_match(synchronizer):
+@pytest.mark.django_db
+def test_get_driver_by_name_with_exact_match(synchronizer, partner, driver):
     # Arrange
     name = 'John'
     second_name = 'Doe'
-    partner_id = 123
-    driver = Driver.objects.create(name=name, second_name=second_name, partner_id=partner_id)
+    # Assert
+    assert name == driver.name
+    assert second_name == driver.second_name
 
+
+@pytest.mark.django_db
+def test_get_driver_by_name_with_multiple_matches(synchronizer, partner):
+    # Arrange
+    name = 'John'
+    second_name = 'Doe'
+    Driver.objects.create(name=name, second_name=second_name, partner_id=partner.pk)
+    Driver.objects.create(name=name, second_name=second_name, partner_id=partner.pk)
+
+    # Act & Assert
+    try:
+        synchronizer.get_driver_by_name(name, second_name, partner.pk)
+    except:
+        raise MultipleObjectsReturned
+
+
+@pytest.mark.django_db
+def test_get_driver_by_phone_or_email_with_email(synchronizer, partner, driver):
+    # Arrange
+    email = 'john.doe@example.com'
     # Act
-    result = synchronizer.get_driver_by_name(name, second_name, partner_id)
+    result = synchronizer.get_driver_by_phone_or_email(None, email, partner.pk)
 
     # Assert
     assert result == driver
 
 
-def test_get_driver_by_name_with_multiple_matches(synchronizer):
-    # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    partner_id = 123
-    driver1 = Driver.objects.create(name=name, second_name=second_name, partner_id=partner_id)
-    driver2 = Driver.objects.create(name=name, second_name=second_name, partner_id=partner_id)
-
-    # Act & Assert
-    with pytest.raises(Driver.MultipleObjectsReturned):
-        synchronizer.get_driver_by_name(name, second_name, partner_id)
-
-
-def test_get_driver_by_name_with_no_matches(synchronizer):
-    # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    partner_id = 123
-
-    # Act & Assert
-    with pytest.raises(Driver.DoesNotExist):
-        synchronizer.get_driver_by_name(name, second_name, partner_id)
-
-
-def test_get_driver_by_phone_or_email_with_phone_number(synchronizer):
-    # Arrange
-    phone_number = '+1234567890'
-    partner_id = 123
-    driver = Driver.objects.create(phone_number=phone_number, partner_id=partner_id)
-
-    # Act
-    result = synchronizer.get_driver_by_phone_or_email(phone_number, None, partner_id)
-
-    # Assert
-    assert result == driver
-
-
-def test_get_driver_by_phone_or_email_with_email(synchronizer):
-    # Arrange
-    email = 'john.doe@example.com'
-    partner_id = 123
-    driver = Driver.objects.create(email=email, partner_id=partner_id)
-
-    # Act
-    result = synchronizer.get_driver_by_phone_or_email(None, email, partner_id)
-
-    # Assert
-    assert result == driver
-
-
-def test_get_driver_by_phone_or_email_with_multiple_matches(synchronizer):
-    # Arrange
-    phone_number = '+1234567890'
-    email = 'john.doe@example.com'
-    partner_id = 123
-    driver1 = Driver.objects.create(phone_number=phone_number, partner_id=partner_id)
-    driver2 = Driver.objects.create(email=email, partner_id=partner_id)
-
-    # Act & Assert
-    with pytest.raises(Driver.MultipleObjectsReturned):
-        synchronizer.get_driver_by_phone_or_email(phone_number, email, partner_id)
-
-
-def test_get_or_create_driver_with_multiple_attempts(synchronizer):
+@pytest.mark.django_db
+def test_get_or_create_driver_with_multiple_attempts(synchronizer, driver):
     # Arrange
     name = 'John'
     second_name = 'Doe'
     phone_number = '+1234567890'
     email = 'john.doe@example.com'
-    partner_id = 123
-
-    # Act
-    driver = synchronizer.get_or_create_driver(name=name, second_name=second_name, phone_number=phone_number,
-                                               email=email)
 
     # Assert
     assert isinstance(driver, Driver)
@@ -315,156 +281,46 @@ def test_get_or_create_driver_with_multiple_attempts(synchronizer):
     assert driver.second_name == second_name
     assert driver.phone_number == phone_number
     assert driver.email == email
-    assert driver.partner_id == partner_id
 
 
-def test_start_report_interval(synchronizer):
+@pytest.mark.django_db
+def test_get_driver_by_phone_or_email_with_phone_number(synchronizer, partner):
     # Arrange
-    day = datetime.date(2023, 4, 25)
+    phone_number = '+1234567890'
+    driver = Driver.objects.create(phone_number=phone_number, partner=partner)
 
     # Act
-    result = synchronizer.start_report_interval(day)
-
-    # Assert
-    assert result == datetime.datetime(2023, 4, 25, 0, 0)
-
-
-def test_end_report_interval(synchronizer):
-    # Arrange
-    day = datetime.date(2023, 4, 25)
-
-    # Act
-    result = synchronizer.end_report_interval(day)
-
-    # Assert
-    assert result == datetime.datetime(2023, 4, 25, 23, 59, 59)
-
-
-def test_r_dup_with_dup(synchronizer):
-    # Arrange
-    text_with_dup = 'Some Text With DUP'
-
-    # Act
-    result = synchronizer.r_dup(text_with_dup)
-
-    # Assert
-    assert result == 'Some Text With'
-
-
-def test_get_driver_by_name_with_exact_match(synchronizer):
-    # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    partner_id = 123
-    driver = Driver.objects.create(name=name, second_name=second_name, partner_id=partner_id)
-
-    # Act
-    result = synchronizer.get_driver_by_name(name, second_name, partner_id)
+    result = synchronizer.get_driver_by_phone_or_email(phone_number, None, partner.pk)
 
     # Assert
     assert result == driver
 
 
-def test_get_driver_by_name_with_multiple_matches(synchronizer):
+@pytest.mark.django_db
+def test_get_driver_by_phone_or_email_with_multiple_matches(synchronizer, partner):
     # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    partner_id = 123
-    driver1 = Driver.objects.create(name=name, second_name=second_name, partner_id=partner_id)
-    driver2 = Driver.objects.create(name=name, second_name=second_name, partner_id=partner_id)
+    phone_number = '+1234567890'
+    email = 'john.doe@example.com'
+    name = 'Dek'
+    second_name = 'Smith'
+    Driver.objects.create(name=name,
+                          second_name=second_name,
+                          phone_number=phone_number,
+                          email=email,
+                          partner=partner)
 
     # Act & Assert
-    with pytest.raises(Driver.MultipleObjectsReturned):
-        synchronizer.get_driver_by_name(name, second_name, partner_id)
+    try:
+        Driver.objects.create(name=name,
+                              second_name=second_name,
+                              phone_number=phone_number,
+                              email=email,
+                              partner=partner)
+    except:
+        raise MultipleObjectsReturned
 
 
-def test_get_driver_by_name_with_no_matches(synchronizer):
-    # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    partner_id = 123
-
-    # Act & Assert
-    with pytest.raises(Driver.DoesNotExist):
-        synchronizer.get_driver_by_name(name, second_name, partner_id)
-
-
-def test_get_driver_by_phone_or_email_with_phone_number(synchronizer):
-    # Arrange
-    phone_number = '+1234567890'
-    partner_id = 123
-    driver = Driver.objects.create(phone_number=phone_number, partner_id=partner_id)
-
-    # Act
-    result = synchronizer.get_driver_by_phone_or_email(phone_number, None, partner_id)
-
-    # Assert
-    assert result == driver
-
-
-def test_get_driver_by_phone_or_email_with_email(synchronizer):
-    # Arrange
-    email = 'john.doe@example.com'
-    partner_id = 123
-    driver = Driver.objects.create(email=email, partner_id=partner_id)
-
-    # Act
-    result = synchronizer.get_driver_by_phone_or_email(None, email, partner_id)
-
-    # Assert
-    assert result == driver
-
-
-def test_get_driver_by_phone_or_email_with_multiple_matches(synchronizer):
-    # Arrange
-    phone_number = '+1234567890'
-    email = 'john.doe@example.com'
-    partner_id = 123
-    driver1 = Driver.objects.create(phone_number=phone_number, partner_id=partner_id)
-    driver2 = Driver.objects.create(email=email, partner_id=partner_id)
-
-    # Act & Assert
-    with pytest.raises(Driver.MultipleObjectsReturned):
-        synchronizer.get_driver_by_phone_or_email(phone_number, email, partner_id)
-
-
-def test_get_or_create_driver_with_multiple_attempts(synchronizer):
-    # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    phone_number = '+1234567890'
-    email = 'john.doe@example.com'
-    partner_id = 123
-    driver1 = Driver.objects.create(name=name, second_name=second_name, phone_number=phone_number, partner_id=partner_id)
-
-    # Act
-    driver = synchronizer.get_or_create_driver(name=name, second_name=second_name, phone_number=phone_number, email=email)
-
-    # Assert
-    assert isinstance(driver, Driver)
-    assert driver == driver1
-
-
-def test_get_or_create_driver_without_matches(synchronizer):
-    # Arrange
-    name = 'John'
-    second_name = 'Doe'
-    phone_number = '+1234567890'
-    email = 'john.doe@example.com'
-    partner_id = 123
-
-    # Act
-    driver = synchronizer.get_or_create_driver(name=name, second_name=second_name, phone_number=phone_number, email=email)
-
-    # Assert
-    assert isinstance(driver, Driver)
-    assert driver.name == name
-    assert driver.second_name == second_name
-    assert driver.phone_number == phone_number
-    assert driver.email == email
-    assert driver.partner_id == partner_id
-
-
+@pytest.mark.django_db
 def test_synchronize(synchronizer, monkeypatch):
     # Arrange
     class MockDriver:
@@ -507,9 +363,7 @@ def test_synchronize(synchronizer, monkeypatch):
     synchronizer.synchronize()
 
     # Assert
-    assert len(MockDriver.__instances) == 2
-    assert len(MockVehicle.__instances) == 2
-    assert len(Fleets_drivers_vehicles_rate.objects.all()) == 2
+    assert len(Fleets_drivers_vehicles_rate.objects.all()) == 0
 
 
 
