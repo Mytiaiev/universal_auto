@@ -10,7 +10,7 @@ from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route
     share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client, inline_choose_date_kb
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
 from auto_bot.main import bot
-from scripts.conversion import get_address, get_location_from_db
+from scripts.conversion import get_address, get_location_from_db, geocode
 from auto_bot.handlers.order.static_text import *
 
 
@@ -155,8 +155,34 @@ def order_create(update, context):
     payment = button_text.split(' ')[1]
     user = Client.get_by_chat_id(update.effective_chat.id)
     query.edit_message_text(creating_order_text)
-    order_create_task.delay(context.user_data, user.phone_number,
-                            user.chat_id, payment, query.message.message_id)
+    if 'from_address' not in context.user_data:
+        context.user_data['from_address'] = context.user_data['location_address']
+    else:
+        from_place = context.user_data['addresses_first'].get(context.user_data['from_address'])
+        context.user_data['latitude'], context.user_data['longitude'] = \
+            geocode(from_place, ParkSettings.get_value('GOOGLE_API_KEY'))
+
+    destination_place = context.user_data['addresses_second'].get(context.user_data['to_the_address'])
+    destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
+    order_data = {
+        'from_address': context.user_data['from_address'],
+        'latitude': context.user_data['latitude'],
+        'longitude': context.user_data['longitude'],
+        'to_the_address': context.user_data['to_the_address'],
+        'to_latitude': destination_lat,
+        'to_longitude': destination_long,
+        'phone_number': user.phone_number,
+        'chat_id_client': user.chat_id,
+        'payment_method': payment,
+        'client_message_id': query.message.message_id,
+
+    }
+    if 'time_order' not in context.user_data:
+        order_data['status_order'] = Order.WAITING
+    else:
+        order_data['status_order'] = Order.ON_TIME
+        order_data['order_time'] = context.user_data['time_order']
+    order_create_task.delay(order_data)
 
 
 def increase_search_radius(update, context):
