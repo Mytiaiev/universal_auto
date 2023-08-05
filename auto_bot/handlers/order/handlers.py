@@ -1,3 +1,4 @@
+import os
 import re
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -329,6 +330,26 @@ def handle_callback_order(update, context):
             context.bot.send_message(chat_id=query.from_user.id, text=select_car_error)
 
 
+def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, payload, price: int):
+    prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
+
+    # Sending a request for payment
+    context.bot.send_invoice(chat_id=chat_id_client,
+                             title=payment_title,
+                             description=payment_description,
+                             payload=payload,
+                             provider_token=provider_token,
+                             currency=payment_currency,
+                             start_parameter=start_parameter,
+                             prices=prices,
+                             photo_url=url,
+                             need_shipping_address=False,
+                             photo_width=615,
+                             photo_height=512,
+                             photo_size=50000,
+                             is_flexible=False)
+
+
 def handle_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
@@ -395,65 +416,47 @@ def handle_order(update, context):
             s, e = int(timezone.localtime(status_driver.created_at).timestamp()), int(timezone.localtime().timestamp())
             get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)
         else:
-            message = driver_complete_text(order.sum)
-            query.edit_message_text(text=message)
-            text_to_client(order, complete_order_text, button=inline_comment_for_client())
+            if order.payment_method == price_inline_buttons[4].split()[1]:
+                message = driver_complete_text(order.sum)
+                query.edit_message_text(text=message)
+                text_to_client(order, complete_order_text, button=inline_comment_for_client())
+                order.status_order = Order.COMPLETED
+                order.partner = order.driver.partner
+                order.save()
+                context.user_data.clear()
+            else:
+                query.edit_message_reply_markup(reply_markup=None)
 
-        # if order.payment_method == PAYCARD:
-        #     payment_id = str(uuid4())
-        #     payment_request(update, context, order.chat_id_client, os.environ["LIQ_PAY_TOKEN"],
-        #                     os.environ["BOT_URL_IMAGE_TAXI"], payment_id, 1)
-        #     liqpay_cert_path = os.environ["LIQPAY_CERF"]
-        #     liqpay_client = LiqPay(os.environ["LIQPAY_PUBLIC_KEY"], os.environ["LIQPAY_PRIVATE_KEY"],
-        #                            ssl_cert=liqpay_cert_path)
-        #
-        #     response = liqpay_client.api("request",
-        #                                  data={
-        #                                      "action": "status",
-        #                                      "version": "3",
-        #                                      "order_id": payment_id
-        #                                  },
-        #                                  headers={
-        #                                      "Content-Type": "application/json",
-        #                                      "Accept": "application/json",
-        #                                  },
-        #                                  cert=liqpay_cert_path,
-        #                                  verify=True
-        #                                  )
-        #
-        #     check_payment_status_tg.delay(data[1], query.message.message_id, response)
-        # else:
-        context.user_data.clear()
+                payment_request(update,
+                                context,
+                                order.chat_id_client,
+                                os.environ["PAYMENT_TOKEN"],
+                                os.environ["BOT_URL_IMAGE_TAXI"],
+                                order.pk,
+                                f'{order.pk} {query.message.message_id}',
+                                order.sum)
+
+
+def precheckout_callback(update, context):
+    query = update.pre_checkout_query
+    data = query.invoice_payload.split()
+    order = Order.objects.filter(chat_id_client=query.from_user.id).last()
+    if data[0] == f'{order.pk}':
+        query.answer(ok=True)
+        context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data[1], text=trip_paymented)
+        text_to_client(order, complete_order_text, button=inline_comment_for_client())
+        ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
         order.status_order = Order.COMPLETED
         order.partner = order.driver.partner
         order.save()
+        context.user_data.clear()
+    else:
+        query.answer(ok=False, error_message=error_payment)
 
 
-def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, price: int):
-    title = 'Послуга особистого водія'
-    description = 'Ninja Taxi - це надійний та професійний провайдер послуг таксі'
-    payload = 'Додаткові дані для ідентифікації користувача'
-    currency = 'UAH'
-    prices = [LabeledPrice(label='Ціна', amount=int(price) * 100)]
-    need_shipping_address = False
-
-    # Sending a request for payment
-    context.bot.send_invoice(chat_id=chat_id_client, title=title, description=description, payload=payload,
-                             provider_token=provider_token, currency=currency, start_parameter=start_parameter,
-                             prices=prices, photo_url=url, need_shipping_address=need_shipping_address,
-                             photo_width=615, photo_height=512, photo_size=50000, is_flexible=False)
 
 
-'''@task_postrun.connect
-def check_payment_status(sender=None, **kwargs):
-    if sender == check_payment_status_tg:
-        rep = kwargs.get("retval")
-        query_id, order_id, status_payment = rep
-        if status_payment:
-            order = Order.objects.filter(pk=order_id).first()
-            bot.edit_message_text(chat_id=order.driver.chat_id, message_id=query_id, text=f"<<Поїздка оплачена>>")
-            bot.send_message(chat_id=order.chat_id_client,
-                             text='Оплата успішна. Дякуємо, що скористались послугами нашої компанії')
-            order.status_order = Order.COMPLETED
-            order.save()
-            ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)'''
+
+
+
+

@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 import time
+import hashlib
+import requests
 from _decimal import Decimal
 from celery import current_app
 from celery.exceptions import MaxRetriesExceededError
@@ -18,9 +20,9 @@ from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly
 from auto_bot.handlers.main.keyboards import spam_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_time_order_kb
+    inline_time_order_kb, inline_comment_for_client
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
-    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text
+    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, trip_paymented
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.handlers.status.static_text import please_start_text, unblock_text
 from auto_bot.main import bot

@@ -22,7 +22,6 @@ services:
     volumes:
       - .:/app
 
-
   redis:
     container_name: universal_auto_redis
     image: redis:6.2-alpine

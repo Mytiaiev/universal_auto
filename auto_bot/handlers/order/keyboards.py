@@ -11,8 +11,8 @@ share_location = [
 def inline_payment_kb():
     keyboard = [
         [InlineKeyboardButton(price_inline_buttons[4], callback_data="Cash_payment 0")],
+        [InlineKeyboardButton(price_inline_buttons[5], callback_data="Card_payment 1")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Right_place")]
-        # [InlineKeyboardButton(price_inline_buttons[5], callback_data="Card_payment 1")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -120,6 +120,7 @@ def inline_time_order_kb(pk=None):
         [InlineKeyboardButton(order_inline_buttons[2], callback_data=f"Start_route {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)
+
 
 
 def inline_choose_date_kb():
