@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import time
 from _decimal import Decimal
 from celery import current_app
+from celery.exceptions import MaxRetriesExceededError
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.utils import timezone
@@ -320,48 +321,28 @@ def send_time_order(self):
 
 
 @app.task(bind=True, max_retries=3, queue='beat_tasks')
-def order_create_task(self, context, phone, chat_id, payment, message_id):
+def order_create_task(self, order_data):
     try:
-        if 'from_address' not in context:
-            context['from_address'] = context['location_address']
-        else:
-            from_place = context['addresses_first'].get(context['from_address'])
-            context['latitude'], context['longitude'] = geocode(from_place, ParkSettings.get_value('GOOGLE_API_KEY'))
-
-        destination_place = context['addresses_second'].get(context['to_the_address'])
-        destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
-
-        distance_price = get_route_price(context['latitude'], context['longitude'],
-                                         destination_lat, destination_long,
+        distance_price = get_route_price(order_data['latitude'], order_data['longitude'],
+                                         order_data['to_latitude'], order_data['to_longitude'],
                                          ParkSettings.get_value('GOOGLE_API_KEY'))
 
-        order_data = {
-            'from_address': context['from_address'],
-            'latitude': context['latitude'],
-            'longitude': context['longitude'],
-            'to_the_address': context['to_the_address'],
-            'to_latitude': destination_lat,
-            'to_longitude': destination_long,
-            'phone_number': phone,
-            'chat_id_client': chat_id,
-            'payment_method': payment,
-            'client_message_id': message_id,
-            'sum': distance_price[0],
-            'distance_google': round(distance_price[1], 2)
-        }
-
-        if 'time_order' in context:
-            order_data['status_order'] = Order.ON_TIME
-            order_data['order_time'] = context['time_order']
-            order_time = context['time_order'].strftime("%Y-%m-%d %H:%M")
-            bot.edit_message_text(chat_id=chat_id, text=f'Замовлення прийняте, сума замовлення {order_data["sum"]}грн\n'
-                                                        f'Очікуйте водія {order_time}', message_id=message_id)
-        else:
-            order_data['status_order'] = Order.WAITING
+        order_data['sum'] = distance_price[0]
+        order_data['distance_google'] = round(distance_price[1], 2)
+        if 'order_time' in order_data:
+            order_time = order_data['order_time'].strftime("%Y-%m-%d %H:%M")
+            bot.edit_message_text(chat_id=order_data['chat_id_client'],
+                                  text=f'Замовлення прийняте, сума замовлення {order_data["sum"]}грн\n'
+                                       f'Очікуйте водія {order_time}',
+                                  message_id=order_data['client_message_id'])
 
         Order.objects.create(**order_data)
     except Exception as e:
-        bot.send_message(chat_id=515224934, text=str(e))
+        if self.request.retries <= self.max_retries:
+            self.retry(exc=e, countdown=5)
+        else:
+            bot.send_message(chat_id=515224934, text=str(e))
+            raise MaxRetriesExceededError("Max retries exceeded for task.")
 
 
 @app.task(bind=True, max_retries=3, queue='beat_tasks')

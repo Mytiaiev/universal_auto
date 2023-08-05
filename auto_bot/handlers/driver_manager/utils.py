@@ -22,15 +22,24 @@ def validate_date(date_str):
 
 
 def calculate_rent(start, end, driver):
-    end_time = datetime.combine(end, datetime.max.time())
-    rent_report = RentInformation.objects.filter(
-        rent_distance__gt=int(ParkSettings.get_value("FREE_RENT", partner=driver.partner.pk)),
-        created_at__range=(start, end_time),
-        driver=driver)
-    overall_rent = ExpressionWrapper(F('rent_distance')
-                                     - int(ParkSettings.get_value("FREE_RENT", partner=driver.partner.pk)),
-                                     output_field=DecimalField())
-    total_rent = rent_report.aggregate(distance=Sum(overall_rent))['distance']
+    total_rent = 0
+    current_day = start
+    one_day = timedelta(days=1)
+    free_rent = int(ParkSettings.get_value("FREE_RENT", partner=driver.partner.pk))
+
+    while current_day <= end:
+        next_day = current_day + one_day
+        rent_report = RentInformation.objects.filter(
+            created_at__range=(current_day, next_day - timedelta(seconds=1)),
+            driver=driver
+        ).aggregate(daily_rent=Sum('rent_distance'))['daily_rent'] or 0
+
+        if rent_report > free_rent:
+            rent_report -= free_rent
+
+        total_rent += max(rent_report, 0)
+        current_day = next_day
+
     return total_rent
 
 

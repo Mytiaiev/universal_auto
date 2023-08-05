@@ -101,10 +101,22 @@ class UaGpsSynchronizer:
                     total = self.total_per_day(vehicle.licence_plate, end)[0]
                     rent_distance = total - road_distance
                 else:
-                    report = self.generate_report(self.get_timestamp(timezone.localtime(start)),
-                                                  self.get_timestamp(timezone.localtime(end)),
-                                                  vehicle.gps_id)
+                    last_status = StatusChange.objects.filter(driver=_driver.id,
+                                                              vehicle=vehicle).last()
+                    if last_status.name == Driver.WITH_CLIENT:
+                        if last_status.end_time:
+                            report = self.generate_report(self.get_timestamp(last_status.end_time),
+                                                          self.get_timestamp(timezone.localtime(end)),
+                                                          vehicle.gps_id)
+                        else:
+                            report = (0, datetime.timedelta(minutes=60))
+
+                    else:
+                        report = self.generate_report(self.get_timestamp(timezone.localtime(start)),
+                                                      self.get_timestamp(timezone.localtime(end)),
+                                                      vehicle.gps_id)
                     rent_distance = report[0]
+
             rent_today = RentInformation.objects.filter(driver=_driver,
                                                         created_at__date=timezone.localtime().date())
             if not rent_today:
