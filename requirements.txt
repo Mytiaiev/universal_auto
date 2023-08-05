@@ -10,6 +10,7 @@ google-api-python-client
 rollbar
 google-cloud-core
 google-cloud-storage
+requests-mock
 google-crc32c
 google-resumable-media
 googleapis-common-protos
