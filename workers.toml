@@ -3,7 +3,7 @@ kill_signal = "SIGINT"
 primary_region = "otp"
 kill_timeout = 5
 [env]
-  DEBUG = 0
+  DEBUG = ''
 [experimental]
   auto_rollback = true
   auto_scale_delay = "10s"
