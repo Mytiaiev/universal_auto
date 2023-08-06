@@ -19,7 +19,8 @@ from django.contrib import admin
 from django.urls import path, include
 from app.views import *
 from auto import settings
-from django.views.decorators.csrf import csrf_exempt
+
+from scripts.bot import webhook
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,6 +31,6 @@ urlpatterns = [
     path('fake_uber/', include('fake_uber.urls')),
     path('cars/', gps_cars, name='map'),
     path('', include('taxi_service.urls')),
-    path('webhook/', csrf_exempt(TelegramBotWebhookView.as_view())),
+    path('webhook/', webhook),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,10 +1,7 @@
-import queue
 import re
 
-from telegram.ext import CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler, Dispatcher, \
-    PreCheckoutQueryHandler
+from telegram.ext import CommandHandler, PreCheckoutQueryHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
 from app.models import Driver
-from auto_bot.main import bot
 from auto_bot.states import text
 # handlers
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
@@ -36,7 +33,7 @@ from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
 from auto_bot.handlers.status.static_text import CORRECT_AUTO, NOT_CORRECT_AUTO, CORRECT_CHOICE, NOT_CORRECT_CHOICE
-from auto_bot.handlers.driver.static_text import SERVICEABLE, BROKEN, SICK_DAY, DAY_OFF
+from auto_bot.handlers.driver.static_text import SERVICEABLE, BROKEN
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext")
@@ -125,10 +122,8 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(handle_order,
                                         pattern=re.compile("^(Reject_order|Along_the_route|Off_route|"
                                                            "Accept|End_trip) [0-9]+$")))
-
     dp.add_handler(CallbackQueryHandler(handle_order, pattern="Client_on_site [0-9]+ [0-9]+"))
     dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
-
     # sending comment
     dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))
     dp.add_handler(CallbackQueryHandler(save_comment, pattern="5_Star|4_Star|3_Star|2_Star|1_Star"))
@@ -238,7 +233,3 @@ def setup_dispatcher(dp):
     # dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
     return dp
-
-
-update_queue = queue.Queue()
-dispatcher = setup_dispatcher(Dispatcher(bot, update_queue))
