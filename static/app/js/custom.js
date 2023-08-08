@@ -1,6 +1,6 @@
-var map, orderReject, orderGo, orderConfirm, orderData, markersTaxi,
+let map, orderReject, orderGo, orderConfirm, orderData, markersTaxi,
 	taxiMarkers = [];
-var circle, intervalId, intervalTime, intervalTaxiMarker;
+let circle, intervalId, intervalTime, intervalTaxiMarker;
 
 const FREE_DISPATCH = parseInt(parkSettings && parkSettings.FREE_CAR_SENDING_DISTANCE || 0);
 const TARIFF_DISPATCH = parseInt(parkSettings && parkSettings.TARIFF_CAR_DISPATCH || 0);
@@ -56,22 +56,22 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 function getAllPath(obj) {
-	var allPaths = [];
-	for (var i = 0; i < obj.length; i++) {
-		var currentPath = obj[i].path;
+	let allPaths = [];
+	for (let i = 0; i < obj.length; i++) {
+		let currentPath = obj[i].path;
 		allPaths = allPaths.concat(currentPath);
 	}
 	return allPaths
 }
 
 function pathSeparation(obj) {
-	var getCity = city_boundaries();
-	var cityPolygon = new google.maps.Polygon({paths: getCity});
+	let getCity = city_boundaries();
+	let cityPolygon = new google.maps.Polygon({paths: getCity});
 
-	var inCity = [], outOfCity = [];
+	let inCity = [], outOfCity = [];
 	obj.forEach(function (path) {
 		// Використовуємо метод containsLocation() для перевірки, чи точка входить у межі міста
-		var isInCity = google.maps.geometry.poly.containsLocation(path, cityPolygon);
+		let isInCity = google.maps.geometry.poly.containsLocation(path, cityPolygon);
 		// Якщо точка входить у межі міста, додаємо її до масиву inCity, інакше - до масиву outOfCity
 		if (isInCity) {
 			inCity.push(path);
@@ -83,8 +83,8 @@ function pathSeparation(obj) {
 }
 
 function getPathCoords(obj) {
-	var coords = []
-	for (var i = 0; i < obj.length; i++) {
+	let coords = []
+	for (let i = 0; i < obj.length; i++) {
 		coords.push({lat: obj[i].lat(), lng: obj[i].lng()});
 	}
 	return coords
@@ -116,7 +116,7 @@ function addMarker(obj) {
 }
 
 function setAutoCenter(map) {
-	var bounds = new google.maps.LatLngBounds();
+	let bounds = new google.maps.LatLngBounds();
 	markersTaxi.forEach(marker => {
 		bounds.extend(marker.getPosition());
 	});
@@ -131,14 +131,14 @@ function getMarkerIcon(type) {
 }
 
 function createMap(address, to_address) {
-	var modal = document.createElement('div');
+	let modal = document.createElement('div');
 	modal.id = 'order-modal';
 	modal.innerHTML = '<div id="map"></div>';
 
 	document.body.appendChild(modal);
 
-	var mapCanvas = document.getElementById("map");
-	var mapOpts = {
+	let mapCanvas = document.getElementById("map");
+	let mapOpts = {
 		zoom: 10,
 		center: new google.maps.LatLng(50.4546600, 30.5238000)
 	};
@@ -162,8 +162,8 @@ function createMap(address, to_address) {
 		animation: google.maps.Animation.DROP
 	});
 
-	var directionsService = new google.maps.DirectionsService();
-	var request = {
+	let directionsService = new google.maps.DirectionsService();
+	let request = {
 		origin: address[0].formatted_address,
 		destination: to_address[0].formatted_address,
 		travelMode: google.maps.TravelMode.DRIVING
@@ -171,39 +171,39 @@ function createMap(address, to_address) {
 	directionsService.route(request, function (result, status) {
 		if (status == google.maps.DirectionsStatus.OK) {
 			// Отримати відстань між точками
-			var distanceInMeters = result.routes[0].legs[0]['steps'];
+			let distanceInMeters = result.routes[0].legs[0]['steps'];
 
-			var allPathsAddress = getAllPath(distanceInMeters)
+			let allPathsAddress = getAllPath(distanceInMeters)
 
-			var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
-			var inCity = inCitOrOutCityAddress[0]
-			var outOfCity = inCitOrOutCityAddress[1]
+			let inCitOrOutCityAddress = pathSeparation(allPathsAddress)
+			let inCity = inCitOrOutCityAddress[0]
+			let outOfCity = inCitOrOutCityAddress[1]
 
-			var inCityCoords = getPathCoords(inCity)
-			var outOfCityCoords = getPathCoords(outOfCity)
+			let inCityCoords = getPathCoords(inCity)
+			let outOfCityCoords = getPathCoords(outOfCity)
 
 
 			let inCityDistance = parseInt(calculateDistance(inCityCoords));
 			let outOfCityDistance = parseInt(calculateDistance(outOfCityCoords));
 			let totalDistance = inCityDistance + outOfCityDistance;
 
-			var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
+			let tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
 			setCookie('sumOder', tripAmount, 1)
 			setCookie('distanceGoogle', totalDistance, 1)
 			setAutoCenter(map);
 
 			// Додати текст та таймер до елементу costDiv
-			var costText = gettext("Оберіть метод оплати.");
-			var costDiv = document.createElement('div');
+			let costText = gettext("Оберіть метод оплати.");
+			let costDiv = document.createElement('div');
 			costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
 				'<h6 class="alert-heading alert-message mb-0">' + costText + '</h6><div id="timer"></div></div>';
 			map.controls[google.maps.ControlPosition.TOP_CENTER].push(costDiv);
 
 			// Додати кнопки оплати на карту
-			var paymentDiv = document.createElement('div');
-			var button1 = gettext('Готівка');
-			var button2 = gettext('Картка');
-			var button3 = gettext('Відмовитись');
+			let paymentDiv = document.createElement('div');
+			let button1 = gettext('Готівка');
+			let button2 = gettext('Картка');
+			let button3 = gettext('Відмовитись');
 			paymentDiv.innerHTML =
 				"<div class='mb-3'>" +
 				"<button class='order-confirm btn btn-primary'>" + button1 + "</button>" +
@@ -215,7 +215,7 @@ function createMap(address, to_address) {
 
 			if (getCookie('idOrder') != null) {
 				orderConfirm = paymentDiv.getElementsByClassName('order-confirm')[0];
-				var Text = gettext("Зачекайте поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
+				let Text = gettext("Зачекайте поки ми підберемо вам автомобіль. Ваша ціна складає ") + tripAmount + gettext(" грн.");
 				costDiv = document.createElement('div');
 				costDiv.innerHTML = '<div class="alert alert-primary mt-2" role="alert">' +
 					'<h6 class="alert-heading alert-message mb-0">' + Text + '</h6><div id="timer"></div></div>';
@@ -262,7 +262,7 @@ function orderUpdate(id_order) {
 				"id_order": id_order
 			},
 			success: function (response) {
-				var driverOrder = JSON.parse(response.data)
+				let driverOrder = JSON.parse(response.data)
 				if (driverOrder.vehicle_gps) {
 					clearInterval(intervalId);
 					clearInterval(intervalTime);
@@ -279,8 +279,8 @@ function orderUpdate(id_order) {
 						animation: google.maps.Animation.DROP
 					});
 
-					var from = JSON.parse(getCookie('address'));
-					var to = JSON.parse(getCookie('to_address'));
+					let from = JSON.parse(getCookie('address'));
+					let to = JSON.parse(getCookie('to_address'));
 
 					const clientMarker = addMarker({
 						position: from[0].geometry.location,
@@ -298,17 +298,17 @@ function orderUpdate(id_order) {
 					});
 
 					// Create a directions service object to get the route
-					var directionsService = new google.maps.DirectionsService();
+					let directionsService = new google.maps.DirectionsService();
 
 					// Create a directions renderer object to display the route
-					var directionsRenderer = new google.maps.DirectionsRenderer();
+					let directionsRenderer = new google.maps.DirectionsRenderer();
 
 					// Bind the directions renderer to the map
 					directionsRenderer.setMap(map);
 					directionsRenderer.setOptions({suppressMarkers: true})
 
 					// Set the options for the route
-					var routeOptions = {
+					let routeOptions = {
 						origin: driverMarker.position,
 						waypoints: [
 							{
@@ -330,11 +330,11 @@ function orderUpdate(id_order) {
 						if (status == google.maps.DirectionsStatus.OK) {
 							directionsRenderer.setDirections(result);
 
-							var tripAmount = parseInt(getCookie('sumOder'));
-							var cost = parseInt(driverOrder.car_delivery_price) + tripAmount;
+							let tripAmount = parseInt(getCookie('sumOder'));
+							let cost = parseInt(driverOrder.car_delivery_price) + tripAmount;
 							cost = Math.ceil(cost);
 
-							var durationToA = result.routes[0].legs[0].duration.text;
+							let durationToA = result.routes[0].legs[0].duration.text;
 
 							$('.alert-message').html(gettext('Ціна поїздки: ') + cost + gettext(' грн. Приблизний час прибуття авто: ') + durationToA);
 							$('.order-confirm').remove();
@@ -351,13 +351,13 @@ function orderUpdate(id_order) {
 
 
 function onOrderPayment(paymentMethod) {
-	var savedOrderData = getCookie('orderData');
+	let savedOrderData = getCookie('orderData');
 	if (!savedOrderData) {
 		alert('Помилка: дані замовлення не знайдені.');
 		return;
 	}
 
-	var orderData = JSON.parse(savedOrderData);
+	let orderData = JSON.parse(savedOrderData);
 	orderData.sum = getCookie('sumOder');
 	orderData.distance_google = getCookie('distanceGoogle');
 	orderData.latitude = getCookie('fromLat');
@@ -376,7 +376,7 @@ function onOrderPayment(paymentMethod) {
 				'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
 			},
 			success: function (response) {
-				var idOrder = JSON.parse(response.data)
+				let idOrder = JSON.parse(response.data)
 				setCookie("idOrder", idOrder.id, 1);
 				orderUpdate(idOrder.id);
 				resolve(idOrder)
@@ -392,7 +392,7 @@ function onOrderPayment(paymentMethod) {
 
 
 function onOrderReject() {
-	var idOrder = getCookie('idOrder')
+	let idOrder = getCookie('idOrder')
 	clearInterval(intervalTaxiMarker);
 	destroyMap()
 	$('#timer').remove();
@@ -409,9 +409,9 @@ function onOrderReject() {
 		})
 
 	// Create an HTML window element with a comment form
-	var modalText = gettext("Коментар про відмову від поїздки")
-	var modalButton = gettext("Відправити")
-	var commentForm = document.createElement("div");
+	let modalText = gettext("Коментар про відмову від поїздки")
+	let modalButton = gettext("Відправити")
+	let commentForm = document.createElement("div");
 	commentForm.innerHTML = `
     <div class="modal">
       <div class="modal-content">
@@ -431,7 +431,7 @@ function onOrderReject() {
 	deleteCookie("address")
 
 	// We attach an event to close the window when the cross is clicked
-	var closeButton = commentForm.querySelector(".close");
+	let closeButton = commentForm.querySelector(".close");
 	closeButton.addEventListener("click", function () {
 		commentForm.parentNode.removeChild(commentForm);
 		deleteAllCookies();
@@ -464,8 +464,8 @@ function sendComment() {
 
 function consentTrip() {
 	destroyMap();
-	var text1 = gettext('Ваша заявка прийнята. Очікуйте на автомобіль!');
-	var applicationAccepted = document.createElement("div");
+	let text1 = gettext('Ваша заявка прийнята. Очікуйте на автомобіль!');
+	let applicationAccepted = document.createElement("div");
 	applicationAccepted.innerHTML = `
     <div class="modal">
       <div class="modal-content">
@@ -476,7 +476,7 @@ function consentTrip() {
 	document.body.appendChild(applicationAccepted);
 	deleteAllCookies();
 
-	var modal = applicationAccepted.querySelector(".modal");
+	let modal = applicationAccepted.querySelector(".modal");
 
 	setTimeout(function () {
 		modal.parentNode.removeChild(modal);
@@ -486,11 +486,11 @@ function consentTrip() {
 }
 
 function startTimer() {
-	var duration = TIMER * 1000; // 3 хвилини
-	// var duration = 10 * 1000; // 3 хвилини
+	let duration = TIMER * 1000; // 3 хвилини
+	// let duration = 10 * 1000; // 3 хвилини
 
 	// Отримати збережений час початку таймера
-	var startTime = getCookie('timerStartTime');
+	let startTime = getCookie('timerStartTime');
 	if (startTime) {
 		startTime = parseInt(startTime);
 	} else {
@@ -500,34 +500,34 @@ function startTimer() {
 	}
 
 	document.addEventListener('DOMContentLoaded', function () {
-		var timer = document.createElement('div');
+		let timer = document.createElement('div');
 		timer.id = 'timer';
 
-		var costDiv = document.getElementsByClassName('alert alert-primary mt-2')[0];
+		let costDiv = document.getElementsByClassName('alert alert-primary mt-2')[0];
 		costDiv.appendChild(timer);
 	});
 
 	// Зупинити попередній таймер, якщо він вже запущений
 	clearInterval(intervalTime);
 
-	var intervalTime = setInterval(function () {
-		var elapsedTime = Date.now() - startTime;
-		var remainingTime = duration - elapsedTime;
+	let intervalTime = setInterval(function () {
+		let elapsedTime = Date.now() - startTime;
+		let remainingTime = duration - elapsedTime;
 
 		// Перевірити, чи таймер закінчився
 		if (remainingTime <= 0) {
 			deleteCookie('timerStartTime');
 			clearInterval(intervalTime);
-			// var timerElement = document.getElementById('timer');
+			// let timerElement = document.getElementById('timer');
 			// if (timerElement) {
 			//   timerElement.remove();
 			// }
 
-			var modalContent = document.createElement('div');
-			var text = gettext('Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?');
-			var buttonTextIncrease = gettext('Підвищити');
-			var buttonTextSearch = gettext('Шукати далі');
-			var buttonTextDecline = gettext('Відмовитись');
+			let modalContent = document.createElement('div');
+			let text = gettext('Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?');
+			let buttonTextIncrease = gettext('Підвищити');
+			let buttonTextSearch = gettext('Шукати далі');
+			let buttonTextDecline = gettext('Відмовитись');
 			modalContent.innerHTML = '<div id="timer-modal" class="modal">\n' +
 				'  <div class="modal-content">\n' +
 				'    <p>' + text + '</p>\n' +
@@ -542,15 +542,15 @@ function startTimer() {
 				'    </div>\n' +
 				'  </div>\n' +
 				'</div>';
-			var modal = document.createElement('div');
+			let modal = document.createElement('div');
 			modal.id = 'timer-modal';
 			modal.classList.add('modal');
 			modal.appendChild(modalContent);
 			document.body.appendChild(modal);
 
-			var increasePrice = modal.getElementsByClassName('btn-primary')[0];
-			var continueSearch = modal.getElementsByClassName('btn-primary')[1];
-			var rejectSearch = modal.getElementsByClassName('btn-danger')[0];
+			let increasePrice = modal.getElementsByClassName('btn-primary')[0];
+			let continueSearch = modal.getElementsByClassName('btn-primary')[1];
+			let rejectSearch = modal.getElementsByClassName('btn-danger')[0];
 
 			increasePrice.addEventListener('click', function () {
 				setCookie("car_delivery_price", sliderElement.value, 1);
@@ -566,19 +566,19 @@ function startTimer() {
 				modal.remove();
 			});
 
-			var sliderElement = document.getElementById('price-range');
-			var sliderValueElement = document.getElementById('slider-value');
+			let sliderElement = document.getElementById('price-range');
+			let sliderValueElement = document.getElementById('slider-value');
 			sliderElement.addEventListener('input', function () {
 				sliderValueElement.textContent = sliderElement.value + '₴';
 			});
 		}
 
 		// Обчислити хвилини та секунди
-		var minutes = Math.floor(remainingTime / 60000);
-		var seconds = Math.floor((remainingTime % 60000) / 1000);
+		let minutes = Math.floor(remainingTime / 60000);
+		let seconds = Math.floor((remainingTime % 60000) / 1000);
 
-		var timerElements = document.getElementById('timer');
-		var timerText = gettext('Приблизний час пошуку: ') + minutes + gettext(' хв ') + seconds + gettext(' сек');
+		let timerElements = document.getElementById('timer');
+		let timerText = gettext('Приблизний час пошуку: ') + minutes + gettext(' хв ') + seconds + gettext(' сек');
 		if (timerElements) {
 			timerElements.innerHTML = timerText;
 		}
@@ -587,11 +587,11 @@ function startTimer() {
 
 
 function onIncreasePrice() {
-	var idOrder = getCookie('idOrder');
-	var carDeliveryPrice = getCookie('car_delivery_price');
+	let idOrder = getCookie('idOrder');
+	let carDeliveryPrice = getCookie('car_delivery_price');
 
 	// Розрахунок нового радіуса
-	var newRadius = (FREE_DISPATCH * 1000) + (carDeliveryPrice / TARIFF_DISPATCH) * 1000;
+	let newRadius = (FREE_DISPATCH * 1000) + (carDeliveryPrice / TARIFF_DISPATCH) * 1000;
 
 	$.ajax({
 		url: ajaxPostUrl,
@@ -620,7 +620,7 @@ function updateCircleRadius(radius) {
 
 
 function onContinueSearch() {
-	var idOrder = getCookie('idOrder');
+	let idOrder = getCookie('idOrder');
 
 	$.ajax({
 		url: ajaxPostUrl,
@@ -648,7 +648,7 @@ $.mask.definitions['9'] = '';
 $.mask.definitions['d'] = '[0-9]';
 
 function intlTelInit(phoneEl) {
-	var phoneSelector = $(phoneEl);
+	let phoneSelector = $(phoneEl);
 
 	if (phoneSelector.length) {
 		phoneSelector.mask("+380 dd ddd-dd-dd");
@@ -661,7 +661,7 @@ $(document).ready(function () {
 	intlTelInit('#phone');
 
 	$('input[name="radio"]').on('change', function () {
-		var selectedValue = $('input[name="radio"]:checked').val();
+		let selectedValue = $('input[name="radio"]:checked').val();
 		if (selectedValue === '2') {
 			$('#order-time-field').removeClass('hidden');
 			$('#order_time-error').removeClass('hidden');
@@ -677,10 +677,10 @@ $(document).ready(function () {
 	$('#order-form').on('submit', function (event) {
 		event.preventDefault();
 
-		var isLateOrder = $('input[name="radio"]:checked').val() === '2';
-		var form = new FormData(this);
-		var timeWrapper = $('#order-time-field');
-		var noTime = timeWrapper.hasClass('hidden');
+		let isLateOrder = $('input[name="radio"]:checked').val() === '2';
+		let form = new FormData(this);
+		let timeWrapper = $('#order-time-field');
+		let noTime = timeWrapper.hasClass('hidden');
 
 		if (isLateOrder && noTime) {
 			timeWrapper.removeClass('hidden').next().html('');
@@ -692,9 +692,9 @@ $(document).ready(function () {
 			form.delete('order_time')
 		}
 
-		var fields = form.keys()
-		var errorFields = 0;
-		var errorMsgs = {
+		let fields = form.keys()
+		let errorFields = 0;
+		let errorMsgs = {
 			'phone_number': gettext("Номер телефону обов'язковий"),
 			'from_address': gettext("Адреса обов'язкова"),
 			'to_the_address': gettext("Адреса обов'язкова"),
@@ -719,18 +719,18 @@ $(document).ready(function () {
 				form.set('order_time', formattedDeliveryTime);
 			} else {
 				errorFields++;
-				var orderTimeError1 = gettext('Виберіть час не менше ніж через ');
-				var orderTimeError2 = gettext(' хвилин');
+				let orderTimeError1 = gettext('Виберіть час не менше ніж через ');
+				let orderTimeError2 = gettext(' хвилин');
 				$('#order_time-error').html(orderTimeError1 + SEND_TIME_ORDER_MIN + orderTimeError2)
 			}
 		}
 
 		if (!errorFields) {
 			// Додаємо перевірку валідності адрес
-			var fromAddress = form.get('from_address');
-			var toAddress = form.get('to_the_address');
+			let fromAddress = form.get('from_address');
+			let toAddress = form.get('to_the_address');
 
-			var geocoder = new google.maps.Geocoder();
+			let geocoder = new google.maps.Geocoder();
 			geocoder.geocode({'address': fromAddress}, function (fromGeocoded, status) {
 				if (status !== 'OK') {
 					$('#from_address-error').html(gettext('Некоректна адреса'));
@@ -744,8 +744,8 @@ $(document).ready(function () {
 					form.append('action', 'order');
 					orderData = Object.fromEntries(form);
 					orderData.phone_number = orderData.phone_number.replace(/[^+0-9]/gi, '');
-					var fromGeocode = fromGeocoded[0].geometry.location
-					var toGeocode = toGeocoded[0].geometry.location
+					let fromGeocode = fromGeocoded[0].geometry.location
+					let toGeocode = toGeocoded[0].geometry.location
 					setCookie("fromLat", fromGeocode.lat().toFixed(6), 1);
 					setCookie("fromLon", fromGeocode.lng().toFixed(6), 1);
 					setCookie("toLat", toGeocode.lat().toFixed(6), 1);
@@ -754,36 +754,36 @@ $(document).ready(function () {
 
 					if (form.has('order_time')) {
 						// Отримання координат з куків
-						var fromLat = parseFloat(getCookie("fromLat"));
-						var fromLon = parseFloat(getCookie("fromLon"));
-						var toLat = parseFloat(getCookie("toLat"));
-						var toLon = parseFloat(getCookie("toLon"));
+						let fromLat = parseFloat(getCookie("fromLat"));
+						let fromLon = parseFloat(getCookie("fromLon"));
+						let toLat = parseFloat(getCookie("toLat"));
+						let toLon = parseFloat(getCookie("toLon"));
 
 						// Створення об'єктів google.maps.LatLng на основі координат з куків
-						var fromLocation = new google.maps.LatLng(fromLat, fromLon);
-						var toLocation = new google.maps.LatLng(toLat, toLon);
+						let fromLocation = new google.maps.LatLng(fromLat, fromLon);
+						let toLocation = new google.maps.LatLng(toLat, toLon);
 
 						// Створення об'єкту запиту для DirectionsService
-						var request = {
+						let request = {
 							origin: fromLocation,
 							destination: toLocation,
 							travelMode: google.maps.TravelMode.DRIVING
 						};
 
 						// Виклик DirectionsService для отримання маршруту та відстані
-						var directionsService = new google.maps.DirectionsService();
+						let directionsService = new google.maps.DirectionsService();
 						directionsService.route(request, function (result, status) {
 							if (status === google.maps.DirectionsStatus.OK) {
-								var distanceInMeters = result.routes[0].legs[0]['steps'];
+								let distanceInMeters = result.routes[0].legs[0]['steps'];
 
-								var allPathsAddress = getAllPath(distanceInMeters)
+								let allPathsAddress = getAllPath(distanceInMeters)
 
-								var inCitOrOutCityAddress = pathSeparation(allPathsAddress)
-								var inCity = inCitOrOutCityAddress[0]
-								var outOfCity = inCitOrOutCityAddress[1]
+								let inCitOrOutCityAddress = pathSeparation(allPathsAddress)
+								let inCity = inCitOrOutCityAddress[0]
+								let outOfCity = inCitOrOutCityAddress[1]
 
-								var inCityCoords = getPathCoords(inCity)
-								var outOfCityCoords = getPathCoords(outOfCity)
+								let inCityCoords = getPathCoords(inCity)
+								let outOfCityCoords = getPathCoords(outOfCity)
 
 
 								let inCityDistance = parseInt(calculateDistance(inCityCoords));
@@ -791,14 +791,14 @@ $(document).ready(function () {
 								let totalDistance = inCityDistance + outOfCityDistance;
 
 
-								var tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
+								let tripAmount = Math.ceil((inCityDistance * TARIFF_IN_THE_CITY) + (outOfCityDistance * TARIFF_OUTSIDE_THE_CITY));
 								setCookie('sumOder', tripAmount, 1)
 								setCookie('distanceGoogle', totalDistance, 1)
 
 
-								var text2 = gettext('Дякуємо за замовлення. Очікуйте на автомобіль! Ваша вартість поїздки: ') +
+								let text2 = gettext('Дякуємо за замовлення. Очікуйте на автомобіль! Ваша вартість поїздки: ') +
 									'<span class="trip-amount">' + tripAmount + '</span>' + gettext(' грн.');
-								var modal = $('<div class="modal">' +
+								let modal = $('<div class="modal">' +
 									'<div class="modal-content rounded">' +
 									'<h3 class="modal-title">' + text2 + '</h3>' +
 									'<div class="buttons-container">' +
@@ -833,14 +833,14 @@ $(document).ready(function () {
 								"action": "active_vehicles_locations"
 							},
 							success: function (response) {
-								var taxiArr = JSON.parse(response.data);
+								let taxiArr = JSON.parse(response.data);
 
 								if (taxiArr.length > 0) {
 									createMap(fromGeocoded, toGeocoded);
 									intervalTaxiMarker = setInterval(updateTaxiMarkers, 10000);
 								} else {
-									var text3 = gettext('Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою замовлення на інший час!')
-									var noTaxiArr = document.createElement("div");
+									let text3 = gettext('Вибачте але на жаль вільних водіїв нема. Скористайтеся нашою послугою замовлення на інший час!')
+									let noTaxiArr = document.createElement("div");
 									noTaxiArr.innerHTML = `
                     <div class="modal-taxi">
                     <div class="modal-content-taxi">
@@ -852,7 +852,7 @@ $(document).ready(function () {
 									deleteCookie("address")
 
 									// We attach an event to close the window when the cross is clicked
-									var closeButton = noTaxiArr.querySelector(".close");
+									let closeButton = noTaxiArr.querySelector(".close");
 									closeButton.addEventListener("click", function () {
 										noTaxiArr.parentNode.removeChild(noTaxiArr);
 									});
@@ -877,7 +877,7 @@ function updateTaxiMarkers() {
 			"action": "active_vehicles_locations"
 		},
 		success: function (response) {
-			var taxiArr = JSON.parse(response.data);
+			let taxiArr = JSON.parse(response.data);
 			// Clear previous taxi markers
 			clearTaxiMarkers();
 			// Add new taxi markers
@@ -901,7 +901,7 @@ function clearTaxiMarkers() {
 function addTaxiMarkers(taxiArr) {
 	taxiArr.forEach(taxi => {
 		// Create a marker for each taxi with a custom icon
-		var marker = new google.maps.Marker({
+		let marker = new google.maps.Marker({
 			position: new google.maps.LatLng(taxi.lat, taxi.lon),
 			map: map,
 			title: taxi.vehicle__licence_plate,
@@ -932,7 +932,7 @@ $(document).ready(function () {
 			},
 			error: function (xhr, textStatus, errorThrown) {
 				if (xhr.status === 400) {
-					var errors = xhr.responseJSON;
+					let errors = xhr.responseJSON;
 					$.each(errors, function (key, value) {
 						$('#' + key + '-error-1, #' + key + '-error-2').html(value);
 					});
@@ -975,7 +975,7 @@ $(document).ready(function () {
 	}
 
 	$(this).on('click', '.services-grid__item .btn', function () {
-		var t = $(this);
+		let t = $(this);
 		content = t.prev();
 
 		if (content.hasClass('limited-lines')) {
@@ -1089,43 +1089,44 @@ $(document).ready(function () {
 		$("label[for='loginRadio']").hide();
 	});
 
-	$("#closeLoginForm").click(function () {
+	$(".close-btn").click(function () {
 		$("#loginForm").fadeOut();
+		$(".forgot-password-form").fadeOut();
+		window.location.reload();
 	});
 
-	$("input[name='loginType']").on("change", function () {
+	// $("input[name='loginType']").on("change", function () {
+	//
+	// 	if (this.value === "login") {
+	// 		$("#loginFormFields").show();
+	// 		$("#newPassword").hide();
+	// 		$("#confirmPassword").hide();
+	// 		$("#change-password").hide();
+	// 		$("#login-invest").show();
+	// 		$("#login-invest-google").show();
+	//
+	// 		$("label[for='loginRadio']").hide();
+	// 		// $("label[for='changePasswordRadio']").show();
+	// 		$("label[for='forgotPasswordRadio']").show();
 
-		if (this.value === "login") {
-			$("#loginFormFields").show();
-			$("#newPassword").hide();
-			$("#confirmPassword").hide();
-			$("#change-password").hide();
-			$("#login-invest").show();
-			$("#login-invest-google").show();
+	// } else if (this.value === "changePassword") {
+	// 	$("#loginFormFields").show();
+	// 	$("#newPassword").show();
+	// 	$("#confirmPassword").show();
+	// 	$("#login-invest").hide();
+	// 	$("#login-invest-google").hide();
+	// 	$("#change-password").show();
+	//
+	// 	$("label[for='loginRadio']").show();
+	// 	$("label[for='forgotPasswordRadio']").hide();
 
-			$("label[for='loginRadio']").hide();
-			$("label[for='changePasswordRadio']").show();
-			$("label[for='forgotPasswordRadio']").show();
-
-		} else if (this.value === "changePassword") {
-			$("#loginFormFields").show();
-			$("#newPassword").show();
-			$("#confirmPassword").show();
-			$("#login-invest").hide();
-			$("#login-invest-google").hide();
-			$("#change-password").show();
-
-			$("label[for='loginRadio']").show();
-			$("label[for='forgotPasswordRadio']").hide();
-
-		} else if (this.value === "forgotPassword") {
-
-
-			$("label[for='loginRadio']").show();
-			$("label[for='changePasswordRadio']").hide();
-
-		}
-	});
+	// 	} else if (this.value === "forgotPassword") {
+	//
+	// 		$("label[for='loginRadio']").show();
+	// 		// $("label[for='changePasswordRadio']").show();
+	//
+	// 	}
+	// });
 
 	$("#login-invest").click(function () {
 		let login = $("#login").val();
@@ -1146,73 +1147,155 @@ $(document).ready(function () {
 					$("#loginBtn").hide();
 					$("#loggedInUser").text('Кабінет Інвестора').show();
 					$("#loginForm").fadeOut();
+					window.location.href = "/dashboard/";
 				} else {
 					$("#login").val("Невірний логін або пароль").addClass("error-message");
-					$("#password").val("Невірний логін або пароль").addClass("error-message");
+					$("#password").val("");
 				}
 			}
 		});
 	});
 
-	$("#change-password").click(function () {
-		let login = $("#login").val();
-		let password = $("#password").val();
-		let newPassword = $("#newPassword").val();
-		let confirmPassword = $("#confirmPassword").val();
-		let action = 'change_password';
+	// $("#change-password").click(function () {
+	// 	let login = $("#login").val();
+	// 	let password = $("#password").val();
+	// 	let newPassword = $("#newPassword").val();
+	// 	let confirmPassword = $("#confirmPassword").val();
+	// 	let action = 'change_password';
+	//
+	// 	if (newPassword !== confirmPassword) {
+	// 		$("#newPassword").val("Пароль не співпадає").addClass("error-message");
+	// 		$("#confirmPassword").val("Пароль не співпадає").addClass("error-message");
+	// 	} else {
+	// 		$.ajax({
+	// 			url: ajaxPostUrl,
+	// 			type: 'POST',
+	// 			data: {
+	// 				action: action,
+	// 				login: login,
+	// 				password: password,
+	// 				newPassword: newPassword,
+	// 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+	// 			},
+	// 			success: function (data) {
+	// 				if (data.data['success'] === true) {
+	// 					$("#loginBtn").hide();
+	// 					$("#loggedInUser").text('Кабінет Інвестора').show();
+	// 					$("#loginForm").fadeOut();
+	// 				} else {
+	// 					$("#login").val("Невірний логін або пароль").addClass("error-message");
+	// 					$("#password").val("Невірний логін або пароль").addClass("error-message");
+	// 				}
+	// 			}
+	// 		});
+	// 	}
+	// });
 
-		if (newPassword !== confirmPassword) {
-			$("#newPassword").val("Пароль не співпадає").addClass("error-message");
-			$("#confirmPassword").val("Пароль не співпадає").addClass("error-message");
+	let urlParams = new URLSearchParams(window.location.search);
+	let signedIn = urlParams.get('signed_in');
+
+	if (signedIn === 'false') {
+		let modal = document.createElement('div');
+		modal.id = 'modal-signed-in-false';
+		modal.className = 'modal-signed-in-false';
+
+		let modalContent = document.createElement('div');
+		modalContent.className = 'modal-content-false';
+
+		let closeBtn = document.createElement('span');
+		closeBtn.className = 'close';
+		closeBtn.innerHTML = '&times;';
+		closeBtn.onclick = function () {
+			document.body.removeChild(modal);
+			window.location.href = '/';
+		};
+
+		let modalText = document.createElement('p');
+		modalText.innerHTML = 'Вхід не вдався:<br>' +
+			'<ol><li>Будь ласка, перевірте, чи ви використовуєте електронну адресу, яку вказували під час реєстрації.</li>' +
+			'<li>Також, переконайтеся, що ви є партнером компанії Ninja Taxi.</li>' +
+			'<li>Якщо ви впевнені в правильності введених даних, але не можете увійти в систему, зверніться до нашого менеджера для отримання допомоги.</li>' +
+			'</ol>';
+
+		modalContent.appendChild(closeBtn);
+		modalContent.appendChild(modalText);
+		modal.appendChild(modalContent);
+
+		document.body.appendChild(modal);
+	}
+
+	const forgotPasswordForm = $('#forgotPasswordForm');
+	const loginRadioForm = $('#loginForm');
+	const sendResetCodeBtn = $('#sendResetCode');
+
+	$('#forgotPasswordRadio').click(function () {
+		forgotPasswordForm.show();
+		loginRadioForm.hide();
+	});
+
+	sendResetCodeBtn.click(function () {
+		const email = $('#forgotEmail').val();
+
+		$.ajax({
+			url: ajaxPostUrl,
+			type: 'POST',
+			data: {
+				action: 'send_reset_code',
+				email: email,
+				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+			},
+			success: function (response) {
+				console.log(response);
+				if (response['success'] === true) {
+					let resetCode = response['code'][1];
+					console.log(resetCode);
+					sendResetCodeBtn.data('resetCode', resetCode);
+					forgotPasswordForm.hide();
+					$('#resetPasswordForm').show();
+				} else {
+					$('#forgotEmail').val('Невірна електронна адреса').addClass('error-message');
+				}
+			}
+		});
+	});
+
+	$('#updatePassword').click(function () {
+		const email = $('#forgotEmail').val();
+		const activeCode = $('#activationCode').val();
+		const newPassword = $('#newPassword').val();
+		const confirmPassword = $('#confirmPassword').val();
+		const resetCode = sendResetCodeBtn.data('resetCode');
+
+		if (newPassword !== confirmPassword || activeCode !== resetCode) {
+			if (newPassword !== confirmPassword) {
+				$('#passwordError').text('Паролі не співпадають').addClass('error-message');
+			} else {
+				$('#passwordError').text('').removeClass('error-message');
+			}
+
+			if (activeCode !== resetCode) {
+				$('#activationError').text('Невірний код активації').addClass('error-message');
+			} else {
+				$('#activationError').text('').removeClass('error-message');
+			}
 		} else {
+
 			$.ajax({
 				url: ajaxPostUrl,
 				type: 'POST',
 				data: {
-					action: action,
-					login: login,
-					password: password,
+					action: 'update_password',
+					email: email,
 					newPassword: newPassword,
 					csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
 				},
-				success: function (data) {
-					if (data.data['success'] === true) {
-						$("#loginBtn").hide();
-						$("#loggedInUser").text('Кабінет Інвестора').show();
-						$("#loginForm").fadeOut();
-					} else {
-						$("#login").val("Невірний логін або пароль").addClass("error-message");
-						$("#password").val("Невірний логін або пароль").addClass("error-message");
+				success: function (response) {
+					if (response['success'] === true) {
+						$('#resetPasswordForm').hide();
+						$('#loginForm').show();
 					}
 				}
 			});
 		}
 	});
-
-	// $("#login-invest-google").click(function () {
-	// 	signInWithGoogle();
-	// });
-
-	// function signInWithGoogle() {
-	// 	gapi.load('auth2', function () {
-	// 		gapi.auth2.init({
-	// 			client_id: '300126065073-tic8iuc9vactfjcej4tttiakbpdf1bg2.apps.googleusercontent.com',
-	// 		}).then(function (auth2) {
-	// 			auth2.signIn().then(function (googleUser) {
-	// 				let accessToken = googleUser.getAuthResponse().access_token;
-	//
-	// 				let userId = profile.getId();
-	// 				let userName = profile.getName();
-	// 				let userEmail = profile.getEmail();
-	// 				let userProfileImage = profile.getImageUrl();
-	//
-	// 				console.log(accessToken);
-	// 				console.log(userId);
-	// 				console.log(userName);
-	// 				console.log(userEmail);
-	// 				console.log(userProfileImage);
-	// 			});
-	// 		});
-	// 	});
-	// }
 });

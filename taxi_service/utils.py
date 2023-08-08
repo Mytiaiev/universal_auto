@@ -1,6 +1,7 @@
 import json
 from datetime import timedelta
 
+from django.core.mail import send_mail
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate, login
 
@@ -335,3 +336,15 @@ def change_password_investor(request, login, password, new_password):
 			return {'success': False, 'message': 'User is not active'}
 	else:
 		return {'success': False, 'message': 'User is not found'}
+
+
+def send_reset_code(email):
+
+	reset_code = str(random.randint(100000, 999999))
+
+	# subject = 'Код скидання пароля'
+	# message = f'Ваш код скидання пароля: {reset_code}'
+	# from_email = 'Ninja-Taxi@gmail.com'
+	# recipient_list = [email]
+	# send_mail(subject, message, from_email, recipient_list)
+	return email, reset_code
