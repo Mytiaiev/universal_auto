@@ -342,9 +342,9 @@ def send_reset_code(email):
 
 	reset_code = str(random.randint(100000, 999999))
 
-	# subject = 'Код скидання пароля'
-	# message = f'Ваш код скидання пароля: {reset_code}'
-	# from_email = 'Ninja-Taxi@gmail.com'
-	# recipient_list = [email]
-	# send_mail(subject, message, from_email, recipient_list)
+	subject = 'Код скидання пароля'
+	message = f'Ваш код скидання пароля: {reset_code}'
+	from_email = 'Ninja-Taxi@gmail.com'
+	recipient_list = [email]
+	send_mail(subject, message, from_email, recipient_list)
 	return email, reset_code
