@@ -1,11 +1,16 @@
 import json
-from datetime import timedelta
+import random
+from datetime import timedelta, date
 
+from django.db.models import Sum
+from django.utils import timezone
 from django.core.mail import send_mail
+from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 
-from app.models import *
+from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
+						SummaryReport, CarEfficiency, Partner, ParkSettings, )
 from selenium_ninja.driver import SeleniumTools
 
 
@@ -325,17 +330,22 @@ def login_in_investor(request, login_name, password):
 		return {'success': False, 'message': 'User is not found'}
 
 
-def change_password_investor(request, login, password, new_password):
-	user = authenticate(username=login, password=password)
-	if user is not None:
-		if user.is_active:
-			user.set_password(new_password)
-			user.save()
-			return {'success': True}
+def change_password_investor(request, password, new_password, user_email):
+	try:
+		user = User.objects.filter(email=user_email).first()
+		if user is not None:
+			user = authenticate(username=user.username, password=password)
+			if user.is_active:
+				user.set_password(new_password)
+				user.save()
+				logout(request)
+				return {'success': True}
+			else:
+				return {'success': False, 'message': 'User is not active'}
 		else:
-			return {'success': False, 'message': 'User is not active'}
-	else:
-		return {'success': False, 'message': 'User is not found'}
+			return {'success': False, 'message': 'User is not found'}
+	except User.DoesNotExist as error:
+		return {'success': False, 'message': 'Користувача не знайдено.'}
 
 
 def send_reset_code(email):

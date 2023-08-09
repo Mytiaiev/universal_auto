@@ -610,4 +610,51 @@ $(document).ready(function () {
 			}
 		});
 	});
+
+	// change-password
+
+	$("#changePassword").click(function () {
+		$("#passwordChangeForm").toggle();
+	});
+
+
+	$("#submitPassword").click(function () {
+		let password = $("#oldPassword").val();
+		let newPassword = $("#newPassword").val();
+		let confirmPassword = $("#confirmPassword").val();
+
+		console.log(password, newPassword, confirmPassword);
+
+		if (newPassword !== confirmPassword) {
+			$("#newPassword").val("Пароль не співпадає").addClass("error-message");
+			$("#confirmPassword").val("Пароль не співпадає").addClass("error-message");
+		} else {
+			$.ajax({
+				url: ajaxPostUrl,
+				type: 'POST',
+				data: {
+					action: 'change_password',
+					password: password,
+					newPassword: newPassword,
+					csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+				},
+				success: function (response) {
+					console.log(response);
+					// if (data.data['success'] === true) {
+					// 	$("#loginBtn").hide();
+					// 	$("#loggedInUser").text('Кабінет Інвестора').show();
+					// 	$("#loginForm").fadeOut();
+					// } else {
+					// 	$("#login").val("Невірний логін або пароль").addClass("error-message");
+					// 	$("#password").val("Невірний логін або пароль").addClass("error-message");
+					// }
+				}
+			});
+		}
+	});
+	// burger-menu
+
+	$('.burger-icon').click(function () {
+		$('.burger-menu').toggleClass('open');
+	});
 });

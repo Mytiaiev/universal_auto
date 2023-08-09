@@ -85,15 +85,18 @@ class PostRequestHandler:
         return JsonResponse({'logged_out': True})
 
     def handler_change_password(self, request):
-        # if request.POST.get('action') == 'change_password':
-        #     login = request.POST.get('login')
-        #     password = request.POST.get('password')
-        #     new_password = request.POST.get('newPassword')
-        #
-        #     change = change_password_investor(request, login, password, new_password)
-        #     json_data = JsonResponse({'data': change}, safe=False)
-        #     response = HttpResponse(json_data, content_type='application/json')
-        #     return response
+        if request.POST.get('action') == 'change_password':
+            password = request.POST.get('password')
+            new_password = request.POST.get('newPassword')
+            user_email = User.objects.get(pk=request.user.pk).email
+            print('#' * 100)
+            print(user_email)
+            print('#' * 100)
+
+            change = change_password_investor(request, password, new_password, user_email)
+            json_data = JsonResponse({'data': change}, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
 
         if request.POST.get('action') == 'send_reset_code':
             email = request.POST.get('email')

@@ -113,8 +113,6 @@
 					<div class="opt"><input type="checkbox" id="showPassword">
 						<label for="showPassword">Показати пароль</label>
 					</div>
-{#					<input type="text" id="newPassword" placeholder="Новий пароль" style="display: none;">#}
-{#					<input type="text" id="confirmPassword" placeholder="Підтвердження пароля" style="display: none;">#}
 					<div class="login-buttons">
 						<button id="login-invest" type="button">Увійти</button>
 						<div id="g_id_onload"
@@ -143,8 +141,6 @@
 					{% csrf_token %}
 					<input type="radio" name="loginType" value="login" id="loginRadio" checked>
 					<label for="loginRadio">Увійти до кабінету</label>
-{#					<input type="radio" name="loginType" value="changePassword" id="changePasswordRadio">#}
-{#					<label for="changePasswordRadio">Змінити пароль</label>#}
 					<input type="radio" name="loginType" value="forgotPassword" id="forgotPasswordRadio">
 					<label for="forgotPasswordRadio">Забув пароль</label>
 				</form>
