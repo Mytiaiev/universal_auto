@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from auto.tasks import download_daily_report, get_car_efficiency
 
 
-def run(partner_id=3):
-    start = datetime.now().date() - timedelta(days=3)
+def run(partner_id):
+    start = datetime.now().date() - timedelta(days=30)
     end = datetime.now().date() - timedelta(days=1)
     while start <= end:
         day = datetime.strftime(start, "%Y-%m-%d")

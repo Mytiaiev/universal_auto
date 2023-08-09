@@ -36,7 +36,31 @@
 		</div>
 		<div class="header-right">
 			<span id="account_circle"></span>
-			<button id="logout-dashboard" type="button">Вийти</button>
+		</div>
+		<div class="burger-menu">
+			<div class="burger-icon"></div>
+			<div class="burger-content">
+				<button id="changePassword" type="button">Змінити пароль</button>
+				<button id="logout-dashboard" type="button">Вийти</button>
+			</div>
+		</div>
+		<div id="passwordChangeForm" style="display: none;">
+			<span class="close-btn">&times;</span>
+			<h2>Після зміни пароля потрібно перезайти.</h2>
+			<form id="passwordForm">
+				{% csrf_token %}
+				<label for="oldPassword">Старий пароль:</label>
+				<input type="password" id="oldPassword" name="oldPassword" required><br>
+
+				<label for="newPassword">Новий пароль:</label>
+				<input type="password" id="newPassword" name="newPassword" required><br>
+
+				<label for="confirmPassword">Підтвердити новий пароль:</label>
+				<input type="password" id="confirmPassword" name="confirmPassword"
+							 required><br>
+
+				<button id="submitPassword" type="button">Змінити</button>
+			</form>
 		</div>
 
 	</header>

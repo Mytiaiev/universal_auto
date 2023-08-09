@@ -1095,39 +1095,6 @@ $(document).ready(function () {
 		window.location.reload();
 	});
 
-	// $("input[name='loginType']").on("change", function () {
-	//
-	// 	if (this.value === "login") {
-	// 		$("#loginFormFields").show();
-	// 		$("#newPassword").hide();
-	// 		$("#confirmPassword").hide();
-	// 		$("#change-password").hide();
-	// 		$("#login-invest").show();
-	// 		$("#login-invest-google").show();
-	//
-	// 		$("label[for='loginRadio']").hide();
-	// 		// $("label[for='changePasswordRadio']").show();
-	// 		$("label[for='forgotPasswordRadio']").show();
-
-	// } else if (this.value === "changePassword") {
-	// 	$("#loginFormFields").show();
-	// 	$("#newPassword").show();
-	// 	$("#confirmPassword").show();
-	// 	$("#login-invest").hide();
-	// 	$("#login-invest-google").hide();
-	// 	$("#change-password").show();
-	//
-	// 	$("label[for='loginRadio']").show();
-	// 	$("label[for='forgotPasswordRadio']").hide();
-
-	// 	} else if (this.value === "forgotPassword") {
-	//
-	// 		$("label[for='loginRadio']").show();
-	// 		// $("label[for='changePasswordRadio']").show();
-	//
-	// 	}
-	// });
-
 	$("#login-invest").click(function () {
 		let login = $("#login").val();
 		let password = $("#password").val();
@@ -1155,41 +1122,6 @@ $(document).ready(function () {
 			}
 		});
 	});
-
-	// $("#change-password").click(function () {
-	// 	let login = $("#login").val();
-	// 	let password = $("#password").val();
-	// 	let newPassword = $("#newPassword").val();
-	// 	let confirmPassword = $("#confirmPassword").val();
-	// 	let action = 'change_password';
-	//
-	// 	if (newPassword !== confirmPassword) {
-	// 		$("#newPassword").val("Пароль не співпадає").addClass("error-message");
-	// 		$("#confirmPassword").val("Пароль не співпадає").addClass("error-message");
-	// 	} else {
-	// 		$.ajax({
-	// 			url: ajaxPostUrl,
-	// 			type: 'POST',
-	// 			data: {
-	// 				action: action,
-	// 				login: login,
-	// 				password: password,
-	// 				newPassword: newPassword,
-	// 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
-	// 			},
-	// 			success: function (data) {
-	// 				if (data.data['success'] === true) {
-	// 					$("#loginBtn").hide();
-	// 					$("#loggedInUser").text('Кабінет Інвестора').show();
-	// 					$("#loginForm").fadeOut();
-	// 				} else {
-	// 					$("#login").val("Невірний логін або пароль").addClass("error-message");
-	// 					$("#password").val("Невірний логін або пароль").addClass("error-message");
-	// 				}
-	// 			}
-	// 		});
-	// 	}
-	// });
 
 	let urlParams = new URLSearchParams(window.location.search);
 	let signedIn = urlParams.get('signed_in');
