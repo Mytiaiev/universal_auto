@@ -29,7 +29,7 @@ def inline_start_order_kb():
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
         [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")],
-        [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_no_comment")]
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
