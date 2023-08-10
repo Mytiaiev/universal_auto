@@ -63,7 +63,7 @@ def raw_gps_handler(pk):
 
 @app.task(bind=True, queue='bot_tasks')
 def health_check(self):
-    bot.send_message(chat_id=515224934, text="Celery OK")
+    logger.warning("Celery OK")
 
 
 @app.task(bind=True, queue='beat_tasks')
