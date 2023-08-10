@@ -7,7 +7,7 @@ from app.models import Driver
 from auto_bot.states import text
 # handlers
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
-    get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, \
+    get_list_job_application, name, name_vehicle, create, add, \
     driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report, get_earning_report, \
     get_efficiency_report, get_report, get_efficiency_auto, get_partner_vehicles, get_partner_drivers, \
     pin_partner_vehicle_to_driver
@@ -197,13 +197,6 @@ def setup_dispatcher(dp):
         Filters.regex(fr'^{USER_DRIVER}$') |
         Filters.regex(fr'^{USER_MANAGER_DRIVER}$'),
         name))
-    # Add vehicle to drivers
-    dp.add_handler(CommandHandler("add_vehicle_to_driver", get_list_drivers))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr'^{F_UKLON}$') |
-        Filters.regex(fr'^{F_UBER}$') |
-        Filters.regex(fr'^{F_BOLT}$'),
-        get_driver_external_id))
 
     # The job application on driver sent to fleet
     dp.add_handler(CommandHandler("add_job_application_to_fleets", get_list_job_application))
