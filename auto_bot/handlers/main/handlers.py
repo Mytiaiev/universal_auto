@@ -31,6 +31,7 @@ def start(update, context):
     redis_instance.expire(str(chat_id), 3600)
     menu(update, context)
     users = User.objects.filter(chat_id=chat_id)
+
     if not users:
         Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
                               second_name=update.message.from_user.last_name)
