@@ -7,6 +7,6 @@ kill_timeout = 5
 [experimental]
   auto_rollback = true
 [processes]
-  worker = "celery -A auto worker -l WARNING -c 4 -Q beat_tasks"
-  bot_worker = "celery -A auto worker -l WARNING -c 4 -Q bot_tasks"
+  worker = "celery -A auto worker -l WARNING -Q beat_tasks"
+  bot_worker = "celery -A auto worker -l WARNING -Q bot_tasks"
   beat = "celery -A auto beat -l WARNING"
