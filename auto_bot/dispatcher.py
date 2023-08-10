@@ -1,11 +1,13 @@
+import os
 import re
 
-from telegram.ext import CommandHandler, PreCheckoutQueryHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
+from telegram.ext import CommandHandler, PreCheckoutQueryHandler, MessageHandler, Filters, CallbackQueryHandler, \
+    ConversationHandler, Updater
 from app.models import Driver
 from auto_bot.states import text
 # handlers
 from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fleet, get_licence_plate_for_gps_imei, \
-    get_list_job_application, get_driver_external_id, get_list_drivers, name, name_vehicle, create, add, \
+    get_list_job_application, name, name_vehicle, create, add, \
     driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report, get_earning_report, \
     get_efficiency_report, get_report, get_efficiency_auto, get_partner_vehicles, get_partner_drivers, \
     pin_partner_vehicle_to_driver
@@ -22,7 +24,7 @@ from auto_bot.handlers.order.handlers import continue_order, to_the_address, fro
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
     ask_client_action, handle_order, choose_date_order, precheckout_callback
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
-    more_function, start_query, get_about_us
+    more_function, start_query, get_about_us, celery_test
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -99,6 +101,7 @@ def setup_dispatcher(dp):
     # Commands for Users
     # Ordering taxi
     dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("test_celery", celery_test))
     dp.add_handler(CallbackQueryHandler(more_function, pattern="Other_user|Other_manager|More_driver"))
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
@@ -194,13 +197,6 @@ def setup_dispatcher(dp):
         Filters.regex(fr'^{USER_DRIVER}$') |
         Filters.regex(fr'^{USER_MANAGER_DRIVER}$'),
         name))
-    # Add vehicle to drivers
-    dp.add_handler(CommandHandler("add_vehicle_to_driver", get_list_drivers))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr'^{F_UKLON}$') |
-        Filters.regex(fr'^{F_UBER}$') |
-        Filters.regex(fr'^{F_BOLT}$'),
-        get_driver_external_id))
 
     # The job application on driver sent to fleet
     dp.add_handler(CommandHandler("add_job_application_to_fleets", get_list_job_application))
@@ -233,3 +229,7 @@ def setup_dispatcher(dp):
     # dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
     return dp
+
+
+updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
+dispatcher = setup_dispatcher(updater.dispatcher)
