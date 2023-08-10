@@ -13,6 +13,7 @@ from telegram import Update
 
 # from auto.celery import app
 from auto.settings import DEBUG
+from auto_bot.dispatcher import dispatcher
 from auto_bot.main import bot
 from scripts.driversrating import DriversRatingMixin
 from app.models import VehicleGPS, Vehicle
@@ -24,19 +25,19 @@ from app.models import VehicleGPS, Vehicle
 #     dispatcher.process_update(update)
 
 
-# class TelegramBotWebhookView(View):
-#     def post(self, request, *args, **kwargs):
-#         update = Update.de_json(json.loads(request.body), bot)
-#         dispatcher.process_update(update)
-#         # if DEBUG:
-#         #     process_telegram_event()
-#         # else:
-#         #     process_telegram_event.delay(json.loads(request.body))
-#
-#         return JsonResponse({"ok": "POST request processed"})
-#
-#     def get(self, request, *args, **kwargs):  # for debug
-#         return JsonResponse({"ok": "Get request received! But nothing done"})
+class TelegramBotWebhookView(View):
+    def post(self, request, *args, **kwargs):
+        update = Update.de_json(json.loads(request.body), bot)
+        dispatcher.process_update(update)
+        # if DEBUG:
+        #     process_telegram_event()
+        # else:
+        #     process_telegram_event.delay(json.loads(request.body))
+
+        return JsonResponse({"ok": "POST request processed"})
+
+    def get(self, request, *args, **kwargs):  # for debug
+        return JsonResponse({"ok": "Get request received! But nothing done"})
 
 
 class DriversRatingView(DriversRatingMixin, TemplateView):

@@ -14,12 +14,8 @@ kill_timeout = "5s"
 [deploy]
   release_command = "python3 manage.py migrate --noinput"
 
-[env]
-  DEBUG = ""
-
 [processes]
   django = "bash ./entrypoint.sh"
-  bot    = "python3 manage.py runscript bot"
 
 [[services]]
   protocol = "tcp"
