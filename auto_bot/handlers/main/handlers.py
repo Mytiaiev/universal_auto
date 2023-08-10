@@ -16,6 +16,7 @@ import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
     more_func_text
+from scripts.redis_conn import redis_instance
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -25,10 +26,11 @@ processed_files = []
 
 
 def start(update, context):
-    context.user_data.clear()
-    menu(update, context)
     chat_id = update.effective_chat.id
+    redis_instance.delete(str(update.effective_chat.id))
+    menu(update, context)
     users = User.objects.filter(chat_id=chat_id)
+
     if not users:
         Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
                               second_name=update.message.from_user.last_name)
