@@ -217,7 +217,7 @@ def effective_vehicle(period, vehicle):
 def login_in(action, login_name, password, user_id):
 	partner = Partner.objects.get(user_id=user_id)
 	selenium_tools = SeleniumTools(partner=partner.pk)
-	if action == 'Bolt_login':
+	if action == 'bolt':
 		success_login = selenium_tools.bolt_login(login=login_name,
 												  password=password)
 
@@ -231,6 +231,7 @@ def login_in(action, login_name, password, user_id):
 					bolt_password_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='BOLT_PASSWORD', value=password,
+											description='Пароль користувача Bolt',
 											partner=partner)
 
 			try:
@@ -241,6 +242,7 @@ def login_in(action, login_name, password, user_id):
 					bolt_name_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='BOLT_NAME', value=login_name,
+											description='Ім\'я користувача Bolt',
 											partner=partner)
 
 			try:
@@ -259,7 +261,7 @@ def login_in(action, login_name, password, user_id):
 		else:
 			return False
 
-	if action == 'Uklon_login':
+	if action == 'uklon':
 		success_login = selenium_tools.uklon_login(login=login_name[4:],
 												   password=password)
 		if success_login:
@@ -271,6 +273,7 @@ def login_in(action, login_name, password, user_id):
 					uklon_password_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UKLON_PASSWORD',
+											description='Пароль користувача Uklon',
 											value=password, partner=partner)
 
 			try:
@@ -281,13 +284,14 @@ def login_in(action, login_name, password, user_id):
 					uklon_name_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UKLON_NAME', value=login_name,
+											description='Ім\'я користувача Uklon',
 											partner=partner)
 
 			return True
 		else:
 			return False
 
-	if action == 'Uber_login':
+	if action == 'uber':
 		success_login = selenium_tools.uber_login(login=login_name,
 												  password=password)
 		if success_login:
@@ -299,6 +303,7 @@ def login_in(action, login_name, password, user_id):
 					uber_password_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UBER_PASSWORD', value=password,
+											description='Пароль користувача Uber',
 											partner=partner)
 
 			try:
@@ -309,11 +314,35 @@ def login_in(action, login_name, password, user_id):
 					uber_name_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UBER_NAME', value=login_name,
+											description='Ім\'я користувача Uber',
 											partner=partner)
 
 			return True
 		else:
 			return False
+
+
+def partner_logout(action, user_pk):
+	if action == 'uber_logout':
+		partner = Partner.objects.get(user_id=user_pk)
+		settings = ParkSettings.objects.filter(partner=partner)
+		settings.filter(key__in=['UBER_NAME', 'UBER_PASSWORD']).delete()
+
+		return True
+
+	if action == 'bolt_logout':
+		partner = Partner.objects.get(user_id=user_pk)
+		settings = ParkSettings.objects.filter(partner=partner)
+		settings.filter(key__in=['BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK']).delete()
+
+		return True
+
+	if action == 'uklon_logout':
+		partner = Partner.objects.get(user_id=user_pk)
+		settings = ParkSettings.objects.filter(partner=partner)
+		settings.filter(key__in=['UKLON_NAME', 'UKLON_PASSWORD']).delete()
+
+		return True
 
 
 def login_in_investor(request, login_name, password):
