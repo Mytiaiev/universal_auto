@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-STAR = '\U00002b50'
+from auto_bot.handlers.comment.static_text import STAR
 
 
 def inline_comment_kb():

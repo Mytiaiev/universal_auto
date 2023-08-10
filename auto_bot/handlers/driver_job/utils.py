@@ -7,7 +7,7 @@ from auto import settings
 
 def validate_date(date_str):
     try:
-        check_date = datetime.strptime(date_str, '%Y-%m-%d')
+        check_date = datetime.strptime(date_str, '%d.%m.%Y')
         today = datetime.today()
         future_date = datetime(2077, 12, 31)
         if check_date < today:

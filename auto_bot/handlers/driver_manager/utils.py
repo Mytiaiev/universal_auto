@@ -11,7 +11,7 @@ from app.models import CarEfficiency, Driver, SummaryReport, DriverManager, \
 
 def validate_date(date_str):
     try:
-        check_date = datetime.strptime(date_str, '%Y-%m-%d')
+        check_date = datetime.strptime(date_str, '%d.%m.%Y')
         today = datetime.today() - timedelta(days=1)
         if check_date > today:
             return False
