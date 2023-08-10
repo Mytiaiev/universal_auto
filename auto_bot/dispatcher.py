@@ -1,6 +1,8 @@
+import os
 import re
 
-from telegram.ext import CommandHandler, PreCheckoutQueryHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
+from telegram.ext import CommandHandler, PreCheckoutQueryHandler, MessageHandler, Filters, CallbackQueryHandler, \
+    ConversationHandler, Updater
 from app.models import Driver
 from auto_bot.states import text
 # handlers
@@ -22,7 +24,7 @@ from auto_bot.handlers.order.handlers import continue_order, to_the_address, fro
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
     ask_client_action, handle_order, choose_date_order, precheckout_callback
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
-    more_function, start_query, get_about_us
+    more_function, start_query, get_about_us, celery_test
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
     update_email, update_user_information, get_job_photo, upload_photo, upload_license_front_photo, \
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
@@ -99,6 +101,7 @@ def setup_dispatcher(dp):
     # Commands for Users
     # Ordering taxi
     dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("test_celery", celery_test))
     dp.add_handler(CallbackQueryHandler(more_function, pattern="Other_user|Other_manager|More_driver"))
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
@@ -233,3 +236,7 @@ def setup_dispatcher(dp):
     # dp.add_handler(MessageHandler(Filters.text('Update report'), get_update_report))
 
     return dp
+
+
+updater = Updater(os.environ['TELEGRAM_TOKEN'], use_context=True)
+dispatcher = setup_dispatcher(updater.dispatcher)
