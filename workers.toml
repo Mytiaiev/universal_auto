@@ -6,17 +6,7 @@ kill_timeout = 5
   DEBUG = ''
 [experimental]
   auto_rollback = true
-  auto_scale_delay = "10s"
 [processes]
-  worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q beat_tasks"
-  gps_worker = "celery -A auto worker --loglevel=info --without-gossip --pool=solo -Q gps_tasks"
-[[services]]
-  auto_stop_machines = true
-  auto_start_machines = true
-  processes = ['worker']
-  protocol = "tcp"
-
-  [services.concurrency]
-    hard_limit = 10
-    soft_limit = 5
-    type = "connections"
+  worker = "celery -A auto worker --loglevel=INFO -Q beat_tasks"
+  gps_worker = "celery -A auto worker --loglevel=INFO  -Q gps_tasks"
+  beat = "celery -A auto beat -l INFO"
