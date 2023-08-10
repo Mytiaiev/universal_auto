@@ -14,8 +14,7 @@ from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, co
     inline_about_us
 import logging
 
-from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
-    more_func_text
+from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, more_func_text
 from scripts.redis_conn import redis_instance
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -108,7 +107,7 @@ def celery_test(update, context):
     try:
         health_check.delay()
     except Exception as e:
-        context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, message=e)
+        context.bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"), message=e)
 
 
 def helptext(update, context):
@@ -162,7 +161,8 @@ def error(update, context):
     )
 
     # Finally, send the message
-    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message, parse_mode=ParseMode.HTML)
+    context.bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
+                             text=message, parse_mode=ParseMode.HTML)
 
 
 

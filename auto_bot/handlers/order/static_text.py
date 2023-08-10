@@ -43,6 +43,7 @@ payment_price = 'Ціна'
 trip_paymented = 'Поїздка оплачена'
 error_payment = "Спробуйте ще раз"
 order_date_text = "Оберіть, коли Ви бажаєте здійснити поїздку"
+update_text = "Оновлюємо інформацію"
 
 order_inline_buttons = (
     "\u274c Відхилити",
