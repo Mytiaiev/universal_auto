@@ -3,10 +3,10 @@ kill_signal = "SIGINT"
 primary_region = "otp"
 kill_timeout = 5
 [env]
-  DEBUG = ''
+  DEBUG = false
 [experimental]
   auto_rollback = true
 [processes]
-  worker = "celery -A auto worker --loglevel=INFO -Q beat_tasks"
-  gps_worker = "celery -A auto worker --loglevel=INFO  -Q gps_tasks"
-  beat = "celery -A auto beat -l INFO"
+  worker = "celery -A auto worker -l WARNING -Q beat_tasks"
+  bot_worker = "celery -A auto worker -l WARNING -Q bot_tasks"
+  beat = "celery -A auto beat -l WARNING"
