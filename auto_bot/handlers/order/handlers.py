@@ -25,27 +25,11 @@ def continue_order(update, context):
     if order:
         query.edit_message_text(already_ordered)
     else:
-        data = {
-            'state': START_TIME_ORDER,
-            'location_button': 0,
-        }
-        redis_instance.hmset(str(chat_id), data)
+        redis_instance.hdel(str(chat_id), 'location_button')
+        redis_instance.hset(str(chat_id), 'state', START_TIME_ORDER)
         query.edit_message_text(price_info(ParkSettings.get_value('TARIFF_IN_THE_CITY'),
                                            ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')))
     query.edit_message_reply_markup(inline_start_order_kb())
-
-
-def cancel_order(update, context):
-    query = update.callback_query
-    query.edit_message_text(complete_order_text)
-    users = User.objects.filter(chat_id=query.message.chat_id)
-    if len(users) == 1:
-        user = users.first()
-        reply_markup = get_start_kb(user)
-    else:
-        reply_markup = inline_owner_kb() if any(user.role == "OWNER" for user in users) else inline_manager_kb()
-    query.edit_message_reply_markup(reply_markup)
-    redis_instance.delete(str(update.effective_chat.id))
 
 
 def get_location(update, context):
@@ -76,7 +60,7 @@ def from_address(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     redis_instance.hset(str(chat_id), 'state', FROM_ADDRESS)
-    location_button = bool(int(redis_instance.hget(str(chat_id), 'location_button')))
+    location_button = redis_instance.hget(str(chat_id), 'location_button')
     if not location_button:
         reply_markup = markup_keyboard(share_location)
         if query:
@@ -184,7 +168,7 @@ def order_create(update, context):
     query.edit_message_text(creating_order_text)
     if not redis_instance.hexists(chat_id, 'from_address'):
         location_address = redis_instance.hget(chat_id, 'location_address')
-        redis_instance.hset(chat_id, 'location_address', location_address)
+        redis_instance.hset(chat_id, 'from_address', location_address)
     else:
         addresses_first = redis_instance.hget(chat_id, 'addresses_first').decode('utf-8')
         from_address = redis_instance.hget(chat_id, 'from_address').decode('utf-8')
@@ -207,7 +191,7 @@ def order_create(update, context):
         'from_address': redis_instance.hget(chat_id, 'from_address').decode('utf-8'),
         'latitude': redis_instance.hget(chat_id, 'latitude').decode(),
         'longitude': redis_instance.hget(chat_id, 'longitude').decode(),
-        'to_the_address': redis_instance.hget(chat_id, 'to_the_address').decode('utf-8'),
+        'to_the_address': to_the_address,
         'to_latitude': destination_lat,
         'to_longitude': destination_long,
         'phone_number': user.phone_number,
@@ -240,6 +224,7 @@ def ask_client_action(update, context):
 
 def increase_order_price(update, context):
     query = update.callback_query
+    query.edit_message_text(update_text)
     chat_id = query.from_user.id
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order=Order.WAITING).last()
