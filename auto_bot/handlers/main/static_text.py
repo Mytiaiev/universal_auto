@@ -1,7 +1,3 @@
-from app.models import ParkSettings
-
-DEVELOPER_CHAT_ID = int(ParkSettings.get_value('DEVELOPER_CHAT_ID', '803129892'))
-
 share_phone_text = "Будь ласка розшарьте номер телефону для роботи з нашим ботом"
 user_greetings_text = "Вас вітає Ninja Taxi. Для замовлення натискай кнопку"
 help_text = "Для першого кроку зробіть реєстрацію або авторизуйтеся командою /start"

@@ -141,7 +141,7 @@ def get_report_period(update, context):
 def create_period_report(update, context):
     date = update.message.text
     if validate_date(date):
-        redis_instance.hset(str(update.effective_chat.id), 'state', None)
+        redis_instance.hdel(str(update.effective_chat.id), 'state')
         start_date = redis_instance.hget(str(update.effective_chat.id), "start").decode()
         start = datetime.strptime(start_date, '%d.%m.%Y')
         end = datetime.strptime(date, '%d.%m.%Y')
@@ -177,7 +177,7 @@ def get_efficiency_auto(update, context):
 def get_efficiency_period(update, context):
     data = update.message.text
     if validate_date(data):
-        context.user_data['start'] = data
+        redis_instance.hset(str(update.effective_chat.id), 'start', data)
         update.message.reply_text(end_report_text)
         redis_instance.hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
     else:
@@ -190,8 +190,9 @@ def create_period_efficiency(update, context):
     data = update.message.text
     if validate_date(data):
         redis_instance.hdel(str(update.effective_chat.id), 'state')
-        start = datetime.strptime(context.user_data['start'], '%Y-%m-%d')
-        end = datetime.strptime(data, '%Y-%m-%d')
+        start_date = redis_instance.hget(str(update.effective_chat.id), "start").decode()
+        start = datetime.strptime(start_date, '%d.%m.%Y')
+        end = datetime.strptime(data, '%d.%m.%Y')
         if start > end:
             start, end = end, start
         result = get_efficiency(update.message.chat_id, start, end)

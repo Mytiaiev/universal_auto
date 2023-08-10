@@ -11,7 +11,7 @@ def comment(update, context):
     query = update.callback_query
     order = Order.objects.filter(chat_id_client=query.message.chat_id,
                                  status_order__in=[Order.IN_PROGRESS, Order.WAITING, Order.COMPLETED],
-                                 created_at__date=timezone.now().date()).last()
+                                 created_at__date=timezone.localtime().date()).last()
     if order:
         query.edit_message_text(mark_or_comment_text)
         query.edit_message_reply_markup(reply_markup=inline_comment_kb())
