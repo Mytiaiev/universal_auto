@@ -103,8 +103,8 @@ class UaGpsSynchronizer:
                 else:
                     last_status = StatusChange.objects.filter(driver=_driver.id,
                                                               vehicle=vehicle).last()
-                    if last_status.name == Driver.WITH_CLIENT:
-                        if last_status.end_time:
+                    if last_status:
+                        if last_status.name == Driver.WITH_CLIENT and last_status.end_time:
                             report = self.generate_report(self.get_timestamp(last_status.end_time),
                                                           self.get_timestamp(timezone.localtime(end)),
                                                           vehicle.gps_id)
