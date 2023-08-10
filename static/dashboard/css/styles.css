@@ -322,7 +322,28 @@ body {
   border-radius: 10px;
 }
 
-/* Стилі для вікна з налаштуваннями(логін партнерів) */
+/*!* Стилі для вікна з налаштуваннями(логін партнерів) *!*/
+
+.loader-login {
+  display: none;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 
 .settings-window {
   display: none;
@@ -362,6 +383,9 @@ body {
 
 .settings-content form label,
 #passwordChangeForm form label {
+  padding: 5px 10px;
+  border: 2px solid #3e8f3e;
+  border-radius: 5px;
   display: block;
   margin-bottom: 5px;
 }
@@ -376,7 +400,8 @@ body {
 }
 
 .settings-content .login-btn,
-#passwordForm #submitPassword {
+#passwordForm #submitPassword,
+.logout-btn {
   padding: 8px 15px;
   border-radius: 5px;
   border: none;
@@ -386,24 +411,8 @@ body {
   margin-left: auto;
   display: block;
 }
-
-.settings-content .logout-btn {
-  padding: 8px 15px;
-  border-radius: 5px;
-  border: none;
-  background-color: #3e8f3e;
-  color: #fff;
-  cursor: pointer;
-  margin-left: auto;
-  display: block;
-}
-
 
 .settings-content .login-btn:hover {
-  background-color: #36a936;
-}
-
-.settings-content .logout-btn:hover {
   background-color: #36a936;
 }
 
@@ -416,33 +425,66 @@ body {
   cursor: pointer;
 }
 
-.opt-boltForm, .opt-uberForm, .opt-uklonForm {
-  margin-top: -45px;
-  margin-bottom: 40px;
+.opt-partnerForm {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
-.error-message {
-  color: red;
+.opt-partnerForm #showPasswordPartner {
+  margin-top: -9px;
 }
 
-.loader-login {
+.partner-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  margin-top: 20px;
+}
+
+.partner-options input {
   display: none;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  animation: spin 1s linear infinite;
-  margin: 0 auto;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.opt-partnerForm {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.opt-partnerForm #showPasswordPartner {
+  margin-top: -9px;
+}
+
+.partner-options label:hover {
+  padding: 5px 10px;
+  color: #fff;
+  cursor: pointer;
+  border: 2px solid #3e8f3e;
+  border-radius: 5px;
+}
+
+.partner-options input:checked + label {
+  padding: 5px 10px;
+  background-color: #3e8f3e;
+  color: #fff;
+  border: 2px solid #3e8f3e;
+  border-radius: 5px;
+}
+
+.login-ok {
+  display: none;
+  margin-top: 50px;
+}
+
+.successful-message {
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  transform: translateX(-50%);
+  color: #3e8f3e;
+  margin-bottom: 35px;
 }
 
 /*стилі для виходу з акаунта*/

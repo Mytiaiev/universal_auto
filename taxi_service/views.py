@@ -65,8 +65,10 @@ class PostRequestView(View):
             return handler.handler_update_order(request)
         elif action in ['increase_price', 'continue_search']:
             return handler.handler_restarting_order(request)
-        elif action in ['Uber_login', 'Uklon_login', 'Bolt_login']:
+        elif action in ['uber', 'uklon', 'bolt']:
             return handler.handler_success_login(request)
+        elif action in ['uber_logout', 'uklon_logout', 'bolt_logout']:
+            return handler.handler_handler_logout(request)
         elif action == 'login_invest':
             return handler.handler_success_login_investor(request)
         elif action == 'logout_invest':

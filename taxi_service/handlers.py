@@ -8,8 +8,9 @@ from django.contrib.auth import logout
 
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import (update_order_sum_or_status, restart_order,
-                                login_in, login_in_investor, change_password_investor,
-                                send_reset_code, active_vehicles_gps, order_confirm,
+                                login_in, partner_logout, login_in_investor,
+                                change_password_investor,send_reset_code,
+                                active_vehicles_gps, order_confirm,
                                 collect_total_earnings, effective_vehicle)
 
 
@@ -71,6 +72,14 @@ class PostRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
+    def handler_handler_logout(self, request):
+        action = request.POST.get('action')
+        partner_pk = request.user.pk
+        partner_logout(action, partner_pk)
+
+        return JsonResponse({}, status=200)
+
+
     def handler_success_login_investor(self, request):
         login = request.POST.get('login')
         password = request.POST.get('password')
@@ -89,9 +98,6 @@ class PostRequestHandler:
             password = request.POST.get('password')
             new_password = request.POST.get('newPassword')
             user_email = User.objects.get(pk=request.user.pk).email
-            print('#' * 100)
-            print(user_email)
-            print('#' * 100)
 
             change = change_password_investor(request, password, new_password, user_email)
             json_data = JsonResponse({'data': change}, safe=False)
