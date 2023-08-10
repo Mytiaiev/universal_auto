@@ -20,18 +20,21 @@ from auto_bot.handlers.owner.static_text import CARD, SUM, PORTMONE_SUM, PORTMON
 from auto_bot.handlers.service_manager.static_text import LICENCE_PLATE, PHOTO, START_OF_REPAIR, END_OF_REPAIR
 from auto_bot.handlers.driver.static_text import V_ID, NUMBERPLATE
 from auto_bot.handlers.order.static_text import FROM_ADDRESS, TO_THE_ADDRESS, TIME_ORDER, COMMENT
+from scripts.redis_conn import redis_instance
 
 
 def text(update, context):
-    if context.user_data:
-        if context.user_data.get('state'):
-            if context.user_data['state'] == FROM_ADDRESS:
+    if True:
+        chat_id = update.message.chat.id
+        state = int(redis_instance.hget(str(chat_id), 'state').decode())
+        if state:
+            if state == FROM_ADDRESS:
                 return to_the_address(update, context)
-            elif context.user_data['state'] == TO_THE_ADDRESS:
+            elif state == TO_THE_ADDRESS:
                 return payment_method(update, context)
-            elif context.user_data['state'] == COMMENT:
+            elif state == COMMENT:
                 return save_comment(update, context)
-            elif context.user_data['state'] == TIME_ORDER:
+            elif state == TIME_ORDER:
                 return order_on_time(update, context)
         elif context.user_data.get('driver_state') is not None:
             if context.user_data['driver_state'] == NUMBERPLATE:
