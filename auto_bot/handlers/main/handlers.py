@@ -26,8 +26,8 @@ processed_files = []
 
 def start(update, context):
     chat_id = update.effective_chat.id
-    redis_instance.delete(str(chat_id))
-    redis_instance.expire(str(chat_id), 3600)
+    redis_instance().delete(str(chat_id))
+    redis_instance().expire(str(chat_id), 3600)
     menu(update, context)
     users = User.objects.filter(chat_id=chat_id)
 
@@ -122,7 +122,7 @@ def get_id(update, context):
 
 def cancel(update, context):
     chat_id = update.message.chat.id
-    redis_instance.delete(str(chat_id))
+    redis_instance().delete(str(chat_id))
     return ConversationHandler.END
 
 

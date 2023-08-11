@@ -1,12 +1,9 @@
 import datetime
-import json
-import os
 import threading
 import time
-import redis
 from django.core.exceptions import ObjectDoesNotExist
 from telegram.ext import ConversationHandler
-from app.models import User, JobApplication, Client
+from app.models import JobApplication, Client
 from auto_bot.handlers.driver_job.keyboards import inline_ask_auto_kb, inline_job_name_kb, inline_ask_docs_kb
 from auto_bot.handlers.driver_job.static_text import *
 from auto_bot.handlers.driver_job.utils import save_storage_photo, validate_date
@@ -29,7 +26,7 @@ def restart_job_application(update, context):
 def update_name(update, context):
     query = update.callback_query
     user = Client.get_by_chat_id(update.effective_chat.id)
-    redis_instance.hset(str(update.effective_chat.id), 'role', driver_job_name)
+    redis_instance().hset(str(update.effective_chat.id), 'role', driver_job_name)
     if user:
         try:
             JobApplication.objects.get(phone_number=user.phone_number)
@@ -46,7 +43,7 @@ def update_second_name(update, context):
     clear_name = Client.name_and_second_name_validator(name=name)
     context.bot.send_message(chat_id=update.effective_chat.id, text=make_mistake_text)
     if clear_name is not None:
-        redis_instance.hset(str(update.effective_chat.id), 'u_name', clear_name)
+        redis_instance().hset(str(update.effective_chat.id), 'u_name', clear_name)
         update.message.reply_text(ask_lastname_text)
         return "JOB_LAST_NAME"
     else:
@@ -58,7 +55,7 @@ def update_email(update, context):
     second_name = update.message.text
     clear_second_name = Client.name_and_second_name_validator(name=second_name)
     if clear_second_name is not None:
-        redis_instance.hset(str(update.effective_chat.id), 'u_second_name', clear_second_name)
+        redis_instance().hset(str(update.effective_chat.id), 'u_second_name', clear_second_name)
         update.message.reply_text(ask_email_text)
         return "JOB_EMAIL"
     else:
@@ -72,13 +69,13 @@ def update_user_information(update, context):
     user = Client.get_by_chat_id(chat_id)
     clear_email = Client.email_validator(email=email)
     if clear_email is not None:
-        user_data = redis_instance.hgetall(str(update.effective_chat.id))
+        user_data = redis_instance().hgetall(str(update.effective_chat.id))
         user.name = user_data['u_name']
         user.second_name = user_data['u_second_name']
         user.email = clear_email
         user.save()
         update.message.reply_text(updated_text, reply_markup=inline_ask_docs_kb())
-        redis_instance.hset(str(update.effective_chat.id), 'phone', user.phone_number)
+        redis_instance().hset(str(update.effective_chat.id), 'phone', user.phone_number)
         return "WAIT_FOR_JOB_OPTION"
     else:
         update.message.reply_text(no_valid_email_text)
@@ -94,7 +91,7 @@ def upload_photo(update, context):
     if update.message.photo:
         image = update.message.photo[-1].get_file()
         filename = f'job/photo/{image["file_unique_id"]}.jpg'
-        redis_instance.hset(str(update.effective_chat.id), 'photo_job', filename)
+        redis_instance().hset(str(update.effective_chat.id), 'photo_job', filename)
         save_storage_photo(image, filename)
         update.message.reply_text(saved_photo_text)
         context.bot.send_photo(update.effective_chat.id,
@@ -109,7 +106,7 @@ def upload_license_front_photo(update, context):
     if update.message.photo:
         image = update.message.photo[-1].get_file()
         filename = f'job/licenses/front/{image["file_unique_id"]}.jpg'
-        redis_instance.hset(str(update.effective_chat.id), 'front_license', filename)
+        redis_instance().hset(str(update.effective_chat.id), 'front_license', filename)
         save_storage_photo(image, filename)
         update.message.reply_text(front_licence_saved)
         context.bot.send_photo(update.effective_chat.id,
@@ -124,7 +121,7 @@ def upload_license_back_photo(update, context):
     if update.message.photo:
         image = update.message.photo[-1].get_file()
         filename = f'job/licenses/back/{image["file_unique_id"]}.jpg'
-        redis_instance.hset(str(update.effective_chat.id), 'back_license', filename)
+        redis_instance().hset(str(update.effective_chat.id), 'back_license', filename)
         save_storage_photo(image, filename)
         update.message.reply_text(back_licence_saved)
         update.message.reply_text(no_date_licence)
@@ -137,7 +134,7 @@ def upload_license_back_photo(update, context):
 def upload_expired_date(update, context):
     date = update.message.text
     if validate_date(date):
-        redis_instance.hset(str(update.effective_chat.id), 'expired_license', date)
+        redis_instance().hset(str(update.effective_chat.id), 'expired_license', date)
         update.message.reply_text(ask_auto_text, reply_markup=inline_ask_auto_kb())
         return "WAIT_ANSWER"
     else:
@@ -157,7 +154,7 @@ def upload_auto_doc(update, context):
     if update.message.photo:
         image = update.message.photo[-1].get_file()
         filename = f'job/car/{image["file_unique_id"]}.jpg'
-        redis_instance.hset(str(update.effective_chat.id), 'auto_doc', filename)
+        redis_instance().hset(str(update.effective_chat.id), 'auto_doc', filename)
         save_storage_photo(image, filename)
         update.message.reply_text(make_mistake_text)
         update.message.reply_text(autodoc_saved_text)
@@ -173,7 +170,7 @@ def upload_insurance(update, context):
     if update.message.photo:
         image = update.message.photo[-1].get_file()
         filename = f'job/insurance/{image["file_unique_id"]}.jpg'
-        redis_instance.hset(str(update.effective_chat.id), 'insurance', filename)
+        redis_instance().hset(str(update.effective_chat.id), 'insurance', filename)
         save_storage_photo(image, filename)
         update.message.reply_text(insurance_saved_text)
         return 'WAIT_FOR_INSURANCE_EXPIRED'
@@ -186,7 +183,7 @@ def upload_expired_insurance(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     user = Client.get_by_chat_id(chat_id)
-    user_data = redis_instance.hgetall(str(chat_id))
+    user_data = redis_instance().hgetall(str(chat_id))
     job = {"first_name": user.name,
            "last_name": user.second_name,
            "email": user.email,
@@ -212,7 +209,7 @@ def upload_expired_insurance(update, context):
         else:
             update.message.reply_text(f'{date} {no_valid_insurance}')
             return 'WAIT_FOR_EXPIRED'
-    redis_instance.hset(str(chat_id), "thread", 1)
+    redis_instance().hset(str(chat_id), "thread", 1)
     t = threading.Thread(target=code_timer, args=(update, context, 180, 30), daemon=True)
     t.start()
     return "JOB_UKLON_CODE"
@@ -221,8 +218,8 @@ def upload_expired_insurance(update, context):
 def uklon_code(update, context):
     chat_id = update.message.chat.id
     user = Client.get_by_chat_id(chat_id)
-    redis_instance.delete(str(chat_id))
-    redis_instance.publish(f'{user.phone_number} code', update.message.text)
+    redis_instance().delete(str(chat_id))
+    redis_instance().publish(f'{user.phone_number} code', update.message.text)
     update.message.reply_text(accept_code_text)
     return ConversationHandler.END
 
@@ -231,14 +228,14 @@ def code_timer(update, context, timer, sleep):
     def timer_callback(context):
         context.bot.send_message(update.effective_chat.id,
                                  f'Заявку відхилено.Ви завжди можете подати її повторно')
-        phone = redis_instance.hget(str(update.effective_chat.id), "phone")
+        phone = redis_instance().hget(str(update.effective_chat.id), "phone")
         JobApplication.objects.filter(phone_number=phone).first().delete()
         return ConversationHandler.END
 
     remaining_time = timer
     while remaining_time > 0:
         try:
-            if redis_instance.hget(str(update.effective_chat.id), "thread"):
+            if redis_instance().hget(str(update.effective_chat.id), "thread"):
                 if remaining_time < sleep + 1:
                     context.bot.send_message(update.effective_chat.id,
                                              f'Залишилось {int(remaining_time)} секунд.'

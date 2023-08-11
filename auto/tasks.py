@@ -26,7 +26,7 @@ from auto_bot.handlers.order.static_text import decline_order, order_info, clien
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.handlers.status.static_text import please_start_text, unblock_text
 from auto_bot.main import bot
-from scripts.conversion import convertion, haversine, get_location_from_db, geocode, get_route_price
+from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
 from auto.celery import app
 from scripts.redis_conn import redis_instance
 from selenium_ninja.bolt_sync import BoltRequest
@@ -187,10 +187,10 @@ def update_driver_status(self, partner_pk):
                         bot.send_message(chat_id=driver.chat_id, text=please_start_text,
                                          reply_markup=spam_driver_kb())
                     except Unauthorized:
-                        if not redis_instance.exists(f"{driver}_block"):
+                        if not redis_instance().exists(f"{driver}_block"):
                             bot.send_message(chat_id=ParkSettings.get_value("DRIVERS_CHAT", partner=partner_pk),
                                              text=f"{driver} {unblock_text}")
-                            redis_instance.set(f"{driver}_block", 'blocked', ex=3600)
+                            redis_instance().set(f"{driver}_block", 'blocked', ex=3600)
                     except Exception as e:
                         logger.error(e)
                 logger.warning(f'{driver}: {current_status}')
@@ -526,18 +526,18 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour='*/2'), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute=59, hour='*/1'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=5, day_of_week=1),
+    sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
+    # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute="59", hour='*/1'), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
                              send_weekly_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1),
+    sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
                              manager_paid_weekly.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=7, day_of_week=1),
-                             get_uber_session.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute="55", hour="10", day_of_week="1"),
+                             get_uber_session.s(partner_id))
 
 
 def remove_periodic_tasks(partner, sender=None):
