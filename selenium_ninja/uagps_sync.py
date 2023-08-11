@@ -2,7 +2,6 @@ import json
 import datetime
 import requests
 from _decimal import Decimal
-from django.db.models import Sum
 from django.utils import timezone
 from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner
 

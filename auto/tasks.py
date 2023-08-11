@@ -26,7 +26,7 @@ from auto_bot.handlers.order.static_text import decline_order, order_info, clien
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.handlers.status.static_text import please_start_text, unblock_text
 from auto_bot.main import bot
-from scripts.conversion import convertion, haversine, get_location_from_db, geocode, get_route_price
+from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
 from auto.celery import app
 from scripts.redis_conn import redis_instance
 from selenium_ninja.bolt_sync import BoltRequest
@@ -187,13 +187,13 @@ def update_driver_status(self, partner_pk):
                         bot.send_message(chat_id=driver.chat_id, text=please_start_text,
                                          reply_markup=spam_driver_kb())
                     except Unauthorized:
-                        if not redis_instance.exists(f"{driver}_block"):
+                        if not redis_instance().exists(f"{driver}_block"):
                             bot.send_message(chat_id=ParkSettings.get_value("DRIVERS_CHAT", partner=partner_pk),
                                              text=f"{driver} {unblock_text}")
-                            redis_instance.set(f"{driver}_block", 'blocked', ex=3600)
+                            redis_instance().set(f"{driver}_block", 'blocked', ex=3600)
                     except Exception as e:
-                        logger.info(e)
-                logger.info(f'{driver}: {current_status}')
+                        logger.error(e)
+                logger.warning(f'{driver}: {current_status}')
     except Exception as e:
         logger.error(e)
 
@@ -304,18 +304,8 @@ def check_time_order(self, order_id):
         instance = Order.objects.get(pk=order_id)
     except ObjectDoesNotExist:
         return
-    order_time = timezone.localtime(instance.order_time)
-    message = order_info(instance.pk,
-                         instance.from_address,
-                         instance.to_the_address,
-                         instance.payment_method,
-                         instance.phone_number,
-                         instance.sum,
-                         instance.distance_google,
-                         time=order_time.strftime("%Y-%m-%d %H:%M"))
-
     group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
-                                 text=message,
+                                 text=order_info(instance),
                                  reply_markup=inline_markup_accept(instance.pk),
                                  parse_mode=ParseMode.HTML)
     instance.driver_message_id, instance.checked = group_msg.message_id, True
@@ -329,14 +319,8 @@ def send_time_order(self):
     for order in accepted_orders:
         if timezone.localtime() < order.order_time < (timezone.localtime() + timedelta(minutes=int(
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
-            markup = inline_time_order_kb(order.id)
-            text = order_info(order.pk, order.from_address, order.to_the_address,
-                              order.payment_method, order.phone_number, order.sum,
-                              order.distance_google,
-                              time=timezone.localtime(order.order_time).time())
-
-            bot.send_message(chat_id=order.driver.chat_id, text=text,
-                             reply_markup=markup, parse_mode=ParseMode.HTML)
+            bot.send_message(chat_id=order.driver.chat_id, text=order_info(order),
+                             reply_markup=inline_time_order_kb(order.id), parse_mode=ParseMode.HTML)
 
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
@@ -402,12 +386,9 @@ def search_driver_for_order(self, order_pk):
                 radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
                          order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
                 if distance <= radius:
-                    message = order_info(order.pk, order.from_address, order.to_the_address,
-                                         order.payment_method, order.phone_number, order.sum, order.distance_google)
-                    markup = inline_markup_accept(order.pk)
                     accept_message = bot.send_message(chat_id=driver.chat_id,
-                                                      text=message,
-                                                      reply_markup=markup)
+                                                      text=order_info(order),
+                                                      reply_markup=inline_markup_accept(order.pk))
                     end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
                     while time.time() < end_time:
                         upd_driver = Driver.objects.get(id=driver.id)
@@ -545,18 +526,18 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=4), download_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour='*/2'), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute=59, hour='*/1'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute=0, hour=6), send_efficiency_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=30, hour=4), get_car_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute=1, hour=6), send_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=5, day_of_week=1),
+    sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
+    # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute="59", hour='*/1'), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
                              send_weekly_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=8, day_of_week=1),
+    sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
                              manager_paid_weekly.s(partner_id))
-    sender.add_periodic_task(crontab(minute=55, hour=7, day_of_week=1),
-                             get_uber_session.s(partner_id), queue='beat_tasks')
+    sender.add_periodic_task(crontab(minute="55", hour="10", day_of_week="1"),
+                             get_uber_session.s(partner_id))
 
 
 def remove_periodic_tasks(partner, sender=None):

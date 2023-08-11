@@ -21,7 +21,7 @@ def comment(update, context):
     else:
         query.edit_message_text(no_order_comment_text)
     user_data = {'state': COMMENT, 'message_comment': query.message.message_id}
-    redis_instance.hmset(str(update.effective_chat.id), user_data)
+    redis_instance().hmset(str(update.effective_chat.id), user_data)
 
 
 def save_comment(update, context):
@@ -30,9 +30,9 @@ def save_comment(update, context):
         query.edit_message_text(comment_save_text)
         mark = int(query.data[0]) * STAR
     else:
-        message_id = redis_instance.hget(str(update.effective_chat.id), 'message_comment')
+        message_id = redis_instance().hget(str(update.effective_chat.id), 'message_comment')
         mark = update.message.text
-        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=int(message_id.decode()))
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=int(message_id))
         context.bot.send_message(chat_id=update.effective_chat.id, text=comment_save_text)
     order = Order.objects.filter(chat_id_client=update.effective_chat.id,
                                  status_order__in=[Order.CANCELED, Order.COMPLETED],
@@ -46,4 +46,4 @@ def save_comment(update, context):
             comment_obj.save()
         order.comment = comment_obj
         order.save()
-    redis_instance.hdel(str(update.effective_chat.id), 'state')
+    redis_instance().hdel(str(update.effective_chat.id), 'state')
