@@ -309,7 +309,7 @@ class SeleniumTools:
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
 
     def wait_otp_code(self, key):
-        p = redis_instance.pubsub()
+        p = redis_instance().pubsub()
         p.subscribe(key)
         p.ping()
         while True:
@@ -324,7 +324,7 @@ class SeleniumTools:
                     break
             except redis.ConnectionError as e:
                 self.logger.error(str(e))
-                p = redis_instance.pubsub()
+                p = redis_instance().pubsub()
                 p.subscribe('code')
             time.sleep(1)
         return otpa

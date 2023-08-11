@@ -22,7 +22,7 @@ from scripts.redis_conn import redis_instance
 
 
 def text(update, context):
-    state_data = redis_instance.hget(str(update.effective_chat.id), "state")
+    state_data = redis_instance().hget(str(update.effective_chat.id), "state")
     if state_data:
         state_data = int(state_data)
         state_handlers = {

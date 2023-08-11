@@ -7,7 +7,6 @@ from app.models import Driver, Vehicle, Report_of_driver_debt, Event, ParkStatus
 from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard, inline_dates_kb
 from auto_bot.handlers.driver.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
-from scripts.redis_conn import redis_instance
 
 
 def status_car(update, context):

@@ -111,7 +111,7 @@ def get_report(update, context):
     message = ''
     if query.data == "Custom_report":
         query.edit_message_text(start_report_text)
-        redis_instance.hset(str(update.effective_chat.id), 'state', START_EARNINGS)
+        redis_instance().hset(str(update.effective_chat.id), 'state', START_EARNINGS)
     else:
         result = get_daily_report(manager_id=query.from_user.id)
         if result:
@@ -131,9 +131,9 @@ def get_report_period(update, context):
         user_data = {'start': data,
                      'state': END_EARNINGS}
         update.message.reply_text(end_report_text)
-        redis_instance.hmset(str(update.effective_chat.id), user_data)
+        redis_instance().hmset(str(update.effective_chat.id), user_data)
     else:
-        redis_instance.hset(str(update.effective_chat.id), 'state', START_EARNINGS)
+        redis_instance().hset(str(update.effective_chat.id), 'state', START_EARNINGS)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_data_text)
         update.message.reply_text(start_report_text)
 
@@ -141,8 +141,8 @@ def get_report_period(update, context):
 def create_period_report(update, context):
     date = update.message.text
     if validate_date(date):
-        redis_instance.hdel(str(update.effective_chat.id), 'state')
-        start_date = redis_instance.hget(str(update.effective_chat.id), "start")
+        redis_instance().hdel(str(update.effective_chat.id), 'state')
+        start_date = redis_instance().hget(str(update.effective_chat.id), "start")
         start = datetime.strptime(start_date, '%d.%m.%Y')
         end = datetime.strptime(date, '%d.%m.%Y')
         if start > end:
@@ -153,7 +153,7 @@ def create_period_report(update, context):
             message += "{} {:.2f}\n".format(key, value)
         update.message.reply_text(message, reply_markup=inline_manager_kb())
     else:
-        redis_instance.hset(str(update.effective_chat.id), 'state', END_EARNINGS)
+        redis_instance().hset(str(update.effective_chat.id), 'state', END_EARNINGS)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
 
 
@@ -162,7 +162,7 @@ def get_efficiency_auto(update, context):
     message = ''
     if query.data == "Efficiency_custom":
         query.edit_message_text(start_report_text)
-        redis_instance.hset(str(update.effective_chat.id), 'state', START_EFFICIENCY)
+        redis_instance().hset(str(update.effective_chat.id), 'state', START_EFFICIENCY)
     else:
         result = get_efficiency(manager_id=query.from_user.id)
         if result:
@@ -177,11 +177,11 @@ def get_efficiency_auto(update, context):
 def get_efficiency_period(update, context):
     data = update.message.text
     if validate_date(data):
-        redis_instance.hset(str(update.effective_chat.id), 'start', data)
+        redis_instance().hset(str(update.effective_chat.id), 'start', data)
         update.message.reply_text(end_report_text)
-        redis_instance.hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
+        redis_instance().hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
     else:
-        redis_instance.hset(str(update.effective_chat.id), 'state', START_EFFICIENCY)
+        redis_instance().hset(str(update.effective_chat.id), 'state', START_EFFICIENCY)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_data_text)
         update.message.reply_text(start_report_text)
 
@@ -189,8 +189,8 @@ def get_efficiency_period(update, context):
 def create_period_efficiency(update, context):
     data = update.message.text
     if validate_date(data):
-        redis_instance.hdel(str(update.effective_chat.id), 'state')
-        start_date = redis_instance.hget(str(update.effective_chat.id), "start")
+        redis_instance().hdel(str(update.effective_chat.id), 'state')
+        start_date = redis_instance().hget(str(update.effective_chat.id), "start")
         start = datetime.strptime(start_date, '%d.%m.%Y')
         end = datetime.strptime(data, '%d.%m.%Y')
         if start > end:
@@ -204,7 +204,7 @@ def create_period_efficiency(update, context):
             message += no_vehicles_text
         update.message.reply_text(message, reply_markup=inline_manager_kb())
     else:
-        redis_instance.hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
+        redis_instance().hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
 
 

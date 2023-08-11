@@ -30,7 +30,7 @@ def setup_webhook():
         print("Webhook set failed after multiple retries")
 
 
-distributed_lock = redis_instance.lock('bot_setup_lock', blocking_timeout=100)
+distributed_lock = redis_instance().lock('bot_setup_lock', blocking_timeout=100)
 if distributed_lock.acquire(blocking=True):
     try:
         setup_webhook()
