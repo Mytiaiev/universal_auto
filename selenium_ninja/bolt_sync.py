@@ -36,7 +36,6 @@ class BoltRequest(Synchronizer):
     def get_access_token(self):
         token = self.redis.get(f"{self.partner_id}_{self.fleet}_refresh")
         if token:
-            token = token.decode()
             while True:
                 access_payload = {
                     "refresh_token": token,

@@ -1,4 +1,6 @@
-FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER = range(1, 6)
+from django.utils import timezone
+
+FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER, ADD_INFO = range(1, 7)
 NOT_CORRECT_ADDRESS = "На жаль, немає вірної адреси"
 LOCATION = "Поділитися місцезнаходженням"
 
@@ -44,7 +46,9 @@ trip_paymented = 'Поїздка оплачена'
 error_payment = "Спробуйте ще раз"
 order_date_text = "Оберіть, коли Ви бажаєте здійснити поїздку"
 update_text = "Оновлюємо інформацію"
-
+add_info_text = "Бажаєте додати коментар до замовлення?"
+ask_info_text = "Напишіть, будь ласка, Ваш коментар"
+too_long_text = "Занадто великий коментар, вкажіть тільки найважливіше"
 order_inline_buttons = (
     "\u274c Відхилити",
     "\u2705 Прийняти замовлення",
@@ -56,6 +60,8 @@ order_inline_buttons = (
     "\u2705 Завершити поїздку",
     "\U0001F6A5 Побудувати маршрут",
     "\u2705 Залишити відгук",
+    "\U0001F4DD Додати коментар",
+    "\u274c Ні, дякую"
 )
 
 search_inline_buttons = (
@@ -91,20 +97,20 @@ def price_info(in_city, out_city):
     return message
 
 
-def order_info(number, address, to_address, payment, phone, price, distance, time=None):
-    time_message = f"<u>Замовлення на певний час {number}:</u>\n" \
-                   f"<b>Час подачі:{time}</b>\n"
-    now_message = f"Отримано нове замовлення {number}:\n"
-    message = f"Адреса посадки: {address}\n" \
-              f"Місце прибуття: {to_address}\n" \
-              f"Спосіб оплати: {payment}\n" \
-              f"Номер телефону: {phone}\n" \
-              f"Загальна вартість: {price} грн\n" \
-              f"Довжина маршруту: {distance} км"
-    if time is not None:
-        message = time_message + message
+def order_info(order):
+    if order.order_time:
+        message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
+                       f"<b>Час подачі:{timezone.localtime(order.order_time).time()}</b>\n"
     else:
-        message = now_message + message
+        message = f"Отримано нове замовлення {order.pk}:\n"
+    message += f"Адреса посадки: {order.from_address}\n" \
+               f"Місце прибуття: {order.to_the_address}\n" \
+               f"Спосіб оплати: {order.payment_method}\n" \
+               f"Номер телефону: {order.phone_number}\n" \
+               f"Загальна вартість: {order.sum} грн\n" \
+               f"Довжина маршруту: {order.distance_google} км"
+    if order.info:
+        message += f"Коментар: {order.info}"
     return message
 
 
@@ -130,14 +136,15 @@ def client_order_text(driver, vehicle, plate, phone, price):
 
 
 def client_order_info(address, to_address, payment, phone, price, increase=None):
-    message = f"Ваше замовлення:\n" \
-              f"Адреса посадки: {address}\n" \
-              f"Місце прибуття: {to_address}\n" \
-              f"Спосіб оплати: {payment}\n" \
-              f"Номер телефону: {phone}\n" \
-              f"Сума замовлення: {price} грн\n" \
-              f'Шукаємо водія...'
     if increase:
         message = f"Замовлення оновлено\nНова сума замовлення: {price} грн\n" \
                   f"Шукаємо водія..."
+    else:
+        message = f"Ваше замовлення:\n" \
+                  f"Адреса посадки: {address}\n" \
+                  f"Місце прибуття: {to_address}\n" \
+                  f"Спосіб оплати: {payment}\n" \
+                  f"Номер телефону: {phone}\n" \
+                  f"Сума замовлення: {price} грн\n" \
+                  f'Шукаємо водія...'
     return message

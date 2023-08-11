@@ -11,7 +11,7 @@ class UklonRequest(Synchronizer):
     def get_header(self) -> dict:
         token = self.redis.get(f"{self.partner_id}token")
         headers = {
-            'Authorization': f'Bearer {token.decode()}'
+            'Authorization': f'Bearer {token}'
          }
         return headers
 

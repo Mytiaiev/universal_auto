@@ -72,8 +72,7 @@ def update_user_information(update, context):
     user = Client.get_by_chat_id(chat_id)
     clear_email = Client.email_validator(email=email)
     if clear_email is not None:
-        redis_data = redis_instance.hgetall(str(update.effective_chat.id))
-        user_data = {key.decode(): value.decode() for key, value in redis_data.items()}
+        user_data = redis_instance.hgetall(str(update.effective_chat.id))
         user.name = user_data['u_name']
         user.second_name = user_data['u_second_name']
         user.email = clear_email
@@ -187,8 +186,7 @@ def upload_expired_insurance(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     user = Client.get_by_chat_id(chat_id)
-    redis_data = redis_instance.hgetall(str(chat_id))
-    user_data = {key.decode(): value.decode() for key, value in redis_data.items()}
+    user_data = redis_instance.hgetall(str(chat_id))
     job = {"first_name": user.name,
            "last_name": user.second_name,
            "email": user.email,
@@ -233,7 +231,7 @@ def code_timer(update, context, timer, sleep):
     def timer_callback(context):
         context.bot.send_message(update.effective_chat.id,
                                  f'Заявку відхилено.Ви завжди можете подати її повторно')
-        phone = redis_instance.hget(str(update.effective_chat.id), "phone").decode()
+        phone = redis_instance.hget(str(update.effective_chat.id), "phone")
         JobApplication.objects.filter(phone_number=phone).first().delete()
         return ConversationHandler.END
 
