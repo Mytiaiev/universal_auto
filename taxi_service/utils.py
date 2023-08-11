@@ -159,7 +159,7 @@ def collect_total_earnings(period):
 		report_from__range=(start_period, end_period))
 	for driver in Driver.objects.all():
 		total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
-			clean_kasa=Sum('total_amount_without_fee'))['clean_kasa']
+			clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
 		if total.get(driver.full_name()):
 			total_amount += total[driver.full_name()]
 	return total, total_amount, start_date_formatted, end_date_formatted
@@ -373,7 +373,7 @@ def change_password_investor(request, password, new_password, user_email):
 				return {'success': False, 'message': 'User is not active'}
 		else:
 			return {'success': False, 'message': 'User is not found'}
-	except User.DoesNotExist as error:
+	except Exception as error:
 		return {'success': False, 'message': 'Користувача не знайдено.'}
 
 

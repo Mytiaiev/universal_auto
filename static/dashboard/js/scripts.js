@@ -23,7 +23,7 @@ function closeSidebar() {
 // BAR CHART
 let barChartOptions = {
 	series: [{
-		data: [10, 8, 6, 4, 2],
+		data: [],
 		name: "Заробіток: ",
 	}],
 	chart: {
@@ -40,6 +40,8 @@ let barChartOptions = {
 		"#2e7d32",
 		"#ff6d00",
 		"#583cb3",
+		"#c51162",
+		"#00bfa5",
 	],
 	plotOptions: {
 		bar: {
@@ -86,7 +88,7 @@ let barChartOptions = {
 		theme: "dark",
 	},
 	xaxis: {
-		categories: ["Laptop", "Phone", "Monitor", "Headphones", "Camera"],
+		categories: [],
 		title: {
 			style: {
 				color: "#f5f7ff",
@@ -136,11 +138,11 @@ barChart.render();
 // AREA CHART
 let areaChartOptions = {
 	series: [{
-		name: "Василь",
-		data: [31, 40, 28, 51, 42, 60, 76],
+		name: "",
+		data: [],
 	}, {
-		name: "Іван",
-		data: [11, 32, 45, 32, 34, 52, 41],
+		name: "",
+		data: [],
 	}],
 	chart: {
 		type: "area",
@@ -408,10 +410,33 @@ $(document).ready(function () {
 $(document).ready(function () {
 
 	const partnerForm = $("#partnerForm");
-	const partnerOptions = $(".partner-options input");
+	const partnerLoginField = $("#partnerLogin");
+	const partnerRadioButtons = $("input[name='partner']");
+
+	partnerRadioButtons.change(function () {
+		const selectedPartner = $("input[name='partner']:checked").val();
+		updateLoginField(selectedPartner);
+	});
+
+	function updateLoginField(partner) {
+		if (partner === 'uklon') {
+			partnerLoginField.val('+380');
+		} else {
+			partnerLoginField.val('');
+			$("#partnerPassword").val("");
+		}
+	}
 
 	if (sessionStorage.getItem('settings') === 'true') {
 		$("#settingsWindow").fadeIn();
+	}
+
+	if (localStorage.getItem('uber')) {
+		$("#partnerLogin").hide()
+		$("#partnerPassword").hide()
+		$(".opt-partnerForm").hide()
+		$(".login-ok").show()
+		$("#loginErrorMessage").hide()
 	}
 
 	$("#settingBtn").click(function () {
@@ -444,6 +469,7 @@ $(document).ready(function () {
 		$("#partnerPassword").show()
 		$(".opt-partnerForm").show()
 		$(".login-ok").hide()
+		$("#loginErrorMessage").hide()
 	});
 
 	// Show/hide password functionality
@@ -473,11 +499,13 @@ $(document).ready(function () {
 			$("#partnerPassword").hide()
 			$(".opt-partnerForm").hide()
 			$(".login-ok").show()
+			$("#loginErrorMessage").hide()
 		} else {
 			$("#partnerLogin").show()
 			$("#partnerPassword").show()
 			$(".opt-partnerForm").show()
 			$(".login-ok").hide()
+			$("#loginErrorMessage").hide()
 		}
 	})
 
@@ -499,7 +527,9 @@ $(document).ready(function () {
 					$(".opt-partnerForm").hide()
 					$(".login-ok").show()
 				} else {
-					$("#partnerLogin").val("Вказано неправильний логін або пароль").addClass("error-message");
+					$("#loginErrorMessage").show()
+					$("#partnerLogin").val("").addClass("error-border");
+					$("#partnerPassword").val("").addClass("error-border");
 				}
 				hideLoader(partnerForm);
 			}
@@ -577,8 +607,7 @@ $(document).ready(function () {
 		let confirmPassword = $("#confirmPassword").val();
 
 		if (newPassword !== confirmPassword) {
-			$("#newPassword").val("Пароль не співпадає").addClass("error-message");
-			$("#confirmPassword").val("Пароль не співпадає").addClass("error-message");
+			$("#ChangeErrorMessage").show();
 		} else {
 			$.ajax({
 				url: ajaxPostUrl,
@@ -594,7 +623,7 @@ $(document).ready(function () {
 						$("#passwordChangeForm").hide();
 						window.location.href = "/";
 					} else {
-						$("#oldPassword").val("Вказано неправильний пароль").addClass("error-message");
+						$("#oldPasswordMessage").show();
 					}
 				}
 			});

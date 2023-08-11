@@ -49,15 +49,14 @@
 			<h2>Після зміни пароля потрібно перезайти.</h2>
 			<form id="passwordForm">
 				{% csrf_token %}
-				<label for="oldPassword">Старий пароль:</label>
-				<input type="password" id="oldPassword" name="oldPassword" required><br>
-
-				<label for="newPassword">Новий пароль:</label>
-				<input type="password" id="newPassword" name="newPassword" required><br>
-
-				<label for="confirmPassword">Підтвердити новий пароль:</label>
-				<input type="password" id="confirmPassword" name="confirmPassword"
-							 required><br>
+				<h4>Старий пароль:</h4>
+				<input type="password" id="oldPassword" name="oldPassword" required>
+				<p class="error-message" id="oldPasswordMessage" style="display:none; color: red">Вказано неправильний пароль</p>
+				<h4>Новий пароль:</h4>
+				<input type="password" id="newPassword" name="newPassword" required>
+				<p class="error-message" id="ChangeErrorMessage" style="display:none; color: red">Пароль не співпадає</p>
+				<h4>Підтвердити новий пароль:</h4>
+				<input type="password" id="confirmPassword" name="confirmPassword" required>
 
 				<button id="submitPassword" type="button">Змінити</button>
 			</form>
@@ -107,7 +106,7 @@
 
 					<form id="partnerForm">
 						{% csrf_token %}
-						<h3 for="partnerSelection">Виберіть партнера:</h3>
+						<h3>Виберіть партнера:</h3>
 						<div class="partner-options">
 							<input type="radio" id="uberOption" name="partner" value="uber" checked>
 							<label for="uberOption">Uber</label>
@@ -118,7 +117,7 @@
 							<input type="radio" id="uklonOption" name="partner" value="uklon">
 							<label for="uklonOption">Uklon</label>
 						</div>
-
+						<p class="error-message" id="loginErrorMessage" style="display:none; color: red">Вказано неправильний логін або пароль</p>
 						<input type="text" id="partnerLogin" name="partnerLogin" placeholder="Логін" required>
 						<input class="showPassword partnerPassword" type="password" id="partnerPassword" name="partnerPassword" placeholder="Пароль" required>
 						<div class="loader-login"></div>
