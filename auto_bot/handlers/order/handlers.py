@@ -9,8 +9,9 @@ from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
     inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb, \
-    share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client, inline_choose_date_kb
-from auto_bot.handlers.order.utils import buttons_addresses, text_to_client
+    share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client, inline_choose_date_kb, \
+    inline_add_info_kb
+from auto_bot.handlers.order.utils import buttons_addresses, text_to_client, validate_text
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db, geocode
 from auto_bot.handlers.order.static_text import *
@@ -25,8 +26,8 @@ def continue_order(update, context):
     if order:
         query.edit_message_text(already_ordered)
     else:
-        redis_instance.hdel(str(chat_id), 'location_button')
-        redis_instance.hset(str(chat_id), 'state', START_TIME_ORDER)
+        redis_instance().hdel(str(chat_id), 'location_button')
+        redis_instance().hset(str(chat_id), 'state', START_TIME_ORDER)
         query.edit_message_text(price_info(ParkSettings.get_value('TARIFF_IN_THE_CITY'),
                                            ParkSettings.get_value('TARIFF_OUTSIDE_THE_CITY')))
     query.edit_message_reply_markup(inline_start_order_kb())
@@ -42,13 +43,13 @@ def get_location(update, context):
             'latitude': location.latitude,
             'longitude': location.longitude
         }
-        redis_instance.hmset(str(chat_id), data)
-        latitude = redis_instance.hget(chat_id, 'latitude').decode()
-        longitude = redis_instance.hget(chat_id, 'longitude').decode()
+        redis_instance().hmset(str(chat_id), data)
+        latitude = redis_instance().hget(chat_id, 'latitude')
+        longitude = redis_instance().hget(chat_id, 'longitude')
         address = get_address(latitude, longitude,
                               ParkSettings.get_value('GOOGLE_API_KEY'))
         if address is not None:
-            redis_instance.hset(chat_id, 'location_address', address)
+            redis_instance().hset(chat_id, 'location_address', address)
             update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=ReplyKeyboardRemove())
             update.message.reply_text(text=ask_spot_text, reply_markup=inline_location_kb())
         else:
@@ -59,8 +60,8 @@ def get_location(update, context):
 def from_address(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
-    redis_instance.hset(str(chat_id), 'state', FROM_ADDRESS)
-    location_button = redis_instance.hget(str(chat_id), 'location_button')
+    redis_instance().hset(str(chat_id), 'state', FROM_ADDRESS)
+    location_button = redis_instance().hget(str(chat_id), 'location_button')
     if not location_button:
         reply_markup = markup_keyboard(share_location)
         if query:
@@ -75,7 +76,7 @@ def from_address(update, context):
 def to_the_address(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
-    state = int(redis_instance.hget(str(chat_id), 'state'))
+    state = int(redis_instance().hget(str(chat_id), 'state'))
     if state == FROM_ADDRESS:
         buttons = [[InlineKeyboardButton(f'{NOT_CORRECT_ADDRESS}', callback_data='From_address 0')], ]
         address = update.message.text
@@ -85,7 +86,7 @@ def to_the_address(update, context):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'From_address {no}')])
             buttons.append([InlineKeyboardButton(order_inline_buttons[6], callback_data="Call_taxi")])
             reply_markup = InlineKeyboardMarkup(buttons)
-            redis_instance.hset(str(chat_id), 'addresses_first', json.dumps(addresses))
+            redis_instance().hset(str(chat_id), 'addresses_first', json.dumps(addresses))
             context.bot.send_message(chat_id=chat_id, text=from_address_search, reply_markup=ReplyKeyboardRemove())
             context.bot.send_message(chat_id=chat_id, text=choose_from_address_text, reply_markup=reply_markup)
         else:
@@ -96,13 +97,13 @@ def to_the_address(update, context):
             query.edit_message_text(arrival_text)
         else:
             context.bot.send_message(chat_id=chat_id, text=arrival_text)
-        redis_instance.hset(str(chat_id), 'state', TO_THE_ADDRESS)
+        redis_instance().hset(str(chat_id), 'state', TO_THE_ADDRESS)
 
 
 def payment_method(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
-    state = int(redis_instance.hget(str(chat_id), 'state'))
+    state = int(redis_instance().hget(str(chat_id), 'state'))
     if state == TO_THE_ADDRESS:
         address = update.message.text
         buttons = [[InlineKeyboardButton(f'{NOT_CORRECT_ADDRESS}', callback_data='To_the_address 0')], ]
@@ -112,7 +113,7 @@ def payment_method(update, context):
                 buttons.append([InlineKeyboardButton(key, callback_data=f'To_the_address {no}')])
             buttons.append([InlineKeyboardButton(order_inline_buttons[6], callback_data="Wrong_place")])
             reply_markup = InlineKeyboardMarkup(buttons)
-            redis_instance.hset(str(chat_id), 'addresses_second', json.dumps(addresses))
+            redis_instance().hset(str(chat_id), 'addresses_second', json.dumps(addresses))
             context.bot.send_message(chat_id=chat_id,
                                      text=choose_to_address_text,
                                      reply_markup=reply_markup)
@@ -120,9 +121,31 @@ def payment_method(update, context):
             context.bot.send_message(chat_id=chat_id, text=wrong_address_request)
             to_the_address(update, context)
     else:
-        redis_instance.hset(str(chat_id), 'state', 0)
+        query.edit_message_text(add_info_text)
+        query.edit_message_reply_markup(inline_add_info_kb())
+        redis_instance().hdel(str(chat_id), 'state')
+
+
+def add_info_to_order(update, context):
+    query = update.callback_query
+    query.edit_message_text(ask_info_text)
+    redis_instance().hset(str(update.effective_chat.id), 'state', ADD_INFO)
+
+
+def get_additional_info(update, context):
+    query = update.callback_query
+    chat_id = update.effective_chat.id
+    if query:
         query.edit_message_text(payment_text)
         query.edit_message_reply_markup(inline_payment_kb())
+    else:
+        if validate_text(update.message.text):
+            redis_instance().hdel(str(update.effective_chat.id), 'state')
+            redis_instance().hset(str(chat_id), 'info', update.message.text)
+            context.bot.send_message(chat_id=chat_id, text=payment_text, reply_markup=inline_payment_kb())
+        else:
+            redis_instance().hset(str(update.effective_chat.id), 'state', ADD_INFO)
+            context.bot.send_message(chat_id=chat_id, text=too_long_text)
 
 
 def second_address_check(update, context):
@@ -135,7 +158,7 @@ def second_address_check(update, context):
             'to_the_address': response,
             'state': 0
         }
-        redis_instance.hmset(str(chat_id), data_)
+        redis_instance().hmset(str(chat_id), data_)
         payment_method(update, context)
     else:
         to_the_address(update, context)
@@ -151,7 +174,7 @@ def first_address_check(update, context):
             'from_address': response,
             'state': 0
         }
-        redis_instance.hmset(str(chat_id), data_)
+        redis_instance().hmset(str(chat_id), data_)
 
         to_the_address(update, context)
     else:
@@ -166,12 +189,12 @@ def order_create(update, context):
     payment = button_text.split(' ')[1]
     user = Client.get_by_chat_id(update.effective_chat.id)
     query.edit_message_text(creating_order_text)
-    if not redis_instance.hexists(chat_id, 'from_address'):
-        location_address = redis_instance.hget(chat_id, 'location_address')
-        redis_instance.hset(chat_id, 'from_address', location_address)
+    if not redis_instance().hexists(chat_id, 'from_address'):
+        location_address = redis_instance().hget(chat_id, 'location_address')
+        redis_instance().hset(chat_id, 'from_address', location_address)
     else:
-        addresses_first = redis_instance.hget(chat_id, 'addresses_first').decode('utf-8')
-        from_address = redis_instance.hget(chat_id, 'from_address').decode('utf-8')
+        addresses_first = redis_instance().hget(chat_id, 'addresses_first')
+        from_address = redis_instance().hget(chat_id, 'from_address')
         value_dict = json.loads(addresses_first)
         from_place = value_dict.get(from_address)
         result = geocode(from_place, ParkSettings.get_value('GOOGLE_API_KEY'))
@@ -179,18 +202,18 @@ def order_create(update, context):
             'latitude': result[0],
             'longitude': result[1]
         }
-        redis_instance.hmset(chat_id, data_)
+        redis_instance().hmset(chat_id, data_)
 
-    addresses_second = redis_instance.hget(chat_id, 'addresses_second').decode('utf-8')
-    to_the_address = redis_instance.hget(chat_id, 'to_the_address').decode('utf-8')
+    addresses_second = redis_instance().hget(chat_id, 'addresses_second')
+    to_the_address = redis_instance().hget(chat_id, 'to_the_address')
     value_dict = json.loads(addresses_second)
     destination_place = value_dict.get(to_the_address)
     destination_lat, destination_long = geocode(destination_place, ParkSettings.get_value('GOOGLE_API_KEY'))
 
     order_data = {
-        'from_address': redis_instance.hget(chat_id, 'from_address').decode('utf-8'),
-        'latitude': redis_instance.hget(chat_id, 'latitude').decode(),
-        'longitude': redis_instance.hget(chat_id, 'longitude').decode(),
+        'from_address': redis_instance().hget(chat_id, 'from_address'),
+        'latitude': redis_instance().hget(chat_id, 'latitude'),
+        'longitude': redis_instance().hget(chat_id, 'longitude'),
         'to_the_address': to_the_address,
         'to_latitude': destination_lat,
         'to_longitude': destination_long,
@@ -200,11 +223,13 @@ def order_create(update, context):
         'client_message_id': query.message.message_id,
 
     }
-    if not redis_instance.hexists(chat_id, 'time_order'):
+    if redis_instance().hexists(chat_id, 'info'):
+        order_data['info'] = redis_instance().hget(chat_id, 'info'),
+    if not redis_instance().hexists(chat_id, 'time_order'):
         order_data['status_order'] = Order.WAITING
     else:
         order_data['status_order'] = Order.ON_TIME
-        order_time = redis_instance.hget(chat_id, 'time_order').decode('utf-8')
+        order_time = redis_instance().hget(chat_id, 'time_order')
         order_data['order_time'] = datetime.fromisoformat(order_time)
 
     order_create_task.delay(order_data)
@@ -245,40 +270,40 @@ def time_order(update, context):
     query = update.callback_query
     chat_id = str(update.effective_chat.id)
     if query.data in ("Today_order", "Tomorrow_order"):
-        redis_instance.hset(chat_id, 'time_order', query.data)
-    redis_instance.hset(chat_id, 'state', TIME_ORDER)
+        redis_instance().hset(chat_id, 'time_order', query.data)
+    redis_instance().hset(chat_id, 'state', TIME_ORDER)
     query.edit_message_text(text=ask_time_text)
 
 
 def order_on_time(update, context):
     chat_id = str(update.message.chat.id)
-    redis_instance.hset(chat_id, 'state', 0)
+    redis_instance().hset(chat_id, 'state', 0)
     pattern = r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
     user_time, user = update.message.text, Client.get_by_chat_id(chat_id)
     if re.match(pattern, user_time):
         format_time = timezone.datetime.strptime(user_time, '%H:%M').time()
-        if redis_instance.hget(chat_id, 'time_order').decode() == "Tomorrow_order":
+        if redis_instance().hget(chat_id, 'time_order') == "Tomorrow_order":
             tomorrow = datetime.now() + timedelta(days=1)
             order_time = datetime.combine(tomorrow.date(), format_time)
         else:
             order_time = datetime.combine(datetime.now().date(), format_time)
         time_difference = order_time - datetime.now()
         if time_difference.total_seconds() / 60 > int(ParkSettings.get_value('TIME_ORDER_MIN', 60)):
-            if not redis_instance.hexists(chat_id, 'time_order'):
+            if not redis_instance().hexists(chat_id, 'time_order'):
                 order = Order.objects.filter(chat_id_client=user.chat_id,
                                              status_order=Order.WAITING).last()
                 order.status_order, order.order_time, order.checked = Order.ON_TIME, order_time, False
                 order.save()
                 update.message.reply_text(order_complete)
             else:
-                redis_instance.hset(chat_id, 'time_order', timezone.make_aware(order_time).isoformat())
+                redis_instance().hset(chat_id, 'time_order', timezone.make_aware(order_time).isoformat())
                 from_address(update, context)
         else:
             update.message.reply_text(small_time_delta)
-            redis_instance.hset(chat_id, 'state', TIME_ORDER)
+            redis_instance().hset(chat_id, 'state', TIME_ORDER)
     else:
         update.message.reply_text(wrong_time_format)
-        redis_instance.hset(chat_id, 'state', TIME_ORDER)
+        redis_instance().hset(chat_id, 'state', TIME_ORDER)
 
 
 def client_reject_order(update, context):
@@ -337,9 +362,7 @@ def handle_callback_order(update, context):
                                                                   timezone.localtime(order.order_time).time()))
             else:
                 ParkStatus.objects.create(driver=driver, status=Driver.WAIT_FOR_CLIENT)
-                message = order_info(order.id, order.from_address, order.to_the_address, order.payment_method,
-                                     order.phone_number, order.sum, order.distance_google)
-                query.edit_message_text(text=message)
+                query.edit_message_text(text=order_info(order))
                 query.edit_message_reply_markup(reply_markup=markup)
                 report_for_client = client_order_text(driver, vehicle.name, record.licence_plate,
                                                       driver.phone_number, order.sum)
@@ -401,17 +424,10 @@ def handle_order(update, context):
             context.bot.delete_message(order.chat_id_client, message_id=int(data[2])-1)
         except:
             pass
-        if not redis_instance.hexists(chat_id, 'recheck'):
+        if not redis_instance().hexists(chat_id, 'recheck'):
             ParkStatus.objects.create(driver=driver,
                                       status=Driver.WITH_CLIENT)
-        message = order_info(order.id,
-                             order.from_address,
-                             order.to_the_address,
-                             order.payment_method,
-                             order.phone_number,
-                             order.sum,
-                             order.distance_google)
-        query.edit_message_text(text=message)
+        query.edit_message_text(order_info(order))
 
         reply_markup = inline_finish_order(order.to_latitude,
                                            order.to_longitude,
@@ -422,20 +438,13 @@ def handle_order(update, context):
         query.edit_message_text(text=route_trip_text)
         query.edit_message_reply_markup(reply_markup=reply_markup)
     elif data[0] in ("Along_the_route", "Off_route"):
-        redis_instance.hset(chat_id, 'recheck', data[0])
-        message = order_info(order.id,
-                             order.from_address,
-                             order.to_the_address,
-                             order.payment_method,
-                             order.phone_number,
-                             order.sum,
-                             order.distance_google)
-        query.edit_message_text(text=message)
+        redis_instance().hset(chat_id, 'recheck', data[0])
+        query.edit_message_text(order_info(order))
         query.edit_message_reply_markup(reply_markup=inline_repeat_keyboard(order.id))
     elif data[0] == "Accept":
         ParkStatus.objects.create(driver=order.driver,
                                   status=Driver.ACTIVE)
-        if redis_instance.hget(chat_id, 'recheck').decode() == "Off_route":
+        if redis_instance().hget(chat_id, 'recheck') == "Off_route":
             query.edit_message_text(text=calc_price_text)
             record = UseOfCars.objects.filter(user_vehicle=driver,
                                               created_at__date=timezone.now().date(), end_at=None).last()
@@ -451,7 +460,7 @@ def handle_order(update, context):
                 order.status_order = Order.COMPLETED
                 order.partner = order.driver.partner
                 order.save()
-                redis_instance.delete(str(update.effective_chat.id))
+                redis_instance().delete(str(update.effective_chat.id))
             else:
                 query.edit_message_reply_markup(reply_markup=None)
 
@@ -477,7 +486,7 @@ def precheckout_callback(update, context):
         order.status_order = Order.COMPLETED
         order.partner = order.driver.partner
         order.save()
-        redis_instance.delete(str(update.effective_chat.id))
+        redis_instance().delete(str(update.effective_chat.id))
     else:
         query.answer(ok=False, error_message=error_payment)
 

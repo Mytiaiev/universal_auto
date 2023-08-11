@@ -85,7 +85,7 @@ def finish_job_main(update, context):
         record.save()
         ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
         query.edit_message_text(finish_job)
-        redis_instance.delete(str(update.effective_chat.id))
+        redis_instance().delete(str(update.effective_chat.id))
         detaching_the_driver_from_the_car.delay(driver.partner.pk, record.licence_plate)
     else:
         query.edit_message_text(already_finish_job)

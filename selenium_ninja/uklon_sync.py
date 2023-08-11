@@ -1,7 +1,11 @@
 import json
 import uuid
+from datetime import datetime
+
 import requests
-from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner
+from django.utils import timezone
+
+from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder
 from selenium_ninja.synchronizer import Synchronizer
 from django.db import IntegrityError
 
@@ -11,7 +15,7 @@ class UklonRequest(Synchronizer):
     def get_header(self) -> dict:
         token = self.redis.get(f"{self.partner_id}token")
         headers = {
-            'Authorization': f'Bearer {token.decode()}'
+            'Authorization': f'Bearer {token}'
          }
         return headers
 
@@ -217,6 +221,41 @@ class UklonRequest(Synchronizer):
             })
 
         return drivers
+
+    def get_fleet_orders(self, day, pk):
+
+        driver = Driver.objects.get(pk=pk)
+        driver_id = driver.get_driver_external_id(self.fleet)
+        str_driver_id = driver_id.replace("-", "")
+        params = {"limit": 50,
+                  "fleetId": ParkSettings.get_value(key='ID_PARK', partner=self.partner_id),
+                  "driverId": driver_id,
+                  "from": int(self.start_report_interval(day).timestamp()),
+                  "to": int(self.end_report_interval(day).timestamp())
+        }
+        orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
+        for order in orders['items']:
+            if FleetOrder.objects.filter(order_id=order['id']):
+                continue
+            detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
+                                        params={"driverId": str_driver_id})
+            try:
+                finish_time = timezone.make_aware(datetime.fromtimestamp(detail["completedAt"]))
+            except KeyError:
+                finish_time = None
+            data = {"order_id": order['id'],
+                    "fleet": self.fleet,
+                    "driver": driver,
+                    "from_address": order['route']['points'][0]["address"],
+                    "accepted_time": timezone.make_aware(datetime.fromtimestamp(order['pickupTime'])),
+                    "state": order['status'],
+                    "finish_time": finish_time,
+                    "destination": order['route']['points'][-1]["address"],
+                    "partner": Partner.get_partner(self.partner_id)
+                    }
+            FleetOrder.objects.create(**data)
+
+
 
     def disable_cash(self, pk, enable):
         url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
