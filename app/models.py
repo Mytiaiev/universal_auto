@@ -827,6 +827,7 @@ class Order(models.Model):
     chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор чату клієнта')
     driver_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення водія')
     client_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення клієнта')
+    info = models.CharField(max_length=255, null=True, verbose_name='Додаткова інформація')
     car_delivery_price = models.IntegerField(default=0, verbose_name='Сума за подачу автомобіля')
     sum = models.IntegerField(default=0, verbose_name='Загальна сума')
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')

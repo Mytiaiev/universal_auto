@@ -20,7 +20,6 @@ from django.urls import path, include
 from app.views import *
 from auto import settings
 from django.views.decorators.csrf import csrf_exempt
-# from scripts.bot import webhook
 
 urlpatterns = [
     path('admin/', admin.site.urls),

@@ -7,10 +7,7 @@ from telegram.ext import Updater
 
 from scripts.redis_conn import redis_instance
 
-bot_token = os.environ['TELEGRAM_TOKEN']
-webhook_url = f'{os.environ["WEBHOOK_URL"]}/webhook/'
-bot = Bot(token=bot_token)
-
+bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 
 def setup_webhook():
     retry_count = 0
@@ -18,7 +15,7 @@ def setup_webhook():
 
     while retry_count < retry_limit:
         try:
-            bot.setWebhook(url=webhook_url)
+            bot.setWebhook(url=f'{os.environ["WEBHOOK_URL"]}/webhook/')
             break
         except telegram.error.RetryAfter as e:
             retry_count += 1
@@ -33,7 +30,7 @@ def setup_webhook():
         print("Webhook set failed after multiple retries")
 
 
-distributed_lock = redis_instance.lock('bot_setup_lock', blocking_timeout=10)
+distributed_lock = redis_instance.lock('bot_setup_lock', blocking_timeout=100)
 if distributed_lock.acquire(blocking=True):
     try:
         setup_webhook()

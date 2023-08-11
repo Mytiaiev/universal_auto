@@ -32,7 +32,7 @@ def save_comment(update, context):
     else:
         message_id = redis_instance.hget(str(update.effective_chat.id), 'message_comment')
         mark = update.message.text
-        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=int(message_id.decode()))
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=int(message_id))
         context.bot.send_message(chat_id=update.effective_chat.id, text=comment_save_text)
     order = Order.objects.filter(chat_id_client=update.effective_chat.id,
                                  status_order__in=[Order.CANCELED, Order.COMPLETED],
