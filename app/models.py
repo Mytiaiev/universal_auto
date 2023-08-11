@@ -849,6 +849,29 @@ class Order(models.Model):
         return f'Замовлення №{self.pk}'
 
 
+class FleetOrder(models.Model):
+    CLIENT = 'Виконується'
+    COMPLETED = 'Виконаний'
+    CLIENT_CANCEL = 'Скасовано клієнтом'
+    DRIVER_CANCEL = 'Скасовано водієм'
+    
+    order_id = models.CharField(max_length=50, verbose_name='Ідентифікатор замовлення')
+    fleet = models.CharField(max_length=20, verbose_name='Агрегатор замовлення')
+    driver = models.CharField(max_length=255, verbose_name='Водій')
+    from_address = models.CharField(max_length=255, verbose_name='Місце посадки')
+    destination = models.CharField(max_length=255, blank=True, null=True, verbose_name='Місце висадки')
+    accepted_time = models.DateTimeField(blank=True, null=True, verbose_name='Час прийняття замовленя')
+    finish_time = models.CharField(max_length=255, blank=True, null=True, verbose_name='Час завершення замовлення')
+    state = models.CharField(max_length=255, blank=True, null=True, verbose_name='Статус замовлення')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+    
+    class Meta:
+        verbose_name = 'Стороннє замовлення'
+        verbose_name_plural = 'Сторонні замовлення'
+    
+
+
+
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
     image = models.ImageField(upload_to='.', verbose_name='Фото')
