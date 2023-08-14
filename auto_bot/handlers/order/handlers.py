@@ -476,19 +476,30 @@ def handle_order(update, context):
 
 def precheckout_callback(update, context):
     query = update.pre_checkout_query
+    chat_id = query.from_user.id
     data = query.invoice_payload.split()
-    order = Order.objects.filter(chat_id_client=query.from_user.id).last()
+    order = Order.objects.filter(chat_id_client=chat_id).last()
+    redis_instance().hset(chat_id, 'message_data', data[1])
     if data[0] == f'{order.pk}':
         query.answer(ok=True)
-        context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data[1], text=trip_paymented)
-        text_to_client(order, complete_order_text, button=inline_comment_for_client())
-        ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
-        order.status_order = Order.COMPLETED
-        order.partner = order.driver.partner
-        order.save()
-        redis_instance().delete(str(update.effective_chat.id))
     else:
         query.answer(ok=False, error_message=error_payment)
+
+
+def successful_payment(update, context):
+    chat_id = str(update.message.chat.id)
+    data = int(redis_instance().hget(chat_id, 'message_data'))
+    print('####')
+    print(data)
+    print('####')
+    order = Order.objects.filter(chat_id_client=chat_id).last()
+    context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
+    text_to_client(order, complete_order_text, button=inline_comment_for_client())
+    order.status_order = Order.COMPLETED
+    order.partner = order.driver.partner
+    order.save()
+    redis_instance().delete(chat_id)
+
 
 
 
