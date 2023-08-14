@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
+from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client, ReportTelegramPayments
 from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
@@ -476,19 +476,36 @@ def handle_order(update, context):
 
 def precheckout_callback(update, context):
     query = update.pre_checkout_query
+    chat_id = query.from_user.id
     data = query.invoice_payload.split()
-    order = Order.objects.filter(chat_id_client=query.from_user.id).last()
+    order = Order.objects.filter(chat_id_client=chat_id).last()
+    redis_instance().hset(chat_id, 'message_data', data[1])
     if data[0] == f'{order.pk}':
         query.answer(ok=True)
-        context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data[1], text=trip_paymented)
-        text_to_client(order, complete_order_text, button=inline_comment_for_client())
-        ParkStatus.objects.create(driver=order.driver, status=Driver.ACTIVE)
-        order.status_order = Order.COMPLETED
-        order.partner = order.driver.partner
-        order.save()
-        redis_instance().delete(str(update.effective_chat.id))
     else:
         query.answer(ok=False, error_message=error_payment)
+
+
+def successful_payment(update, context):
+    chat_id = str(update.message.chat.id)
+    successful_payment = update.message.successful_payment
+    print(successful_payment)
+    data = int(redis_instance().hget(chat_id, 'message_data'))
+    order = Order.objects.filter(chat_id_client=chat_id).last()
+    context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
+    text_to_client(order, complete_order_text, button=inline_comment_for_client())
+    report_tg = ReportTelegramPayments.objects.create(
+        provider_payment_charge_id=successful_payment.provider_payment_charge_id,
+        telegram_payment_charge_id=successful_payment.telegram_payment_charge_id,
+        currency=successful_payment.currency,
+        total_amount=successful_payment.total_amount/100
+    )
+    order.report_tg = report_tg
+    order.status_order = Order.COMPLETED
+    order.partner = order.driver.partner
+    order.save()
+    redis_instance().delete(chat_id)
+
 
 
 
