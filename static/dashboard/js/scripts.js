@@ -481,7 +481,7 @@ $(document).ready(function () {
 	});
 
 	function showLoader(form) {
-		form.find(".opt-partnerForm .login-btn").hide();
+		$(".opt-partnerForm").hide();
 		form.find(".loader-login").show();
 	}
 
@@ -526,7 +526,9 @@ $(document).ready(function () {
 					$("#partnerPassword").hide()
 					$(".opt-partnerForm").hide()
 					$(".login-ok").show()
+					$("#loginErrorMessage").hide()
 				} else {
+					$(".opt-partnerForm").show();
 					$("#loginErrorMessage").show()
 					$("#partnerLogin").val("").addClass("error-border");
 					$("#partnerPassword").val("").addClass("error-border");
