@@ -25,7 +25,8 @@ from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_s
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
-    ask_client_action, handle_order, choose_date_order, precheckout_callback, add_info_to_order, get_additional_info
+    ask_client_action, handle_order, choose_date_order, precheckout_callback, add_info_to_order, get_additional_info, \
+    successful_payment
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
     more_function, start_query, get_about_us, celery_test
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
@@ -131,6 +132,7 @@ def setup_dispatcher(dp):
                                                            "Accept|End_trip) [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(handle_order, pattern="Client_on_site [0-9]+ [0-9]+"))
     dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
+    dp.add_handler(MessageHandler(Filters.successful_payment, successful_payment))
     # sending comment
     dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))
     dp.add_handler(CallbackQueryHandler(save_comment, pattern="5_Star|4_Star|3_Star|2_Star|1_Star"))
