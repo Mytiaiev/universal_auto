@@ -9,7 +9,7 @@ class Synchronizer:
     def __init__(self, partner_id, fleet='Uklon'):
         self.partner_id = partner_id
         self.fleet = fleet
-        self.redis = redis_instance
+        self.redis = redis_instance()
         self.logger = get_logger()
 
     def get_drivers_table(self):

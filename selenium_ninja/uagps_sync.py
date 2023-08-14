@@ -2,7 +2,6 @@ import json
 import datetime
 import requests
 from _decimal import Decimal
-from django.db.models import Sum
 from django.utils import timezone
 from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner
 
@@ -103,8 +102,8 @@ class UaGpsSynchronizer:
                 else:
                     last_status = StatusChange.objects.filter(driver=_driver.id,
                                                               vehicle=vehicle).last()
-                    if last_status.name == Driver.WITH_CLIENT:
-                        if last_status.end_time:
+                    if last_status:
+                        if last_status.name == Driver.WITH_CLIENT and last_status.end_time:
                             report = self.generate_report(self.get_timestamp(last_status.end_time),
                                                           self.get_timestamp(timezone.localtime(end)),
                                                           vehicle.gps_id)
@@ -118,7 +117,7 @@ class UaGpsSynchronizer:
                     rent_distance = report[0]
 
             rent_today = RentInformation.objects.filter(driver=_driver,
-                                                        created_at__date=timezone.localtime().date())
+                                                        created_at__date=timezone.localtime().date()).first()
             if not rent_today:
                 RentInformation.objects.create(driver_name=_driver,
                                                driver=_driver,
@@ -126,13 +125,9 @@ class UaGpsSynchronizer:
                                                rent_distance=rent_distance,
                                                partner=partner_obj)
             else:
-                rent_distance -= rent_today.aggregate(distance=Sum('rent_distance'))['distance']
-                road_time -= rent_today.aggregate(time=Sum('rent_time'))['time']
-                RentInformation.objects.create(driver_name=_driver,
-                                               driver=_driver,
-                                               rent_time=road_time,
-                                               rent_distance=rent_distance,
-                                               partner=partner_obj)
+                rent_today.rent_distance = rent_distance
+                rent_today.rent_time = road_time
+                rent_today.save()
 
     def total_per_day(self, licence_plate, day):
         start = datetime.datetime.combine(day, datetime.time.min)

@@ -6,6 +6,7 @@ from auto_bot.handlers.driver.static_text import V_ID
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
 from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard, correct_keyboard
 from auto_bot.handlers.status.static_text import *
+from scripts.redis_conn import redis_instance
 
 
 def status(update, context):
@@ -84,7 +85,7 @@ def finish_job_main(update, context):
         record.save()
         ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
         query.edit_message_text(finish_job)
-        context.user_data.clear()
+        redis_instance().delete(str(update.effective_chat.id))
         detaching_the_driver_from_the_car.delay(driver.partner.pk, record.licence_plate)
     else:
         query.edit_message_text(already_finish_job)

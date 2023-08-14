@@ -4,6 +4,10 @@ from auto_bot.main import bot
 from scripts.conversion import get_addresses_by_radius
 
 
+def validate_text(text):
+    if len(text) < 200:
+        return True
+
 def buttons_addresses(address):
     center_lat, center_lng = ParkSettings.get_value('CENTRE_CITY_LAT'), ParkSettings.get_value('CENTRE_CITY_LNG')
     center_radius = int(ParkSettings.get_value('CENTRE_CITY_RADIUS'))
