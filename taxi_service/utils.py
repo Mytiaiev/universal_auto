@@ -294,6 +294,7 @@ def login_in(action, login_name, password, user_id):
 	if action == 'uber':
 		success_login = selenium_tools.uber_login(login=login_name,
 												  password=password)
+		selenium_tools.quit()
 		if success_login:
 			try:
 				uber_password_setting = ParkSettings.objects.get(
@@ -301,7 +302,7 @@ def login_in(action, login_name, password, user_id):
 				if uber_password_setting.value != password:
 					uber_password_setting.value = password
 					uber_password_setting.save()
-			except ParkSettings.DoesNotExist:
+			except ObjectDoesNotExist:
 				ParkSettings.objects.create(key='UBER_PASSWORD', value=password,
 											description='Пароль користувача Uber',
 											partner=partner)
@@ -312,7 +313,7 @@ def login_in(action, login_name, password, user_id):
 				if uber_name_setting.value != login_name:
 					uber_name_setting.value = login_name
 					uber_name_setting.save()
-			except ParkSettings.DoesNotExist:
+			except ObjectDoesNotExist:
 				ParkSettings.objects.create(key='UBER_NAME', value=login_name,
 											description='Ім\'я користувача Uber',
 											partner=partner)

@@ -1,3 +1,5 @@
+import base64
+import csv
 import re
 import time
 import os
@@ -5,6 +7,7 @@ from datetime import datetime
 
 import redis
 import requests
+from django.utils import timezone
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -13,7 +16,8 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException, NoSuchElementException
 
-from app.models import ParkSettings, UberService, UberSession, Partner, BoltService, NewUklonService, NewUklonFleet
+from app.models import ParkSettings, UberService, UberSession, Partner, BoltService, NewUklonService, NewUklonFleet, \
+    FleetOrder, Fleets_drivers_vehicles_rate
 from auto import settings
 from scripts.redis_conn import redis_instance, get_logger
 
@@ -223,7 +227,7 @@ class SeleniumTools:
         job_application.save()
         self.quit()
 
-    def uber_login(self, login=None, password=None):
+    def uber_login(self, session=None, login=None, password=None):
         self.driver.get(UberService.get_value('UBER_LOGIN_URL'))
         time.sleep(self.sleep)
         input_login = WebDriverWait(self.driver, self.sleep).until(
@@ -242,9 +246,8 @@ class SeleniumTools:
                 self.password_form()
         except TimeoutException:
             try:
-                el = WebDriverWait(self.driver, self.sleep).until(
-                    ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_4'))))
-                el.click()
+                WebDriverWait(self.driver, self.sleep).until(
+                    ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_4')))).click()
                 if password:
                     self.password_form(password)
                 else:
@@ -264,10 +267,10 @@ class SeleniumTools:
             time.sleep(self.sleep)
             self.driver.find_element(By.XPATH, UberService.get_value('CHECK_LOGIN_UBER'))
             login_success = True
-            self.save_uber()
+            if session:
+                self.save_uber()
         except NoSuchElementException:
             login_success = False
-        self.quit()
         return login_success
 
     def save_uber(self):
@@ -368,6 +371,159 @@ class SeleniumTools:
             self.driver.find_element(By.ID, UberService.get_value('UBER_FORCE_OPT_FORM')).click()
         except TimeoutException:
             pass
+
+    def get_uuid(self):
+        obj_session = UberSession.objects.filter(partner=self.partner).latest('created_at')
+        return str(obj_session.uber_uuid)
+
+    @staticmethod
+    def report_file_name(pattern):
+        filenames = os.listdir(os.curdir)
+        for file in filenames:
+            if re.search(pattern, file):
+                return file
+
+    def get_downloaded_files(self, driver):
+        if not self.driver.current_url.startswith("chrome://downloads"):
+            self.driver.get("chrome://downloads/")
+
+        return self.driver.execute_script(
+            "return  document.querySelector('downloads-manager')  "
+            " .shadowRoot.querySelector('#downloadsList')         "
+            " .items.filter(e => e.state === 'COMPLETE')          "
+            " .map(e => e.filePath || e.file_path || e.fileUrl || e.file_url); ")
+
+    def get_file_content(self, path):
+        try:
+            elem = self.driver.execute_script(
+                "var input = window.document.createElement('INPUT'); "
+                "input.setAttribute('type', 'file'); "
+                "input.hidden = true; "
+                "input.onchange = function (e) { e.stopPropagation() }; "
+                "return window.document.documentElement.appendChild(input); ")
+            elem._execute('sendKeysToElement', {'value': [path], 'text': path})
+            result = self.driver.execute_async_script(
+                "var input = arguments[0], callback = arguments[1]; "
+                "var reader = new FileReader(); "
+                "reader.onload = function (ev) { callback(reader.result) }; "
+                "reader.onerror = function (ex) { callback(ex.message) }; "
+                "reader.readAsDataURL(input.files[0]); "
+                "input.remove(); "
+                , elem)
+            if not result.startswith('data:'):
+                raise Exception("Failed to get file content: %s" % result)
+            return base64.b64decode(result[result.find('base64,') + 7:])
+        finally:
+            pass
+
+    def get_last_downloaded_file_from_remote(self, save_as=None):
+        try:
+            files = WebDriverWait(self.driver, 30, 1).until(lambda driver: self.get_downloaded_files(driver))
+        except TimeoutException:
+            return
+        content = self.get_file_content(files[0])
+        if len(files):
+            filename = os.path.basename(files[0]) if save_as is None else save_as
+            with open(os.path.join(os.getcwd(), filename), 'wb') as f:
+                f.write(content)
+
+    def payments_order_file_name(self, fleet=None, day=None):
+        return self.report_file_name(self.file_pattern(fleet, day))
+
+    def file_pattern(self, fleet, day):
+        sd, sy, sm = day.strftime("%d"), day.strftime("%Y"), day.strftime("%m")
+        return f'{fleet} {sy}{sm}{sd}-{self.partner}.csv'
+
+    def click_uber_calendar(self, month, year, day):
+        self.driver.find_element(By.XPATH, UberService.get_value('UBER_CALENDAR_1')).click()
+        self.driver.find_element(By.XPATH,
+                                 f'{UberService.get_value("UBER_CALENDAR_2")}{month}")]]').click()
+        self.driver.find_element(By.XPATH, UberService.get_value("UBER_CALENDAR_3")).click()
+        self.driver.find_element(By.XPATH,
+                                 f'{UberService.get_value("UBER_CALENDAR_2")}{year}")]]').click()
+        self.driver.find_element(By.XPATH,
+                                 f'{UberService.get_value("UBER_CALENDAR_4")}{day}]').click()
+
+    def generate_payments_order(self, fleet, day):
+        url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}{self.get_uuid()}/reports"
+        xpath = UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')
+        self.uber_login()
+        self.driver.get(url)
+        WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
+        try:
+            xpath = UberService.get_value('UBER_GENERATE_TRIPS_1')
+            WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
+        except Exception:
+            try:
+                xpath = UberService.get_value('UBER_GENERATE_TRIPS_1')
+                WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
+            except Exception:
+                xpath = UberService.get_value('UBER_GENERATE_TRIPS_2')
+                WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
+        try:
+            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3')).click()
+        except:
+            pass
+        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4')).click()
+        self.click_uber_calendar(day.strftime("%B"),
+                                 day.strftime("%Y"),
+                                 day.day)
+        self.click_uber_calendar(day.strftime("%B"),
+                                 day.strftime("%Y"),
+                                 day.day)
+        self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_5')).click()
+        return f'{self.payments_order_file_name(fleet, day)}'
+
+    def download_payments_order(self, fleet, day):
+        if os.path.exists(f'{self.payments_order_file_name(fleet, day)}'):
+            self.logger.info('Report already downloaded')
+            return
+
+        self.generate_payments_order(fleet, day)
+        download_button = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_1')}"
+        try:
+            in_progress_text = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_2')}"
+            WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.XPATH, in_progress_text)))
+            WebDriverWait(self.driver, 600).until_not(ec.presence_of_element_located((By.XPATH, in_progress_text)))
+        except:
+            pass
+        WebDriverWait(self.driver, 60).until(ec.element_to_be_clickable((By.XPATH, download_button))).click()
+        time.sleep(self.sleep)
+        self.get_last_downloaded_file_from_remote(self.file_pattern(fleet, day))
+
+    def save_trips_report(self, fleet, day):
+        states = {"completed": FleetOrder.COMPLETED,
+                  "delivery_failed": FleetOrder.SYSTEM_CANCEL,
+                  "rider_cancelled": FleetOrder.CLIENT_CANCEL,
+                  "driver_cancelled": FleetOrder.DRIVER_CANCEL
+                  }
+
+        self.logger.info(self.file_pattern(fleet, day))
+        if self.payments_order_file_name(fleet, day) is not None:
+            try:
+                with open(self.payments_order_file_name(fleet, day), encoding="utf-8") as file:
+                    reader = csv.reader(file)
+                    next(reader)
+                    for row in reader:
+                        if FleetOrder.objects.filter(order_id=row[0]):
+                            continue
+                        try:
+                            finish = timezone.make_aware(datetime.strptime(row[8], "%Y-%m-%d %H:%M:%S"))
+                        except ValueError:
+                            finish = None
+                        driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=row[1]).driver
+                        order = {"order_id": row[0],
+                                 "driver": driver,
+                                 "fleet": fleet,
+                                 "from_address": row[9],
+                                 "destination": row[10],
+                                 "accepted_time": timezone.make_aware(datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S")),
+                                 "finish_time": finish,
+                                 "state": states.get(row[12]),
+                                 "partner": Partner.get_partner(self.partner)}
+                        FleetOrder.objects.create(**order)
+            except FileNotFoundError:
+                pass
 
 
 def clickandclear(element):

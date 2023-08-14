@@ -453,7 +453,7 @@ class UberServiceAdmin(admin.ModelAdmin):
 
 @admin.register(RentInformation)
 class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ('driver_name', 'created_at')
+    list_filter = ('driver', 'created_at')
 
     def get_list_display(self, request):
         if request.user.is_superuser:
