@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client
+from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client, ReportTelegramPayments
 from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
@@ -488,10 +488,19 @@ def precheckout_callback(update, context):
 
 def successful_payment(update, context):
     chat_id = str(update.message.chat.id)
+    successful_payment = update.message.successful_payment
+    print(successful_payment)
     data = int(redis_instance().hget(chat_id, 'message_data'))
     order = Order.objects.filter(chat_id_client=chat_id).last()
     context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
     text_to_client(order, complete_order_text, button=inline_comment_for_client())
+    report_tg = ReportTelegramPayments.objects.create(
+        provider_payment_charge_id=successful_payment.provider_payment_charge_id,
+        telegram_payment_charge_id=successful_payment.telegram_payment_charge_id,
+        currency=successful_payment.currency,
+        total_amount=successful_payment.total_amount/100
+    )
+    order.report_tg = report_tg
     order.status_order = Order.COMPLETED
     order.partner = order.driver.partner
     order.save()
