@@ -6,7 +6,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from app.models import CarEfficiency, Driver, SummaryReport, DriverManager, \
-    Vehicle, RentInformation, ParkSettings
+    Vehicle, RentInformation, ParkSettings, DriverEfficiency
 
 
 def validate_date(date_str):
@@ -175,3 +175,66 @@ def get_efficiency(manager_id=None, start=None, end=None):
         for k, v in sorted_effective_driver.items():
             report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
         return report
+
+
+def calculate_efficiency_driver(driver, start, end):
+    efficiency_objects = DriverEfficiency.objects.filter(report_from__range=(start, end),
+                                                         driver=driver)
+    total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
+    total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
+    total_orders = efficiency_objects.aggregate(total_orders=Sum('total_orders'))['total_orders']
+    accept_percent = efficiency_objects.aggregate(accept=Avg('accept_percent'))['accept']
+    avg_price = total_kasa / total_orders
+    efficiency = 0
+    if total_distance:
+        efficiency = float('{:.2f}'.format(total_kasa / total_distance))
+    return efficiency, total_orders, accept_percent, avg_price
+
+
+def get_driver_efficiency_report(manager_id=None, start=None, end=None):
+    yesterday = timezone.localtime().date() - timedelta(days=1)
+    if not start and not end:
+        if timezone.localtime().weekday():
+            start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+        else:
+            start = timezone.localtime().date() - timedelta(weeks=1)
+        end = yesterday
+    effective_driver = {}
+    report = {}
+    manager = DriverManager.get_by_chat_id(manager_id)
+    drivers = Driver.objects.filter(manager=manager)
+    if drivers:
+        for driver in drivers:
+            effect = calculate_efficiency_driver(driver, start, end)
+            if end == yesterday:
+                yesterday_efficiency = DriverEfficiency.objects.filter(report_from=yesterday,
+                                                                       driver=driver).first()
+                if yesterday_efficiency:
+                    efficiency = float(yesterday_efficiency.efficiency)
+                    orders = yesterday_efficiency.total_orders
+                    accept_percent = yesterday_efficiency.accept_percent
+                    average_price = yesterday_efficiency.average_price
+                else:
+                    efficiency = 0
+                    orders = 0
+                    accept_percent = 0
+                    average_price = 0
+
+                effective_driver[driver] = {'Ефективність(грн/км):': f"{effect[0]} +{efficiency}",
+                                            'Замовлень:': f"{effect[1]} +{orders}",
+                                            'Прийнято замовлень %:': f"{effect[2]} +{accept_percent}",
+                                            'Cередній чек грн:': f"{effect[3]} {average_price}"
+                                            }
+            else:
+                effective_driver[driver] = {'Ефективність(грн/км):': f"{effect[0]}",
+                                            'Замовлень:': f"{effect[1]}",
+                                            'Прийнято замовлень %:': f"{effect[2]}",
+                                            'Cередній чек грн:': f"{effect[3]}"
+                                            }
+        sorted_effective_driver = dict(sorted(effective_driver.items(),
+                                       key=lambda x: x[1]['Ефективність(грн/км):'],
+                                       reverse=True))
+        for k, v in sorted_effective_driver.items():
+            report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
+        return report
+
