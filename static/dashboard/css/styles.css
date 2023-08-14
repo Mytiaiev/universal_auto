@@ -559,3 +559,8 @@ body {
 .burger-menu.open .burger-content {
   display: block;
 }
+
+.danger-message {
+  display: none;
+  color: #d50000;
+}

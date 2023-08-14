@@ -107,8 +107,10 @@ class PostRequestHandler:
         if request.POST.get('action') == 'send_reset_code':
             email = request.POST.get('email')
             user = User.objects.filter(email=email).first()
+
             if user:
-                code = send_reset_code(email)
+                user_login = user.username
+                code = send_reset_code(email, user_login)
                 json_data = JsonResponse({'code': code, 'success': True}, safe=False)
                 response = HttpResponse(json_data, content_type='application/json')
                 return response
@@ -164,7 +166,8 @@ class GetRequestHandler:
 
     def handle_is_logged_in(self, request):
         if request.user.is_authenticated:
-            user_name = request.user.username
+            user_name = request.user.first_name + " " + request.user.last_name
+
             response_data = {'is_logged_in': True, 'user_name': user_name}
         else:
             response_data = {'is_logged_in': False}

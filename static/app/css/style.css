@@ -2281,3 +2281,8 @@ a#bingc-phone-button {
   display: none;
   width: 400px;
 }
+
+.danger-message {
+  display: none;
+  color: #d50000;
+}

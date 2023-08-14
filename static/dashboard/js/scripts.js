@@ -483,10 +483,12 @@ $(document).ready(function () {
 	function showLoader(form) {
 		$(".opt-partnerForm").hide();
 		form.find(".loader-login").show();
+		$("input[name='partner']").prop("disabled", true);
 	}
 
 	function hideLoader(form) {
 		form.find(".loader-login").hide();
+		$("input[name='partner']").prop("disabled", false);
 	}
 
 
@@ -633,7 +635,7 @@ $(document).ready(function () {
 	});
 	// burger-menu
 
-	$('.burger-icon').click(function () {
+	$('.burger-menu').click(function () {
 		$('.burger-menu').toggleClass('open');
 	});
 });
