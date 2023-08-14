@@ -23,7 +23,7 @@ function closeSidebar() {
 // BAR CHART
 let barChartOptions = {
 	series: [{
-		data: [10, 8, 6, 4, 2],
+		data: [],
 		name: "Заробіток: ",
 	}],
 	chart: {
@@ -40,6 +40,8 @@ let barChartOptions = {
 		"#2e7d32",
 		"#ff6d00",
 		"#583cb3",
+		"#c51162",
+		"#00bfa5",
 	],
 	plotOptions: {
 		bar: {
@@ -86,7 +88,7 @@ let barChartOptions = {
 		theme: "dark",
 	},
 	xaxis: {
-		categories: ["Laptop", "Phone", "Monitor", "Headphones", "Camera"],
+		categories: [],
 		title: {
 			style: {
 				color: "#f5f7ff",
@@ -136,11 +138,11 @@ barChart.render();
 // AREA CHART
 let areaChartOptions = {
 	series: [{
-		name: "Василь",
-		data: [31, 40, 28, 51, 42, 60, 76],
+		name: "",
+		data: [],
 	}, {
-		name: "Іван",
-		data: [11, 32, 45, 32, 34, 52, 41],
+		name: "",
+		data: [],
 	}],
 	chart: {
 		type: "area",
@@ -406,42 +408,40 @@ $(document).ready(function () {
 });
 
 $(document).ready(function () {
-	const forms = ['uberForm', 'boltForm', 'uklonForm'];
 
-	function showLoggedInUser(formName) {
-		$("#" + formName + " input").hide();
-		$("#" + formName + " .login-btn").remove();
-		$(".opt-" + formName).remove();
-		$("#" + formName).append("<span class='successful-message'>Вхід Успішний!</span>");
-		$("#" + formName).append("<button class='logout-btn' data-form='" + formName + "'>Вийти</button>");
+	const partnerForm = $("#partnerForm");
+	const partnerLoginField = $("#partnerLogin");
+	const partnerRadioButtons = $("input[name='partner']");
+
+	partnerRadioButtons.change(function () {
+		const selectedPartner = $("input[name='partner']:checked").val();
+		updateLoginField(selectedPartner);
+	});
+
+	function updateLoginField(partner) {
+		if (partner === 'uklon') {
+			partnerLoginField.val('+380');
+		} else {
+			partnerLoginField.val('');
+			$("#partnerPassword").val("");
+		}
 	}
 
 	if (sessionStorage.getItem('settings') === 'true') {
 		$("#settingsWindow").fadeIn();
+	}
 
-		forms.forEach((formName) => {
-			if (localStorage.getItem(formName.substring(0, formName.length - 4)) === 'true') {
-				showLoggedInUser(formName);
-			}
-		});
+	if (localStorage.getItem('uber')) {
+		$("#partnerLogin").hide()
+		$("#partnerPassword").hide()
+		$(".opt-partnerForm").hide()
+		$(".login-ok").show()
+		$("#loginErrorMessage").hide()
 	}
 
 	$("#settingBtn").click(function () {
 		sessionStorage.setItem('settings', 'true');
 		$("#settingsWindow").fadeIn();
-
-		forms.forEach((formName) => {
-			if (localStorage.getItem(formName.substring(0, formName.length - 4)) === 'true') {
-				showLoggedInUser(formName);
-			}
-		});
-	});
-
-
-	$(document).on("click", ".logout-btn", function () {
-		let formName = $(this).data('form');
-		localStorage.removeItem(formName.substring(0, formName.length - 4));
-		location.reload();
 	});
 
 	$(".close-btn").click(function () {
@@ -450,133 +450,120 @@ $(document).ready(function () {
 		location.reload();
 	});
 
-	$(function () {
-		$("#showPasswordBolt").click(function () {
-			let $checkbox = $(this);
-			let $passwordField = $checkbox.closest('.settings-content').find('.boltPassword');
-			let change = $checkbox.is(":checked") ? "text" : "password";
-			$passwordField.prop('type', change);
-		});
-	});
+	$(".login-btn").click(function () {
+		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
+		const partnerLogin = partnerForm.find("#partnerLogin").val();
+		const partnerPassword = partnerForm.find("#partnerPassword").val();
 
-	$(function () {
-		$("#showPasswordUklon").click(function () {
-			let $checkbox = $(this);
-			let $passwordField = $checkbox.closest('.settings-content').find('.uklonPassword');
-			let change = $checkbox.is(":checked") ? "text" : "password";
-			$passwordField.prop('type', change);
-		});
-	});
-
-	$(function () {
-		$("#showPasswordUber").click(function () {
-			let $checkbox = $(this);
-			let $passwordField = $checkbox.closest('.settings-content').find('.uberPassword');
-			let change = $checkbox.is(":checked") ? "text" : "password";
-			$passwordField.prop('type', change);
-		});
-	});
-
-	function handlerLoginClick(formName, action) {
-		let form = $("#" + formName + "Form");
-		let loginField = $("#" + formName + "Login")
-		let passwordField = $("#" + formName + "Password")
-		let login = loginField.val();
-		let password = passwordField.val();
-
-		if (form[0].checkValidity()) {
-			showLoader(form);
-			sendLoginDataToServer(action, login, password, formName);
-		} else {
-			if (login === "") {
-				loginField.attr("placeholder", "Обов'язково до заповнення");
-			}
-			if (password === "") {
-				passwordField.attr("placeholder", "Обов'язково до заповнення");
-			}
-
-			loginField.addClass("error-message");
-			passwordField.addClass("error-message");
+		if (partnerForm[0].checkValidity() && selectedPartner) {
+			showLoader(partnerForm);
+			sendLoginDataToServer(selectedPartner, partnerLogin, partnerPassword);
 		}
-	}
-
-	$("#uberForm .login-btn").click(function () {
-		handlerLoginClick('uber', 'Uber_login');
 	});
 
-	$("#boltForm .login-btn").click(function () {
-		handlerLoginClick('bolt', 'Bolt_login');
+	$(".logout-btn").click(function () {
+		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
+		sendLogautDataToServer(selectedPartner);
+		localStorage.removeItem(selectedPartner);
+		$("#partnerLogin").show()
+		$("#partnerPassword").show()
+		$(".opt-partnerForm").show()
+		$(".login-ok").hide()
+		$("#loginErrorMessage").hide()
 	});
 
-	$("#uklonForm .login-btn").click(function () {
-		handlerLoginClick('uklon', 'Uklon_login');
+	// Show/hide password functionality
+	$("#showPasswordPartner").click(function () {
+		let $checkbox = $(this);
+		let $passwordField = $checkbox.closest('.settings-content').find('.partnerPassword');
+		let change = $checkbox.is(":checked") ? "text" : "password";
+		$passwordField.prop('type', change);
 	});
 
 	function showLoader(form) {
-		form.find(".login-btn").hide();
+		$(".opt-partnerForm").hide();
 		form.find(".loader-login").show();
+		$("input[name='partner']").prop("disabled", true);
 	}
 
 	function hideLoader(form) {
 		form.find(".loader-login").hide();
+		$("input[name='partner']").prop("disabled", false);
 	}
 
 
-	function sendLoginDataToServer(action, login, password, form) {
+	$('[name="partner"]').change(function () {
+		let partner = $(this).val()
+		let login = localStorage.getItem(partner)
 
+		if (login === "success") {
+			$("#partnerLogin").hide()
+			$("#partnerPassword").hide()
+			$(".opt-partnerForm").hide()
+			$(".login-ok").show()
+			$("#loginErrorMessage").hide()
+		} else {
+			$("#partnerLogin").show()
+			$("#partnerPassword").show()
+			$(".opt-partnerForm").show()
+			$(".login-ok").hide()
+			$("#loginErrorMessage").hide()
+		}
+	})
+
+	function sendLoginDataToServer(partner, login, password) {
 		$.ajax({
 			type: "POST",
 			url: ajaxPostUrl,
 			data: {
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: action,
+				action: partner,
 				login: login,
 				password: password,
 			},
 			success: function (response) {
 				if (response.data === true) {
-					localStorage.setItem(form, 'true');
-					if (action === 'Bolt_login') {
-						$("#boltForm input").hide();
-						$("#boltForm .login-btn").remove();
-						$(".opt-boltForm").hide();
-						$("#boltForm").append("<span class='successful-message'>Вхід Успішний!</span>");
-						$("#boltForm").append("<button class='logout-btn' data-form='Uklon_logout'>Вийти</button>");
-					}
-					if (action === "Uber_login") {
-						$("#uberForm input").hide();
-						$("#uberForm .login-btn").remove();
-						$(".opt-uberForm").hide();
-						$("#uberForm").append("<span class='successful-message'>Вхід Успішний!</span>");
-						$("#uberForm").append("<button class='logout-btn' data-form='Uklon_logout'>Вийти</button>");
-					}
-					if (action === "Uklon_login") {
-						$("#uklonForm input").hide();
-						$("#uklonForm .login-btn").remove();
-						$(".opt-uklonForm").hide();
-						$("#uklonForm").append("<span class='successful-message'>Вхід Успішний!</span>");
-						$("#uklonForm").append("<button class='logout-btn' data-form='Uklon_logout'>Вийти</button>");
-					}
+					localStorage.setItem(partner, 'success');
+					$("#partnerLogin").hide()
+					$("#partnerPassword").hide()
+					$(".opt-partnerForm").hide()
+					$(".login-ok").show()
+					$("#loginErrorMessage").hide()
 				} else {
-					if (action === "Bolt_login") {
-						$("#boltLogin").val("Вказано неправильний логін або пароль").addClass("error-message");
-						$("#boltPassword").val("Вказано неправильний логін або пароль").addClass("error-message");
-						$("#boltForm .login-btn").show();
-					} else if (action === "Uber_login") {
-						$("#uberLogin").val("Вказано неправильний логін або пароль").addClass("error-message");
-						$("#uberPassword").val("Вказано неправильний логін або пароль").addClass("error-message");
-						$("#uberForm .login-btn").show();
-					} else if (action === "Uklon_login") {
-						$("#uklonLogin").val("Вказано неправильний логін або пароль").addClass("error-message");
-						$("#uklonPassword").val("Вказано неправильний логін або пароль").addClass("error-message");
-						$("#uklonForm .login-btn").show();
-					}
+					$(".opt-partnerForm").show();
+					$("#loginErrorMessage").show()
+					$("#partnerLogin").val("").addClass("error-border");
+					$("#partnerPassword").val("").addClass("error-border");
 				}
-				hideLoader($("#" + form + "Form"));
+				hideLoader(partnerForm);
+			}
+		});
+	}
+
+	function sendLogautDataToServer(partner) {
+		console.log(partner + "_logout")
+		$("#partnerLogin").val("")
+		$("#partnerPassword").val("")
+		$.ajax({
+			type: "POST",
+			url: ajaxPostUrl,
+			data: {
+				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
+				action: partner + "_logout",
+			},
+			success: function (response) {
+				if (response.data === true) {
+					localStorage.setItem(partner, 'false');
+					$("#partnerLogin").show()
+					$("#partnerPassword").show()
+					$(".opt-partnerForm").show()
+					$(".login-ok").hide()
+				}
 			}
 		});
 	}
 });
+
 
 $(document).ready(function () {
 
@@ -609,5 +596,46 @@ $(document).ready(function () {
 				}
 			}
 		});
+	});
+
+	// change-password
+
+	$("#changePassword").click(function () {
+		$("#passwordChangeForm").toggle();
+	});
+
+
+	$("#submitPassword").click(function () {
+		let password = $("#oldPassword").val();
+		let newPassword = $("#newPassword").val();
+		let confirmPassword = $("#confirmPassword").val();
+
+		if (newPassword !== confirmPassword) {
+			$("#ChangeErrorMessage").show();
+		} else {
+			$.ajax({
+				url: ajaxPostUrl,
+				type: 'POST',
+				data: {
+					action: 'change_password',
+					password: password,
+					newPassword: newPassword,
+					csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+				},
+				success: function (response) {
+					if (response.data['success'] === true) {
+						$("#passwordChangeForm").hide();
+						window.location.href = "/";
+					} else {
+						$("#oldPasswordMessage").show();
+					}
+				}
+			});
+		}
+	});
+	// burger-menu
+
+	$('.burger-menu').click(function () {
+		$('.burger-menu').toggleClass('open');
 	});
 });

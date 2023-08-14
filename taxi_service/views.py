@@ -1,11 +1,20 @@
-from django.shortcuts import render
-from django.views.generic import View, TemplateView
+import jwt
+import json
+
+from django.urls import reverse
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from django.contrib.auth.models import User
 from django.core.paginator import Paginator
+from django.http import HttpResponseRedirect
+from django.views.generic import View, TemplateView
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-from taxi_service.utils import *
-from app.models import ParkSettings
+from taxi_service.utils import weekly_rent, average_effective_vehicle
+from app.models import ParkSettings, Driver, Vehicle
 
 
 class IndexView(TemplateView):
@@ -56,13 +65,15 @@ class PostRequestView(View):
             return handler.handler_update_order(request)
         elif action in ['increase_price', 'continue_search']:
             return handler.handler_restarting_order(request)
-        elif action in ['Uber_login', 'Uklon_login', 'Bolt_login']:
+        elif action in ['uber', 'uklon', 'bolt']:
             return handler.handler_success_login(request)
+        elif action in ['uber_logout', 'uklon_logout', 'bolt_logout']:
+            return handler.handler_handler_logout(request)
         elif action == 'login_invest':
             return handler.handler_success_login_investor(request)
         elif action == 'logout_invest':
             return handler.handler_logout_investor(request)
-        elif action == 'change_password':
+        elif action in ['change_password', 'send_reset_code', 'update_password']:
             return handler.handler_change_password(request)
         else:
             return handler.handler_unknown_action(request)
@@ -117,6 +128,30 @@ class DashboardView(TemplateView):
         context['average_effective_vehicle'] = average_effective_vehicle()
 
         return context
+
+
+class GoogleAuthView(View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(GoogleAuthView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request):
+        credential_data = request.POST.get('credential')
+        data = jwt.decode(credential_data, options={'verify_signature': False})
+        email = data["email"].lower()
+        redirect_url = reverse('index')
+
+        if email:
+            user = User.objects.filter(email=email).first()
+            if user:
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user)
+                redirect_url = reverse('dashboard')
+            else:
+
+                return redirect(reverse('index') + "?signed_in=false")
+
+        return HttpResponseRedirect(redirect_url)
 
 
 def blog(request):

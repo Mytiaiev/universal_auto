@@ -2154,6 +2154,10 @@ body .btn-one {
 }
 
 
+#loginFormFields {
+  margin-top: 20px;
+}
+
 #loginFormFields input {
   display: flex;
   flex-direction: column;
@@ -2161,7 +2165,10 @@ body .btn-one {
 }
 
 #loginFormFields input[type="text"],
-#loginFormFields input[type="password"] {
+#loginFormFields input[type="password"],
+#updatePasswordFields input[type="text"],
+#updatePasswordFields input[type="password"],
+#forgotPasswordFields input[type="email"] {
   width: 100%;
   padding: 8px;
   border: 1px solid #ccc;
@@ -2183,13 +2190,13 @@ body .btn-one {
   margin-top: 10px;
 }
 
-#loginFormFields button {
-  padding: 5px 15px;
-  background-color: #E96F24;
-  border: 1px solid #E96F24;
+#loginFormFields button,
+#sendResetCode,
+#updatePassword {
+  padding: 0 40px;
+  background-color: black;
   color: #ffffff;
   border-radius: 25px;
-  margin-top: 20px;
 }
 
 #loginFormFields button:not(:last-child) {
@@ -2204,17 +2211,78 @@ body .btn-one {
   cursor: pointer;
 }
 
+.login-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 
 /* binotel hack */
 a#bingc-phone-button {
-    left: auto !important;
-    right: 2%;
+  left: auto !important;
+  right: 2%;
 }
+
 #bingc-phone-button div.bingc-phone-button-tooltip {
   right: 5px !important;
   left: auto !important;
 }
+
 #bingc-phone-button div.bingc-phone-button-tooltip svg.bingc-phone-button-arrow {
   left: auto !important;
   right: 29px;
+}
+
+
+/* Стилі для модального вікна */
+.modal-signed-in-false {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content-false {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 600px;
+  position: relative;
+  border-radius: 25px;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.forgot-password-form, .reset-password-form {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 25px;
+  padding: 20px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: none;
+  width: 400px;
+}
+
+.danger-message {
+  display: none;
+  color: #d50000;
 }

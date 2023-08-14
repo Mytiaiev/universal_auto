@@ -1,10 +1,16 @@
 import json
-from datetime import timedelta
+import random
+from datetime import timedelta, date
 
+from django.db.models import Sum
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 
-from app.models import *
+from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
+						SummaryReport, CarEfficiency, Partner, ParkSettings, )
 from selenium_ninja.driver import SeleniumTools
 
 
@@ -153,7 +159,7 @@ def collect_total_earnings(period):
 		report_from__range=(start_period, end_period))
 	for driver in Driver.objects.all():
 		total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
-			clean_kasa=Sum('total_amount_without_fee'))['clean_kasa']
+			clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
 		if total.get(driver.full_name()):
 			total_amount += total[driver.full_name()]
 	return total, total_amount, start_date_formatted, end_date_formatted
@@ -211,7 +217,7 @@ def effective_vehicle(period, vehicle):
 def login_in(action, login_name, password, user_id):
 	partner = Partner.objects.get(user_id=user_id)
 	selenium_tools = SeleniumTools(partner=partner.pk)
-	if action == 'Bolt_login':
+	if action == 'bolt':
 		success_login = selenium_tools.bolt_login(login=login_name,
 												  password=password)
 
@@ -225,6 +231,7 @@ def login_in(action, login_name, password, user_id):
 					bolt_password_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='BOLT_PASSWORD', value=password,
+											description='Пароль користувача Bolt',
 											partner=partner)
 
 			try:
@@ -235,6 +242,7 @@ def login_in(action, login_name, password, user_id):
 					bolt_name_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='BOLT_NAME', value=login_name,
+											description='Ім\'я користувача Bolt',
 											partner=partner)
 
 			try:
@@ -253,7 +261,7 @@ def login_in(action, login_name, password, user_id):
 		else:
 			return False
 
-	if action == 'Uklon_login':
+	if action == 'uklon':
 		success_login = selenium_tools.uklon_login(login=login_name[4:],
 												   password=password)
 		if success_login:
@@ -265,6 +273,7 @@ def login_in(action, login_name, password, user_id):
 					uklon_password_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UKLON_PASSWORD',
+											description='Пароль користувача Uklon',
 											value=password, partner=partner)
 
 			try:
@@ -275,13 +284,14 @@ def login_in(action, login_name, password, user_id):
 					uklon_name_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UKLON_NAME', value=login_name,
+											description='Ім\'я користувача Uklon',
 											partner=partner)
 
 			return True
 		else:
 			return False
 
-	if action == 'Uber_login':
+	if action == 'uber':
 		success_login = selenium_tools.uber_login(login=login_name,
 												  password=password)
 		if success_login:
@@ -293,6 +303,7 @@ def login_in(action, login_name, password, user_id):
 					uber_password_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UBER_PASSWORD', value=password,
+											description='Пароль користувача Uber',
 											partner=partner)
 
 			try:
@@ -303,11 +314,35 @@ def login_in(action, login_name, password, user_id):
 					uber_name_setting.save()
 			except ParkSettings.DoesNotExist:
 				ParkSettings.objects.create(key='UBER_NAME', value=login_name,
+											description='Ім\'я користувача Uber',
 											partner=partner)
 
 			return True
 		else:
 			return False
+
+
+def partner_logout(action, user_pk):
+	if action == 'uber_logout':
+		partner = Partner.objects.get(user_id=user_pk)
+		settings = ParkSettings.objects.filter(partner=partner)
+		settings.filter(key__in=['UBER_NAME', 'UBER_PASSWORD']).delete()
+
+		return True
+
+	if action == 'bolt_logout':
+		partner = Partner.objects.get(user_id=user_pk)
+		settings = ParkSettings.objects.filter(partner=partner)
+		settings.filter(key__in=['BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK']).delete()
+
+		return True
+
+	if action == 'uklon_logout':
+		partner = Partner.objects.get(user_id=user_pk)
+		settings = ParkSettings.objects.filter(partner=partner)
+		settings.filter(key__in=['UKLON_NAME', 'UKLON_PASSWORD']).delete()
+
+		return True
 
 
 def login_in_investor(request, login_name, password):
@@ -324,14 +359,39 @@ def login_in_investor(request, login_name, password):
 		return {'success': False, 'message': 'User is not found'}
 
 
-def change_password_investor(request, login, password, new_password):
-	user = authenticate(username=login, password=password)
-	if user is not None:
-		if user.is_active:
-			user.set_password(new_password)
-			user.save()
-			return {'success': True}
+def change_password_investor(request, password, new_password, user_email):
+	try:
+		user = User.objects.filter(email=user_email).first()
+		if user is not None:
+			user = authenticate(username=user.username, password=password)
+			if user.is_active:
+				user.set_password(new_password)
+				user.save()
+				logout(request)
+				return {'success': True}
+			else:
+				return {'success': False, 'message': 'User is not active'}
 		else:
-			return {'success': False, 'message': 'User is not active'}
-	else:
-		return {'success': False, 'message': 'User is not found'}
+			return {'success': False, 'message': 'User is not found'}
+	except Exception as error:
+		return {'success': False, 'message': 'Користувача не знайдено.'}
+
+
+def send_reset_code(email, user_login):
+	try:
+		reset_code = str(random.randint(100000, 999999))
+
+		subject = 'Код скидання пароля'
+		message = (
+			f'Вас вітає Ninja-Taxi!\nВи запросили відновлення пароля.'
+			f'\nЯкщо ви цього не робили просто проігноруйте це повідомлення.'
+			f'\nЯкщо все таки це ви то ось ваші данні для відновлення.\n'
+			f'Ваш код скидання пароля: {reset_code}\n'
+			f'Ваш логін: {user_login}\n'
+		)
+		from_email = 'Ninja-Taxi@gmail.com'
+		recipient_list = [email]
+		send_mail(subject, message, from_email, recipient_list)
+		return email, reset_code
+	except Exception as error:
+		print(error)

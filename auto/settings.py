@@ -150,3 +150,14 @@ CELERY_IMPORTS = [
 ]
 
 SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
+APPEND_SLASH = False
+
+
+# Налаштування для відправки листів
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = str(os.getenv('EMAIL_USER'))
+EMAIL_HOST_PASSWORD = str(os.getenv('EMAIL_PASSWORD'))

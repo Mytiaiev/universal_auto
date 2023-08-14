@@ -1,9 +1,18 @@
+import json
+
+from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.contrib.auth import logout
 
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
-from taxi_service.utils import *
+from taxi_service.utils import (update_order_sum_or_status, restart_order,
+                                login_in, partner_logout, login_in_investor,
+                                change_password_investor,send_reset_code,
+                                active_vehicles_gps, order_confirm,
+                                collect_total_earnings, effective_vehicle)
+
 
 class PostRequestHandler:
     def handler_order_form(self, request):
@@ -63,6 +72,14 @@ class PostRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
+    def handler_handler_logout(self, request):
+        action = request.POST.get('action')
+        partner_pk = request.user.pk
+        partner_logout(action, partner_pk)
+
+        return JsonResponse({}, status=200)
+
+
     def handler_success_login_investor(self, request):
         login = request.POST.get('login')
         password = request.POST.get('password')
@@ -77,14 +94,42 @@ class PostRequestHandler:
         return JsonResponse({'logged_out': True})
 
     def handler_change_password(self, request):
-        login = request.POST.get('login')
-        password = request.POST.get('password')
-        new_password = request.POST.get('newPassword')
+        if request.POST.get('action') == 'change_password':
+            password = request.POST.get('password')
+            new_password = request.POST.get('newPassword')
+            user_email = User.objects.get(pk=request.user.pk).email
 
-        change = change_password_investor(request, login, password, new_password)
-        json_data = JsonResponse({'data': change}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
+            change = change_password_investor(request, password, new_password, user_email)
+            json_data = JsonResponse({'data': change}, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
+
+        if request.POST.get('action') == 'send_reset_code':
+            email = request.POST.get('email')
+            user = User.objects.filter(email=email).first()
+
+            if user:
+                user_login = user.username
+                code = send_reset_code(email, user_login)
+                json_data = JsonResponse({'code': code, 'success': True}, safe=False)
+                response = HttpResponse(json_data, content_type='application/json')
+                return response
+            else:
+                response = HttpResponse(json.dumps({'success': False}), content_type='application/json')
+                return response
+
+        if request.POST.get('action') == 'update_password':
+            email = request.POST.get('email')
+            new_password = request.POST.get('newPassword')
+            user = User.objects.filter(email=email).first()
+            if user:
+                user.set_password(new_password)
+                user.save()
+                response = HttpResponse(json.dumps({'success': True}), content_type='application/json')
+                return response
+            else:
+                response = HttpResponse(json.dumps({'success': False}), content_type='application/json')
+                return response
 
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
@@ -121,7 +166,8 @@ class GetRequestHandler:
 
     def handle_is_logged_in(self, request):
         if request.user.is_authenticated:
-            user_name = request.user.username
+            user_name = request.user.first_name + " " + request.user.last_name
+
             response_data = {'is_logged_in': True, 'user_name': user_name}
         else:
             response_data = {'is_logged_in': False}
