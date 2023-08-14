@@ -1116,7 +1116,8 @@ $(document).ready(function () {
 					$("#loginForm").fadeOut();
 					window.location.href = "/dashboard/";
 				} else {
-					$("#login").val("Невірний логін або пароль").addClass("error-message");
+					$("#loginErrorMessage").show();
+					$("#login").val("")
 					$("#password").val("");
 				}
 			}
@@ -1185,7 +1186,8 @@ $(document).ready(function () {
 					forgotPasswordForm.hide();
 					$('#resetPasswordForm').show();
 				} else {
-					$('#forgotEmail').val('Невірна електронна адреса').addClass('error-message');
+					$('#forgotPasswordError').show();
+					$('#forgotEmail').val('');
 				}
 			}
 		});
@@ -1200,13 +1202,13 @@ $(document).ready(function () {
 
 		if (newPassword !== confirmPassword || activeCode !== resetCode) {
 			if (newPassword !== confirmPassword) {
-				$('#passwordError').text('Паролі не співпадають').addClass('error-message');
+				$('#passwordError').text('Паролі не співпадають').addClass('error-message').show();
 			} else {
 				$('#passwordError').text('').removeClass('error-message');
 			}
 
 			if (activeCode !== resetCode) {
-				$('#activationError').text('Невірний код активації').addClass('error-message');
+				$('#activationError').text('Невірний код активації').addClass('error-message').show();
 			} else {
 				$('#activationError').text('').removeClass('error-message');
 			}

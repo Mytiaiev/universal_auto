@@ -377,13 +377,21 @@ def change_password_investor(request, password, new_password, user_email):
 		return {'success': False, 'message': 'Користувача не знайдено.'}
 
 
-def send_reset_code(email):
+def send_reset_code(email, user_login):
+	try:
+		reset_code = str(random.randint(100000, 999999))
 
-	reset_code = str(random.randint(100000, 999999))
-
-	subject = 'Код скидання пароля'
-	message = f'Ваш код скидання пароля: {reset_code}'
-	from_email = 'Ninja-Taxi@gmail.com'
-	recipient_list = [email]
-	send_mail(subject, message, from_email, recipient_list)
-	return email, reset_code
+		subject = 'Код скидання пароля'
+		message = (
+			f'Вас вітає Ninja-Taxi!\nВи запросили відновлення пароля.'
+			f'\nЯкщо ви цього не робили просто проігноруйте це повідомлення.'
+			f'\nЯкщо все таки це ви то ось ваші данні для відновлення.\n'
+			f'Ваш код скидання пароля: {reset_code}\n'
+			f'Ваш логін: {user_login}\n'
+		)
+		from_email = 'Ninja-Taxi@gmail.com'
+		recipient_list = [email]
+		send_mail(subject, message, from_email, recipient_list)
+		return email, reset_code
+	except Exception as error:
+		print(error)

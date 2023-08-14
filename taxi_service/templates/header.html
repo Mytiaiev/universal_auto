@@ -105,9 +105,10 @@
 			</div>
 			<div id="loginForm" class="login-form">
 				<span id="closeLoginForm" class="close-btn">&times;</span>
-				<h2>Кабінет інвестора</h2>
+				<h2>Кабінет інвестора</h2><br>
 				<form id="loginFormFields">
 					{% csrf_token %}
+					<p class="error-message danger-message" id="loginErrorMessage">Вказано неправильний логін або пароль</p>
 					<input type="text" id="login" placeholder="Логін">
 					<input type="password" id="password" placeholder="Пароль">
 					<div class="opt"><input type="checkbox" id="showPassword">
@@ -133,16 +134,14 @@
 								 data-logo_alignment="left">
 						</div>
 					</div>
-					<button id="change-password" type="button" style="display: none;">
-						Змінити
-					</button>
+					<button id="change-password" type="button" style="display: none;">Змінити</button>
 				</form>
 				<form id="loginRadioForm">
 					{% csrf_token %}
 					<input type="radio" name="loginType" value="login" id="loginRadio" checked>
 					<label for="loginRadio">Увійти до кабінету</label>
 					<input type="radio" name="loginType" value="forgotPassword" id="forgotPasswordRadio">
-					<label for="forgotPasswordRadio">Забув пароль</label>
+					<label for="forgotPasswordRadio">Забули пароль</label>
 				</form>
 			</div>
 			<div id="forgotPasswordForm" class="forgot-password-form" style="display: none;">
@@ -151,19 +150,20 @@
 				<form id="forgotPasswordFields">
 					{% csrf_token %}
 					<input type="email" id="forgotEmail" placeholder="Електронна адреса">
+					<p class="error-message danger-message" id="forgotPasswordError">Не вірна електронна адреса</p>
 					<button id="sendResetCode" type="button">Надіслати</button>
 				</form>
 			</div>
 			<div id="resetPasswordForm" class="reset-password-form" style="display: none;">
 				<span id="closeForm" class="close-btn">&times;</span>
-				<p>Введіть новий пароль, підтвердіть його та введіть код активації:</p>
+				<p>Введіть новий пароль, підтвердіть його та введіть код активації який ми надіслали вам на пошту:</p>
 				<form id="updatePasswordFields">
 					{% csrf_token %}
 					<input type="password" id="newPassword" placeholder="Новий пароль">
 					<input type="password" id="confirmPassword" placeholder="Підтвердити пароль">
 					<input type="text" id="activationCode" placeholder="Код активації">
-					<div id="passwordError" class="error-message"></div>
-        	<div id="activationError" class="error-message"></div>
+					<div id="passwordError" class="error-message danger-message"></div>
+        	<div id="activationError" class="error-message danger-message"></div>
 					<button id="updatePassword" type="button">Оновити</button>
     		</form>
 			</div>
