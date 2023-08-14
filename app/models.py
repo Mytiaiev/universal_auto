@@ -827,6 +827,7 @@ class Order(models.Model):
     chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор чату клієнта')
     driver_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення водія')
     client_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення клієнта')
+    info = models.CharField(max_length=255, null=True, verbose_name='Додаткова інформація')
     car_delivery_price = models.IntegerField(default=0, verbose_name='Сума за подачу автомобіля')
     sum = models.IntegerField(default=0, verbose_name='Загальна сума')
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
@@ -846,6 +847,29 @@ class Order(models.Model):
 
     def __str__(self):
         return f'Замовлення №{self.pk}'
+
+
+class FleetOrder(models.Model):
+    CLIENT = 'Виконується'
+    COMPLETED = 'Виконаний'
+    CLIENT_CANCEL = 'Скасовано клієнтом'
+    DRIVER_CANCEL = 'Скасовано водієм'
+    
+    order_id = models.CharField(max_length=50, verbose_name='Ідентифікатор замовлення')
+    fleet = models.CharField(max_length=20, verbose_name='Агрегатор замовлення')
+    driver = models.CharField(max_length=255, verbose_name='Водій')
+    from_address = models.CharField(max_length=255, verbose_name='Місце посадки')
+    destination = models.CharField(max_length=255, blank=True, null=True, verbose_name='Місце висадки')
+    accepted_time = models.DateTimeField(blank=True, null=True, verbose_name='Час прийняття замовленя')
+    finish_time = models.CharField(max_length=255, blank=True, null=True, verbose_name='Час завершення замовлення')
+    state = models.CharField(max_length=255, blank=True, null=True, verbose_name='Статус замовлення')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+    
+    class Meta:
+        verbose_name = 'Стороннє замовлення'
+        verbose_name_plural = 'Сторонні замовлення'
+    
+
 
 
 class Report_of_driver_debt(models.Model):

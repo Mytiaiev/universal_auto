@@ -7,15 +7,15 @@ import rollbar
 from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
-
+from auto.tasks import health_check
 from app.models import User, Client, UseOfCars, ParkSettings
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
     inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb, \
     inline_about_us
 import logging
 
-from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, DEVELOPER_CHAT_ID, \
-    more_func_text
+from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, more_func_text
+from scripts.redis_conn import redis_instance
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -25,10 +25,12 @@ processed_files = []
 
 
 def start(update, context):
-    context.user_data.clear()
-    menu(update, context)
     chat_id = update.effective_chat.id
+    redis_instance().delete(str(chat_id))
+    redis_instance().expire(str(chat_id), 3600)
+    menu(update, context)
     users = User.objects.filter(chat_id=chat_id)
+
     if not users:
         Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
                               second_name=update.message.from_user.last_name)
@@ -101,6 +103,13 @@ def get_about_us(update, context):
                                                                  url2=ParkSettings.get_value('CONTRACT_OFFER')))
 
 
+def celery_test(update, context):
+    try:
+        health_check.delay()
+    except Exception as e:
+        context.bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"), message=e)
+
+
 def helptext(update, context):
     update.message.reply_text(help_text)
 
@@ -112,7 +121,8 @@ def get_id(update, context):
 
 
 def cancel(update, context):
-    context.user_data.clear()
+    chat_id = update.message.chat.id
+    redis_instance().delete(str(chat_id))
     return ConversationHandler.END
 
 
@@ -151,7 +161,8 @@ def error(update, context):
     )
 
     # Finally, send the message
-    context.bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=message, parse_mode=ParseMode.HTML)
+    context.bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
+                             text=message, parse_mode=ParseMode.HTML)
 
 
 
