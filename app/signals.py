@@ -7,7 +7,6 @@ from auto.tasks import send_on_job_application_on_driver, check_time_order, setu
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order
-from auto_bot.handlers.main.static_text import DEVELOPER_CHAT_ID
 from auto_bot.main import bot
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
@@ -48,7 +47,8 @@ def create_status_change(sender, instance, **kwargs):
         prev_status_changes = StatusChange.objects.filter(driver=instance, end_time=None)
         prev_status_changes.update(end_time=timezone.now(), duration=F('end_time') - F('start_time'))
         if prev_status_changes.count() > 1:
-            bot.send_message(chat_id=DEVELOPER_CHAT_ID, text=f'Multiple status for driver {instance.id} deleted')
+            bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
+                             text=f'Multiple status for driver {instance.id} deleted')
         # driver_status has changed, create new status change
         status_change = StatusChange(
             driver=instance,
