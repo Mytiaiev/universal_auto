@@ -83,7 +83,6 @@ def save_debt_report(update, context):
 def choose_day_off_or_sick(update, context):
     query = update.callback_query
     data = query.data.split()[0]
-    context.user_data['driver'] = Driver.get_by_chat_id(update.effective_chat.id)
     if data == "Off":
         day = timezone.localtime() + timedelta(days=2)
     else:
@@ -96,12 +95,12 @@ def take_a_day_off_or_sick_leave(update, context):
     query = update.callback_query
     event_str, date_str = query.data.split()
     event = Event.DAY_OFF if event_str == "Off" else Event.SICK_DAY
-    driver = context.user_data['driver']
+    driver = Driver.get_by_chat_id(update.effective_chat.id)
     selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     result = f"Водій {driver} взяв {event} на {selected_date}"
     ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
     Event.objects.create(
-        full_name_driver=context.user_data['driver'],
+        full_name_driver=driver,
         event=event,
         event_date=selected_date,
         chat_id=driver.chat_id)

@@ -29,7 +29,7 @@ def inline_start_order_kb():
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
         [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")],
-        [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_no_comment")]
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -122,10 +122,17 @@ def inline_time_order_kb(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-
 def inline_choose_date_kb():
     keyboard = [
         [InlineKeyboardButton(date_inline_buttons[0], callback_data="Today_order")],
         [InlineKeyboardButton(date_inline_buttons[1], callback_data="Tomorrow_order")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_add_info_kb():
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[10], callback_data="Add_information")],
+        [InlineKeyboardButton(order_inline_buttons[11], callback_data="Choose_payment")]
     ]
     return InlineKeyboardMarkup(keyboard)
