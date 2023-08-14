@@ -1079,6 +1079,13 @@ $(document).ready(function () {
 		}
 	})
 
+	$("#showPassword").click(function () {
+		let $checkbox = $(this);
+		let $passwordField = $checkbox.closest('#loginForm').find('#password');
+		let change = $checkbox.is(":checked") ? "text" : "password";
+		$passwordField.prop('type', change);
+	});
+
 	$("#loggedInUser").click(function () {
 		window.location.href = "/dashboard/";
 	});
@@ -1178,10 +1185,8 @@ $(document).ready(function () {
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
 			},
 			success: function (response) {
-				console.log(response);
 				if (response['success'] === true) {
 					let resetCode = response['code'][1];
-					console.log(resetCode);
 					sendResetCodeBtn.data('resetCode', resetCode);
 					forgotPasswordForm.hide();
 					$('#resetPasswordForm').show();
