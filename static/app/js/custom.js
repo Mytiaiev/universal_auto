@@ -1204,13 +1204,13 @@ $(document).ready(function () {
 			if (newPassword !== confirmPassword) {
 				$('#passwordError').text('Паролі не співпадають').addClass('error-message').show();
 			} else {
-				$('#passwordError').text('').removeClass('error-message');
+				$('#passwordError').hide()
 			}
 
 			if (activeCode !== resetCode) {
 				$('#activationError').text('Невірний код активації').addClass('error-message').show();
 			} else {
-				$('#activationError').text('').removeClass('error-message');
+				$('#activationError').hide()
 			}
 		} else {
 
