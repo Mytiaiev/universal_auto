@@ -332,46 +332,6 @@ class SeleniumTools:
             time.sleep(1)
         return otpa
 
-    def otp_code_v2(self):
-        while True:
-            if not self.wait_code_form('PHONE_SMS_OTP-0'):
-                break
-            otp = self.wait_otp_code('code')
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_1')).send_keys(otp[0])
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_2')).send_keys(otp[1])
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_3')).send_keys(otp[2])
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_4')).send_keys(otp[3])
-            # self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V2_5')).click()
-            break
-
-    def wait_code_form(self, pk):
-        try:
-            WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.ID, pk)))
-            self.driver.find_element(By.ID, pk)
-            self.driver.get_screenshot_as_file(f'{pk}.png')
-            return True
-        except Exception as e:
-            self.logger.error(str(e))
-            self.driver.get_screenshot_as_file(f'{pk}_error.png')
-            return False
-
-    def otp_code_v1(self):
-        while True:
-            if not self.wait_code_form('verificationCode'):
-                break
-            otp = self.wait_otp_code('code')
-            self.driver.find_element(By.ID, UberService.get_value('UBER_OTP_CODE_V1_1')).send_keys(otp)
-            self.driver.find_element(By.CLASS_NAME, UberService.get_value('UBER_OTP_CODE_V1_2')).click()
-            break
-
-    def force_opt_form(self):
-        try:
-            WebDriverWait(self.driver, self.sleep).until(
-                ec.presence_of_element_located((By.ID, UberService.get_value('UBER_FORCE_OPT_FORM'))))
-            self.driver.find_element(By.ID, UberService.get_value('UBER_FORCE_OPT_FORM')).click()
-        except TimeoutException:
-            pass
-
     def get_uuid(self):
         obj_session = UberSession.objects.filter(partner=self.partner).latest('created_at')
         return str(obj_session.uber_uuid)

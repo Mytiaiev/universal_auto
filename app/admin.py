@@ -412,12 +412,10 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['driver', 'total_kasa', 'licence_plate', 'efficiency', 'mileage', 'report_from']
+            return ['total_kasa', 'licence_plate', 'efficiency', 'mileage', 'report_from']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
-            ('Водій',                       {'fields': ['driver',
-                                                        ]}),
             ('Інформація по авто',          {'fields': ['licence_plate', 'total_kasa', 'efficiency',
                                                         'mileage']}),
             ('Додатково',                   {'fields': ['report_from'
@@ -425,6 +423,7 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         ]
 
         return fieldsets
+
 
 @admin.register(DriverEfficiency)
 class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):

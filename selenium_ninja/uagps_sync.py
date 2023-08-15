@@ -139,15 +139,17 @@ class UaGpsSynchronizer:
             return distance, vehicle
 
     def save_daily_rent(self, partner_id, delta):
+        day = timezone.localtime() - datetime.timedelta(days=delta)
         in_road = self.get_road_distance(partner_id, delta=delta)
         for driver, result in in_road.items():
             if driver.vehicle:
-                day = timezone.localtime() - datetime.timedelta(days=delta)
+
                 total_km = self.total_per_day(driver.vehicle.licence_plate, day)[0]
                 rent_distance = total_km - result[0]
             else:
                 rent_distance = 0
-            RentInformation.objects.create(driver=driver,
+            RentInformation.objects.create(report_from=day,
+                                           driver=driver,
                                            partner=Partner.get_partner(partner_id),
                                            rent_distance=rent_distance,
                                            road_time=result[1])

@@ -13,6 +13,25 @@ def inline_driver_paid_kb(pk):
     return InlineKeyboardMarkup(keyboard)
 
 
+def inline_func_with_driver_kb():
+    keyboard = [
+        [InlineKeyboardButton(manager_buttons[0], callback_data="Update_drivers")],
+        [InlineKeyboardButton(manager_buttons[1], callback_data="Pin_vehicle_to_driver")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_statistic_kb():
+    keyboard = [
+        [InlineKeyboardButton(manager_buttons[2], callback_data="Get_report")],
+        [InlineKeyboardButton(manager_buttons[3], callback_data="Get_efficiency_report")],
+        [InlineKeyboardButton(manager_buttons[4], callback_data="Get_driver_efficiency")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
 def inline_earning_report_kb():
     keyboard = [
         [InlineKeyboardButton(report_period[0], callback_data="Weekly_report")],
@@ -41,6 +60,15 @@ def inline_efficiency_report_kb():
     keyboard = [
         [InlineKeyboardButton(report_period[1], callback_data="Efficiency_daily")],
         [InlineKeyboardButton(report_period[2], callback_data="Efficiency_custom")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def inline_driver_eff_kb():
+    keyboard = [
+        [InlineKeyboardButton(report_period[1], callback_data="Driver_daily")],
+        [InlineKeyboardButton(report_period[2], callback_data="Driver_custom")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)

@@ -57,10 +57,8 @@ def inline_about_us(url1, url2):
 
 def inline_manager_kb():
     keyboard = [
-        [InlineKeyboardButton(manager_main_buttons[0], callback_data="Update_drivers")],
-        [InlineKeyboardButton(manager_main_buttons[1], callback_data="Get_report")],
-        [InlineKeyboardButton(manager_main_buttons[2], callback_data="Get_efficiency_report")],
-        [InlineKeyboardButton(manager_main_buttons[3], callback_data="Pin_vehicle_to_driver")],
+        [InlineKeyboardButton(manager_main_buttons[0], callback_data="Setup_drivers")],
+        [InlineKeyboardButton(manager_main_buttons[1], callback_data="Get_statistic")],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_manager")]
     ]
     return InlineKeyboardMarkup(keyboard)

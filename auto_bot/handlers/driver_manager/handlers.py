@@ -9,10 +9,11 @@ from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
-    inline_efficiency_report_kb, inline_partner_vehicles, inline_partner_drivers
+    inline_efficiency_report_kb, inline_partner_vehicles, inline_partner_drivers, inline_func_with_driver_kb, \
+    inline_statistic_kb, inline_driver_eff_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_date, get_efficiency, \
-    generate_message_weekly
+    generate_message_weekly, get_driver_efficiency_report
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, send_driver_efficiency
@@ -28,6 +29,18 @@ def remove_cash_driver(sender=None, **kwargs):
             for driver in Driver.objects.filter(manager=manager):
                 bot.send_message(chat_id=manager.chat_id, text=ask_driver_paid(driver),
                                  reply_markup=inline_driver_paid_kb(driver.id))
+
+
+def functions_with_drivers(update, context):
+    query = update.callback_query
+    query.edit_message_text(choose_func_text)
+    query.edit_message_reply_markup(inline_func_with_driver_kb())
+
+
+def statistic_functions(update, context):
+    query = update.callback_query
+    query.edit_message_text(choose_func_text)
+    query.edit_message_reply_markup(inline_statistic_kb())
 
 
 @task_postrun.connect
@@ -64,38 +77,61 @@ def get_efficiency_report(update, context):
     query.edit_message_reply_markup(inline_efficiency_report_kb())
 
 
-def get_partner_vehicles(update, context):
+def get_drivers_statistics(update, context):
     query = update.callback_query
-    manager = DriverManager.get_by_chat_id(query.from_user.id)
-    vehicles = Vehicle.objects.filter(partner=manager.partner, manager=manager)
-    if vehicles:
-        query.edit_message_text(partner_vehicles)
-        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles))
+    query.edit_message_text(choose_period_text)
+    query.edit_message_reply_markup(inline_driver_eff_kb())
+
+
+def get_efficiency_for_drivers(update, context):
+    query = update.callback_query
+    message = ''
+    if query.data == "Driver_custom":
+        query.edit_message_text(start_report_text)
+        redis_instance().hset(str(update.effective_chat.id), 'state', START_DRIVER_EFF)
     else:
-        query.edit_message_text(no_vehicles_text)
+        result = get_driver_efficiency_report(manager_id=query.from_user.id)
+        if result:
+            for k, v in result.items():
+                message += f"{k}\n" + "".join(v)
+        else:
+            message += no_vehicles_text
+        query.edit_message_text(message)
+        query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
 
-def get_partner_drivers(update, context):
-    query = update.callback_query
-    pk_vehicle = query.data.split()[1]
-    manager = DriverManager.get_by_chat_id(query.from_user.id)
-    drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
-    if drivers:
-        query.edit_message_text(partner_drivers)
-        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(pin_vehicle_callback, drivers, pk_vehicle))
+def get_period_driver_eff(update, context):
+    data = update.message.text
+    if validate_date(data):
+        redis_instance().hset(str(update.effective_chat.id), 'start', data)
+        update.message.reply_text(end_report_text)
+        redis_instance().hset(str(update.effective_chat.id), 'state', END_DRIVER_EFF)
     else:
-        query.edit_message_text(no_drivers_text)
+        redis_instance().hset(str(update.effective_chat.id), 'state', START_DRIVER_EFF)
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_data_text)
+        update.message.reply_text(start_report_text)
 
 
-def pin_partner_vehicle_to_driver(update, context):
-    query = update.callback_query
-    data = query.data.split()
-    driver_pk, vehicle_pk = data[1], data[2]
-    driver_obj = Driver.objects.get(pk=driver_pk)
-    vehicle_obj = Vehicle.objects.get(pk=vehicle_pk)
-    driver_obj.vehicle = vehicle_obj
-    driver_obj.save()
-    query.edit_message_text(pin_vehicle_to_driver(driver_obj, vehicle_obj))
+def create_driver_eff(update, context):
+    data = update.message.text
+    if validate_date(data):
+        redis_instance().hdel(str(update.effective_chat.id), 'state')
+        start_date = redis_instance().hget(str(update.effective_chat.id), "start")
+        start = datetime.strptime(start_date, '%d.%m.%Y')
+        end = datetime.strptime(data, '%d.%m.%Y')
+        if start > end:
+            start, end = end, start
+        result = get_driver_efficiency_report(update.message.chat_id, start, end)
+        message = ''
+        if result:
+            for k, v in result.items():
+                message += f"{k}\n" + "".join(v)
+        else:
+            message += no_vehicles_text
+        update.message.reply_text(message, reply_markup=inline_manager_kb())
+    else:
+        redis_instance().hset(str(update.effective_chat.id), 'state', END_DRIVER_EFF)
+        context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
 
 
 def get_weekly_report(update, context):
@@ -223,6 +259,40 @@ def send_week_report(sender=None, **kwargs):
         messages = kwargs.get('retval')
         for user, message in messages.items():
             bot.send_message(chat_id=user, text=message)
+
+
+def get_partner_vehicles(update, context):
+    query = update.callback_query
+    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    vehicles = Vehicle.objects.filter(partner=manager.partner, manager=manager)
+    if vehicles:
+        query.edit_message_text(partner_vehicles)
+        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles))
+    else:
+        query.edit_message_text(no_vehicles_text)
+
+
+def get_partner_drivers(update, context):
+    query = update.callback_query
+    pk_vehicle = query.data.split()[1]
+    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
+    if drivers:
+        query.edit_message_text(partner_drivers)
+        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(pin_vehicle_callback, drivers, pk_vehicle))
+    else:
+        query.edit_message_text(no_drivers_text)
+
+
+def pin_partner_vehicle_to_driver(update, context):
+    query = update.callback_query
+    data = query.data.split()
+    driver_pk, vehicle_pk = data[1], data[2]
+    driver_obj = Driver.objects.get(pk=driver_pk)
+    vehicle_obj = Vehicle.objects.get(pk=vehicle_pk)
+    driver_obj.vehicle = vehicle_obj
+    driver_obj.save()
+    query.edit_message_text(pin_vehicle_to_driver(driver_obj, vehicle_obj))
 
 
 # Add users and vehicle to db and others
