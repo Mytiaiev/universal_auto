@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client, ReportTelegramPayments
+from app.models import Order, User, Driver, Vehicle, UseOfCars, ParkStatus, ParkSettings, Client, FleetOrder, Partner, ReportTelegramPayments
 from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard, get_start_kb, inline_owner_kb, inline_manager_kb
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
@@ -309,6 +309,13 @@ def order_on_time(update, context):
 def client_reject_order(update, context):
     query = update.callback_query
     order = Order.objects.filter(pk=int(query.data.split(' ')[1])).first()
+    if order.driver:
+        FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
+                                  from_address=order.from_address, destination=order.to_the_address,
+                                  accepted_time=order.accepted_time, finish_time=timezone.localtime(),
+                                  state=FleetOrder.CLIENT_CANCEL,
+                                  partner=Partner.get_partner(order.driver.partner),
+                                  fleet='Ninja')
     order.status_order = Order.CANCELED
     order.save()
     try:
@@ -368,7 +375,7 @@ def handle_callback_order(update, context):
                                                       driver.phone_number, order.sum)
                 client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
                 order.status_order, order.driver_message_id = Order.IN_PROGRESS, query.message.message_id
-                order.client_message_id = client_msg
+                order.client_message_id, order.accepted_time = client_msg, timezone.localtime()
                 order.save()
                 if order.chat_id_client:
                     lat, long = get_location_from_db(record.licence_plate)
@@ -415,9 +422,15 @@ def handle_order(update, context):
         context.bot.edit_message_reply_markup(chat_id=order.chat_id_client,
                                               message_id=order.client_message_id,
                                               reply_markup=None)
+        FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
+                                  from_address=order.from_address, destination=order.to_the_address,
+                                  accepted_time=order.accepted_time, finish_time=timezone.localtime(),
+                                  state=FleetOrder.DRIVER_CANCEL, partner=Partner.get_partner(order.driver.partner),
+                                  fleet='Ninja')
         order.client_message_id = text_to_client(order, driver_cancel)
         order.status_order, order.driver, order.checked = Order.WAITING, None, False
         order.save()
+
     elif data[0] == "Client_on_site":
         try:
             context.bot.delete_message(order.chat_id_client, message_id=data[2])
@@ -454,12 +467,17 @@ def handle_order(update, context):
             get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)
         else:
             if order.payment_method == price_inline_buttons[4].split()[1]:
-                message = driver_complete_text(order.sum)
-                query.edit_message_text(text=message)
+                query.edit_message_text(driver_complete_text(order.sum))
                 text_to_client(order, complete_order_text, button=inline_comment_for_client())
                 order.status_order = Order.COMPLETED
                 order.partner = order.driver.partner
                 order.save()
+                FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
+                                          from_address=order.from_address, destination=order.to_the_address,
+                                          accepted_time=order.accepted_time, finish_time=timezone.localtime(),
+                                          state=FleetOrder.COMPLETED,
+                                          partner=Partner.get_partner(order.driver.partner),
+                                          fleet='Ninja')
                 redis_instance().delete(str(update.effective_chat.id))
             else:
                 query.edit_message_reply_markup(reply_markup=None)
@@ -489,9 +507,14 @@ def precheckout_callback(update, context):
 def successful_payment(update, context):
     chat_id = str(update.message.chat.id)
     successful_payment = update.message.successful_payment
-    print(successful_payment)
     data = int(redis_instance().hget(chat_id, 'message_data'))
     order = Order.objects.filter(chat_id_client=chat_id).last()
+    FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
+                              from_address=order.from_address, destination=order.to_the_address,
+                              accepted_time=order.accepted_time, finish_time=timezone.localtime(),
+                              state=FleetOrder.COMPLETED,
+                              partner=Partner.get_partner(order.driver.partner),
+                              fleet='Ninja')
     context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
     text_to_client(order, complete_order_text, button=inline_comment_for_client())
     report_tg = ReportTelegramPayments.objects.create(

@@ -168,7 +168,7 @@ def get_driver_efficiency(self, partner_pk, day=None):
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
-    for driver in Driver.objects.filter(partner=partner_pk):
+    for driver in Driver.objects.filter(partner=partner_pk, vehicle__isnull=False):
         efficiency = DriverEfficiency.objects.filter(report_from=day,
                                                      partner=partner_pk,
                                                      driver=driver)
@@ -177,11 +177,15 @@ def get_driver_efficiency(self, partner_pk, day=None):
             total_kasa = report.total_amount_without_fee if report else 0
             total_km, vehicle = UaGpsSynchronizer().total_per_day(driver.vehicle.licence_plate, day)
             result = Decimal(total_kasa)/Decimal(total_km) if total_km else 0
-            orders = FleetOrder.objects.filter(driver=driver, created_at=day)
+            orders = FleetOrder.objects.filter(driver=driver, accepted_time__date=day)
             total_orders = orders.count()
-            canceled = orders.filter(state=FleetOrder.DRIVER_CANCEL).count()
-            accept = (total_orders-canceled)/total_orders * 100 if canceled else 100
-            avg_price = total_kasa / total_orders
+            if total_orders:
+                canceled = orders.filter(state=FleetOrder.DRIVER_CANCEL).count()
+                accept = int((total_orders-canceled)/total_orders * 100) if canceled else 100
+                avg_price = Decimal(total_kasa) / Decimal(total_orders)
+            else:
+                accept = 0
+                avg_price = 0
             DriverEfficiency.objects.create(report_from=day,
                                             driver=driver,
                                             total_kasa=total_kasa,

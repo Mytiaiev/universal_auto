@@ -100,7 +100,7 @@ def price_info(in_city, out_city):
 def order_info(order):
     if order.order_time:
         message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
-                       f"<b>Час подачі:{timezone.localtime(order.order_time).time()}</b>\n"
+                       f"<b>Час подачі:{timezone.localtime(order.order_time)}</b>\n"
     else:
         message = f"Отримано нове замовлення {order.pk}:\n"
     message += f"Адреса посадки: {order.from_address}\n" \
@@ -108,7 +108,7 @@ def order_info(order):
                f"Спосіб оплати: {order.payment_method}\n" \
                f"Номер телефону: {order.phone_number}\n" \
                f"Загальна вартість: {order.sum} грн\n" \
-               f"Довжина маршруту: {order.distance_google} км"
+               f"Довжина маршруту: {order.distance_google} км\n"
     if order.info:
         message += f"Коментар: {order.info}"
     return message

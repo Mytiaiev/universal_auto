@@ -838,9 +838,11 @@ class Order(models.Model):
     to_latitude = models.CharField(max_length=10, null=True, verbose_name='Широта місця висадки')
     to_longitude = models.CharField(max_length=10, null=True, verbose_name='Довгота місця висадки')
     phone_number = models.CharField(max_length=13, verbose_name='Номер телефона клієнта')
-    chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор чату клієнта')
-    driver_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення водія')
-    client_message_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індифікатор повідомлення клієнта')
+    chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Ідентифікатор чату клієнта')
+    driver_message_id = models.CharField(max_length=10, blank=True, null=True,
+                                         verbose_name='Ідентифікатор повідомлення водія')
+    client_message_id = models.CharField(max_length=10, blank=True, null=True,
+                                         verbose_name='Ідентифікатор повідомлення клієнта')
     info = models.CharField(max_length=255, null=True, verbose_name='Додаткова інформація')
     car_delivery_price = models.IntegerField(default=0, verbose_name='Сума за подачу автомобіля')
     sum = models.IntegerField(default=0, verbose_name='Загальна сума')
@@ -850,6 +852,8 @@ class Order(models.Model):
     distance_gps = models.CharField(max_length=10, blank=True, null=True, verbose_name='Дистанція по GPS')
     distance_google = models.CharField(max_length=10, verbose_name='Дистанція Google')
     driver = models.ForeignKey(Driver, null=True, on_delete=models.RESTRICT, verbose_name='Виконувач')
+    accepted_time = models.DateTimeField(blank=True, null=True, verbose_name='Час прийняття замовленя')
+    finish_time = models.DateTimeField(blank=True, null=True, verbose_name='Час завершення замовлення')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
     comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL, verbose_name='Відгук')
     checked = models.BooleanField(default=False, verbose_name='Перевірено')
@@ -1035,9 +1039,9 @@ class DriverEfficiency(models.Model):
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
     total_orders = models.IntegerField(default=0, verbose_name="Всього замовлень")
     accept_percent = models.IntegerField(default=0, verbose_name="Відсоток прийнятих замовлень")
-    average_price = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Середній чек, грн')
+    average_price = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Середній чек, грн')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
-    efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
+    efficiency = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Ефективність, грн/км')
     partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнер')
 
     class Meta:
