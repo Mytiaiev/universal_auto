@@ -15,7 +15,7 @@ from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_da
     generate_message_weekly
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
-    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report
+    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, send_driver_efficiency
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 
@@ -210,7 +210,7 @@ def create_period_efficiency(update, context):
 
 @task_postrun.connect
 def send_into_group(sender=None, **kwargs):
-    if sender in (send_daily_report, send_efficiency_report):
+    if sender in (send_daily_report, send_efficiency_report, send_driver_efficiency):
         messages = kwargs.get('retval')
         for partner, message in messages.items():
             if message:

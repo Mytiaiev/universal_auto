@@ -24,7 +24,8 @@ def assign_model_permissions(group):
         'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
         'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
         'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
-        'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False}
+        'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
+        'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
     }
 
     for model, permissions in models.items():
@@ -419,6 +420,30 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                         ]}),
             ('Інформація по авто',          {'fields': ['licence_plate', 'total_kasa', 'efficiency',
                                                         'mileage']}),
+            ('Додатково',                   {'fields': ['report_from'
+                                                        ]}),
+        ]
+
+        return fieldsets
+
+@admin.register(DriverEfficiency)
+class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    list_filter = ['driver']
+
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['driver', 'total_kasa', 'total_orders',
+                    'efficiency', 'mileage', 'report_from',
+                    'accept_percent', 'average_price']
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = [
+            ('Водій',                       {'fields': ['driver',
+                                                        ]}),
+            ('Інформація по водію',          {'fields': ['total_orders', 'total_kasa', 'efficiency',
+                                                         'mileage', 'accept_percent', 'average_price']}),
             ('Додатково',                   {'fields': ['report_from'
                                                         ]}),
         ]
