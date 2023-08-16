@@ -489,7 +489,6 @@ def precheckout_callback(update, context):
 def successful_payment(update, context):
     chat_id = str(update.message.chat.id)
     successful_payment = update.message.successful_payment
-    print(successful_payment)
     data = int(redis_instance().hget(chat_id, 'message_data'))
     order = Order.objects.filter(chat_id_client=chat_id).last()
     context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
