@@ -21,9 +21,10 @@ from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficie
     get_driver_efficiency_report
 from auto_bot.handlers.main.keyboards import spam_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_time_order_kb
+    inline_time_order_kb, inline_spot_keyboard, inline_reject_order
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
-    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, trip_paymented
+    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, trip_paymented, \
+    client_order_text, order_customer_text, search_driver
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.handlers.status.static_text import please_start_text, unblock_text
 from auto_bot.main import bot
@@ -375,19 +376,36 @@ def check_time_order(self, order_id):
                                  text=order_info(instance),
                                  reply_markup=inline_markup_accept(instance.pk),
                                  parse_mode=ParseMode.HTML)
-    instance.driver_message_id, instance.checked = group_msg.message_id, True
+    redis_instance().hset('group_msg', order_id, group_msg.message_id)
+    instance.checked = True
     instance.save()
 
 
 @app.task(bind=True, queue='beat_tasks')
 def send_time_order(self):
-    logger.info('sending_time_orders')
     accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
     for order in accepted_orders:
         if timezone.localtime() < order.order_time < (timezone.localtime() + timedelta(minutes=int(
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
-            bot.send_message(chat_id=order.driver.chat_id, text=order_info(order),
-                             reply_markup=inline_time_order_kb(order.id), parse_mode=ParseMode.HTML)
+            driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=order_info(order),
+                                          reply_markup=inline_spot_keyboard(order.latitude, order.longitude, order.id),
+                                          parse_mode=ParseMode.HTML)
+            record = UseOfCars.objects.filter(user_vehicle=order.driver,
+                                              created_at__date=timezone.now().date(),
+                                              end_at=None).last()
+            vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
+            report_for_client = client_order_text(order.driver, vehicle.name, record.licence_plate,
+                                                  order.driver.phone_number, order.sum)
+            client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
+            redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
+            redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
+            order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
+            order.save()
+            if order.chat_id_client:
+                lat, long = get_location_from_db(record.licence_plate)
+                bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
+                message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
+                send_map_to_client.delay(order.id, record.licence_plate, message.message_id, message.chat_id)
 
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
@@ -401,10 +419,11 @@ def order_create_task(self, order_data):
         order_data['distance_google'] = round(distance_price[1], 2)
         if 'order_time' in order_data:
             order_time = order_data['order_time'].strftime("%Y-%m-%d %H:%M")
+            client_msg = redis_instance().hget(order_data['chat_id_client'], 'client_msg')
             bot.edit_message_text(chat_id=order_data['chat_id_client'],
                                   text=f'Замовлення прийняте, сума замовлення {order_data["sum"]}грн\n'
                                        f'Очікуйте водія {order_time}',
-                                  message_id=order_data['client_message_id'])
+                                  message_id=client_msg)
 
         Order.objects.create(**order_data)
     except Exception as e:
@@ -417,36 +436,35 @@ def order_create_task(self, order_data):
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
 def search_driver_for_order(self, order_pk):
+
     try:
         order = Order.objects.get(id=order_pk)
-        client_msg = client_order_info(order.from_address,
-                                       order.to_the_address,
-                                       order.payment_method,
-                                       order.phone_number,
-                                       order.sum,
-                                       increase=order.car_delivery_price)
+        if order.status_order == Order.CANCELED:
+            return
+        client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
         if self.request.retries == self.max_retries:
             if order.chat_id_client:
                 bot.edit_message_text(chat_id=order.chat_id_client,
                                       text=no_driver_in_radius,
                                       reply_markup=inline_search_kb(),
-                                      message_id=order.client_message_id)
+                                      message_id=client_msg)
             return
         if self.request.retries == 0:
-            text_to_client(order, client_msg, message_id=order.client_message_id)
+            bot.edit_message_text(chat_id=order.chat_id_client, text=client_order_info(order), message_id=client_msg)
+            last_msg = text_to_client(order, search_driver, button=inline_reject_order(order.pk))
+            redis_instance().hset(order.chat_id_client, 'client_msg', last_msg)
         elif self.request.retries == 1:
-            text_to_client(order, search_driver_1, message_id=order.client_message_id)
+            text_to_client(order, search_driver_1, message_id=client_msg,
+                           button=inline_reject_order(order.pk))
         else:
-            text_to_client(order, search_driver_2, message_id=order.client_message_id)
+            text_to_client(order, search_driver_2, message_id=client_msg,
+                           button=inline_reject_order(order.pk))
         drivers = Driver.objects.filter(chat_id__isnull=False)
         for driver in drivers:
             record = UseOfCars.objects.filter(user_vehicle=driver,
                                               created_at__date=timezone.now().date(),
                                               end_at=None).last()
             if record and driver.driver_status == Driver.ACTIVE:
-                ParkStatus.objects.create(driver=driver, status=Driver.GET_ORDER)
-                driver.driver_status = Driver.GET_ORDER
-                driver.save()
                 driver_lat, driver_long = get_location_from_db(record.licence_plate)
                 distance = haversine(float(driver_lat), float(driver_long),
                                      float(order.latitude), float(order.longitude))
@@ -458,23 +476,19 @@ def search_driver_for_order(self, order_pk):
                                                       reply_markup=inline_markup_accept(order.pk))
                     end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
                     while time.time() < end_time:
+                        Driver.objects.filter(id=driver.id).update(driver_status=Driver.GET_ORDER)
                         upd_driver = Driver.objects.get(id=driver.id)
                         instance = Order.objects.get(id=order.id)
+                        if instance.status_order == Order.CANCELED:
+                            bot.delete_message(chat_id=driver.chat_id,
+                                               message_id=accept_message.message_id)
+                            return
                         if instance.driver == upd_driver:
-                            try:
-                                bot.edit_message_text(chat_id=order.chat_id_client,
-                                                      text=client_msg,
-                                                      message_id=order.client_message_id)
-                            except BadRequest as e:
-                                logger.info(e)
                             return
                     bot.delete_message(chat_id=driver.chat_id,
                                        message_id=accept_message.message_id)
                     bot.send_message(chat_id=driver.chat_id,
                                      text=decline_order)
-                ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
-                driver.driver_status = Driver.ACTIVE
-                driver.save()
             else:
                 continue
         self.retry(args=[order_pk], countdown=30)
@@ -483,7 +497,7 @@ def search_driver_for_order(self, order_pk):
 
 
 @app.task(bind=True, max_retries=90, queue='bot_tasks')
-def send_map_to_client(self, order_pk, query_id, licence, client_msg, message, chat):
+def send_map_to_client(self, order_pk, licence, message, chat):
     order = Order.objects.get(id=order_pk)
     if order.chat_id_client:
         try:
@@ -494,23 +508,26 @@ def send_map_to_client(self, order_pk, query_id, licence, client_msg, message, c
                 return
             elif distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
                 bot.stopMessageLiveLocation(chat, message)
+                client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
+                driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
                 text_to_client(order, driver_arrived, delete_id=client_msg)
+                redis_instance().hset(str(order.driver.chat_id), 'start_route', int(timezone.localtime().timestamp()))
                 bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
-                                              message_id=query_id,
+                                              message_id=driver_msg,
                                               reply_markup=inline_client_spot(order_pk, message))
             else:
                 bot.editMessageLiveLocation(chat, message, latitude=latitude, longitude=longitude)
-                self.retry(args=[order_pk, query_id, licence, client_msg, message, chat], countdown=20)
+                self.retry(args=[order_pk, licence, message, chat], countdown=20)
         except BadRequest as e:
             if "Message can't be edited" in str(e) or order.status_order in (Order.CANCELED, Order.WAITING):
                 pass
             else:
-                raise self.retry(args=[order_pk, query_id, licence, client_msg, message, chat], countdown=30) from e
+                raise self.retry(args=[order_pk, licence, message, chat], countdown=30) from e
         except StopIteration:
             pass
         except Exception as e:
             logger.error(msg=str(e))
-            self.retry(args=[order_pk, query_id, licence, client_msg, message, chat], countdown=30)
+            self.retry(args=[order_pk, licence, message, chat], countdown=30)
         if self.request.retries >= self.max_retries:
             bot.stopMessageLiveLocation(chat, message)
         return message
