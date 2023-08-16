@@ -825,6 +825,7 @@ class ReportTelegramPayments(models.Model):
     def __str__(self):
         return self.provider_payment_charge_id
 
+
 class Order(models.Model):
     WAITING = 'Очікується'
     IN_PROGRESS = 'Виконується'
