@@ -814,8 +814,6 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             'status_order', 'distance_gps',
                                                             'distance_google', 'driver',
                                                             ]}),
-                ('Додатково',                   {'fields': ['comment',
-                                                            ]}),
             ]
         else:
             fieldsets = [
@@ -829,9 +827,31 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             'status_order', 'distance_gps',
                                                             'distance_google', 'driver',
                                                             ]}),
-                ('Додатково',                   {'fields': ['comment',
-                                                            ]}),
             ]
+
+        return fieldsets
+
+
+@admin.register(FleetOrder)
+class FleetOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['order_id', 'fleet', 'driver', 'from_address', 'destination',
+                    'accepted_time', 'finish_time',
+                    'state'
+                    ]
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = [
+            ('Адреси',                      {'fields': ['from_address', 'destination',
+                                                        ]}),
+            ('Інформація',                    {'fields': ['driver', 'fleet', 'state'
+                                                          ]}),
+            ('Час',                        {'fields': ['accepted_time', 'finish_time',
+                                                       ]}),
+        ]
 
         return fieldsets
 

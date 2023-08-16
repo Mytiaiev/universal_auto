@@ -126,8 +126,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(time_order, pattern="Today_order|Tomorrow_order|No_driver_time_order"))
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
     dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
-    dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile("^(Accept_order|Start_route) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(handle_callback_order, pattern="^Accept_order [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(handle_order,
                                         pattern=re.compile("^(Reject_order|Along_the_route|Off_route|"
                                                            "Accept|End_trip) [0-9]+$")))
