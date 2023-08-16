@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'polymorphic',
     'fake_uber',
     'taxi_service',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
