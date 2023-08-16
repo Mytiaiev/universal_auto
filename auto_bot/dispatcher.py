@@ -13,7 +13,8 @@ from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fle
     get_list_job_application, name, name_vehicle, create, add, \
     driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report, get_earning_report, \
     get_efficiency_report, get_report, get_efficiency_auto, get_partner_vehicles, get_partner_drivers, \
-    pin_partner_vehicle_to_driver
+    pin_partner_vehicle_to_driver, statistic_functions, functions_with_drivers, get_drivers_statistics, \
+    get_efficiency_for_drivers
 from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
@@ -125,8 +126,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(time_order, pattern="Today_order|Tomorrow_order|No_driver_time_order"))
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
     dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
-    dp.add_handler(CallbackQueryHandler(handle_callback_order,
-                                        pattern=re.compile("^(Accept_order|Start_route) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(handle_callback_order, pattern="^Accept_order [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(handle_order,
                                         pattern=re.compile("^(Reject_order|Along_the_route|Off_route|"
                                                            "Accept|End_trip) [0-9]+$")))
@@ -174,12 +174,16 @@ def setup_dispatcher(dp):
     # Commands for Driver Managers
     dp.add_handler(CallbackQueryHandler(remove_cash_by_manager,
                                         pattern=re.compile("^Paid_driver (true|false) [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(functions_with_drivers, pattern="Setup_drivers"))
+    dp.add_handler(CallbackQueryHandler(statistic_functions, pattern="Get_statistic"))
     dp.add_handler(CallbackQueryHandler(get_drivers_from_fleets, pattern="Update_drivers"))
     dp.add_handler(CallbackQueryHandler(get_earning_report, pattern="Get_report"))
     dp.add_handler(CallbackQueryHandler(get_weekly_report, pattern="Weekly_report"))
     dp.add_handler(CallbackQueryHandler(get_report, pattern="Daily_report|Custom_report"))
     dp.add_handler(CallbackQueryHandler(get_efficiency_auto, pattern="Efficiency_daily|Efficiency_custom"))
     dp.add_handler(CallbackQueryHandler(get_efficiency_report, pattern="Get_efficiency_report"))
+    dp.add_handler(CallbackQueryHandler(get_drivers_statistics, pattern="Get_driver_efficiency"))
+    dp.add_handler(CallbackQueryHandler(get_efficiency_for_drivers, pattern="Driver_daily|Driver_custom"))
     dp.add_handler(CallbackQueryHandler(get_partner_vehicles, pattern="Pin_vehicle_to_driver"))
     dp.add_handler(CallbackQueryHandler(get_partner_drivers,
                                         pattern=re.compile("^select_vehicle [0-9]+$")))

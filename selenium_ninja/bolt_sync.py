@@ -138,47 +138,50 @@ class BoltRequest(Synchronizer):
         return driver_list
 
     def get_fleet_orders(self, day, pk):
-        driver = Driver.objects.get(pk=pk)
-        driver_id = driver.get_driver_external_id(self.fleet)
-        format_day = day.strftime("%Y-%m-%d")
-        payload = {
-                  "offset": 0,
-                  "limit": 50,
-                  "from_date": format_day,
-                  "to_date": format_day,
-                  "driver_id": driver_id,
-                  "orders_state_statuses": [
-                                            "client_did_not_show",
-                                            "finished",
-                                            "client_cancelled",
-                                            "driver_cancelled_after_accept"
-                                            ]
-                }
-        report = self.post_target_url(f'{self.base_url}getOrdersHistory', self.param, payload)
         bolt_states = {
-            "client_did_not_show": FleetOrder.CLIENT,
+            "client_did_not_show": FleetOrder.CLIENT_CANCEL,
             "finished": FleetOrder.COMPLETED,
             "client_cancelled": FleetOrder.CLIENT_CANCEL,
-            "driver_cancelled_after_accept": FleetOrder.DRIVER_CANCEL
+            "driver_cancelled_after_accept": FleetOrder.DRIVER_CANCEL,
+            "driver_rejected": FleetOrder.DRIVER_CANCEL
         }
-        for order in report['data']['rows']:
-            if FleetOrder.objects.filter(order_id=order['order_id']):
-                continue
-            try:
-                finish = timezone.make_aware(datetime.datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
-            except TypeError:
-                finish = None
-            data = {"order_id": order['order_id'],
-                    "fleet": self.fleet,
-                    "driver": driver,
-                    "from_address": order['pickup_address'],
-                    "accepted_time": timezone.make_aware(datetime.datetime.fromtimestamp(order['accepted_time'])),
-                    "state": bolt_states.get(order['order_try_state']),
-                    "finish_time": finish,
-                    "destination": order['order_stops'][-1]['address'],
-                    "partner": Partner.get_partner(self.partner_id)
+        driver = Driver.objects.get(pk=pk)
+        driver_id = driver.get_driver_external_id(self.fleet)
+        if driver_id:
+            format_day = day.strftime("%Y-%m-%d")
+            payload = {
+                      "offset": 0,
+                      "limit": 50,
+                      "from_date": format_day,
+                      "to_date": format_day,
+                      "driver_id": driver_id,
+                      "orders_state_statuses": [
+                                                "client_did_not_show",
+                                                "finished",
+                                                "client_cancelled",
+                                                "driver_cancelled_after_accept",
+                                                "driver_rejected"
+                                                ]
                     }
-            FleetOrder.objects.create(**data)
+            report = self.post_target_url(f'{self.base_url}getOrdersHistory', self.param, payload)
+            for order in report['data']['rows']:
+                if FleetOrder.objects.filter(order_id=order['order_id']):
+                    continue
+                try:
+                    finish = timezone.make_aware(datetime.datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
+                except TypeError:
+                    finish = None
+                data = {"order_id": order['order_id'],
+                        "fleet": self.fleet,
+                        "driver": driver,
+                        "from_address": order['pickup_address'],
+                        "accepted_time": timezone.make_aware(datetime.datetime.fromtimestamp(order['accepted_time'])),
+                        "state": bolt_states.get(order['order_try_state']),
+                        "finish_time": finish,
+                        "destination": order['order_stops'][-1]['address'],
+                        "partner": Partner.get_partner(self.partner_id)
+                        }
+                FleetOrder.objects.create(**data)
 
     def get_drivers_status(self):
         with_client = []

@@ -44,6 +44,21 @@ uber_states = {
     'UBER_LOGIN_5': ('//button[@id="alt-alternate-forms-option-modal"]', 'xpath'),
     'UBER_LOGIN_6': ('//div[@id="bottom-modal-content"]/button[2]', 'xpath'),
     'CHECK_LOGIN_UBER': ('//div[@data-tracking-name="vehicles"]', 'XPATH'),
+    'UBER_GENERATE_PAYMENTS_ORDER_1': ('https://supplier.uber.com/orgs/', 'url'),
+    'UBER_GENERATE_PAYMENTS_ORDER_2': ('//div[@data-testid="report-type-dropdown"]/div/div', 'xpath'),
+    'UBER_GENERATE_PAYMENTS_ORDER_3': ('//button[@data-tracking-name="custom-date-range"]', 'XPATH'),
+    'UBER_GENERATE_PAYMENTS_ORDER_4': ('//div[@data-baseweb="base-input"][1]', 'XPATH'),
+    'UBER_GENERATE_PAYMENTS_ORDER_5': ('//button[@data-testid="generate-report-button"]', 'XPATH'),
+    'UBER_GENERATE_TRIPS_1': ('//ul/li/div[text()[contains(.,"Trip Activity")]]', 'XPATH'),
+    'UBER_GENERATE_TRIPS_2': ('//ul/li/div[text()[contains(.,"Информация о поездке")]]', 'XPATH'),
+    'UBER_CALENDAR_1': ('//button[@aria-live="polite"][1]', 'XPATH'),
+    'UBER_CALENDAR_2': ('//li[@role="option" and text()[contains(.,"', 'XPATH'),
+    'UBER_CALENDAR_3': ('//button[@aria-live="polite"][2]', 'XPATH'),
+    'UBER_CALENDAR_4': ('//div[@aria-roledescription="button"]/div[text()=', 'XPATH'),
+
+    'UBER_DOWNLOAD_PAYMENTS_ORDER_1': ('(//div[@data-testid="paginated-table"]//button)[1]', 'XPATH'),
+    'UBER_DOWNLOAD_PAYMENTS_ORDER_2': ('//i[@class="_css-bvkFtm"]', 'XPATH'),
+
 }
 
 states = {
