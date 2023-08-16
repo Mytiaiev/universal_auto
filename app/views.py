@@ -102,3 +102,12 @@ def gps_cars(request):
     }
     return render(request, 'map.html', context)
 
+
+from rest_framework import generics
+from app.models import Order
+from app.serializers import OrderSerializer
+
+
+class OrderListAPIView(generics.ListAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
