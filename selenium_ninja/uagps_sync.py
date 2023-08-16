@@ -3,7 +3,7 @@ import datetime
 import requests
 from _decimal import Decimal
 from django.utils import timezone
-from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner
+from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner, FleetOrder
 
 
 class UaGpsSynchronizer:
@@ -35,8 +35,8 @@ class UaGpsSynchronizer:
             Vehicle.objects.filter(licence_plate=vehicle['d']['nm'].split('(')[0]).update(gps_id=vehicle['i'])
 
     def generate_report(self, start_time, end_time, vehicle_id):
-        rent_distance = 0
-        rent_time = datetime.timedelta()
+        road_distance = 0
+        road_time = datetime.timedelta()
         parameters = {
             "reportResourceId": 66281,
             "reportObjectId": vehicle_id,
@@ -59,75 +59,74 @@ class UaGpsSynchronizer:
             report = requests.get(self.url, params=params)
             raw_time = report.json()['reportResult']['stats'][4][1]
             clean_time = [int(i) for i in raw_time.split(':')]
-            rent_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
+            road_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
             raw_distance = report.json()['reportResult']['stats'][5][1]
-            rent_distance = Decimal(raw_distance.split(' ')[0])
+            road_distance = Decimal(raw_distance.split(' ')[0])
         except Exception as e:
             print(e)
-        return rent_distance, rent_time
+        return road_distance, road_time
 
     @staticmethod
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
 
-    def get_rent_distance(self, partner_id):
-        start = timezone.datetime.combine(timezone.localtime(), datetime.datetime.min.time()).astimezone()
-        end = timezone.localtime()
-        partner_obj = Partner.objects.get(id=partner_id)
+    def get_road_distance(self, partner_id, start=None, end=None, delta=None):
+        if not start:
+            day = timezone.localtime() - datetime.timedelta(days=delta)
+            start = timezone.datetime.combine(day, datetime.datetime.min.time()).astimezone()
+            end = timezone.datetime.combine(day, datetime.datetime.max.time()).astimezone()
+        else:
+            pass
+        road_dict = {}
         for _driver in Driver.objects.filter(partner=partner_id):
-            road_distance = 0
-            rent_distance = 0
-            road_time = datetime.timedelta()
-            # car that have worked at that day
             vehicle = _driver.vehicle
+            road_distance = 0
+            road_time = datetime.timedelta()
             if vehicle:
-                road_statuses = StatusChange.objects.filter(driver=_driver.id,
-                                                            vehicle=vehicle,
-                                                            name=Driver.WITH_CLIENT,
-                                                            start_time__gte=timezone.localtime(start))
-                if road_statuses:
-                    for status in road_statuses:
-                        if status.end_time is not None:
-                            report = self.generate_report(self.get_timestamp(timezone.localtime(status.start_time)),
-                                                          self.get_timestamp(timezone.localtime(status.end_time)),
-                                                          vehicle.gps_id)
-                        else:
-                            report = self.generate_report(self.get_timestamp(timezone.localtime(status.start_time)),
-                                                          self.get_timestamp(timezone.localtime(end)),
-                                                          vehicle.gps_id)
-                        road_distance += report[0]
-                        road_time += report[1]
-                    total = self.total_per_day(vehicle.licence_plate, end)[0]
-                    rent_distance = total - road_distance
-                else:
-                    last_status = StatusChange.objects.filter(driver=_driver.id,
-                                                              vehicle=vehicle).last()
-                    if last_status:
-                        if last_status.name == Driver.WITH_CLIENT and last_status.end_time:
-                            report = self.generate_report(self.get_timestamp(last_status.end_time),
-                                                          self.get_timestamp(timezone.localtime(end)),
-                                                          vehicle.gps_id)
-                        else:
-                            report = (0, datetime.timedelta(minutes=60))
+                completed = FleetOrder.objects.filter(driver=_driver,
+                                                      state=FleetOrder.COMPLETED,
+                                                      accepted_time__gte=start)
+                for order in completed:
+                    end_report = order.finish_time if order.finish_time < end else end
+                    report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
+                                                  self.get_timestamp(timezone.localtime(end_report)),
+                                                  vehicle.gps_id)
+                    road_distance += report[0]
+                    road_time += report[1]
 
-                    else:
-                        report = self.generate_report(self.get_timestamp(timezone.localtime(start)),
-                                                      self.get_timestamp(timezone.localtime(end)),
-                                                      vehicle.gps_id)
-                    rent_distance = report[0]
+                canceled = FleetOrder.objects.filter(driver=_driver,
+                                                     state__in=[FleetOrder.DRIVER_CANCEL,
+                                                                FleetOrder.SYSTEM_CANCEL,
+                                                                FleetOrder.CLIENT_CANCEL],
+                                                     accepted_time__gte=start)
+                for order in canceled:
+                    first_status = StatusChange.objects.filter(
+                        driver=_driver.id,
+                        vehicle=vehicle,
+                        name__in=[Driver.ACTIVE, Driver.WITH_CLIENT],
+                        start_time__gte=timezone.localtime(order.accepted_time)).first()
+                    if first_status:
+                        if first_status.name == Driver.WITH_CLIENT:
+                            continue
+                        else:
+                            end_report = first_status.start_time if first_status.start_time < end else end
+                            report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
+                                                          self.get_timestamp(timezone.localtime(end_report)),
+                                                          vehicle.gps_id)
+                            road_distance += report[0]
+                            road_time += report[1]
 
-            rent_today = RentInformation.objects.filter(driver=_driver,
-                                                        created_at__date=timezone.localtime().date()).first()
-            if not rent_today:
-                RentInformation.objects.create(driver_name=_driver,
-                                               driver=_driver,
-                                               rent_time=road_time,
-                                               rent_distance=rent_distance,
-                                               partner=partner_obj)
-            else:
-                rent_today.rent_distance = rent_distance
-                rent_today.rent_time = road_time
-                rent_today.save()
+                yesterday_order = FleetOrder.objects.filter(driver=_driver,
+                                                            finish_time__gt=start,
+                                                            accepted_time__lte=start).first()
+                if yesterday_order:
+                    report = self.generate_report(self.get_timestamp(timezone.localtime(start)),
+                                                  self.get_timestamp(timezone.localtime(yesterday_order.finish_time)),
+                                                  vehicle.gps_id)
+                    road_distance += report[0]
+                    road_time += report[1]
+            road_dict[_driver] = (road_distance, road_time)
+        return road_dict
 
     def total_per_day(self, licence_plate, day):
         start = datetime.datetime.combine(day, datetime.time.min)
@@ -138,3 +137,20 @@ class UaGpsSynchronizer:
                                             self.get_timestamp(end),
                                             vehicle.gps_id)[0]
             return distance, vehicle
+
+    def save_daily_rent(self, partner_id, delta):
+        day = timezone.localtime() - datetime.timedelta(days=delta)
+        in_road = self.get_road_distance(partner_id, delta=delta)
+        for driver, result in in_road.items():
+            if driver.vehicle:
+
+                total_km = self.total_per_day(driver.vehicle.licence_plate, day)[0]
+                rent_distance = total_km - result[0]
+            else:
+                rent_distance = 0
+            RentInformation.objects.create(report_from=day,
+                                           driver=driver,
+                                           partner=Partner.get_partner(partner_id),
+                                           rent_distance=rent_distance,
+                                           road_time=result[1])
+

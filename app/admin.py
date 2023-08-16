@@ -24,7 +24,8 @@ def assign_model_permissions(group):
         'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
         'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
         'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
-        'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False}
+        'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
+        'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
     }
 
     for model, permissions in models.items():
@@ -411,14 +412,37 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['driver', 'total_kasa', 'licence_plate', 'efficiency', 'mileage', 'report_from']
+            return ['total_kasa', 'licence_plate', 'efficiency', 'mileage', 'report_from']
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = [
+            ('Інформація по авто',          {'fields': ['licence_plate', 'total_kasa', 'efficiency',
+                                                        'mileage']}),
+            ('Додатково',                   {'fields': ['report_from'
+                                                        ]}),
+        ]
+
+        return fieldsets
+
+
+@admin.register(DriverEfficiency)
+class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    list_filter = ['driver']
+
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['driver', 'total_kasa', 'total_orders',
+                    'efficiency', 'mileage', 'report_from',
+                    'accept_percent', 'average_price']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
             ('Водій',                       {'fields': ['driver',
                                                         ]}),
-            ('Інформація по авто',          {'fields': ['licence_plate', 'total_kasa', 'efficiency',
-                                                        'mileage']}),
+            ('Інформація по водію',          {'fields': ['total_orders', 'total_kasa', 'efficiency',
+                                                         'mileage', 'accept_percent', 'average_price']}),
             ('Додатково',                   {'fields': ['report_from'
                                                         ]}),
         ]
@@ -453,7 +477,7 @@ class UberServiceAdmin(admin.ModelAdmin):
 
 @admin.register(RentInformation)
 class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ('driver_name', 'created_at')
+    list_filter = ('driver', 'created_at')
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -790,8 +814,6 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             'status_order', 'distance_gps',
                                                             'distance_google', 'driver',
                                                             ]}),
-                ('Додатково',                   {'fields': ['comment',
-                                                            ]}),
             ]
         else:
             fieldsets = [
@@ -805,9 +827,31 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             'status_order', 'distance_gps',
                                                             'distance_google', 'driver',
                                                             ]}),
-                ('Додатково',                   {'fields': ['comment',
-                                                            ]}),
             ]
+
+        return fieldsets
+
+
+@admin.register(FleetOrder)
+class FleetOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['order_id', 'fleet', 'driver', 'from_address', 'destination',
+                    'accepted_time', 'finish_time',
+                    'state'
+                    ]
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = [
+            ('Адреси',                      {'fields': ['from_address', 'destination',
+                                                        ]}),
+            ('Інформація',                    {'fields': ['driver', 'fleet', 'state'
+                                                          ]}),
+            ('Час',                        {'fields': ['accepted_time', 'finish_time',
+                                                       ]}),
+        ]
 
         return fieldsets
 

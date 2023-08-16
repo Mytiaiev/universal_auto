@@ -33,6 +33,7 @@ ask_time_text = 'Вкажіть, будь ласка, час для подачі
 already_accepted = "Це замовлення вже виконано або виконується."
 decline_order = "Ви не прийняли замовлення, ваш рейтинг понизився на 1"
 client_decline = "Ви відмовились від замовлення"
+search_driver = "Шукаємо водія"
 search_driver_1 = "Будь ласка, зачекайте, ми працюємо над вашим питанням."
 search_driver_2 = "Ми все ще шукаємо водія для вас. Зачекайте, будь ласка."
 no_driver_in_radius = "Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?"
@@ -99,8 +100,9 @@ def price_info(in_city, out_city):
 
 def order_info(order):
     if order.order_time:
+        time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
         message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
-                       f"<b>Час подачі:{timezone.localtime(order.order_time).time()}</b>\n"
+                  f"<b>Час подачі:{time}</b>\n"
     else:
         message = f"Отримано нове замовлення {order.pk}:\n"
     message += f"Адреса посадки: {order.from_address}\n" \
@@ -108,7 +110,7 @@ def order_info(order):
                f"Спосіб оплати: {order.payment_method}\n" \
                f"Номер телефону: {order.phone_number}\n" \
                f"Загальна вартість: {order.sum} грн\n" \
-               f"Довжина маршруту: {order.distance_google} км"
+               f"Довжина маршруту: {order.distance_google} км\n"
     if order.info:
         message += f"Коментар: {order.info}"
     return message
@@ -135,16 +137,15 @@ def client_order_text(driver, vehicle, plate, phone, price):
     return message
 
 
-def client_order_info(address, to_address, payment, phone, price, increase=None):
-    if increase:
-        message = f"Замовлення оновлено\nНова сума замовлення: {price} грн\n" \
-                  f"Шукаємо водія..."
+def client_order_info(order):
+    if order.car_delivery_price:
+        message = f"Замовлення оновлено\n" \
+                  f"Нова сума замовлення: {order.sum} грн\n"
     else:
         message = f"Ваше замовлення:\n" \
-                  f"Адреса посадки: {address}\n" \
-                  f"Місце прибуття: {to_address}\n" \
-                  f"Спосіб оплати: {payment}\n" \
-                  f"Номер телефону: {phone}\n" \
-                  f"Сума замовлення: {price} грн\n" \
-                  f'Шукаємо водія...'
+                  f"Адреса посадки: {order.from_address}\n" \
+                  f"Місце прибуття: {order.to_the_address}\n" \
+                  f"Спосіб оплати: {order.payment_method}\n" \
+                  f"Номер телефону: {order.phone_number}\n" \
+                  f"Сума замовлення: {order.sum} грн\n"
     return message
