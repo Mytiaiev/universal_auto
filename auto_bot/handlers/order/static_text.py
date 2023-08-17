@@ -156,6 +156,7 @@ def manager_change_payments_info(order):
     message = f"Замовлення: {order.pk}\n" \
               f"Водій: {order.driver}\n" \
               f"Автомобіль: {order.driver.vehicle}\n" \
+              f"Сума замовлення: {order.sum}\n" \
               f"Змінив спосіб оплати на: {order.payment_method}\n"
     return message
 

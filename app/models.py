@@ -224,11 +224,12 @@ class DriverManager(User):
     def __str__(self):
         return f'{self.name} {self.second_name}'
 
+
 class Vehicle(models.Model):
     class Currency(models.TextChoices):
-        UAH = 'UAH', 'Гривня'
-        USD = 'USD', 'Долар'
-        EUR = 'EUR', 'Євро'
+        UAH = 'UAH', 'Гривня',
+        USD = 'USD', 'Долар',
+        EUR = 'EUR', 'Євро',
 
     name = models.CharField(max_length=255, verbose_name='Назва')
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
