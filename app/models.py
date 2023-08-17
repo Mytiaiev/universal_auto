@@ -224,8 +224,12 @@ class DriverManager(User):
     def __str__(self):
         return f'{self.name} {self.second_name}'
 
-
 class Vehicle(models.Model):
+    class Currency(models.TextChoices):
+        UAH = 'UAH', 'Гривня'
+        USD = 'USD', 'Долар'
+        EUR = 'EUR', 'Євро'
+
     name = models.CharField(max_length=255, verbose_name='Назва')
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
@@ -238,6 +242,15 @@ class Vehicle(models.Model):
     lon = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Довгота")
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
+    purchase_price = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Ціна покупки")
+    сurrency = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
+                                verbose_name='Валюта покупки')
+    currency_rate = models.DecimalField(decimal_places=2, max_digits=10, default=0,
+                                        verbose_name="Курс валюти при покупці(НБУ)")
+    car_earnings = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Заробіток авто")
+    сurrency_back = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
+                                     verbose_name='Валюта повернення коштів')
+    investor = models.BooleanField(default=False, verbose_name='Машина інвестора')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
@@ -286,6 +299,15 @@ class Vehicle(models.Model):
             return None
 
 
+class TransactionsConversantion(models.Model):
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Машина')
+    sum_before_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума до транзакції")
+    сurrency = models.CharField(max_length=4, verbose_name='Валюта покупки')
+    currency_rate = models.DecimalField(decimal_places=2, max_digits=10, default=0,
+                                        verbose_name="Курс валюти")
+    sum_after_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума після транзакції")
+
+
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
     WITH_CLIENT = 'В дорозі'
@@ -305,7 +327,7 @@ class Driver(User):
     manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, blank=True,
                                 verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
-    driver_status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія')
+    driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
     schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
     plan = models.IntegerField(default=12000, verbose_name='План водія')
     rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
