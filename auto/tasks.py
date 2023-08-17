@@ -404,7 +404,7 @@ def add_money_to_vehicle(self, partner_pk):
                     sum_after_transaction=result)
                 vehicle.save()
             else:
-                vehicle.car_earnings += total_kasa
+                vehicle.car_earnings += total_kasa * 0.5
 
 
 
