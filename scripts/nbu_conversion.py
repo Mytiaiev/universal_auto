@@ -1,5 +1,6 @@
 import requests
 from decimal import Decimal, ROUND_HALF_UP
+from app.models import Vehicle
 
 
 def get_exchange_rate(currency_code):
@@ -20,5 +21,5 @@ def convert_to_currency(amount_uah, to_currency):
     if usd_rate is not None:
         amount_usd = amount_uah / usd_rate
         rounded_value = Decimal(str(amount_usd)).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-        return rounded_value
+        return rounded_value, usd_rate
     return None

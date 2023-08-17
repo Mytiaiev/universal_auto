@@ -14,7 +14,8 @@ from telegram import ParseMode
 from telegram.error import BadRequest, Unauthorized
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner, DriverEfficiency, FleetOrder
+    UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner, DriverEfficiency, FleetOrder, \
+    TransactionsConversantion
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
@@ -36,6 +37,7 @@ from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberRequest
 from selenium_ninja.uklon_sync import UklonRequest
+from scripts.nbu_conversion import convert_to_currency
 
 
 logger = get_task_logger(__name__)
@@ -382,6 +384,31 @@ def check_time_order(self, order_id):
 
 
 @app.task(bind=True, queue='beat_tasks')
+def add_money_to_vehicle(self, partner_pk):
+    yesterday = timezone.localtime() - timedelta(days=1)
+    car_efficiency_records = CarEfficiency.objects.filter(report_from__date=yesterday.date(), partner=partner_pk)
+    sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'))
+    for result in sum_by_plate:
+        vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'], partner=partner_pk)
+        if vehicle:
+            currency = vehicle.сurrency_back
+            total_kasa = result['total_kasa']
+            if currency != Vehicle.Currency.UAH:
+                result, rate = convert_to_currency(total_kasa, currency)
+                vehicle.car_earnings += result * 0.5
+                TransactionsConversantion.objects.create(
+                    vehicle=vehicle,
+                    sum_before_transaction=total_kasa,
+                    сurrency=currency,
+                    currency_rate=rate,
+                    sum_after_transaction=result)
+                vehicle.save()
+            else:
+                vehicle.car_earnings += total_kasa
+
+
+
+@app.task(bind=True, queue='beat_tasks')
 def send_time_order(self):
     accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
     for order in accepted_orders:
@@ -617,6 +644,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="8"), add_money_to_vehicle.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour="7"), get_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
