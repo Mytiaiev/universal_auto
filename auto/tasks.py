@@ -11,21 +11,20 @@ from django.utils import timezone
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from telegram import ParseMode
-from telegram.error import BadRequest, Unauthorized
+from telegram.error import BadRequest
 
-from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
+from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner, DriverEfficiency, FleetOrder
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
-from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_time_order_kb, inline_spot_keyboard, inline_reject_order
+from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot,\
+    inline_spot_keyboard, inline_reject_order
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
-    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, trip_paymented, \
+    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
     client_order_text, order_customer_text, search_driver
 from auto_bot.handlers.order.utils import text_to_client
-from auto_bot.handlers.status.static_text import please_start_text, unblock_text
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
 from auto.celery import app
@@ -224,7 +223,7 @@ def update_driver_status(self, partner_pk):
         for driver in drivers:
             active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,
-                                                  created_at__date=timezone.localtime().date(), end_at=None)
+                                                  created_at__date=timezone.localtime().date(), end_at=None).first()
             if active_order or (driver.name, driver.second_name) in status_with_client:
                 current_status = Driver.WITH_CLIENT
             elif (driver.name, driver.second_name) in status_online:
@@ -379,6 +378,18 @@ def check_time_order(self, order_id):
 
 
 @app.task(bind=True, queue='beat_tasks')
+def order_not_accepted(self):
+    instances = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=True)
+    for order in instances:
+        if order.order_time < (timezone.localtime() + timedelta(
+                minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN')))):
+            group_msg = redis_instance().hget('group_msg', order.id)
+            bot.delete_message(chat_id=ParkSettings.get_value("ORDER_CHAT"), message_id=group_msg)
+            redis_instance().hdel('group_msg', order.id)
+            search_driver_for_order.delay(order.id)
+
+
+@app.task(bind=True, queue='beat_tasks')
 def send_time_order(self):
     accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
     for order in accepted_orders:
@@ -434,6 +445,14 @@ def search_driver_for_order(self, order_pk):
     try:
         order = Order.objects.get(id=order_pk)
         if order.status_order == Order.CANCELED:
+            return
+        if order.status_order == Order.ON_TIME:
+            order.status_order = Order.WAITING
+            order.save()
+            if order.chat_id_client:
+                bot.send_message(chat_id=order.chat_id_client,
+                                 text=no_driver_in_radius,
+                                 reply_markup=inline_search_kb())
             return
         client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
         if self.request.retries == self.max_retries:
@@ -589,9 +608,9 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
 
 @app.on_after_finalize.connect
 def run_periodic_tasks(sender, **kwargs):
-    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             send_time_order.s())
+    sender.add_periodic_task(crontab(minute="*/2"), send_time_order.s())
     sender.add_periodic_task(crontab(minute='*/15'), auto_send_task_bot.s())
+    sender.add_periodic_task(crontab(minute="*/2"), order_not_accepted.s())
     for partner in Partner.objects.exclude(user__is_superuser=True):
         setup_periodic_tasks(partner, sender)
 

@@ -316,6 +316,7 @@ def client_reject_order(update, context):
                                   partner=order.driver.partner,
                                   fleet='Ninja')
     order.status_order = Order.CANCELED
+    order.finish_time = timezone.localtime()
     order.save()
     try:
         for i in range(3):
@@ -352,6 +353,7 @@ def handle_callback_order(update, context):
             group_msg = redis_instance().hget('group_msg', order.pk)
             context.bot.delete_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
                                        message_id=group_msg)
+            redis_instance().hdel('group_msg', order.pk)
             context.bot.send_message(chat_id=driver.chat_id,
                                      text=time_order_accepted(order.from_address,
                                                               timezone.localtime(order.order_time).time()))
@@ -450,6 +452,7 @@ def handle_order(update, context):
                 query.edit_message_text(driver_complete_text(order.sum))
                 text_to_client(order, complete_order_text, button=inline_comment_for_client())
                 order.status_order = Order.COMPLETED
+                order.finish_time = timezone.localtime()
                 order.partner = order.driver.partner
                 order.save()
                 FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
