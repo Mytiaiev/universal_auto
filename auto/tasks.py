@@ -19,7 +19,6 @@ from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
-from auto_bot.handlers.main.keyboards import spam_driver_kb
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_time_order_kb, inline_spot_keyboard, inline_reject_order
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
@@ -231,22 +230,20 @@ def update_driver_status(self, partner_pk):
             elif (driver.name, driver.second_name) in status_online:
                 current_status = Driver.ACTIVE
             else:
-                current_status = Driver.ACTIVE if work_ninja else Driver.OFFLINE
+                current_status = Driver.OFFLINE
             driver.driver_status = current_status
             driver.save()
             if current_status != Driver.OFFLINE:
-                if not work_ninja:
-                    try:
-                        bot.send_message(chat_id=driver.chat_id, text=please_start_text,
-                                         reply_markup=spam_driver_kb())
-                    except Unauthorized:
-                        if not redis_instance().exists(f"{driver}_block"):
-                            bot.send_message(chat_id=ParkSettings.get_value("DRIVERS_CHAT", partner=partner_pk),
-                                             text=f"{driver} {unblock_text}")
-                            redis_instance().set(f"{driver}_block", 'blocked', ex=3600)
-                    except Exception as e:
-                        logger.error(e)
+                if not work_ninja and driver.vehicle and driver.chat_id:
+                    UseOfCars.objects.create(user_vehicle=driver,
+                                             partner=Partner.get_partner(partner_pk),
+                                             licence_plate=driver.vehicle.licence_plate,
+                                             chat_id=driver.chat_id)
                 logger.warning(f'{driver}: {current_status}')
+            else:
+                if work_ninja:
+                    work_ninja.end_at = timezone.localtime()
+                    work_ninja.save()
     except Exception as e:
         logger.error(e)
 
@@ -390,22 +387,19 @@ def send_time_order(self):
             driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=order_info(order),
                                           reply_markup=inline_spot_keyboard(order.latitude, order.longitude, order.id),
                                           parse_mode=ParseMode.HTML)
-            record = UseOfCars.objects.filter(user_vehicle=order.driver,
-                                              created_at__date=timezone.now().date(),
-                                              end_at=None).last()
-            vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-            report_for_client = client_order_text(order.driver, vehicle.name, record.licence_plate,
-                                                  order.driver.phone_number, order.sum)
+            driver = order.driver
+            report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
+                                                  driver.phone_number, order.sum)
             client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
             redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
             order.save()
             if order.chat_id_client:
-                lat, long = get_location_from_db(record.licence_plate)
+                lat, long = get_location_from_db(driver.vehicle.licence_plate)
                 bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
                 message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
-                send_map_to_client.delay(order.id, record.licence_plate, message.message_id, message.chat_id)
+                send_map_to_client.delay(order.id, driver.vehicle.licence_plate, message.message_id, message.chat_id)
 
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
@@ -459,13 +453,10 @@ def search_driver_for_order(self, order_pk):
         else:
             text_to_client(order, search_driver_2, message_id=client_msg,
                            button=inline_reject_order(order.pk))
-        drivers = Driver.objects.filter(chat_id__isnull=False)
+        drivers = Driver.objects.filter(chat_id__isnull=False, vehicle__isnull=False)
         for driver in drivers:
-            record = UseOfCars.objects.filter(user_vehicle=driver,
-                                              created_at__date=timezone.now().date(),
-                                              end_at=None).last()
-            if record and driver.driver_status == Driver.ACTIVE:
-                driver_lat, driver_long = get_location_from_db(record.licence_plate)
+            if driver.driver_status == Driver.ACTIVE:
+                driver_lat, driver_long = get_location_from_db(driver.vehicle.licence_plate)
                 distance = haversine(float(driver_lat), float(driver_long),
                                      float(order.latitude), float(order.longitude))
                 radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
