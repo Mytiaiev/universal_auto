@@ -915,8 +915,6 @@ class FleetOrder(models.Model):
         verbose_name_plural = 'Сторонні замовлення'
     
 
-
-
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
     image = models.ImageField(upload_to='.', verbose_name='Фото')
