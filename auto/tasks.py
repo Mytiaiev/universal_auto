@@ -466,6 +466,7 @@ def search_driver_for_order(self, order_pk):
             return
         if order.status_order == Order.ON_TIME:
             order.status_order = Order.WAITING
+            order.order_time = None
             order.save()
             if order.chat_id_client:
                 bot.send_message(chat_id=order.chat_id_client,
