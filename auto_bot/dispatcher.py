@@ -20,7 +20,7 @@ from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, sa
     take_a_day_off_or_sick_leave, numberplate, status_car, choose_day_off_or_sick
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
-from auto_bot.handlers.status.handlers import correct_or_not_auto, set_status, get_imei, get_vehicle_of_driver
+from auto_bot.handlers.status.handlers import correct_or_not_auto, get_imei, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
@@ -140,11 +140,6 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(choose_day_off_or_sick, pattern="Off day_driver|Sick day_driver"))
     dp.add_handler(CallbackQueryHandler(take_a_day_off_or_sick_leave, pattern=re.compile(
         r"^Off|Sick \d{4}-\d{2}-\d{2}$")))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr"^{Driver.ACTIVE}$") |
-        Filters.regex(fr"^{Driver.OFFLINE}$") |
-        Filters.regex(fr"^{Driver.RENT}$"),
-        set_status))
 
     # Updating status_car
     dp.add_handler(CommandHandler("status_car", status_car))

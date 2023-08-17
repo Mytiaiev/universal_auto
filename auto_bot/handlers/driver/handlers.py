@@ -3,7 +3,7 @@ from django.utils import timezone
 from telegram import ReplyKeyboardRemove, InlineKeyboardMarkup
 from telegram.ext import ConversationHandler
 
-from app.models import Driver, Vehicle, Report_of_driver_debt, Event, ParkStatus
+from app.models import Driver, Vehicle, Report_of_driver_debt, Event
 from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard, inline_dates_kb
 from auto_bot.handlers.driver.static_text import *
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
@@ -98,7 +98,6 @@ def take_a_day_off_or_sick_leave(update, context):
     driver = Driver.get_by_chat_id(update.effective_chat.id)
     selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     result = f"Водій {driver} взяв {event} на {selected_date}"
-    ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
     Event.objects.create(
         full_name_driver=driver,
         event=event,
