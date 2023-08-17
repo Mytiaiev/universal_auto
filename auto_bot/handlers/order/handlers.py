@@ -298,7 +298,8 @@ def order_on_time(update, context):
                 redis_instance().hset(chat_id, 'time_order', timezone.make_aware(order_time).isoformat())
                 from_address(update, context)
         else:
-            update.message.reply_text(small_time_delta)
+            update.message.reply_text(small_time_delta(timezone.localtime(),
+                                                       int(ParkSettings.get_value('TIME_ORDER_MIN')) + 5))
             redis_instance().hset(chat_id, 'state', TIME_ORDER)
     else:
         update.message.reply_text(wrong_time_format)

@@ -39,7 +39,8 @@ def inline_driver_func_kb():
 
 def inline_user_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")],
         [InlineKeyboardButton(main_buttons[7], callback_data="About_us")],
     ]
@@ -66,7 +67,8 @@ def inline_manager_kb():
 
 def inline_more_manager_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -74,7 +76,8 @@ def inline_more_manager_kb():
 
 def inline_owner_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(manager_main_buttons[0], callback_data="Update_drivers")],
         [InlineKeyboardButton(manager_main_buttons[1], callback_data="Get_report")],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_manager")]
@@ -84,7 +87,8 @@ def inline_owner_kb():
 
 def inline_start_driver_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(main_buttons[6], callback_data="More_driver")]
     ]
     return InlineKeyboardMarkup(keyboard)

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.utils import timezone
 
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER, ADD_INFO = range(1, 7)
@@ -29,7 +31,6 @@ order_complete = "Ваше замовлення прийняте, очікуйт
 route_trip_text = "Поїздка була згідно маршруту?"
 calc_price_text = 'Проводимо розрахунок вартості...'
 wrong_time_format = 'Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)'
-small_time_delta = 'Вкажіть, будь ласка, більш пізній час'
 ask_time_text = 'Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)'
 already_accepted = "Це замовлення вже виконано або виконується."
 decline_order = "Ви не прийняли замовлення, ваш рейтинг понизився на 1"
@@ -149,4 +150,11 @@ def client_order_info(order):
                   f"Спосіб оплати: {order.payment_method}\n" \
                   f"Номер телефону: {order.phone_number}\n" \
                   f"Сума замовлення: {order.sum} грн\n"
+    return message
+
+
+def small_time_delta(time, delta):
+    format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
+    message = f'Вкажіть, будь ласка, більш пізній час.\n' \
+              f'Мінімальний час для передзамовлення: {format_time}'
     return message

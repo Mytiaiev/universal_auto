@@ -185,6 +185,23 @@ def get_driver_efficiency(self, partner_pk, day=None):
             else:
                 accept = 0
                 avg_price = 0
+            hours_online = timedelta()
+            using_info = UseOfCars.objects.filter(created_at__date=day, user_vehicle=driver)
+            start = timezone.datetime.combine(day, datetime.min.time()).astimezone()
+            end = timezone.datetime.combine(day, datetime.max.time()).astimezone()
+            yesterday = day - timedelta(days=1)
+            for report in using_info:
+                if report.end_at and report.end_at__date == day:
+                    hours_online += report.end_at - report.created_at
+                else:
+                    hours_online += end - report.created_at
+
+            last_using = UseOfCars.objects.filter(created_at__date=yesterday,
+                                                  user_vehicle=driver,
+                                                  end_at__date=day).first()
+            if last_using:
+                hours_online += last_using.end_at - start
+
             DriverEfficiency.objects.create(report_from=day,
                                             driver=driver,
                                             total_kasa=total_kasa,
@@ -192,6 +209,7 @@ def get_driver_efficiency(self, partner_pk, day=None):
                                             accept_percent=accept,
                                             average_price=avg_price,
                                             mileage=total_km or 0,
+                                            online_time=hours_online,
                                             efficiency=result,
                                             partner=Partner.get_partner(partner_pk))
 
@@ -622,12 +640,12 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute="20", hour='4'), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute="40", hour="7"), get_driver_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="20", hour="4"), get_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
                              send_weekly_report.s(partner_id))
