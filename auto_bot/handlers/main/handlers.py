@@ -8,10 +8,9 @@ from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 from auto.tasks import health_check
-from app.models import User, Client, UseOfCars, ParkSettings
+from app.models import User, Client, ParkSettings
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
-    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_finish_driver_kb, inline_start_driver_kb, \
-    inline_about_us
+    inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_about_us
 import logging
 
 from auto_bot.handlers.main.static_text import share_phone_text, user_greetings_text, help_text, more_func_text
@@ -47,11 +46,8 @@ def start(update, context):
         elif any(user.role == "DRIVER_MANAGER" for user in users):
             reply_markup = inline_manager_kb()
         else:
-            user = users.first()
-            reply_markup = inline_finish_driver_kb() if UseOfCars.objects.filter(user_vehicle=user,
-                                                                                 created_at__date=timezone.now().date(),
-                                                                                 end_at=None)\
-                else inline_start_driver_kb()
+            user = users.filter(role="DRIVER").first()
+            reply_markup = get_start_kb(user)
         update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
 
 
@@ -67,11 +63,8 @@ def start_query(update, context):
         elif any(user.role == "DRIVER_MANAGER" for user in users):
             reply_markup = inline_manager_kb()
         else:
-            user = users.first()
-            reply_markup = inline_finish_driver_kb() if UseOfCars.objects.filter(user_vehicle=user,
-                                                                                 created_at__date=timezone.now().date(),
-                                                                                 end_at=None) \
-                else inline_start_driver_kb()
+            user = users.filter(role="DRIVER").first()
+            reply_markup = get_start_kb(user)
     query.edit_message_text(text=user_greetings_text)
     query.edit_message_reply_markup(reply_markup=reply_markup)
 

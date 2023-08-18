@@ -375,25 +375,12 @@ class Driver(User):
         return f'{self.name} {self.second_name}'
 
 
-class ParkStatus(models.Model):
-    status = models.CharField(max_length=35, null=False, default='Offline', verbose_name='Статус водія в ParkFleet')
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.status
-
-    class Meta:
-        ordering = ['-created_at']
-
-
 class RentInformation(models.Model):
     report_from = models.DateField(verbose_name='Дата звіту')
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій')
-    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-    road_time = models.DurationField(null=True, blank=True, verbose_name='Час в дорозі')
     rent_distance = models.DecimalField(null=True, blank=True, max_digits=6,
                                         decimal_places=2, verbose_name='Орендована дистанція')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
 
     class Meta:
@@ -1064,14 +1051,13 @@ class DriverEfficiency(models.Model):
     average_price = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Середній чек, грн')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Ефективність, грн/км')
+    road_time = models.DurationField(null=True, blank=True, verbose_name='Час в дорозі')
+    online_time = models.DurationField(null=True, blank=True, verbose_name='Час онлайн')
     partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнер')
 
     class Meta:
         verbose_name = 'Ефективність водія'
         verbose_name_plural = 'Ефективність водіїв'
-
-    def __str__(self):
-        return self.driver
 
 
 class UseOfCars(models.Model):
