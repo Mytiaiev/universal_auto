@@ -39,7 +39,8 @@ def inline_driver_func_kb():
 
 def inline_user_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")],
         [InlineKeyboardButton(main_buttons[7], callback_data="About_us")],
     ]
@@ -66,7 +67,8 @@ def inline_manager_kb():
 
 def inline_more_manager_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -74,7 +76,8 @@ def inline_more_manager_kb():
 
 def inline_owner_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(manager_main_buttons[0], callback_data="Update_drivers")],
         [InlineKeyboardButton(manager_main_buttons[1], callback_data="Get_report")],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_manager")]
@@ -84,31 +87,26 @@ def inline_owner_kb():
 
 def inline_start_driver_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[4], callback_data="Start_work")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(main_buttons[6], callback_data="More_driver")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def spam_driver_kb():
+def inline_work_driver_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[4], callback_data="Start_work")]
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
-
-def inline_finish_driver_kb():
-    keyboard = [
-        [InlineKeyboardButton(main_buttons[5], callback_data="Finish_work")],
+        [InlineKeyboardButton(driver_option_buttons[2], callback_data="Off day_driver")],
+        [InlineKeyboardButton(driver_option_buttons[3], callback_data="Sick day_driver")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
 def get_start_kb(user):
     role_reply_markup = {
-        "DRIVER": inline_finish_driver_kb() if UseOfCars.objects.filter(user_vehicle=user,
-                                                                        created_at__date=timezone.now().date(),
-                                                                        end_at=None) else inline_start_driver_kb(),
+        "DRIVER": inline_start_driver_kb() if not UseOfCars.objects.filter(user_vehicle=user,
+                                                                           created_at__date=timezone.now().date(),
+                                                                           end_at=None) else inline_work_driver_kb(),
         "CLIENT": inline_user_kb(),
         "DRIVER_MANAGER": inline_manager_kb(),
         "OWNER": inline_owner_kb()

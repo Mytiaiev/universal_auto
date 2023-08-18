@@ -3,7 +3,8 @@ import datetime
 import requests
 from _decimal import Decimal
 from django.utils import timezone
-from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner, FleetOrder
+from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner, FleetOrder, \
+    DriverEfficiency
 
 
 class UaGpsSynchronizer:
@@ -148,9 +149,11 @@ class UaGpsSynchronizer:
                 rent_distance = total_km - result[0]
             else:
                 rent_distance = 0
+            driver_eff = DriverEfficiency.objects.filter(driver=driver, report_from=day).first()
+            if driver_eff:
+                driver_eff.road_time = result[1]
+                driver_eff.save()
             RentInformation.objects.create(report_from=day,
                                            driver=driver,
                                            partner=Partner.get_partner(partner_id),
-                                           rent_distance=rent_distance,
-                                           road_time=result[1])
-
+                                           rent_distance=rent_distance)

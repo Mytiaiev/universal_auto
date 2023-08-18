@@ -1,54 +1,10 @@
 from django.utils import timezone
-from telegram import ReplyKeyboardRemove, ParseMode
-from app.models import Vehicle, Driver, UseOfCars, ParkStatus, Partner
-from auto.tasks import detaching_the_driver_from_the_car
+from telegram import ReplyKeyboardRemove
+from app.models import Vehicle, Driver, UseOfCars
 from auto_bot.handlers.driver.static_text import V_ID
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, markup_keyboard
-from auto_bot.handlers.status.keyboards import status_buttons, choose_auto_keyboard, correct_keyboard
+from auto_bot.handlers.status.keyboards import choose_auto_keyboard, correct_keyboard
 from auto_bot.handlers.status.static_text import *
-from scripts.redis_conn import redis_instance
-
-
-def status(update, context):
-    query = update.callback_query
-    chat_id = update.effective_chat.id
-    driver = Driver.get_by_chat_id(chat_id)
-    partner = Partner.get_partner(driver.partner.pk)
-    vehicle = Vehicle.objects.filter(driver=driver)
-    if len(vehicle) == 1:
-        if UseOfCars.objects.filter(chat_id=chat_id,
-                                    created_at__date=timezone.localtime().date(),
-                                    end_at=None):
-            query.edit_message_text(text=already_start_job)
-        else:
-            UseOfCars.objects.create(
-                user_vehicle=driver,
-                chat_id=chat_id,
-                licence_plate=vehicle[0].licence_plate,
-                partner=partner)
-            driver.driver_status = Driver.ACTIVE
-            driver.save()
-            ParkStatus.objects.create(driver=driver, status=Driver.ACTIVE)
-            query.edit_message_text(text=add_auto_to_driver_text)
-    else:
-        query.edit_message_text(text=add_many_auto_text)
-
-
-def send_set_status(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
-                             reply_markup=markup_keyboard_onetime(status_buttons))
-
-
-def set_status(update, context):
-    driver_status = update.message.text
-    if driver_status == Driver.OFFLINE:
-        finish_job_main(update, context)
-    else:
-        ParkStatus.objects.create(driver=context.user_data['u_driver'], status=driver_status)
-        context.user_data['u_driver'].driver_status = driver_status
-        context.user_data['u_driver'].save()
-        update.message.reply_text(f'Твій статус: <b>{driver_status}</b>', reply_markup=ReplyKeyboardRemove(),
-                                  parse_mode=ParseMode.HTML)
 
 
 def get_vehicle_of_driver(update, context):
@@ -71,24 +27,6 @@ def get_vehicle_of_driver(update, context):
             context.user_data['driver_state'] = V_ID
     else:
         update.message.reply_text("За вами не закріплено жодного авто з gps. Зверніться до вашого менеджера")
-
-
-def finish_job_main(update, context):
-    query = update.callback_query
-    driver = Driver.get_by_chat_id(update.effective_chat.id)
-    record = UseOfCars.objects.filter(chat_id=update.effective_chat.id,
-                                      created_at__date=timezone.localtime().date(), end_at=None).first()
-    if record:
-        record.end_at = timezone.localtime()
-        driver.driver_status = Driver.OFFLINE
-        driver.save()
-        record.save()
-        ParkStatus.objects.create(driver=driver, status=Driver.OFFLINE)
-        query.edit_message_text(finish_job)
-        redis_instance().delete(str(update.effective_chat.id))
-        detaching_the_driver_from_the_car.delay(driver.partner.pk, record.licence_plate)
-    else:
-        query.edit_message_text(already_finish_job)
 
 
 def correct_or_not_auto(update, context):
@@ -144,5 +82,4 @@ def get_imei(update, context):
     update.message.reply_text(add_auto_to_driver_text, reply_markup=ReplyKeyboardRemove())
     context.user_data['u_driver'].driver_status = Driver.ACTIVE
     context.user_data['u_driver'].save()
-    ParkStatus.objects.create(driver=context.user_data['u_driver'], status=Driver.ACTIVE)
     context.user_data.clear()
