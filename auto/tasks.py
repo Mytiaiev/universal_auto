@@ -400,7 +400,7 @@ def check_time_order(self, order_id):
 @app.task(bind=True, queue='beat_tasks')
 def add_money_to_vehicle(self, partner_pk):
     yesterday = timezone.localtime() - timedelta(days=1)
-    car_efficiency_records = CarEfficiency.objects.filter(report_from__date=yesterday.date(), partner=partner_pk)
+    car_efficiency_records = CarEfficiency.objects.filter(report_from=yesterday.date(), partner=partner_pk)
     sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'))
     for result in sum_by_plate:
         vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'], partner=partner_pk)
@@ -420,6 +420,8 @@ def add_money_to_vehicle(self, partner_pk):
             else:
                 vehicle.car_earnings += total_kasa * 0.5
 
+
+@app.task(bind=True, queue='beat_tasks')
 def order_not_accepted(self):
     instances = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=True)
     for order in instances:
