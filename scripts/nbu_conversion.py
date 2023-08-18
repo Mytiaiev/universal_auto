@@ -1,6 +1,5 @@
 import requests
 from decimal import Decimal, ROUND_HALF_UP
-from app.models import Vehicle
 
 
 def get_exchange_rate(currency_code):
