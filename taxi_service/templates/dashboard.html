@@ -138,10 +138,11 @@
 	</aside>
 	<!-- End Sidebar -->
 
-	<!-- Main -->
+	<!-- Main Manager-->
+	{% if user_role == 'Manager' %}
 	<main class="main-container">
 		<div class="main-title">
-			<h2>Інформаційна панель</h2>
+			<h2>Інформаційна панель Менеджера</h2>
 		</div>
 		<div class="main-cards">
 			<div class="card">
@@ -297,7 +298,166 @@
 			</div>
 		</div>
 	</main>
-	<!-- End Main -->
+	{% endif %}
+	<!-- End Main Manager-->
+
+	<!-- Main -->
+	{% if user_role == 'Partner' %}
+	<main class="main-container">
+		<div class="main-title">
+			<h2>Інформаційна панель Партнера</h2>
+		</div>
+		<div class="main-cards-partner">
+			<div class="card-partner">
+				<div class="card-inner-partner">
+					<h2>Загальний дохід авто</h2>
+					<span class="material-icons-outlined">&#8372;</span><br>
+				</div>
+				<h3 id="income-amount">грн.</h3>
+			</div>
+			<div class="card-partner">
+				<div class="card-inner-partner">
+					<h2>Загальний кілометраж авто</h2>
+					<span class="material-icons-outlined">alt_route</span><br>
+				</div>
+				<h3 id="income-km"></h3>
+			</div>
+			<div class="card-partner">
+				<div class="card-inner-partner">
+					<h2>Загальні витрати на авто</h2>
+					<span class="material-icons-outlined">money_off</span><br>
+				</div>
+				<h3>{{ average_effective_vehicle.0 }} грн.</h3>
+			</div>
+			<div class="card-partner">
+				<div class="card-inner-partner">
+					<h2>Сповіщення</h2>
+					<span class="material-icons-outlined">email</span>
+				</div>
+				<h3>56</h3>
+			</div>
+		</div>
+
+		<div class="charts">
+			<div class="charts-card">
+				<h2 class="chart-title">Дохід</h2>
+				<div id="bar-chart"></div>
+				<div class="chart-btns">
+					<div class="radio_btn">
+						<input id="radio-1" type="radio" name="effective-amount" value="d"
+									 checked>
+						<label for="radio-1">день</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-2" type="radio" name="effective-amount" value="w">
+						<label for="radio-2">тиждень</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-3" type="radio" name="effective-amount" value="m">
+						<label for="radio-3">місяць</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-4" type="radio" name="effective-amount" value="q">
+						<label for="radio-4">поточний квартал</label>
+					</div>
+				</div>
+			</div>
+
+			<div class="charts-card">
+				<h2 class="chart-title">Ефективність автомобіля</h2>
+				<div class="car-select">
+					<select id="vehicle-select">
+						{% for vehicle in get_all_vehicle %}
+							<option>{{ vehicle.licence_plate }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div id="area-chart"></div>
+				<div class="chart-btns">
+					<div class="radio_btn">
+						<input id="radio-5" type="radio" name="effective-period" value="w"
+									 checked>
+						<label for="radio-5">тиждень</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-6" type="radio" name="effective-period" value="m">
+						<label for="radio-6">місяць</label>
+					</div>
+					<div class="radio_btn">
+						<input id="radio-7" type="radio" name="effective-period" value="q">
+						<label for="radio-7">поточний квартал</label>
+					</div>
+				</div>
+			</div>
+
+			<div class="payback-car">
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<p>Номер авто: AB1234</p>
+						<p>Заробіток: $5000</p>
+						<p>Витрати: $2500</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 70%;"></div>
+						</div>
+						<p>Повна сума авто: $20000</p>
+					</div>
+				</div>
+
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<h3>Водій: Петров Петро</h3>
+						<p>Номер авто: CD5678</p>
+						<p>Заробіток: $3000</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 40%;"></div>
+						</div>
+						<p>Повна сума авто: $15000</p>
+					</div>
+				</div>
+
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<h3>Водій: Сидорова Олена</h3>
+						<p>Номер авто: EF9012</p>
+						<p>Заробіток: $7000</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 90%;"></div>
+						</div>
+						<p>Повна сума авто: $25000</p>
+					</div>
+				</div>
+
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}"
+								 alt="Зображення авто">
+					</div>
+					<div class="car-details">
+						<h3>Водій: Коваленко Микола</h3>
+						<p>Номер авто: GH3456</p>
+						<p>Заробіток: $2000</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: 20%;"></div>
+						</div>
+						<p>Повна сума авто: $10000</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
+	{% endif %}
 </div>
 
 <!-- Scripts -->

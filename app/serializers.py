@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from app.models import Order, Payments, RentInformation, SummaryReport, Driver, Vehicle, DriverManager, Comment, \
+from app.models import Order, Payments, RentInformation, SummaryReport, Driver, Vehicle, Manager, Comment, \
     CarEfficiency
 
 return_value = ("-", "0", 0)
@@ -133,7 +133,7 @@ class DriverManagerSerializer(serializers.ModelSerializer):
     partner = serializers.StringRelatedField(many=False)
 
     class Meta:
-        model = DriverManager
+        model = Manager
         fields = ('id', 'name', 'second_name', 'email',
                   'phone_number', 'chat_id', 'partner',
                   'created_at')

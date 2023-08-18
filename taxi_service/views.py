@@ -14,7 +14,7 @@ from django.utils.decorators import method_decorator
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import weekly_rent, average_effective_vehicle
-from app.models import ParkSettings, Driver, Vehicle
+from app.models import ParkSettings, Driver, Vehicle, Partner, Manager
 
 
 class IndexView(TemplateView):
@@ -88,7 +88,7 @@ class GetRequestView(View):
             return handler.handle_active_vehicles_locations(request)
         elif action == 'order_confirm':
             return handler.handle_order_confirm(request)
-        elif action == 'get_drivers_cash':
+        elif action == 'get_cash':
             return handler.handle_get_drivers_cash(request)
         elif action == 'effective_vehicle':
             return handler.handle_effective_vehicle(request)
@@ -122,7 +122,19 @@ class DashboardView(TemplateView):
     template_name = 'dashboard.html'
 
     def get_context_data(self, **kwargs):
+        user = self.request.user
+
         context = super().get_context_data(**kwargs)
+        if user.is_authenticated:
+            partner = Partner.objects.filter(user=user).exists()
+            manager = Manager.objects.filter(user=user).exists()
+
+            if partner:
+                context['user_role'] = 'Partner'
+            elif manager:
+                context['user_role'] = 'Manager'
+            else:
+                context['user_role'] = 'User'
         context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
         context['average_effective_vehicle'] = average_effective_vehicle()

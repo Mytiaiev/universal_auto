@@ -261,29 +261,39 @@ $(document).ready(function () {
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
-				action: 'get_drivers_cash',
+				action: 'get_cash',
 				period: period
 			},
 			success: function (response) {
 				let data = response.data[0];
-				let totalAmount = response.data[1];
-				let startDate = response.data[2];
-				let endDate = response.data[3];
+				let totalAmount = parseFloat(response.data[1]).toFixed(2);
+				let totalKm = parseFloat(response.data[2]).toFixed(2);
+				let startDate = response.data[3];
+				let endDate = response.data[4];
 				let formattedData = {};
 
 				Object.keys(data).forEach(function (key) {
-					let value = parseFloat(data[key]);
+					let value = parseFloat(data[key]).toFixed(2);
 					if (value !== 0) {
-						formattedData[key] = value;
+						let formattedKey = '< ' + key + ' >';
+						formattedData[formattedKey] = value;
 					}
 				});
 
-				barChartOptions.series[0].data = Object.values(formattedData);
-				barChartOptions.xaxis.categories = Object.keys(formattedData);
+				let sortedKeys = Object.keys(formattedData).sort();
+				let sortedFormattedData = {};
+				sortedKeys.forEach(function (key) {
+					sortedFormattedData[key] = formattedData[key];
+				});
+
+				barChartOptions.series[0].data = Object.values(sortedFormattedData);
+				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 				barChart.updateOptions(barChartOptions);
 
 				$('#weekly-income-dates').text(startDate + ' по ' + endDate);
 				$('#weekly-income-amount').text(totalAmount + ' грн');
+				$('#income-amount').text(totalAmount + ' грн');
+				$('#income-km').text(totalKm + ' км');
 			}
 		});
 	}

@@ -14,7 +14,7 @@ from telegram import ParseMode
 from telegram.error import BadRequest, Unauthorized
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner, DriverEfficiency, FleetOrder
+    UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
@@ -328,7 +328,7 @@ def send_weekly_report(self, partner_pk):
 def send_daily_report(self, partner_pk):
     message = ''
     dict_msg = {}
-    for manager in DriverManager.objects.filter(chat_id__isnull=False, partner=partner_pk):
+    for manager in Manager.objects.filter(chat_id__isnull=False, partner=partner_pk):
         result = get_daily_report(manager_id=manager.chat_id)
         if result:
             for num, key in enumerate(result[0], 1):
@@ -344,7 +344,7 @@ def send_daily_report(self, partner_pk):
 def send_efficiency_report(self, partner_pk):
     message = ''
     dict_msg = {}
-    for manager in DriverManager.objects.filter(chat_id__isnull=False, partner=partner_pk):
+    for manager in Manager.objects.filter(chat_id__isnull=False, partner=partner_pk):
         result = get_efficiency(manager_id=manager.chat_id)
         if result:
             for k, v in result.items():
@@ -357,7 +357,7 @@ def send_efficiency_report(self, partner_pk):
 def send_driver_efficiency(self, partner_pk):
     message = ''
     dict_msg = {}
-    for manager in DriverManager.objects.filter(chat_id__isnull=False, partner=partner_pk):
+    for manager in Manager.objects.filter(chat_id__isnull=False, partner=partner_pk):
         result = get_driver_efficiency_report(manager_id=manager.chat_id)
         if result:
             for k, v in result.items():

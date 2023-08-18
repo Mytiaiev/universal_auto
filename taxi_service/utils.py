@@ -8,6 +8,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate, login, logout
+from django.core.exceptions import ObjectDoesNotExist
 
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
 						SummaryReport, CarEfficiency, Partner, ParkSettings, )
@@ -165,6 +166,35 @@ def collect_total_earnings(period):
 	return total, total_amount, start_date_formatted, end_date_formatted
 
 
+def total_cash_car(period):
+	vehicle = {}
+	total_amount = 0
+	total_km = 0
+
+	start_period, end_period = get_dates(period)
+	start_date_formatted = start_period.strftime('%d.%m.%Y')
+	end_date_formatted = end_period.strftime('%d.%m.%Y')
+
+	results = CarEfficiency.objects.filter(report_from__range=(start_period, end_period))
+
+	for result in results:
+		licence_plate = result.licence_plate
+		total_kasa = result.total_kasa
+
+		earnings = float(total_kasa) * 0.35
+
+		if licence_plate not in vehicle:
+			vehicle[licence_plate] = earnings
+		else:
+			vehicle[licence_plate] += earnings
+
+		total_amount += earnings
+		total_km += result.mileage
+
+	return vehicle, total_amount, total_km, start_date_formatted, end_date_formatted
+
+
+
 def average_effective_vehicle():
 	start_date, end_date = get_dates('week')
 
@@ -194,7 +224,7 @@ def effective_vehicle(period, vehicle):
 
 	for effective in effective_objects:
 		date_effective = effective.report_from
-		name = effective.driver
+		# name = effective.driver
 		total_amount = effective.total_kasa
 		car = effective.licence_plate
 		mileage = effective.mileage
@@ -203,7 +233,7 @@ def effective_vehicle(period, vehicle):
 		car_data = {
 			'date_effective': date_effective,
 			'car': car,
-			'name': name,
+			# 'name': name,
 			'total_amount': total_amount,
 			'mileage': mileage,
 			'effective': effective

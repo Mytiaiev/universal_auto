@@ -621,11 +621,11 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         return fieldsets
 
 
-@admin.register(DriverManager)
-@add_partner_on_save_model(DriverManager)
-class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+@admin.register(Manager)
+@add_partner_on_save_model(Manager)
+class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('name', 'second_name')
-    ordering = ('name', 'second_name')
+    # ordering = ('name', 'second_name')
     list_per_page = 25
 
     def save_model(self, request, obj, form, change):
@@ -643,17 +643,16 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
-                ('Інформація про менеджера',    {'fields': ['name', 'second_name', 'email',
-                                                            'phone_number', 'chat_id',
-                                                            ]}),
-                ('Додатково',                   {'fields': ['partner',
+
+                ('Додатково',                   {'fields': ['last_name', 'first_name', 'email', 'chat_id',
+                                                            'phone_number', 'partner', 'user'
                                                             ]}),
             ]
 
         else:
             fieldsets = [
-                ('Інформація про менеджера',    {'fields': ['name', 'second_name', 'email', 'chat_id',
-                                                            'phone_number',
+                ('Інформація про менеджера',    {'fields': ['last_name', 'first_name', 'email', 'chat_id',
+                                                            'phone_number', 'partner', 'user'
                                                             ]}),
             ]
 

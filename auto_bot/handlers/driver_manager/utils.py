@@ -5,7 +5,7 @@ from django.db.models import Sum, Avg, DecimalField, ExpressionWrapper, F
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from app.models import CarEfficiency, Driver, SummaryReport, DriverManager, \
+from app.models import CarEfficiency, Driver, SummaryReport, Manager, \
     Vehicle, RentInformation, ParkSettings, DriverEfficiency
 
 
@@ -76,7 +76,7 @@ def get_daily_report(manager_id=None, start=None, end=None):
     day_values = {}
     rent_daily = {}
     total_rent = {}
-    manager = DriverManager.get_by_chat_id(manager_id)
+    manager = Manager.get_by_chat_id(manager_id)
     drivers = Driver.objects.filter(manager=manager)
     if drivers:
         for driver in drivers:
@@ -94,7 +94,7 @@ def generate_message_weekly(partner_pk):
     drivers_dict = {}
     balance = 0
     rent = int(ParkSettings.get_value('RENT_PRICE', partner=partner_pk))
-    for manager in DriverManager.objects.filter(partner=partner_pk):
+    for manager in Manager.objects.filter(partner=partner_pk):
         message = ''
         drivers = Driver.objects.filter(manager=manager)
         if drivers:
@@ -152,7 +152,7 @@ def get_efficiency(manager_id=None, start=None, end=None):
         end = yesterday
     effective_vehicle = {}
     report = {}
-    manager = DriverManager.get_by_chat_id(manager_id)
+    manager = Manager.get_by_chat_id(manager_id)
     vehicles = Vehicle.objects.filter(manager=manager)
     if vehicles:
         for vehicle in vehicles:
@@ -201,7 +201,7 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
         end = yesterday
     effective_driver = {}
     report = {}
-    manager = DriverManager.get_by_chat_id(manager_id)
+    manager = Manager.get_by_chat_id(manager_id)
     drivers = Driver.objects.filter(manager=manager, vehicle__isnull=False)
     if drivers:
         for driver in drivers:
