@@ -1,10 +1,9 @@
-import os
 import queue
 import re
 
 
 from telegram.ext import CommandHandler, PreCheckoutQueryHandler, MessageHandler, Filters, CallbackQueryHandler, \
-    ConversationHandler, Updater, Dispatcher
+    ConversationHandler, Dispatcher
 from app.models import Driver
 from auto_bot.main import bot
 from auto_bot.states import text
@@ -21,8 +20,7 @@ from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, sa
     take_a_day_off_or_sick_leave, numberplate, status_car, choose_day_off_or_sick
 from auto_bot.handlers.owner.handlers import driver_total_weekly_rating, drivers_rating, payments, get_card, \
     correct_transfer, wrong_transfer, get_my_commission, get_sum_for_portmone, commission
-from auto_bot.handlers.status.handlers import status, correct_or_not_auto, set_status, \
-    get_imei, finish_job_main, get_vehicle_of_driver
+from auto_bot.handlers.status.handlers import correct_or_not_auto, get_imei, get_vehicle_of_driver
 from auto_bot.handlers.order.handlers import continue_order, to_the_address, from_address, time_order, \
     order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
@@ -35,7 +33,7 @@ from auto_bot.handlers.driver_job.handlers import update_name, restart_job_appli
     upload_license_back_photo, upload_expired_date, check_auto, upload_auto_doc, upload_insurance, \
     upload_expired_insurance, uklon_code, job_application
 # text
-from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, F_UKLON, USER_MANAGER_DRIVER, USER_DRIVER, \
+from auto_bot.handlers.driver_manager.static_text import F_UBER, F_BOLT, USER_MANAGER_DRIVER, USER_DRIVER, \
     CREATE_VEHICLE, CREATE_USER
 from auto_bot.handlers.owner.static_text import THE_DATA_IS_WRONG, THE_DATA_IS_CORRECT, TRANSFER_MONEY, MY_COMMISSION, \
     COMMISSION_ONLY_PORTMONE, GENERATE_LINK_PORTMONE
@@ -129,7 +127,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(handle_callback_order, pattern="^Accept_order [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(handle_order,
                                         pattern=re.compile("^(Reject_order|Along_the_route|Off_route|"
-                                                           "Accept|End_trip) [0-9]+$")))
+                                                           "Accept|End_trip|Change_payments) [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(handle_order, pattern="Client_on_site [0-9]+ [0-9]+"))
     dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
     dp.add_handler(MessageHandler(Filters.successful_payment, successful_payment))
@@ -139,16 +137,9 @@ def setup_dispatcher(dp):
 
     # Add job application
     # Commands for Drivers
-    dp.add_handler(CallbackQueryHandler(status, pattern="Start_work"))
-    dp.add_handler(CallbackQueryHandler(finish_job_main, pattern="Finish_work"))
     dp.add_handler(CallbackQueryHandler(choose_day_off_or_sick, pattern="Off day_driver|Sick day_driver"))
     dp.add_handler(CallbackQueryHandler(take_a_day_off_or_sick_leave, pattern=re.compile(
         r"^Off|Sick \d{4}-\d{2}-\d{2}$")))
-    dp.add_handler(MessageHandler(
-        Filters.regex(fr"^{Driver.ACTIVE}$") |
-        Filters.regex(fr"^{Driver.OFFLINE}$") |
-        Filters.regex(fr"^{Driver.RENT}$"),
-        set_status))
 
     # Updating status_car
     dp.add_handler(CommandHandler("status_car", status_car))

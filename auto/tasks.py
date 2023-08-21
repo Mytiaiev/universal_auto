@@ -11,22 +11,21 @@ from django.utils import timezone
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from telegram import ParseMode
-from telegram.error import BadRequest, Unauthorized
+from telegram.error import BadRequest
 
-from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkStatus, ParkSettings, \
-    UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder
+from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, \
+    UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, \
+    TransactionsConversantion
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
-from auto_bot.handlers.main.keyboards import spam_driver_kb
-from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_time_order_kb, inline_spot_keyboard, inline_reject_order
+from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot,\
+    inline_spot_keyboard, inline_reject_order
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
-    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, trip_paymented, \
+    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
     client_order_text, order_customer_text, search_driver
 from auto_bot.handlers.order.utils import text_to_client
-from auto_bot.handlers.status.static_text import please_start_text, unblock_text
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
 from auto.celery import app
@@ -36,6 +35,7 @@ from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberRequest
 from selenium_ninja.uklon_sync import UklonRequest
+from scripts.nbu_conversion import convert_to_currency
 
 
 logger = get_task_logger(__name__)
@@ -187,6 +187,23 @@ def get_driver_efficiency(self, partner_pk, day=None):
             else:
                 accept = 0
                 avg_price = 0
+            hours_online = timedelta()
+            using_info = UseOfCars.objects.filter(created_at__date=day, user_vehicle=driver)
+            start = timezone.datetime.combine(day, datetime.min.time()).astimezone()
+            end = timezone.datetime.combine(day, datetime.max.time()).astimezone()
+            yesterday = day - timedelta(days=1)
+            for report in using_info:
+                if report.end_at and report.end_at__date == day:
+                    hours_online += report.end_at - report.created_at
+                else:
+                    hours_online += end - report.created_at
+
+            last_using = UseOfCars.objects.filter(created_at__date=yesterday,
+                                                  user_vehicle=driver,
+                                                  end_at__date=day).first()
+            if last_using:
+                hours_online += last_using.end_at - start
+
             DriverEfficiency.objects.create(report_from=day,
                                             driver=driver,
                                             total_kasa=total_kasa,
@@ -194,6 +211,7 @@ def get_driver_efficiency(self, partner_pk, day=None):
                                             accept_percent=accept,
                                             average_price=avg_price,
                                             mileage=total_km or 0,
+                                            online_time=hours_online,
                                             efficiency=result,
                                             partner=Partner.get_partner(partner_pk))
 
@@ -225,28 +243,26 @@ def update_driver_status(self, partner_pk):
         for driver in drivers:
             active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,
-                                                  created_at__date=timezone.localtime().date(), end_at=None)
+                                                  created_at__date=timezone.localtime().date(), end_at=None).first()
             if active_order or (driver.name, driver.second_name) in status_with_client:
                 current_status = Driver.WITH_CLIENT
             elif (driver.name, driver.second_name) in status_online:
                 current_status = Driver.ACTIVE
             else:
-                current_status = Driver.ACTIVE if work_ninja else Driver.OFFLINE
+                current_status = Driver.OFFLINE
             driver.driver_status = current_status
             driver.save()
             if current_status != Driver.OFFLINE:
-                if not work_ninja:
-                    try:
-                        bot.send_message(chat_id=driver.chat_id, text=please_start_text,
-                                         reply_markup=spam_driver_kb())
-                    except Unauthorized:
-                        if not redis_instance().exists(f"{driver}_block"):
-                            bot.send_message(chat_id=ParkSettings.get_value("DRIVERS_CHAT", partner=partner_pk),
-                                             text=f"{driver} {unblock_text}")
-                            redis_instance().set(f"{driver}_block", 'blocked', ex=3600)
-                    except Exception as e:
-                        logger.error(e)
+                if not work_ninja and driver.vehicle and driver.chat_id:
+                    UseOfCars.objects.create(user_vehicle=driver,
+                                             partner=Partner.get_partner(partner_pk),
+                                             licence_plate=driver.vehicle.licence_plate,
+                                             chat_id=driver.chat_id)
                 logger.warning(f'{driver}: {current_status}')
+            else:
+                if work_ninja:
+                    work_ninja.end_at = timezone.localtime()
+                    work_ninja.save()
     except Exception as e:
         logger.error(e)
 
@@ -382,6 +398,46 @@ def check_time_order(self, order_id):
 
 
 @app.task(bind=True, queue='beat_tasks')
+def add_money_to_vehicle(self, partner_pk):
+    yesterday = timezone.localtime() - timedelta(days=1)
+    car_efficiency_records = CarEfficiency.objects.filter(report_from=yesterday.date(), partner=partner_pk)
+    sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'))
+    for result in sum_by_plate:
+        vehicle = Vehicle.objects.get(licence_plate=result['licence_plate'], partner=partner_pk)
+        if vehicle:
+            currency = vehicle.сurrency_back
+            total_kasa = result['total_sum']
+            if currency != Vehicle.Currency.UAH:
+                result, rate = convert_to_currency(float(total_kasa), currency)
+                car_earnings = result / 2
+                vehicle.car_earnings += car_earnings
+            else:
+                car_earnings = total_kasa / 2
+                vehicle.car_earnings += car_earnings
+                rate = 0.00
+            vehicle.save()
+
+            TransactionsConversantion.objects.create(
+                vehicle=vehicle,
+                sum_before_transaction=total_kasa / 2,
+                сurrency=currency,
+                currency_rate=rate,
+                sum_after_transaction=car_earnings)
+
+
+@app.task(bind=True, queue='beat_tasks')
+def order_not_accepted(self):
+    instances = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=True)
+    for order in instances:
+        if order.order_time < (timezone.localtime() + timedelta(
+                minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN')))):
+            group_msg = redis_instance().hget('group_msg', order.id)
+            bot.delete_message(chat_id=ParkSettings.get_value("ORDER_CHAT"), message_id=group_msg)
+            redis_instance().hdel('group_msg', order.id)
+            search_driver_for_order.delay(order.id)
+
+
+@app.task(bind=True, queue='beat_tasks')
 def send_time_order(self):
     accepted_orders = Order.objects.filter(status_order=Order.ON_TIME, driver__isnull=False)
     for order in accepted_orders:
@@ -390,22 +446,19 @@ def send_time_order(self):
             driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=order_info(order),
                                           reply_markup=inline_spot_keyboard(order.latitude, order.longitude, order.id),
                                           parse_mode=ParseMode.HTML)
-            record = UseOfCars.objects.filter(user_vehicle=order.driver,
-                                              created_at__date=timezone.now().date(),
-                                              end_at=None).last()
-            vehicle = Vehicle.objects.get(licence_plate=record.licence_plate)
-            report_for_client = client_order_text(order.driver, vehicle.name, record.licence_plate,
-                                                  order.driver.phone_number, order.sum)
+            driver = order.driver
+            report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
+                                                  driver.phone_number, order.sum)
             client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
             redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
             order.save()
             if order.chat_id_client:
-                lat, long = get_location_from_db(record.licence_plate)
+                lat, long = get_location_from_db(driver.vehicle.licence_plate)
                 bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
                 message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
-                send_map_to_client.delay(order.id, record.licence_plate, message.message_id, message.chat_id)
+                send_map_to_client.delay(order.id, driver.vehicle.licence_plate, message.message_id, message.chat_id)
 
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
@@ -441,6 +494,15 @@ def search_driver_for_order(self, order_pk):
         order = Order.objects.get(id=order_pk)
         if order.status_order == Order.CANCELED:
             return
+        if order.status_order == Order.ON_TIME:
+            order.status_order = Order.WAITING
+            order.order_time = None
+            order.save()
+            if order.chat_id_client:
+                bot.send_message(chat_id=order.chat_id_client,
+                                 text=no_driver_in_radius,
+                                 reply_markup=inline_search_kb())
+            return
         client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
         if self.request.retries == self.max_retries:
             if order.chat_id_client:
@@ -459,13 +521,10 @@ def search_driver_for_order(self, order_pk):
         else:
             text_to_client(order, search_driver_2, message_id=client_msg,
                            button=inline_reject_order(order.pk))
-        drivers = Driver.objects.filter(chat_id__isnull=False)
+        drivers = Driver.objects.filter(chat_id__isnull=False, vehicle__isnull=False)
         for driver in drivers:
-            record = UseOfCars.objects.filter(user_vehicle=driver,
-                                              created_at__date=timezone.now().date(),
-                                              end_at=None).last()
-            if record and driver.driver_status == Driver.ACTIVE:
-                driver_lat, driver_long = get_location_from_db(record.licence_plate)
+            if driver.driver_status == Driver.ACTIVE:
+                driver_lat, driver_long = get_location_from_db(driver.vehicle.licence_plate)
                 distance = haversine(float(driver_lat), float(driver_long),
                                      float(order.latitude), float(order.longitude))
                 radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
@@ -598,9 +657,9 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
 
 @app.on_after_finalize.connect
 def run_periodic_tasks(sender, **kwargs):
-    sender.add_periodic_task(crontab(minute=f"*/{ParkSettings.get_value('CHECK_ORDER_TIME_MIN', 5)}"),
-                             send_time_order.s())
+    sender.add_periodic_task(crontab(minute="*/2"), send_time_order.s())
     sender.add_periodic_task(crontab(minute='*/15'), auto_send_task_bot.s())
+    sender.add_periodic_task(crontab(minute="*/2"), order_not_accepted.s())
     for partner in Partner.objects.exclude(user__is_superuser=True):
         setup_periodic_tasks(partner, sender)
 
@@ -612,12 +671,13 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute="20", hour='4'), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute="40", hour="7"), get_driver_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="5"), add_money_to_vehicle.s(partner_id))
+    sender.add_periodic_task(crontab(minute="20", hour="4"), get_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
                              send_weekly_report.s(partner_id))

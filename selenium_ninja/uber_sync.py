@@ -178,7 +178,7 @@ class UberRequest(Synchronizer):
                     }
         data = self.get_payload(query, variables)
         response = requests.post(self.base_url, headers=self.get_header(), json=data)
-        if response.status_code == 200:
+        if response.status_code == 200 and response.json()['data']['getPerformanceReport']:
             for report in response.json()['data']['getPerformanceReport']:
                 if report['totalEarnings']:
                     driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid']).driver

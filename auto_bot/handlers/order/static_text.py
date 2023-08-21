@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.utils import timezone
 
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER, ADD_INFO = range(1, 7)
@@ -22,13 +24,13 @@ order_customer_text = "Коли водій буде на місці, ви отр
 driver_accept_text = 'Ваше замовлення прийнято.Шукаємо водія'
 driver_arrived = "Машину подано. Водій вас очікує"
 select_car_error = "Для прийняття замовлень потрібно розпочати роботу."
+add_many_auto_text = 'Не вдається знайти авто для роботи зверніться до менеджера.'
 driver_cancel = "На жаль, водій відхилив замовлення. Пошук іншого водія..."
 client_cancel = "Ви відмовились від замовлення"
 order_complete = "Ваше замовлення прийняте, очікуйте, будь ласка, водія"
 route_trip_text = "Поїздка була згідно маршруту?"
 calc_price_text = 'Проводимо розрахунок вартості...'
 wrong_time_format = 'Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)'
-small_time_delta = 'Вкажіть, будь ласка, більш пізній час'
 ask_time_text = 'Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)'
 already_accepted = "Це замовлення вже виконано або виконується."
 decline_order = "Ви не прийняли замовлення, ваш рейтинг понизився на 1"
@@ -62,7 +64,8 @@ order_inline_buttons = (
     "\U0001F6A5 Побудувати маршрут",
     "\u2705 Залишити відгук",
     "\U0001F4DD Додати коментар",
-    "\u274c Ні, дякую"
+    "\u274c Ні, дякую",
+    '\u2705 Змінити тип оплати',
 )
 
 search_inline_buttons = (
@@ -148,4 +151,19 @@ def client_order_info(order):
                   f"Спосіб оплати: {order.payment_method}\n" \
                   f"Номер телефону: {order.phone_number}\n" \
                   f"Сума замовлення: {order.sum} грн\n"
+    return message
+
+
+def manager_change_payments_info(order):
+    message = f"Замовлення: {order.pk}\n" \
+              f"Водій: {order.driver}\n" \
+              f"Автомобіль: {order.driver.vehicle}\n" \
+              f"Сума замовлення: {order.sum}\n" \
+              f"Змінив спосіб оплати на: {order.payment_method}\n"
+    return message
+
+def small_time_delta(time, delta):
+    format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
+    message = f'Вкажіть, будь ласка, більш пізній час.\n' \
+              f'Мінімальний час для передзамовлення: {format_time}'
     return message

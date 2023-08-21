@@ -3,10 +3,10 @@ from django.db.models import F
 from django.utils import timezone
 
 from auto.tasks import send_on_job_application_on_driver, check_time_order, setup_periodic_tasks, \
-    remove_periodic_tasks, search_driver_for_order
+    remove_periodic_tasks, search_driver_for_order, detaching_the_driver_from_the_car
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
-from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order
+from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order, UseOfCars
 from auto_bot.main import bot
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
@@ -63,6 +63,13 @@ def create_status_change(sender, instance, **kwargs):
 def run_add_drivers_task(sender, instance, created, **kwargs):
     if created:
         send_on_job_application_on_driver.delay(instance.id)
+
+
+@receiver(post_save, sender=UseOfCars)
+def run_add_drivers_task(sender, instance, created, **kwargs):
+    if instance.end_at:
+        bot.send_message(chat_id=515224934, text=f"{instance.user_vehicle} finished job")
+        # detaching_the_driver_from_the_car.delay(instance.partner.pk, instance.licence_plate)
 
 
 @receiver(post_save, sender=Order)
