@@ -252,6 +252,8 @@ class Vehicle(models.Model):
     сurrency_back = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
                                      verbose_name='Валюта повернення коштів')
     investor = models.BooleanField(default=False, verbose_name='Машина інвестора')
+    investor_percentage = models.DecimalField(decimal_places=2, max_digits=10, default=0.35,
+                                              verbose_name="Відсоток інвестора")
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')

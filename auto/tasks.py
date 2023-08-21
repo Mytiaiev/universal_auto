@@ -411,16 +411,18 @@ def add_money_to_vehicle(self, partner_pk):
                 result, rate = convert_to_currency(float(total_kasa), currency)
                 car_earnings = result / 2
                 vehicle.car_earnings += car_earnings
-                TransactionsConversantion.objects.create(
-                    vehicle=vehicle,
-                    sum_before_transaction=total_kasa / 2,
-                    сurrency=currency,
-                    currency_rate=rate,
-                    sum_after_transaction=car_earnings)
-                vehicle.save()
             else:
-                vehicle.car_earnings += total_kasa / 2
-                vehicle.save()
+                car_earnings = total_kasa / 2
+                vehicle.car_earnings += car_earnings
+                rate = 0.00
+            vehicle.save()
+
+            TransactionsConversantion.objects.create(
+                vehicle=vehicle,
+                sum_before_transaction=total_kasa / 2,
+                сurrency=currency,
+                currency_rate=rate,
+                sum_after_transaction=car_earnings)
 
 
 @app.task(bind=True, queue='beat_tasks')
