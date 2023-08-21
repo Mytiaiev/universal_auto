@@ -136,3 +136,10 @@ def inline_add_info_kb():
         [InlineKeyboardButton(order_inline_buttons[11], callback_data="Choose_payment")]
     ]
     return InlineKeyboardMarkup(keyboard)
+
+
+def inline_change_currency_trip(pk):
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[12], callback_data=f"Change_payments {pk}")],
+    ]
+    return InlineKeyboardMarkup(keyboard)

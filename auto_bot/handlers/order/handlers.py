@@ -10,7 +10,7 @@ from auto_bot.handlers.main.keyboards import markup_keyboard
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
     inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb, \
     share_location, inline_location_kb, inline_payment_kb, inline_comment_for_client, inline_choose_date_kb, \
-    inline_add_info_kb
+    inline_add_info_kb, inline_change_currency_trip
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client, validate_text
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db, geocode
@@ -400,6 +400,21 @@ def payment_request(update, context, chat_id_client, provider_token, url, start_
                              is_flexible=False)
 
 
+def cash_order(update, query, order):
+    query.edit_message_text(driver_complete_text(order.sum))
+    text_to_client(order, complete_order_text, button=inline_comment_for_client())
+    order.status_order = Order.COMPLETED
+    order.partner = order.driver.partner
+    order.save()
+    FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
+                              from_address=order.from_address, destination=order.to_the_address,
+                              accepted_time=order.accepted_time, finish_time=timezone.localtime(),
+                              state=FleetOrder.COMPLETED,
+                              partner=order.driver.partner,
+                              fleet='Ninja')
+    redis_instance().delete(str(update.effective_chat.id))
+
+
 def handle_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
@@ -442,7 +457,6 @@ def handle_order(update, context):
         query.edit_message_text(order_info(order))
         query.edit_message_reply_markup(reply_markup=inline_repeat_keyboard(order.id))
     elif data[0] == "Accept":
-
         if redis_instance().hget(chat_id, 'recheck') == "Off_route":
             query.edit_message_text(text=calc_price_text)
             start_route = redis_instance().hget(str(chat_id), 'start_route')
@@ -450,21 +464,10 @@ def handle_order(update, context):
             get_distance_trip.delay(data[1], query.message.message_id, s, e, driver.vehicle.gps_id)
         else:
             if order.payment_method == price_inline_buttons[4].split()[1]:
-                query.edit_message_text(driver_complete_text(order.sum))
-                text_to_client(order, complete_order_text, button=inline_comment_for_client())
-                order.status_order = Order.COMPLETED
-                order.finish_time = timezone.localtime()
-                order.partner = order.driver.partner
-                order.save()
-                FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
-                                          from_address=order.from_address, destination=order.to_the_address,
-                                          accepted_time=order.accepted_time, finish_time=timezone.localtime(),
-                                          state=FleetOrder.COMPLETED,
-                                          partner=Partner.get_partner(order.driver.partner),
-                                          fleet='Ninja')
-                redis_instance().delete(str(update.effective_chat.id))
+                cash_order(update, query, order)
+
             else:
-                query.edit_message_reply_markup(reply_markup=None)
+                query.edit_message_reply_markup(reply_markup=inline_change_currency_trip(order.pk))
 
                 payment_request(update,
                                 context,
@@ -474,6 +477,11 @@ def handle_order(update, context):
                                 order.pk,
                                 f'{order.pk} {query.message.message_id}',
                                 order.sum)
+    elif data[0] == "Change_payments":
+        order.payment_method = price_inline_buttons[4].split()[1]
+        order.save()
+        bot.send_message(chat_id=order.driver.manager.chat_id, text=manager_change_payments_info(order))
+        cash_order(update, query, order)
 
 
 def precheckout_callback(update, context):
@@ -497,16 +505,16 @@ def successful_payment(update, context):
                               from_address=order.from_address, destination=order.to_the_address,
                               accepted_time=order.accepted_time, finish_time=timezone.localtime(),
                               state=FleetOrder.COMPLETED,
-                              partner=Partner.get_partner(order.driver.partner),
+                              partner=order.driver.partner,
                               fleet='Ninja')
     context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
     text_to_client(order, complete_order_text, button=inline_comment_for_client())
     report_tg = ReportTelegramPayments.objects.create(
-        provider_payment_charge_id=successful_payment.provider_payment_charge_id,
-        telegram_payment_charge_id=successful_payment.telegram_payment_charge_id,
-        currency=successful_payment.currency,
-        total_amount=successful_payment.total_amount/100
-    )
+                             provider_payment_charge_id=successful_payment.provider_payment_charge_id,
+                             telegram_payment_charge_id=successful_payment.telegram_payment_charge_id,
+                             currency=successful_payment.currency,
+                             total_amount=successful_payment.total_amount/100)
+
     order.report_tg = report_tg
     order.status_order = Order.COMPLETED
     order.partner = order.driver.partner
