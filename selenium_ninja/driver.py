@@ -474,7 +474,7 @@ class SeleniumTools:
                         driver = Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=row[1]).first()
                         if driver:
                             order = {"order_id": row[0],
-                                     "driver": driver,
+                                     "driver": driver.driver,
                                      "fleet": fleet,
                                      "from_address": row[9],
                                      "destination": row[10],
