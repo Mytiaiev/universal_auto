@@ -471,17 +471,18 @@ class SeleniumTools:
                             finish = timezone.make_aware(datetime.strptime(row[8], "%Y-%m-%d %H:%M:%S"))
                         except ValueError:
                             finish = None
-                        driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=row[1]).driver
-                        order = {"order_id": row[0],
-                                 "driver": driver,
-                                 "fleet": fleet,
-                                 "from_address": row[9],
-                                 "destination": row[10],
-                                 "accepted_time": timezone.make_aware(datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S")),
-                                 "finish_time": finish,
-                                 "state": states.get(row[12]),
-                                 "partner": Partner.get_partner(self.partner)}
-                        FleetOrder.objects.create(**order)
+                        driver = Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=row[1]).first()
+                        if driver:
+                            order = {"order_id": row[0],
+                                     "driver": driver,
+                                     "fleet": fleet,
+                                     "from_address": row[9],
+                                     "destination": row[10],
+                                     "accepted_time": timezone.make_aware(datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S")),
+                                     "finish_time": finish,
+                                     "state": states.get(row[12]),
+                                     "partner": Partner.get_partner(self.partner)}
+                            FleetOrder.objects.create(**order)
             except FileNotFoundError:
                 pass
 

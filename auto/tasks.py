@@ -191,8 +191,9 @@ def get_driver_efficiency(self, partner_pk, day=None):
             end = timezone.datetime.combine(day, datetime.max.time()).astimezone()
             yesterday = day - timedelta(days=1)
             for report in using_info:
-                if report.end_at and report.end_at__date == day:
-                    hours_online += report.end_at - report.created_at
+                if report.end_at:
+                    if report.end_at__date == day:
+                        hours_online += report.end_at - report.created_at
                 else:
                     hours_online += end - report.created_at
 
