@@ -747,7 +747,11 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         else:
             return ['id', 'name',
                     'licence_plate', 'type', 'vin_code',
-                    'gps_imei', 'car_status', 'created_at',
+                    'gps_imei', 'car_status', 'purchase_price',
+                    'сurrency', 'investor', 'investor_percentage',
+                    'currency_rate',
+                    'сurrency_back', 'car_earnings',
+                    'created_at',
                     ]
 
     def get_fieldsets(self, request, obj=None):
@@ -755,7 +759,9 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
-                ('Інформація про машину',       {'fields': ['name', 'type',
+                ('Інформація про машину',       {'fields': ['name', 'type', 'purchase_price',
+                                                            'сurrency', 'investor', 'investor_percentage',
+                                                            'currency_rate', 'сurrency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei', 'lat', 'lon',
                                                             'car_status', 'gps_id',
@@ -768,7 +774,9 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
-                ('Інформація про машину',       {'fields': ['name', 'type',
+                ('Інформація про машину',       {'fields': ['name', 'type', 'purchase_price',
+                                                            'сurrency', 'investor', 'investor_percentage',
+                                                            'currency_rate', 'сurrency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei',
                                                             'car_status',

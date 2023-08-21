@@ -64,7 +64,8 @@ order_inline_buttons = (
     "\U0001F6A5 Побудувати маршрут",
     "\u2705 Залишити відгук",
     "\U0001F4DD Додати коментар",
-    "\u274c Ні, дякую"
+    "\u274c Ні, дякую",
+    '\u2705 Змінити тип оплати',
 )
 
 search_inline_buttons = (
@@ -152,6 +153,14 @@ def client_order_info(order):
                   f"Сума замовлення: {order.sum} грн\n"
     return message
 
+
+def manager_change_payments_info(order):
+    message = f"Замовлення: {order.pk}\n" \
+              f"Водій: {order.driver}\n" \
+              f"Автомобіль: {order.driver.vehicle}\n" \
+              f"Сума замовлення: {order.sum}\n" \
+              f"Змінив спосіб оплати на: {order.payment_method}\n"
+    return message
 
 def small_time_delta(time, delta):
     format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
