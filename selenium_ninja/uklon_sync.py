@@ -250,6 +250,10 @@ class UklonRequest(Synchronizer):
                     finish_time = timezone.make_aware(datetime.fromtimestamp(detail["completedAt"]))
                 except KeyError:
                     finish_time = None
+                try:
+                    start_time = timezone.make_aware(datetime.fromtimestamp(detail["createdAt"]))
+                except KeyError:
+                    start_time = None
                 if order['status'] != "completed":
                     state = order["cancellation"]["initiator"]
                 else:
@@ -259,7 +263,7 @@ class UklonRequest(Synchronizer):
                         "fleet": self.fleet,
                         "driver": driver,
                         "from_address": order['route']['points'][0]["address"],
-                        "accepted_time": timezone.make_aware(datetime.fromtimestamp(order['pickupTime'])),
+                        "accepted_time": start_time,
                         "state": states.get(state),
                         "finish_time": finish_time,
                         "destination": order['route']['points'][-1]["address"],
