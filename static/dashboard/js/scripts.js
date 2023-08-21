@@ -106,6 +106,7 @@ let barChartOptions = {
 			style: {
 				colors: "#f5f7ff",
 			},
+			rotate: -45,
 		},
 	},
 	yaxis: {
@@ -139,10 +140,10 @@ barChart.render();
 let areaChartOptions = {
 	series: [{
 		name: "",
-		data: [],
+		data: ['Вася'],
 	}, {
 		name: "",
-		data: [],
+		data: ['Петя'],
 	}],
 	chart: {
 		type: "area",
@@ -275,8 +276,8 @@ $(document).ready(function () {
 				Object.keys(data).forEach(function (key) {
 					let value = parseFloat(data[key]).toFixed(2);
 					if (value !== 0) {
-						let formattedKey = '< ' + key + ' >';
-						formattedData[formattedKey] = value;
+						// let formattedKey = '< ' + key + ' >';
+						formattedData[key] = value;
 					}
 				});
 
@@ -309,73 +310,48 @@ $(document).ready(function () {
 			},
 			success: function (response) {
 				let dataArray = response.data.data;
-				let uniqueNames = Array.from(new Set(dataArray.map(item => item.name)));
-				let driverData = {};
 
-				uniqueNames.forEach(function (name, index) {
-					let driverIndex = index + 1;
-					let driverNameKey = 'name' + driverIndex;
-					let effectiveKey = 'effective' + driverIndex;
+				let carNumbers = Array.from(new Set(dataArray.map(item => item.car)));
+				let carData = {};
 
-					driverData[driverNameKey] = name;
-					driverData[effectiveKey] = dataArray
-						.filter(item => item.name === name)
-						.map(item => item.effective)
+				carNumbers.forEach(function (carNumber, index) {
+					let carIndex = index + 1;
+					let carNumberKey = 'carNumber' + carIndex;
+					let mileageKey = 'mileage' + carIndex;
+
+					carData[carNumberKey] = carNumber;
+					carData[mileageKey] = dataArray
+						.filter(item => item.car === carNumber)
+						.map(item => parseFloat(item.mileage))
 						.join(', ');
 
-					if (driverData[effectiveKey] === '') {
-						driverData[effectiveKey] = 0;
+					if (carData[mileageKey] === '') {
+						carData[mileageKey] = "0";
 					}
 				});
 
-				if (uniqueNames.length === 1) {
-					let driverIndex = 2;
-					let driverNameKey = 'name' + driverIndex;
-					let effectiveKey = 'effective' + driverIndex;
-
-					driverData[driverNameKey] = "Водій відсутній";
-					driverData[effectiveKey] = "0";
-				}
-
-				driverData.date_effective = dataArray
-					.map(function (item) {
-						let date = new Date(item.date_effective);
-						return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-					})
-					.join(', ');
-
-				let dataPairs = [];
-				let dates = driverData.date_effective.split(', ');
-				let effective1 = driverData.effective1.split(', ');
-				let effective2 = driverData.effective2.split(', ');
-
-				for (let i = 0; i < dates.length; i++) {
-					let pair = {
-						date: dates[i],
-						effective1: parseFloat(effective1[i]),
-						effective2: parseFloat(effective2[i])
-					};
-					dataPairs.push(pair);
-				}
-
-				// Сортування масиву за датами
-				dataPairs.sort(function (a, b) {
-					let dateA = new Date(a.date);
-					let dateB = new Date(b.date);
-					return dateA - dateB;
+				let dates = dataArray.map(item => {
+					let date = new Date(item.date_effective);
+					return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
 				});
 
-				// Оновлення графіка з новими даними
-				areaChartOptions.series[0].name = driverData.name1;
-				areaChartOptions.series[0].data = dataPairs.map(pair => pair.effective1);
-				areaChartOptions.series[1].name = driverData.name2;
-				areaChartOptions.series[1].data = dataPairs.map(pair => pair.effective2);
-				areaChartOptions.labels = dataPairs.map(pair => pair.date);
+				let mileageSeries = carNumbers.map(carNumber => {
+					let carIndex = carNumbers.indexOf(carNumber) + 1;
+					return {
+						name: carData['carNumber' + carIndex],
+						data: carData['mileage' + carIndex].split(', ').map(parseFloat)
+					};
+				});
+
+				// Update chart options with new data
+				areaChartOptions.series = mileageSeries;
+				areaChartOptions.labels = dates;
 
 				areaChart.updateOptions(areaChartOptions);
 			}
 		});
 	}
+
 
 	function updateEffectiveChart(vehicleId, period) {
 		loadEffectiveChart(period, vehicleId);

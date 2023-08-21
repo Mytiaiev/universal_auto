@@ -194,20 +194,17 @@ def total_cash_car(period):
 	return vehicle, total_amount, total_km, start_date_formatted, end_date_formatted
 
 
-
 def average_effective_vehicle():
 	start_date, end_date = get_dates('week')
 
 	start_date_formatted = start_date.strftime('%d.%m.%Y')
 	end_date_formatted = end_date.strftime('%d.%m.%Y')
 
-	vehicle = CarEfficiency.objects.filter(
-		report_from__range=(start_date, end_date))
+	vehicle = CarEfficiency.objects.filter(report_from__range=(start_date, end_date))
 	effective = 0
 	if vehicle:
 		mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum'] or 0
-		total_kasa = vehicle.aggregate(Sum('total_kasa'))[
-						 'total_kasa__sum'] or 0
+		total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
 		effective = total_kasa / mileage
 		effective = float('{:.2f}'.format(effective))
 
@@ -224,16 +221,14 @@ def effective_vehicle(period, vehicle):
 
 	for effective in effective_objects:
 		date_effective = effective.report_from
-		# name = effective.driver
-		total_amount = effective.total_kasa
 		car = effective.licence_plate
+		total_amount = effective.total_kasa
 		mileage = effective.mileage
 		effective = effective.efficiency
 
 		car_data = {
 			'date_effective': date_effective,
 			'car': car,
-			# 'name': name,
 			'total_amount': total_amount,
 			'mileage': mileage,
 			'effective': effective
