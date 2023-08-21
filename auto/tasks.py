@@ -403,22 +403,24 @@ def add_money_to_vehicle(self, partner_pk):
     car_efficiency_records = CarEfficiency.objects.filter(report_from=yesterday.date(), partner=partner_pk)
     sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'))
     for result in sum_by_plate:
-        vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'], partner=partner_pk)
+        vehicle = Vehicle.objects.get(licence_plate=result['licence_plate'], partner=partner_pk)
         if vehicle:
             currency = vehicle.сurrency_back
-            total_kasa = result['total_kasa']
+            total_kasa = result['total_sum']
             if currency != Vehicle.Currency.UAH:
-                result, rate = convert_to_currency(total_kasa, currency)
-                vehicle.car_earnings += result * 0.5
+                result, rate = convert_to_currency(float(total_kasa), currency)
+                car_earnings = result / 2
+                vehicle.car_earnings += car_earnings
                 TransactionsConversantion.objects.create(
                     vehicle=vehicle,
-                    sum_before_transaction=total_kasa,
+                    sum_before_transaction=total_kasa / 2,
                     сurrency=currency,
                     currency_rate=rate,
-                    sum_after_transaction=result)
+                    sum_after_transaction=car_earnings)
                 vehicle.save()
             else:
-                vehicle.car_earnings += total_kasa * 0.5
+                vehicle.car_earnings += total_kasa / 2
+                vehicle.save()
 
 
 @app.task(bind=True, queue='beat_tasks')
