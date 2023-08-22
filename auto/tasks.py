@@ -450,7 +450,10 @@ def send_time_order(self):
             driver = order.driver
             report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
                                                   driver.phone_number, order.sum)
-            client_msg = text_to_client(order, report_for_client, button=inline_reject_order(order.pk))
+            message_info = redis_instance().hset(str(order.chat_id_client), 'client_msg')
+            text_to_client(order, delete_id=message_info)
+            client_msg = text_to_client(order, report_for_client,
+                                        button=inline_reject_order(order.pk))
             redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
