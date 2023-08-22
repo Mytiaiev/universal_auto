@@ -83,10 +83,11 @@ class UaGpsSynchronizer:
             vehicle = _driver.vehicle
             road_distance = 0
             road_time = datetime.timedelta()
-            if vehicle:
-                completed = FleetOrder.objects.filter(driver=_driver,
-                                                      state=FleetOrder.COMPLETED,
-                                                      accepted_time__gte=start)
+            completed = FleetOrder.objects.filter(driver=_driver,
+                                                  state=FleetOrder.COMPLETED,
+                                                  accepted_time__gte=start,
+                                                  accepted_time__lt=end)
+            if vehicle and completed:
                 for order in completed:
                     end_report = order.finish_time if order.finish_time < end else end
                     report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
@@ -94,28 +95,27 @@ class UaGpsSynchronizer:
                                                   vehicle.gps_id)
                     road_distance += report[0]
                     road_time += report[1]
-
-                canceled = FleetOrder.objects.filter(driver=_driver,
-                                                     state__in=[FleetOrder.DRIVER_CANCEL,
-                                                                FleetOrder.SYSTEM_CANCEL,
-                                                                FleetOrder.CLIENT_CANCEL],
-                                                     accepted_time__gte=start)
-                for order in canceled:
-                    first_status = StatusChange.objects.filter(
-                        driver=_driver.id,
-                        vehicle=vehicle,
-                        name__in=[Driver.ACTIVE, Driver.WITH_CLIENT],
-                        start_time__gte=timezone.localtime(order.accepted_time)).first()
-                    if first_status:
-                        if first_status.name == Driver.WITH_CLIENT:
-                            continue
-                        else:
-                            end_report = first_status.start_time if first_status.start_time < end else end
-                            report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
-                                                          self.get_timestamp(timezone.localtime(end_report)),
-                                                          vehicle.gps_id)
-                            road_distance += report[0]
-                            road_time += report[1]
+                # canceled = FleetOrder.objects.filter(driver=_driver,
+                #                                      state__in=[FleetOrder.DRIVER_CANCEL,
+                #                                                 FleetOrder.SYSTEM_CANCEL,
+                #                                                 FleetOrder.CLIENT_CANCEL],
+                #                                      accepted_time__gte=start)
+                # for order in canceled:
+                #     first_status = StatusChange.objects.filter(
+                #         driver=_driver.id,
+                #         vehicle=vehicle,
+                #         name__in=[Driver.ACTIVE, Driver.WITH_CLIENT],
+                #         start_time__gte=timezone.localtime(order.accepted_time)).first()
+                #     if first_status:
+                #         if first_status.name == Driver.WITH_CLIENT:
+                #             continue
+                #         else:
+                #             end_report = first_status.start_time if first_status.start_time < end else end
+                #             report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
+                #                                           self.get_timestamp(timezone.localtime(end_report)),
+                #                                           vehicle.gps_id)
+                #             road_distance += report[0]
+                #             road_time += report[1]
 
                 yesterday_order = FleetOrder.objects.filter(driver=_driver,
                                                             finish_time__gt=start,
