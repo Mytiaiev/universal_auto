@@ -512,7 +512,7 @@ class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)
 @admin.register(Payments)
 class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('vendor_name', 'full_name')
-    list_filter = ('vendor_name',)
+    list_filter = ('vendor_name', 'full_name')
     ordering = ('-report_from', 'full_name')
     list_per_page = 25
 
@@ -866,6 +866,8 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(FleetOrder)
 class FleetOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    list_filter = ('fleet', 'driver')
+
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
