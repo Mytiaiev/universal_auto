@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.contrib.auth import logout
 
-from app.models import Manager, Partner
+from app.models import Manager, Partner, Investor
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 login_in, partner_logout, login_in_investor,
@@ -164,11 +164,17 @@ class GetRequestHandler:
             json_data = JsonResponse({'data': get_cash}, safe=False)
             response = HttpResponse(json_data, content_type='application/json')
             return response
+        elif user.is_active and Investor.objects.filter(user=user).exists():
+            get_cash = total_cash_car(period)
+            json_data = JsonResponse({'data': get_cash}, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
 
     def handle_effective_vehicle(self, request):
         period = request.GET.get('period')
-        vehicle = request.GET.get('vehicle_id')
-        get_efficiency_vehicle = effective_vehicle(period, vehicle)
+        vehicle1 = request.GET.get('vehicle_id1')
+        vehicle2 = request.GET.get('vehicle_id2')
+        get_efficiency_vehicle = effective_vehicle(period, vehicle1, vehicle2)
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response

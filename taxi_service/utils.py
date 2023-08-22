@@ -2,7 +2,7 @@ import json
 import random
 from datetime import timedelta, date
 
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
@@ -11,7 +11,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
 
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
-						SummaryReport, CarEfficiency, Partner, ParkSettings, )
+						SummaryReport, CarEfficiency, Partner, ParkSettings,
+						Manager, Investor, )
 from selenium_ninja.driver import SeleniumTools
 
 
@@ -211,30 +212,26 @@ def average_effective_vehicle():
 	return effective, start_date_formatted, end_date_formatted
 
 
-def effective_vehicle(period, vehicle):
+def effective_vehicle(period, vehicle1, vehicle2):
 	start_date, end_date = get_dates(period=period)
-	car_effective = []
 
 	effective_objects = CarEfficiency.objects.filter(
-		licence_plate=vehicle,
-		report_from__range=(start_date, end_date)).order_by('report_from')
+		Q(licence_plate=vehicle1) | Q(licence_plate=vehicle2),
+		report_from__range=(start_date, end_date)
+	).order_by('licence_plate', 'report_from')
+
+	result = {'vehicle1': [], 'vehicle2': []}
 
 	for effective in effective_objects:
-		date_effective = effective.report_from
-		car = effective.licence_plate
-		total_amount = effective.total_kasa
-		mileage = effective.mileage
-		effective = effective.efficiency
-
 		car_data = {
-			'date_effective': date_effective,
-			'car': car,
-			'total_amount': total_amount,
-			'mileage': mileage,
-			'effective': effective
+			'date_effective': effective.report_from,
+			'car': effective.licence_plate,
+			'total_amount': effective.total_kasa,
+			'mileage': effective.mileage,
+			'effective': effective.efficiency
 		}
-		car_effective.append(car_data)
-	result = {'data': car_effective}
+		result_key = 'vehicle1' if effective.licence_plate == vehicle1 else 'vehicle2'
+		result[result_key].append(car_data)
 
 	return result
 
@@ -377,8 +374,22 @@ def login_in_investor(request, login_name, password):
 		if user.is_active:
 			login(request, user)
 			user_name = user.get_username()
+			if Partner.objects.filter(user=user).exists():
+				role = 'partner'
+				print('#' * 100)
+				print(role)
+			elif Manager.objects.filter(user=user).exists():
+				role = 'manager'
+				print('#' * 100)
+				print(role)
+			elif Investor.objects.filter(user=user).exists():
+				role = 'investor'
+				print('#' * 100)
+				print(role)
+			else:
+				role = 'admin'
 
-			return {'success': True, 'user_name': user_name}
+			return {'success': True, 'user_name': user_name, 'role': role}
 		else:
 			return {'success': False, 'message': 'User is not active'}
 	else:

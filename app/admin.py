@@ -621,6 +621,31 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         return fieldsets
 
 
+@admin.register(Partner)
+class PartnerAdmin(admin.ModelAdmin):
+    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'role')
+    list_display_links = ('first_name', 'last_name')
+    list_filter = ['first_name']
+    ordering = ('first_name', 'last_name')
+    list_per_page = 25
+
+    fieldsets = [
+        (None, {'fields': ['first_name', 'last_name', 'email', 'phone_number', 'user', 'role']}),
+    ]
+
+
+@admin.register(Investor)
+class InvestorAdmin(admin.ModelAdmin):
+    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'user', 'role')
+    list_display_links = ('first_name', 'last_name')
+    list_filter = ['first_name']
+    list_per_page = 25
+
+    fieldsets = [
+        (None, {'fields': ['first_name', 'last_name', 'email', 'phone_number', 'user', 'vehicle', 'role']}),
+    ]
+
+
 @admin.register(Manager)
 @add_partner_on_save_model(Manager)
 class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
@@ -747,7 +772,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return ['id', 'name',
                     'licence_plate', 'type', 'vin_code',
                     'gps_imei', 'car_status', 'purchase_price',
-                    'сurrency', 'investor', 'investor_percentage',
+                    'сurrency', 'investor_car', 'investor_percentage',
                     'currency_rate',
                     'сurrency_back', 'car_earnings',
                     'created_at',
@@ -759,7 +784,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'type', 'purchase_price',
-                                                            'сurrency', 'investor', 'investor_percentage',
+                                                            'сurrency', 'investor_car', 'investor_percentage',
                                                             'currency_rate', 'сurrency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei', 'lat', 'lon',
@@ -774,7 +799,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'type', 'purchase_price',
-                                                            'сurrency', 'investor', 'investor_percentage',
+                                                            'сurrency', 'investor_car', 'investor_percentage',
                                                             'currency_rate', 'сurrency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei',

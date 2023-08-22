@@ -1117,11 +1117,29 @@ $(document).ready(function () {
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
 			},
 			success: function (data) {
+				console.log(data);
 				if (data.data['success'] === true) {
-					$("#loginBtn").hide();
-					$("#loggedInUser").text('Кабінет Інвестора').show();
-					$("#loginForm").fadeOut();
-					window.location.href = "/dashboard/";
+					if (data.data['role'] === 'investor') {
+						$("#loginBtn").hide();
+						$("#loggedInUser").text('Кабінет Інвестора').show();
+						$("#loginForm").fadeOut();
+						window.location.href = "/dashboard-investor/";
+					}
+
+					if (data.data['role'] === 'manager') {
+						$("#loginBtn").hide();
+						$("#loggedInUser").text('Кабінет Менеджера').show();
+						$("#loginForm").fadeOut();
+						window.location.href = "/dashboard/";
+					}
+
+					if (data.data['role'] === 'partner') {
+						$("#loginBtn").hide();
+						$("#loggedInUser").text('Кабінет Партнера').show();
+						$("#loginForm").fadeOut();
+						window.location.href = "/dashboard-partner/";
+					}
+
 				} else {
 					$("#loginErrorMessage").show();
 					$("#login").val("")
@@ -1237,4 +1255,5 @@ $(document).ready(function () {
 			});
 		}
 	});
-});
+})
+;

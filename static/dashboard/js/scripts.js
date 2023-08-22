@@ -276,8 +276,8 @@ $(document).ready(function () {
 				Object.keys(data).forEach(function (key) {
 					let value = parseFloat(data[key]).toFixed(2);
 					if (value !== 0) {
-						// let formattedKey = '< ' + key + ' >';
-						formattedData[key] = value;
+						let formattedKey = '< ' + key + ' >';
+						formattedData[formattedKey] = value;
 					}
 				});
 
@@ -299,20 +299,25 @@ $(document).ready(function () {
 		});
 	}
 
-	function loadEffectiveChart(period, vehicleId) {
+	function loadEffectiveChart(period, vehicleId1, vehicleId2) {
 		$.ajax({
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
 				action: 'effective_vehicle',
 				period: period,
-				vehicle_id: vehicleId
+				vehicle_id1: vehicleId1,
+				vehicle_id2: vehicleId2
 			},
 			success: function (response) {
-				let dataArray = response.data.data;
+				console.log(response.data);
+				let dataArray1 = response.data.vehicle1;
+				let dataArray2 = response.data.vehicle2;
 
-				let carNumbers = Array.from(new Set(dataArray.map(item => item.car)));
+				let carNumbers = Array.from(new Set(dataArray1.map(item => item.car)));
+				let carNumbers2 = Array.from(new Set(dataArray2.map(item => item.car)));
 				let carData = {};
+				let carData2 = {};
 
 				carNumbers.forEach(function (carNumber, index) {
 					let carIndex = index + 1;
@@ -320,7 +325,7 @@ $(document).ready(function () {
 					let mileageKey = 'mileage' + carIndex;
 
 					carData[carNumberKey] = carNumber;
-					carData[mileageKey] = dataArray
+					carData[mileageKey] = dataArray1
 						.filter(item => item.car === carNumber)
 						.map(item => parseFloat(item.mileage))
 						.join(', ');
@@ -330,7 +335,23 @@ $(document).ready(function () {
 					}
 				});
 
-				let dates = dataArray.map(item => {
+				carNumbers2.forEach(function (carNumber, index) {
+					let carIndex = index + 1;
+					let carNumberKey = 'carNumber' + carIndex;
+					let mileageKey = 'mileage' + carIndex;
+
+					carData2[carNumberKey] = carNumber;
+					carData2[mileageKey] = dataArray2
+						.filter(item => item.car === carNumber)
+						.map(item => parseFloat(item.mileage))
+						.join(', ');
+
+					if (carData2[mileageKey] === '') {
+						carData2[mileageKey] = "0";
+					}
+				});
+
+				let dates = dataArray1.map(item => {
 					let date = new Date(item.date_effective);
 					return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
 				});
@@ -343,8 +364,16 @@ $(document).ready(function () {
 					};
 				});
 
+				let mileageSeries2 = carNumbers2.map(carNumber => {
+					let carIndex = carNumbers2.indexOf(carNumber) + 1;
+					return {
+						name: carData2['carNumber' + carIndex],
+						data: carData2['mileage' + carIndex].split(', ').map(parseFloat)
+					};
+				});
+
 				// Update chart options with new data
-				areaChartOptions.series = mileageSeries;
+				areaChartOptions.series = [...mileageSeries, ...mileageSeries2];
 				areaChartOptions.labels = dates;
 
 				areaChart.updateOptions(areaChartOptions);
@@ -353,8 +382,8 @@ $(document).ready(function () {
 	}
 
 
-	function updateEffectiveChart(vehicleId, period) {
-		loadEffectiveChart(period, vehicleId);
+	function updateEffectiveChart(vehicleId1, vehicleId2, period) {
+		loadEffectiveChart(period, vehicleId1, vehicleId2);
 	}
 
 	loadDefaultKasa('day');
@@ -369,18 +398,21 @@ $(document).ready(function () {
 
 	$('input[name="effective-period"]').change(function () {
 		const selectedEffective = $(this).val();
-		const vehicleId = $('#vehicle-select').val();
+		const vehicleId1 = $('#vehicle-select').val();
+		const vehicleId2 = $('#vehicle-select-2').val();
 		const period = getPeriod(selectedEffective);
 
-		updateEffectiveChart(vehicleId, period);
+		updateEffectiveChart(vehicleId1, vehicleId2, period);
 	});
 
-	$('#vehicle-select').change(function () {
-		const vehicleId = $(this).val();
+	$('#vehicle-select, #vehicle-select-2').change(function () {
 		const selectedEffective = $('input[name="effective-period"]:checked').val();
 		const period = getPeriod(selectedEffective);
 
-		updateEffectiveChart(vehicleId, period);
+		const vehicleId1 = $('#vehicle-select').val();
+		const vehicleId2 = $('#vehicle-select-2').val();
+		console.log(vehicleId1, vehicleId2, period);
+		updateEffectiveChart(vehicleId1, vehicleId2, period);
 	});
 
 	function getPeriod(val) {
