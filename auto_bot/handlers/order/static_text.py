@@ -124,6 +124,9 @@ def client_order_info(order):
         time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
         message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
                   f"<b>Час подачі:{time}</b>\n"
+    elif order.car_delivery_price:
+        message = f"Замовлення оновлено\n" \
+                  f"Нова сума замовлення: {order.sum} грн\n"
     else:
         message = f"Ваше замовлення {order.pk}:\n"
     message += f"Адреса посадки: {order.from_address}\n" \
@@ -155,20 +158,6 @@ def client_order_text(driver, vehicle, plate, phone, price):
               f'Номер машини: {plate}\n' \
               f'Номер телефону: {phone}\n' \
               f'Сума замовлення: {price} грн\n'
-    return message
-
-
-def client_order_info(order):
-    if order.car_delivery_price:
-        message = f"Замовлення оновлено\n" \
-                  f"Нова сума замовлення: {order.sum} грн\n"
-    else:
-        message = f"Ваше замовлення:\n" \
-                  f"Адреса посадки: {order.from_address}\n" \
-                  f"Місце прибуття: {order.to_the_address}\n" \
-                  f"Спосіб оплати: {order.payment_method}\n" \
-                  f"Номер телефону: {order.phone_number}\n" \
-                  f"Сума замовлення: {order.sum} грн\n"
     return message
 
 

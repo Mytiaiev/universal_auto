@@ -316,6 +316,14 @@ def client_reject_order(update, context):
                                   state=FleetOrder.CLIENT_CANCEL,
                                   partner=order.driver.partner,
                                   fleet='Ninja')
+    else:
+        try:
+            group_msg = redis_instance().hget('group_msg', order.pk)
+            context.bot.delete_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
+                                       message_id=group_msg)
+            redis_instance().hdel('group_msg', order.pk)
+        except:
+            pass
     order.status_order = Order.CANCELED
     order.finish_time = timezone.localtime()
     order.save()
