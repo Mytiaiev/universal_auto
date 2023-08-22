@@ -13,7 +13,7 @@ from auto_bot.handlers.driver_manager.handlers import add_job_application_to_fle
     driver_status, broken_car, remove_cash_by_manager, get_drivers_from_fleets, get_weekly_report, get_earning_report, \
     get_efficiency_report, get_report, get_efficiency_auto, get_partner_vehicles, get_partner_drivers, \
     pin_partner_vehicle_to_driver, statistic_functions, functions_with_drivers, get_drivers_statistics, \
-    get_efficiency_for_drivers
+    get_efficiency_for_drivers, functions_with_vehicles, choose_spending_category, ask_spending_sum
 from auto_bot.handlers.comment.handlers import comment, save_comment
 from auto_bot.handlers.service_manager.handlers import numberplate_car
 from auto_bot.handlers.driver.handlers import sending_report, get_debt_photo, save_debt_report, \
@@ -166,6 +166,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(remove_cash_by_manager,
                                         pattern=re.compile("^Paid_driver (true|false) [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(functions_with_drivers, pattern="Setup_drivers"))
+    dp.add_handler(CallbackQueryHandler(functions_with_vehicles, pattern="Setup_vehicles"))
     dp.add_handler(CallbackQueryHandler(statistic_functions, pattern="Get_statistic"))
     dp.add_handler(CallbackQueryHandler(get_drivers_from_fleets, pattern="Update_drivers"))
     dp.add_handler(CallbackQueryHandler(get_earning_report, pattern="Get_report"))
@@ -175,7 +176,10 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(get_efficiency_report, pattern="Get_efficiency_report"))
     dp.add_handler(CallbackQueryHandler(get_drivers_statistics, pattern="Get_driver_efficiency"))
     dp.add_handler(CallbackQueryHandler(get_efficiency_for_drivers, pattern="Driver_daily|Driver_custom"))
-    dp.add_handler(CallbackQueryHandler(get_partner_vehicles, pattern="Pin_vehicle_to_driver"))
+    dp.add_handler(CallbackQueryHandler(get_partner_vehicles, pattern="Pin_vehicle_to_driver|Spending_car"))
+    dp.add_handler(CallbackQueryHandler(choose_spending_category,
+                                        pattern=re.compile("^Spending_vehicle [0-9]+$")))
+    dp.add_handler(CallbackQueryHandler(ask_spending_sum, pattern="WASHING|FUEL|SERVICE|REPAIR"))
     dp.add_handler(CallbackQueryHandler(get_partner_drivers,
                                         pattern=re.compile("^select_vehicle [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(pin_partner_vehicle_to_driver,

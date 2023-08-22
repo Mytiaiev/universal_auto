@@ -390,7 +390,7 @@ def check_time_order(self, order_id):
     except ObjectDoesNotExist:
         return
     group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
-                                 text=order_info(instance),
+                                 text=order_info(instance, time=True),
                                  reply_markup=inline_markup_accept(instance.pk),
                                  parse_mode=ParseMode.HTML)
     redis_instance().hset('group_msg', order_id, group_msg.message_id)
@@ -444,7 +444,7 @@ def send_time_order(self):
     for order in accepted_orders:
         if timezone.localtime() < order.order_time < (timezone.localtime() + timedelta(minutes=int(
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
-            driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=order_info(order),
+            driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=order_info(order, time=True),
                                           reply_markup=inline_spot_keyboard(order.latitude, order.longitude, order.id),
                                           parse_mode=ParseMode.HTML)
             driver = order.driver
@@ -471,14 +471,6 @@ def order_create_task(self, order_data):
 
         order_data['sum'] = distance_price[0]
         order_data['distance_google'] = round(distance_price[1], 2)
-        if 'order_time' in order_data:
-            order_time = order_data['order_time'].strftime("%Y-%m-%d %H:%M")
-            client_msg = redis_instance().hget(order_data['chat_id_client'], 'client_msg')
-            bot.edit_message_text(chat_id=order_data['chat_id_client'],
-                                  text=f'Замовлення прийняте, сума замовлення {order_data["sum"]}грн\n'
-                                       f'Очікуйте водія {order_time}',
-                                  message_id=client_msg)
-
         Order.objects.create(**order_data)
     except Exception as e:
         if self.request.retries <= self.max_retries:

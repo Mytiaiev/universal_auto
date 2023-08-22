@@ -101,13 +101,31 @@ def price_info(in_city, out_city):
     return message
 
 
-def order_info(order):
-    if order.order_time:
+def order_info(order, time=None):
+    if order.order_time and time:
         time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
         message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
                   f"<b>Час подачі:{time}</b>\n"
     else:
         message = f"Отримано нове замовлення {order.pk}:\n"
+    message += f"Адреса посадки: {order.from_address}\n" \
+               f"Місце прибуття: {order.to_the_address}\n" \
+               f"Спосіб оплати: {order.payment_method}\n" \
+               f"Номер телефону: {order.phone_number}\n" \
+               f"Загальна вартість: {order.sum} грн\n" \
+               f"Довжина маршруту: {order.distance_google} км\n"
+    if order.info:
+        message += f"Коментар: {order.info}"
+    return message
+
+
+def client_order_info(order):
+    if order.order_time:
+        time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+        message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
+                  f"<b>Час подачі:{time}</b>\n"
+    else:
+        message = f"Ваше замовлення {order.pk}:\n"
     message += f"Адреса посадки: {order.from_address}\n" \
                f"Місце прибуття: {order.to_the_address}\n" \
                f"Спосіб оплати: {order.payment_method}\n" \

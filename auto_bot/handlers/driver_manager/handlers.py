@@ -10,10 +10,10 @@ from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
     fleet_job_keyboard, drivers_status_buttons, inline_driver_paid_kb, inline_earning_report_kb, \
     inline_efficiency_report_kb, inline_partner_vehicles, inline_partner_drivers, inline_func_with_driver_kb, \
-    inline_statistic_kb, inline_driver_eff_kb
+    inline_statistic_kb, inline_driver_eff_kb, inline_func_with_vehicle_kb, vehicle_spending_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_date, get_efficiency, \
-    generate_message_weekly, get_driver_efficiency_report
+    generate_message_weekly, get_driver_efficiency_report, validate_sum
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, send_driver_efficiency
@@ -37,10 +37,48 @@ def functions_with_drivers(update, context):
     query.edit_message_reply_markup(inline_func_with_driver_kb())
 
 
+def functions_with_vehicles(update, context):
+    query = update.callback_query
+    query.edit_message_text(choose_func_text)
+    query.edit_message_reply_markup(inline_func_with_vehicle_kb())
+
+
 def statistic_functions(update, context):
     query = update.callback_query
     query.edit_message_text(choose_func_text)
     query.edit_message_reply_markup(inline_statistic_kb())
+
+
+def choose_spending_category(update, context):
+    query = update.callback_query
+    redis_instance().hset(str(update.effective_chat.id), 'vehicle', query.data[1])
+    query.edit_message_text(choose_category_text)
+    query.edit_message_reply_markup(vehicle_spending_kb())
+
+
+def ask_spending_sum(update, context):
+    query = update.callback_query
+    data = {
+        'category': query.data,
+        'state': SPENDING_CAR
+    }
+    redis_instance().hmset(str(update.effective_chat.id), data)
+    query.edit_message_text(ask_spend_sum_text)
+
+
+def save_car_spending(update, context):
+    spending = update.message.text
+    if validate_sum(spending):
+        print("created")
+        # user_data = redis_instance().hgetall(str(update.effective_chat.id))
+        # vehicle = Vehicle.objects.get(pk=int(user_data['vehicle']))
+        # data = {'category': user_data['category'],
+        #         'vehicle': vehicle,
+        #         'amount': round(spending, 2)}
+        # Vehicle.objects.create(**data)
+        redis_instance().delete(str(update.effective_chat.id))
+    else:
+        update.message.reply_text(wrong_sum_type)
 
 
 @task_postrun.connect
@@ -95,7 +133,7 @@ def get_efficiency_for_drivers(update, context):
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
         else:
-            message += no_vehicles_text
+            message += no_drivers_text
         query.edit_message_text(message)
         query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
@@ -127,7 +165,7 @@ def create_driver_eff(update, context):
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
         else:
-            message += no_vehicles_text
+            message += no_drivers_text
         update.message.reply_text(message, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_DRIVER_EFF)
@@ -205,7 +243,7 @@ def get_efficiency_auto(update, context):
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
         else:
-            message += no_vehicles_text
+            message = no_vehicles_text
         query.edit_message_text(message)
         query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
@@ -237,7 +275,7 @@ def create_period_efficiency(update, context):
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
         else:
-            message += no_vehicles_text
+            message = no_vehicles_text
         update.message.reply_text(message, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
@@ -266,8 +304,12 @@ def get_partner_vehicles(update, context):
     manager = DriverManager.get_by_chat_id(query.from_user.id)
     vehicles = Vehicle.objects.filter(partner=manager.partner, manager=manager)
     if vehicles:
+        if query.data == "Pin_vehicle_to_driver":
+            callback = 'select_vehicle'
+        else:
+            callback = 'Spending_vehicle'
         query.edit_message_text(partner_vehicles)
-        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles))
+        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback))
     else:
         query.edit_message_text(no_vehicles_text)
 
