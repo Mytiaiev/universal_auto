@@ -372,6 +372,13 @@
 						{% endfor %}
 					</select>
 				</div>
+				<div class="car-select-2">
+					<select id="vehicle-select-2">
+						{% for vehicle in get_all_vehicle %}
+							<option>{{ vehicle.licence_plate }}</option>
+						{% endfor %}
+					</select>
+				</div>
 				<div id="area-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
@@ -393,8 +400,7 @@
 			<div class="payback-car">
 				<div class="car-item">
 					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}"
-								 alt="Зображення авто">
+						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
 					</div>
 					<div class="car-details">
 						<p>Номер авто: AB1234</p>
@@ -404,54 +410,6 @@
 							<div class="progress" style="width: 70%;"></div>
 						</div>
 						<p>Повна сума авто: $20000</p>
-					</div>
-				</div>
-
-				<div class="car-item">
-					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}"
-								 alt="Зображення авто">
-					</div>
-					<div class="car-details">
-						<h3>Водій: Петров Петро</h3>
-						<p>Номер авто: CD5678</p>
-						<p>Заробіток: $3000</p>
-						<div class="progress-bar">
-							<div class="progress" style="width: 40%;"></div>
-						</div>
-						<p>Повна сума авто: $15000</p>
-					</div>
-				</div>
-
-				<div class="car-item">
-					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}"
-								 alt="Зображення авто">
-					</div>
-					<div class="car-details">
-						<h3>Водій: Сидорова Олена</h3>
-						<p>Номер авто: EF9012</p>
-						<p>Заробіток: $7000</p>
-						<div class="progress-bar">
-							<div class="progress" style="width: 90%;"></div>
-						</div>
-						<p>Повна сума авто: $25000</p>
-					</div>
-				</div>
-
-				<div class="car-item">
-					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}"
-								 alt="Зображення авто">
-					</div>
-					<div class="car-details">
-						<h3>Водій: Коваленко Микола</h3>
-						<p>Номер авто: GH3456</p>
-						<p>Заробіток: $2000</p>
-						<div class="progress-bar">
-							<div class="progress" style="width: 20%;"></div>
-						</div>
-						<p>Повна сума авто: $10000</p>
 					</div>
 				</div>
 			</div>
