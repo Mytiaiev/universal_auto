@@ -642,7 +642,7 @@ class InvestorAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['first_name', 'last_name', 'email', 'phone_number', 'user', 'vehicle', 'role']}),
+        (None, {'fields': ['first_name', 'last_name', 'email', 'phone_number', 'user', 'role']}),
     ]
 
 

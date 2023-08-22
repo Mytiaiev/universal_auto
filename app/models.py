@@ -253,6 +253,23 @@ class Manager(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 
+class Investor(models.Model):
+    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
+    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
+    email = models.EmailField(max_length=254, blank=True, null=True, verbose_name='Електрона пошта')
+    phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
+    role = models.CharField(max_length=25, default=Role.INVESTOR, choices=Role.choices)
+
+    user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        verbose_name = 'Інвестор'
+        verbose_name_plural = 'Інвестори'
+
+    def __str__(self) -> str:
+        return f'{self.first_name} {self.last_name}'
+
+
 class Vehicle(models.Model):
     class Currency(models.TextChoices):
         UAH = 'UAH', 'Гривня',
@@ -279,7 +296,7 @@ class Vehicle(models.Model):
     car_earnings = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Заробіток авто")
     сurrency_back = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
                                      verbose_name='Валюта повернення коштів')
-    investor_car = models.BooleanField(default=False, verbose_name='Машина інвестора')
+    investor_car = models.ForeignKey(Investor, blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Машина інвестора')
     investor_percentage = models.DecimalField(decimal_places=2, max_digits=10, default=0.35,
                                               verbose_name="Відсоток інвестора")
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -359,24 +376,6 @@ class VehicleSpendings(models.Model):
 
     def __str__(self) -> str:
         return f'{self.vehicle} {self.amount} {self.category}'
-
-
-class Investor(models.Model):
-    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
-    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
-    email = models.EmailField(max_length=254, blank=True, null=True, verbose_name='Електрона пошта')
-    phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
-    role = models.CharField(max_length=25, default=Role.INVESTOR, choices=Role.choices)
-
-    user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
-
-    class Meta:
-        verbose_name = 'Інвестор'
-        verbose_name_plural = 'Інвестори'
-
-    def __str__(self) -> str:
-        return f'{self.first_name} {self.last_name}'
 
 
 class Driver(User):
