@@ -120,11 +120,7 @@ def order_info(order, time=None):
 
 
 def client_order_info(order):
-    if order.order_time:
-        time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
-        message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
-                  f"<b>Час подачі:{time}</b>\n"
-    elif order.car_delivery_price:
+    if order.car_delivery_price:
         message = f"Замовлення оновлено\n" \
                   f"Нова сума замовлення: {order.sum} грн\n"
     else:
@@ -137,6 +133,9 @@ def client_order_info(order):
                f"Довжина маршруту: {order.distance_google} км\n"
     if order.info:
         message += f"Коментар: {order.info}"
+    if order.order_time:
+        time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+        message = f"Час подачі:{time}\n"
     return message
 
 
