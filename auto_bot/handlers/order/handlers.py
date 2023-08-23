@@ -13,7 +13,7 @@ from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route
     inline_add_info_kb, inline_change_currency_trip
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client, validate_text
 from auto_bot.main import bot
-from scripts.conversion import get_address, get_location_from_db, geocode
+from scripts.conversion import get_address, get_location_from_db, geocode, get_route_price
 from auto_bot.handlers.order.static_text import *
 from scripts.redis_conn import redis_instance
 
@@ -181,6 +181,26 @@ def first_address_check(update, context):
         from_address(update, context)
 
 
+def payment_request(chat_id_client, provider_token, url, start_parameter, payload, price: int):
+    prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
+
+    # Sending a request for payment
+    bot.send_invoice(chat_id=chat_id_client,
+                     title=payment_title,
+                     description=payment_description,
+                     payload=payload,
+                     provider_token=provider_token,
+                     currency=payment_currency,
+                     start_parameter=start_parameter,
+                     prices=prices,
+                     photo_url=url,
+                     need_shipping_address=False,
+                     photo_width=615,
+                     photo_height=512,
+                     photo_size=50000,
+                     is_flexible=False)
+
+
 def order_create(update, context):
     query = update.callback_query
     chat_id = str(update.effective_chat.id)
@@ -230,7 +250,6 @@ def order_create(update, context):
         order_data['status_order'] = Order.ON_TIME
         order_time = redis_instance().hget(chat_id, 'time_order')
         order_data['order_time'] = datetime.fromisoformat(order_time)
-
     order_create_task.delay(order_data)
 
 
@@ -380,26 +399,6 @@ def handle_callback_order(update, context):
             send_map_to_client.delay(order.id, driver.vehicle.licence_plate, message.message_id, message.chat_id)
 
 
-def payment_request(update, context, chat_id_client, provider_token, url, start_parameter, payload, price: int):
-    prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
-
-    # Sending a request for payment
-    context.bot.send_invoice(chat_id=chat_id_client,
-                             title=payment_title,
-                             description=payment_description,
-                             payload=payload,
-                             provider_token=provider_token,
-                             currency=payment_currency,
-                             start_parameter=start_parameter,
-                             prices=prices,
-                             photo_url=url,
-                             need_shipping_address=False,
-                             photo_width=615,
-                             photo_height=512,
-                             photo_size=50000,
-                             is_flexible=False)
-
-
 def cash_order(update, query, order):
     query.edit_message_text(driver_complete_text(order.sum))
     text_to_client(order, complete_order_text, button=inline_comment_for_client())
@@ -469,9 +468,7 @@ def handle_order(update, context):
             else:
                 query.edit_message_reply_markup(reply_markup=inline_change_currency_trip(order.pk))
 
-                payment_request(update,
-                                context,
-                                order.chat_id_client,
+                payment_request(order.chat_id_client,
                                 os.environ["PAYMENT_TOKEN"],
                                 os.environ["BOT_URL_IMAGE_TAXI"],
                                 order.pk,
@@ -487,17 +484,22 @@ def handle_order(update, context):
 def precheckout_callback(update, context):
     query = update.pre_checkout_query
     chat_id = query.from_user.id
-    data = query.invoice_payload.split()
-    order = Order.objects.filter(chat_id_client=chat_id).last()
-    redis_instance().hset(chat_id, 'message_data', data[1])
-    if data[0] == f'{order.pk}':
+    first_payments = redis_instance().hget(str(chat_id), 'first_payment')
+    if first_payments:
         query.answer(ok=True)
     else:
-        query.answer(ok=False, error_message=error_payment)
+        data = query.invoice_payload.split()
+        order = Order.objects.filter(chat_id_client=chat_id).last()
+        redis_instance().hset(chat_id, 'message_data', data[1])
+        if data[0] == f'{order.pk}':
+            query.answer(ok=True)
+        else:
+            query.answer(ok=False, error_message=error_payment)
 
 
 def successful_payment(update, context):
     chat_id = str(update.message.chat.id)
+    first_payments = redis_instance().hget(str(chat_id), 'first_payment')
     successful_payment = update.message.successful_payment
     data = int(redis_instance().hget(chat_id, 'message_data'))
     order = Order.objects.filter(chat_id_client=chat_id).last()

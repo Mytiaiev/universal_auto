@@ -20,11 +20,12 @@ from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
+from auto_bot.handlers.order.handlers import payment_request
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot,\
     inline_spot_keyboard, inline_reject_order
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
-    client_order_text, order_customer_text, search_driver
+    client_order_text, order_customer_text, search_driver, price_inline_buttons, accept_order
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
@@ -471,15 +472,24 @@ def order_create_task(self, order_data):
 
         order_data['sum'] = distance_price[0]
         order_data['distance_google'] = round(distance_price[1], 2)
+        order = Order.objects.create(**order_data)
         if 'order_time' in order_data:
             order_time = order_data['order_time'].strftime("%Y-%m-%d %H:%M")
             client_msg = redis_instance().hget(order_data['chat_id_client'], 'client_msg')
-            bot.edit_message_text(chat_id=order_data['chat_id_client'],
-                                  text=f'Замовлення прийняте, сума замовлення {order_data["sum"]}грн\n'
-                                       f'Очікуйте водія {order_time}',
-                                  message_id=client_msg)
-
-        Order.objects.create(**order_data)
+            if order.payment_method == price_inline_buttons[5].split()[1]:
+                bot.edit_message_text(chat_id=order_data['chat_id_client'],
+                                      text=accept_order(order_data["sum"], order_time, True),
+                                      message_id=client_msg)
+                payment_request(order_data['chat_id_client'],
+                                os.environ["PAYMENT_TOKEN"],
+                                os.environ["BOT_URL_IMAGE_TAXI"],
+                                order.pk,
+                                order.pk,
+                                order_data['sum'])
+            else:
+                bot.edit_message_text(chat_id=order_data['chat_id_client'],
+                                      text=accept_order(order_data["sum"], order_time),
+                                      message_id=client_msg)
     except Exception as e:
         if self.request.retries <= self.max_retries:
             self.retry(exc=e, countdown=5)

@@ -162,8 +162,18 @@ def manager_change_payments_info(order):
               f"Змінив спосіб оплати на: {order.payment_method}\n"
     return message
 
+
 def small_time_delta(time, delta):
     format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
     message = f'Вкажіть, будь ласка, більш пізній час.\n' \
               f'Мінімальний час для передзамовлення: {format_time}'
     return message
+
+
+def accept_order(sum, time, card=False):
+    message = 'Замовлення прийняте:\n'
+    message_add = f'Cума замовлення {sum}грн\n' \
+                  f'Очікуйте водія {time}'
+    card = 'Сплатіть замовлення, щоб водій почав його виконувати:\n'
+
+    return message + message_add if not card else card + message_add
