@@ -228,6 +228,10 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
             effect = calculate_efficiency_driver(driver, start, end)
             if effect:
                 if end == yesterday:
+                    efficiency = 0
+                    orders = 0
+                    accept_percent = 0
+                    average_price = 0
                     yesterday_efficiency = DriverEfficiency.objects.filter(report_from=yesterday,
                                                                            driver=driver).first()
                     if yesterday_efficiency:
@@ -235,12 +239,6 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
                         orders = yesterday_efficiency.total_orders
                         accept_percent = yesterday_efficiency.accept_percent
                         average_price = yesterday_efficiency.average_price
-                    else:
-                        efficiency = 0
-                        orders = 0
-                        accept_percent = 0
-                        average_price = 0
-
                     effective_driver[driver] = {'Ефективність(грн/км)': f"{effect[0]} (+{efficiency})",
                                                 'Кількість замовлень': f"{effect[1]} (+{orders})",
                                                 'Прийнято замовлень %': f"{effect[2]} ({accept_percent})",
