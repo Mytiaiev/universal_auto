@@ -12,7 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
 						SummaryReport, CarEfficiency, Partner, ParkSettings,
-						Manager, Investor, )
+						Manager, Investor, Vehicle, )
 from selenium_ninja.driver import SeleniumTools
 
 
@@ -167,21 +167,31 @@ def collect_total_earnings(period):
 	return total, total_amount, start_date_formatted, end_date_formatted
 
 
-def total_cash_car(period):
+def investor_cash_car(period, investor_pk):    #TODO: refactor this function
 	vehicle = {}
 	total_amount = 0
 	total_km = 0
+
+	investor = Investor.objects.get(user_id=investor_pk)
+	investor_cars = Vehicle.objects.filter(investor_car=investor)
+	licence_plates = [car.licence_plate for car in investor_cars]
 
 	start_period, end_period = get_dates(period)
 	start_date_formatted = start_period.strftime('%d.%m.%Y')
 	end_date_formatted = end_period.strftime('%d.%m.%Y')
 
-	results = CarEfficiency.objects.filter(report_from__range=(start_period, end_period))
+	results = CarEfficiency.objects.filter(
+		Q(licence_plate__in=licence_plates)&
+		Q(report_from__range=(start_period, end_period))
+	)
 
 	for result in results:
 		licence_plate = result.licence_plate
 		total_kasa = result.total_kasa
-
+		# investor_percentage = result.vehicle.investor_percentage
+		# print('#'*100)
+		# print(investor_percentage)
+		# print('#'*100)
 		earnings = float(total_kasa) * 0.35
 
 		if licence_plate not in vehicle:
@@ -233,6 +243,33 @@ def effective_vehicle(period, vehicle1, vehicle2):
 		result_key = 'vehicle1' if effective.licence_plate == vehicle1 else 'vehicle2'
 		result[result_key].append(car_data)
 
+	return result
+
+
+def investor_effective_vehicle(period, investor_pk):
+	start_date, end_date = get_dates(period=period)
+
+	investor = Investor.objects.get(user_id=investor_pk)
+	investor_cars = Vehicle.objects.filter(investor_car=investor)
+	licence_plates = [car.licence_plate for car in investor_cars]
+
+	effective_objects = CarEfficiency.objects.filter(
+		licence_plate__in=licence_plates,
+		report_from__range=(start_date, end_date)
+	).order_by('licence_plate', 'report_from')
+
+	result = {}
+
+	for effective in effective_objects:
+		car_data = {
+			'date_effective': effective.report_from,
+			'car': effective.licence_plate,
+			'mileage': effective.mileage,
+		}
+		if effective.licence_plate not in result:
+			result[effective.licence_plate] = [car_data]
+		else:
+			result[effective.licence_plate].append(car_data)
 	return result
 
 
@@ -376,16 +413,10 @@ def login_in_investor(request, login_name, password):
 			user_name = user.get_username()
 			if Partner.objects.filter(user=user).exists():
 				role = 'partner'
-				print('#' * 100)
-				print(role)
 			elif Manager.objects.filter(user=user).exists():
 				role = 'manager'
-				print('#' * 100)
-				print(role)
 			elif Investor.objects.filter(user=user).exists():
 				role = 'investor'
-				print('#' * 100)
-				print(role)
 			else:
 				role = 'admin'
 

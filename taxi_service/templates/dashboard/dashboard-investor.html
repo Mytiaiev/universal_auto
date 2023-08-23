@@ -98,30 +98,30 @@
 		<div class="main-title">
 			<h2>Інформаційна панель Інвестора</h2>
 		</div>
-		<div class="main-cards-partner">
-			<div class="card-partner">
-				<div class="card-inner-partner">
+		<div class="main-cards">
+			<div class="card">
+				<div class="card-inner">
 					<h2>Загальний дохід авто</h2>
 					<span class="material-icons-outlined">&#8372;</span><br>
 				</div>
 				<h3 id="income-amount">грн.</h3>
 			</div>
-			<div class="card-partner">
-				<div class="card-inner-partner">
+			<div class="card">
+				<div class="card-inner">
 					<h2>Загальний кілометраж авто</h2>
 					<span class="material-icons-outlined">alt_route</span><br>
 				</div>
 				<h3 id="income-km"></h3>
 			</div>
-			<div class="card-partner">
-				<div class="card-inner-partner">
+			<div class="card">
+				<div class="card-inner">
 					<h2>Загальні витрати на авто</h2>
 					<span class="material-icons-outlined">money_off</span><br>
 				</div>
 				<h3>0 грн.</h3>
 			</div>
-			<div class="card-partner">
-				<div class="card-inner-partner">
+			<div class="card">
+				<div class="card-inner">
 					<h2>Сповіщення</h2>
 					<span class="material-icons-outlined">email</span>
 				</div>
@@ -155,21 +155,7 @@
 			</div>
 
 			<div class="charts-card">
-				<h2 class="chart-title">Ефективність автомобіля</h2>
-				<div class="car-select">
-					<select id="vehicle-select">
-						{% for vehicle in get_all_vehicle %}
-							<option>{{ vehicle.licence_plate }}</option>
-						{% endfor %}
-					</select>
-				</div>
-				<div class="car-select-2">
-					<select id="vehicle-select-2">
-						{% for vehicle in get_all_vehicle %}
-							<option>{{ vehicle.licence_plate }}</option>
-						{% endfor %}
-					</select>
-				</div>
+				<h2 class="chart-title">Пробіг автомобіля</h2>
 				<div id="area-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
@@ -218,6 +204,6 @@
 		src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js"></script>
 <script
 		src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
-<script src="{% static 'dashboard/js/scripts.js' %}"></script>
+<script src="{% static 'dashboard/js/scripts-investor.js' %}"></script>
 </body>
 </html>

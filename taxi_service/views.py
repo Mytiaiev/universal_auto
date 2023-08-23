@@ -14,7 +14,7 @@ from django.utils.decorators import method_decorator
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import weekly_rent, average_effective_vehicle
-from app.models import ParkSettings, Driver, Vehicle, Partner, Manager
+from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
 
 
 class IndexView(TemplateView):
@@ -88,10 +88,10 @@ class GetRequestView(View):
             return handler.handle_active_vehicles_locations(request)
         elif action == 'order_confirm':
             return handler.handle_order_confirm(request)
-        elif action == 'get_cash':
-            return handler.handle_get_drivers_cash(request)
-        elif action == 'effective_vehicle':
-            return handler.handle_effective_vehicle(request)
+        elif action == 'get_cash_investor':
+            return handler.handle_get_investor_cash(request)
+        elif action == 'investor_effective_vehicle':
+            return handler.handle_investor_effective_vehicle(request)
         elif action == 'is_logged_in':
             return handler.handle_is_logged_in(request)
         else:
@@ -136,12 +136,13 @@ class DashboardInvestorView(TemplateView):
     template_name = 'dashboard/dashboard-investor.html'
 
     def get_context_data(self, **kwargs):
-
         context = super().get_context_data(**kwargs)
 
-        context['total_distance_rent'] = weekly_rent()
-        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
-        context['average_effective_vehicle'] = average_effective_vehicle()
+        user_id = self.request.user.id
+        investor = Investor.objects.get(user_id=user_id)
+        investor_cars = Vehicle.objects.filter(investor_car=investor)
+
+        context['get_all_vehicle'] = investor_cars
 
         return context
 
