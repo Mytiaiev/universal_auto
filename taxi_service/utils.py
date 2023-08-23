@@ -10,24 +10,21 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate, login, logout
 
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
-						SummaryReport, CarEfficiency, Partner, ParkSettings, )
+                        SummaryReport, CarEfficiency, Partner, ParkSettings, Vehicle, )
 from selenium_ninja.driver import SeleniumTools
 
 
 def active_vehicles_gps():
-	vehicles_gps = []
-	active_drivers = Driver.objects.filter(driver_status=Driver.ACTIVE)
-	for driver in active_drivers:
-		today = date.today()
-		vehicle = UseOfCars.objects.filter(user_vehicle=driver,
-										   created_at__date=today).first()
-		if vehicle:
-			vehicles = VehicleGPS.objects.filter(
-				vehicle__licence_plate=vehicle.licence_plate
-			).values('vehicle__licence_plate', 'lat', 'lon').last()
-			vehicles_gps.append(vehicles)
-	json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
-	return json_data
+    vehicles_gps = []
+    active_drivers = Driver.objects.filter(driver_status=Driver.ACTIVE, vehicle__isnull=False)
+    for driver in active_drivers:
+        vehicle = {'licence_plate': driver.vehicle.licence_plate,
+                   'lat': driver.vehicle.lat,
+                   'lon': driver.vehicle.lon
+                   }
+        vehicles_gps.append(vehicle)
+    json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
+    return json_data
 
 
 def order_confirm(id_order):
@@ -50,10 +47,10 @@ def order_confirm(id_order):
 
 
 def update_order_sum_or_status(id_order, action):
-	if action == 'user_opt_out':
-		order = Order.objects.get(id=id_order)
-		order.status_order = Order.CANCELED
-		order.save()
+    if action == 'user_opt_out':
+        order = Order.objects.get(id=id_order)
+        order.status_order = Order.CANCELED
+        order.save()
 
 
 def restart_order(id_order, car_delivery_price, action):

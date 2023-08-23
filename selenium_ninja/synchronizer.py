@@ -102,6 +102,12 @@ class Synchronizer:
                         client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
                         driver.chat_id = client.chat_id
                         driver.save()
+                        fleet = Fleet.objects.get(name='Ninja')
+                        Fleets_drivers_vehicles_rate.objects.get_or_create(fleet=fleet,
+                                                                           driver_external_id=driver.chat_id,
+                                                                           driver=driver,
+                                                                           partner=driver.partner,
+                                                                           vehicle=driver.vehicle)
                     except ObjectDoesNotExist:
                         pass
         return driver

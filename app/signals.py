@@ -7,7 +7,10 @@ from auto.tasks import send_on_job_application_on_driver, check_time_order, setu
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order, UseOfCars
+from auto_bot.handlers.order.keyboards import inline_reject_order
+from auto_bot.handlers.order.static_text import client_order_info
 from auto_bot.main import bot
+from scripts.redis_conn import redis_instance
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import create_event, datetime_with_timezone
@@ -65,10 +68,10 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
         send_on_job_application_on_driver.delay(instance.id)
 
 
-@receiver(post_save, sender=UseOfCars)
-def run_add_drivers_task(sender, instance, created, **kwargs):
-    if instance.end_at:
-        bot.send_message(chat_id=515224934, text=f"{instance.user_vehicle} finished job")
+# @receiver(post_save, sender=UseOfCars)
+# def run_add_drivers_task(sender, instance, created, **kwargs):
+    # if instance.end_at:
+        # bot.send_message(chat_id=515224934, text=f"{instance.user_vehicle} finished job")
         # detaching_the_driver_from_the_car.delay(instance.partner.pk, instance.licence_plate)
 
 
@@ -79,6 +82,11 @@ def take_order_from_client(sender, instance, **kwargs):
         instance.save()
         search_driver_for_order.delay(instance.pk)
     elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
+        client_msg = redis_instance().hget(instance.chat_id_client, 'client_msg')
+        bot.edit_message_text(chat_id=instance.chat_id_client,
+                              text=client_order_info(instance),
+                              reply_markup=inline_reject_order(instance.pk),
+                              message_id=client_msg)
         check_time_order.delay(instance.pk)
         # g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
         # if g_id:

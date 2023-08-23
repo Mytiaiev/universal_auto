@@ -7,7 +7,7 @@ from auto_bot.handlers.driver_manager.handlers import get_gps_imea, get_n_vehicl
     get_vin_code_vehicle, get_licence_plate_vehicle, get_model_vehicle, get_name_vehicle, \
     viewing_status_driver, second_name, email, phone_number, create_user, \
     get_report_period, create_period_report, get_efficiency_period, create_period_efficiency, get_period_driver_eff, \
-    create_driver_eff
+    create_driver_eff, save_car_spending
 from auto_bot.handlers.order.handlers import to_the_address, payment_method, order_on_time, get_additional_info
 from auto_bot.handlers.owner.handlers import get_sum, generate_link_v1, get_sum_for_portmone, transfer, generate_link_v2
 from auto_bot.handlers.service_manager.handlers import send_report_to_db_and_driver, end_of_repair, start_of_repair, \
@@ -37,7 +37,8 @@ def text(update, context):
             END_EFFICIENCY: create_period_efficiency,
             ADD_INFO: get_additional_info,
             START_DRIVER_EFF: get_period_driver_eff,
-            END_DRIVER_EFF: create_driver_eff
+            END_DRIVER_EFF: create_driver_eff,
+            SPENDING_CAR: save_car_spending
 
         }
         handler_method = state_handlers.get(state_data)
