@@ -202,7 +202,8 @@ def calculate_efficiency_driver(driver, start, end):
         total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
         total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
         total_orders = efficiency_objects.aggregate(total_orders=Sum('total_orders'))['total_orders']
-        accept_percent = float('{:.2f}'.format(efficiency_objects.aggregate(accept=Avg('accept_percent'))['accept']))
+        accept_percent = float('{:.2f}'.format(efficiency_objects.exclude(accept_percent=0).aggregate(
+            accept=Avg('accept_percent'))['accept']))
         avg_price = float('{:.2f}'.format(total_kasa / total_orders)) if total_orders else 0
         efficiency = 0
         if total_distance:
@@ -252,7 +253,7 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
                                                 'Cередній чек грн': f"{effect[3]}"
                                                 }
         sorted_effective_driver = dict(sorted(effective_driver.items(),
-                                       key=lambda x: x[1]['Ефективність(грн/км)'],
+                                       key=lambda x: float(x[1]['Ефективність(грн/км)'].split()[0]),
                                        reverse=True))
         for k, v in sorted_effective_driver.items():
             report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]

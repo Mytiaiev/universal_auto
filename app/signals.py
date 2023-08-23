@@ -68,10 +68,10 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
         send_on_job_application_on_driver.delay(instance.id)
 
 
-@receiver(post_save, sender=UseOfCars)
-def run_add_drivers_task(sender, instance, created, **kwargs):
-    if instance.end_at:
-        bot.send_message(chat_id=515224934, text=f"{instance.user_vehicle} finished job")
+# @receiver(post_save, sender=UseOfCars)
+# def run_add_drivers_task(sender, instance, created, **kwargs):
+    # if instance.end_at:
+        # bot.send_message(chat_id=515224934, text=f"{instance.user_vehicle} finished job")
         # detaching_the_driver_from_the_car.delay(instance.partner.pk, instance.licence_plate)
 
 

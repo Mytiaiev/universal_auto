@@ -135,7 +135,7 @@ def client_order_info(order):
         message += f"Коментар: {order.info}"
     if order.order_time:
         time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
-        message = f"Час подачі:{time}\n"
+        message += f"Час подачі:{time}\n"
     return message
 
 
