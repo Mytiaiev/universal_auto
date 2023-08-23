@@ -115,23 +115,24 @@ def generate_message_weekly(partner_pk):
             for driver in drivers:
                 driver_message = ''
                 result = calculate_reports(start, end, driver)
-                balance += result[0]
-                driver_message += f"{driver} каса: {result[1]}\n"
-                if result[5]:
-                    driver_message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
-                if driver.schema in ("HALF", "CUSTOM"):
-                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
-                        result[1], driver.rate, result[2])
-                    if result[4]:
-                        driver_message += " - План {:.2f}".format(result[4])
-                elif driver.schema == "RENT":
-                    driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
-                        result[1], driver.rate, result[2], driver.rental)
-                else:
-                    pass
-                if result[6]:
-                    driver_message += f" - Оренда {result[6]}"
-                driver_message += f" = {result[3]}\n"
+                if result:
+                    balance += result[0]
+                    driver_message += f"{driver} каса: {result[1]}\n"
+                    if result[5]:
+                        driver_message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
+                    if driver.schema in ("HALF", "CUSTOM"):
+                        driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
+                            result[1], driver.rate, result[2])
+                        if result[4]:
+                            driver_message += " - План {:.2f}".format(result[4])
+                    elif driver.schema == "RENT":
+                        driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
+                            result[1], driver.rate, result[2], driver.rental)
+                    else:
+                        pass
+                    if result[6]:
+                        driver_message += f" - Оренда {result[6]}"
+                    driver_message += f" = {result[3]}\n"
                 if driver.chat_id:
                     drivers_dict[driver.chat_id] = driver_message
                 message += driver_message

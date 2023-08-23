@@ -131,7 +131,7 @@ def get_efficiency_for_drivers(update, context):
         result = get_driver_efficiency_report(manager_id=query.from_user.id)
         if result:
             for k, v in result.items():
-                message += f"{k}\n" + "".join(v)
+                message += f"{k}\n\n" + "".join(v)
         else:
             message += no_drivers_text
         query.edit_message_text(message)
