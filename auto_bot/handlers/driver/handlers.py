@@ -6,7 +6,7 @@ from telegram.ext import ConversationHandler
 from app.models import Driver, Vehicle, Report_of_driver_debt, Event
 from auto_bot.handlers.driver.keyboards import service_auto_buttons, inline_debt_keyboard, inline_dates_kb
 from auto_bot.handlers.driver.static_text import *
-from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
+from auto_bot.handlers.main.keyboards import markup_keyboard_onetime, back_to_main_menu
 
 
 def status_car(update, context):
@@ -88,7 +88,7 @@ def choose_day_off_or_sick(update, context):
     else:
         day = timezone.localtime()
     query.edit_message_text(select_off_text)
-    query.edit_message_reply_markup(inline_dates_kb(data, day))
+    query.edit_message_reply_markup(inline_dates_kb(data, day, 'More_driver'))
 
 
 def take_a_day_off_or_sick_leave(update, context):
@@ -104,4 +104,5 @@ def take_a_day_off_or_sick_leave(update, context):
         event_date=selected_date,
         chat_id=driver.chat_id)
     query.edit_message_text(text=f'Ви взяли {event} на {selected_date}.')
+    query.edit_message_reply_markup(reply_markup=back_to_main_menu())
     context.bot.send_message(chat_id=driver.manager.chat_id, text=result)

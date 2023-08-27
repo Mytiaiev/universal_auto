@@ -109,7 +109,7 @@ def setup_dispatcher(dp):
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi
-    dp.add_handler(CallbackQueryHandler(start_query, pattern="Back_to_main"))
+    dp.add_handler(CallbackQueryHandler(start_query, pattern="Back_to_main|Main_"))
     dp.add_handler(CallbackQueryHandler(continue_order, pattern="Call_taxi"))
     dp.add_handler(MessageHandler(Filters.location, get_location))
     dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order|Wrong_place"))

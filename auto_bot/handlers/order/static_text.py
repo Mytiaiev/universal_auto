@@ -52,6 +52,11 @@ update_text = "Оновлюємо інформацію"
 add_info_text = "Бажаєте додати коментар до замовлення?"
 ask_info_text = "Напишіть, будь ласка, Ваш коментар"
 too_long_text = "Занадто великий коментар, вкажіть тільки найважливіше"
+order_not_payment = 'У Вас вже є одинє неоплачене замовлення. ' \
+                    'Ви зможете використовувати наш сервіс після закриття попереднього замовлення'
+end_trip = 'Поїздка була оплачена заздалегіть.'
+
+
 order_inline_buttons = (
     "\u274c Відхилити",
     "\u2705 Прийняти замовлення",
@@ -65,7 +70,8 @@ order_inline_buttons = (
     "\u2705 Залишити відгук",
     "\U0001F4DD Додати коментар",
     "\u274c Ні, дякую",
-    '\u2705 Змінити тип оплати',
+    "\u2705 Змінити тип оплати",
+    "\u2705 Виставити рахунок",
 )
 
 search_inline_buttons = (
@@ -176,10 +182,19 @@ def small_time_delta(time, delta):
     return message
 
 
-def accept_order(sum, time, card=False):
-    message = 'Замовлення прийняте:\n'
-    message_add = f'Cума замовлення {sum}грн\n' \
-                  f'Очікуйте водія {time}'
-    card = 'Сплатіть замовлення, щоб водій почав його виконувати:\n'
+def accept_order(sum, cancel=None):
+    message = 'Сплатіть замовлення, щоб водій почав його виконувати:\n' \
+              f'Cума замовлення {sum}грн\n'
+    if cancel:
+        message += 'Або скасуйте замовлення'
 
-    return message + message_add if not card else card + message_add
+    return message
+
+
+def add_payments_money(sum):
+    return f'Ви повині сплатити за поїздку ще {sum}грн\nЗачекайте поки водій надішле форму для оплати'
+
+
+def second_payment(sum):
+    return f'Клієнт винний {sum}грн'
+

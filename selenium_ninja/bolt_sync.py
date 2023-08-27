@@ -132,7 +132,7 @@ class BoltRequest(Synchronizer):
                 'licence_plate': '',
                 'vehicle_name': '',
                 'vin_code': '',
-
+                'access_type': driver_info['data']['has_cash_payment']
             })
             time.sleep(0.5)
         return driver_list

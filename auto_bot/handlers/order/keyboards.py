@@ -2,6 +2,7 @@ from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 from auto_bot.handlers.order.static_text import *
 from scripts.conversion import coord_to_link
+from auto_bot.handlers.main.keyboards import main
 
 share_location = [
     [KeyboardButton(text=search_inline_buttons[5], request_location=True)]
@@ -38,7 +39,7 @@ def inline_search_kb():
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[0], callback_data="Increase_price")],
         [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
-        [InlineKeyboardButton(search_inline_buttons[3], callback_data="No_driver_time_order")],
+        # [InlineKeyboardButton(search_inline_buttons[3], callback_data="No_driver_time_order")],
         [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_order")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -102,9 +103,9 @@ def inline_route_keyboard(pk=None):
 
 
 def inline_comment_for_client():
-    keyboard = [[
-        InlineKeyboardButton(order_inline_buttons[9], callback_data="Comment client")
-    ]]
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[9], callback_data="Comment client")],
+        main]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -141,5 +142,12 @@ def inline_add_info_kb():
 def inline_change_currency_trip(pk):
     keyboard = [
         [InlineKeyboardButton(order_inline_buttons[12], callback_data=f"Change_payments {pk}")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def accept_second_payment(pk):
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[13], callback_data=f"Accept {pk}")],
     ]
     return InlineKeyboardMarkup(keyboard)

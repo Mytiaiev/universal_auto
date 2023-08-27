@@ -1,7 +1,7 @@
 from django.utils import timezone
 from telegram import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 
-from app.models import UseOfCars
+from app.models import UseOfCars, ParkSettings
 from auto_bot.handlers.main.static_text import main_buttons, driver_option_buttons, manager_main_buttons, about_us
 from auto_bot.handlers.order.static_text import order_inline_buttons
 
@@ -37,10 +37,11 @@ def inline_driver_func_kb():
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_user_kb():
+def inline_user_kb(url1):
     keyboard = [
         # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
+        [InlineKeyboardButton(main_buttons[9], url=url1)],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")],
         [InlineKeyboardButton(main_buttons[7], callback_data="About_us")],
     ]
@@ -108,11 +109,11 @@ def get_start_kb(user):
         "DRIVER": inline_start_driver_kb() if not UseOfCars.objects.filter(user_vehicle=user,
                                                                            created_at__date=timezone.now().date(),
                                                                            end_at=None) else inline_work_driver_kb(),
-        "CLIENT": inline_user_kb(),
+        "CLIENT": inline_user_kb(ParkSettings.get_value('SHIPPING_CHILDS')),
         "DRIVER_MANAGER": inline_manager_kb(),
         "OWNER": inline_owner_kb()
     }
-    reply_markup = role_reply_markup.get(user.role, inline_user_kb())
+    reply_markup = role_reply_markup.get(user.role, inline_user_kb(ParkSettings.get_value('SHIPPING_CHILDS')))
     return reply_markup
 
 
@@ -132,3 +133,11 @@ def markup_keyboard(keyboard):
 
 def markup_keyboard_onetime(keyboard):
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+
+
+main = [InlineKeyboardButton(main_buttons[8], callback_data="Main_")]
+
+
+def back_to_main_menu():
+    keyboard = [main]
+    return InlineKeyboardMarkup(keyboard)

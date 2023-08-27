@@ -86,7 +86,8 @@ def update_phone_number(update, context):
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
                                   reply_markup=ReplyKeyboardRemove())
-    context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=inline_user_kb())
+    context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=inline_user_kb(
+        ParkSettings.get_value('SHIPPING_CHILDS')))
 
 
 def get_about_us(update, context):

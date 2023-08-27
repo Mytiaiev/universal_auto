@@ -196,10 +196,11 @@ class UklonRequest(Synchronizer):
         all_drivers = self.response_data(url=url_1, params=param)
 
         for driver in all_drivers['items']:
-            pay_cash, vehicle_name, vin_code = True, '', ''
+            pay_cash, access_type, vehicle_name, vin_code = True, True, '', ''
             if driver['restrictions']:
                 pay_cash = False if 'Cash' in driver['restrictions'][0]['restriction_types'] else True
-
+            if driver['access_type'] == 'Nobody':
+                access_type = False
             elif self.find_value_str(driver, *('selected_vehicle',)):
                 vehicle_name = f"{driver['selected_vehicle']['make']} {driver['selected_vehicle']['model']}"
                 vin_code = self.response_data(f"{url_2}/{driver['selected_vehicle']['vehicle_id']}")
@@ -218,6 +219,7 @@ class UklonRequest(Synchronizer):
                 'licence_plate': self.find_value_str(driver, *('selected_vehicle', 'license_plate')),
                 'vehicle_name': vehicle_name,
                 'vin_code': vin_code,
+                'access_type': access_type
             })
 
         return drivers

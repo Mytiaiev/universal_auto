@@ -15,17 +15,18 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, DriverManager, Partner, DriverEfficiency, FleetOrder, \
-    TransactionsConversantion
+    TransactionsConversantion, ReportTelegramPayments
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
-from auto_bot.handlers.order.handlers import payment_request
-from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot,\
-    inline_spot_keyboard, inline_reject_order
+from auto_bot.handlers.order.handlers import fleet_order
+from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
+    inline_spot_keyboard, inline_reject_order, inline_comment_for_client, accept_second_payment
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
-    client_order_text, order_customer_text, search_driver, price_inline_buttons, accept_order
+    client_order_text, order_customer_text, search_driver, price_inline_buttons, accept_order, add_payments_money, \
+    second_payment
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
@@ -445,6 +446,11 @@ def send_time_order(self):
     for order in accepted_orders:
         if timezone.localtime() < order.order_time < (timezone.localtime() + timedelta(minutes=int(
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
+            if order.payment_method == price_inline_buttons[5].split()[1]:
+                if order.chat_id_client and not ReportTelegramPayments.objects.filter(order=order.pk):
+                    bot.send_message(chat_id=order.chat_id_client,
+                                     text=accept_order(order.sum, cancel=True))
+                    continue
             driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=order_info(order, time=True),
                                           reply_markup=inline_spot_keyboard(order.latitude, order.longitude, order.id),
                                           parse_mode=ParseMode.HTML)
@@ -474,6 +480,7 @@ def order_create_task(self, order_data):
 
         order_data['sum'] = distance_price[0]
         order_data['distance_google'] = round(distance_price[1], 2)
+
         Order.objects.create(**order_data)
     except Exception as e:
         if self.request.retries <= self.max_retries:
@@ -596,7 +603,8 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
     try:
         result = UaGpsSynchronizer().generate_report(start_trip_with_client, end, gps_id)
         minutes = delta.total_seconds() // 60
-        instance = Order.objects.filter(pk=order).first()
+        instance = Order.objects.get(pk=order)
+        first_sum = instance.sum
         instance.distance_gps = result[0]
         price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
                             int(ParkSettings.get_value('COST_PER_KM'))) / 60
@@ -607,9 +615,41 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         else:
             instance.sum = int(price_per_minute) + int(instance.car_delivery_price)
         instance.save()
-        text_to_client(order=instance, text=f'Сума до cплати: {instance.sum} грн\n {complete_order_text}')
-        message = driver_complete_text(instance.sum)
-        bot.edit_message_text(chat_id=instance.driver.chat_id, message_id=query, text=message)
+        second_sum = instance.sum
+        if instance.payment_method == price_inline_buttons[4].split()[1]:
+            text_to_client(order=instance, text=f'Загальна сума до cплати: {instance.sum} грн\n{complete_order_text}',
+                           button=inline_comment_for_client())
+            message = driver_complete_text(instance.sum)
+            bot.edit_message_text(chat_id=instance.driver.chat_id, message_id=query, text=message)
+            instance.status_order = Order.COMPLETED
+            instance.partner = instance.driver.partner
+            instance.save()
+            fleet_order(instance)
+            redis_instance().delete(instance.chat_id_client)
+        if instance.payment_method == price_inline_buttons[5].split()[1] and first_sum > second_sum:
+            text_to_client(instance, complete_order_text, button=inline_comment_for_client())
+            bot.edit_message_text(chat_id=instance.driver.chat_id,
+                                  message_id=query,
+                                  text=driver_complete_text(instance.sum))
+            instance.status_order = Order.COMPLETED
+            instance.partner = instance.driver.partner
+            instance.save()
+            fleet_order(instance)
+            redis_instance().delete(instance.chat_id_client)
+        else:
+            sum = second_sum-first_sum
+            text_to_client(instance, add_payments_money(sum))
+            bot.edit_message_text(chat_id=instance.driver.chat_id,
+                                  message_id=query,
+                                  text=second_payment(sum),
+                                  )
+            redis_instance().hset(instance.chat_id_client, 'first_sum', first_sum)
+            redis_instance().hset(instance.chat_id_client, 'second_payment', 1)
+
+            bot.edit_message_reply_markup(chat_id=instance.driver.chat_id,
+                                          message_id=query,
+                                          reply_markup=accept_second_payment(instance.pk))
+
     except Exception as e:
         logger.info(e)
 

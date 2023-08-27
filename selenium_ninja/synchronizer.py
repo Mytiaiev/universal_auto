@@ -144,8 +144,8 @@ class Synchronizer:
 
     @staticmethod
     def update_driver_fields(driver, **kwargs):
-        key_phone, key_email = 'phone_number', 'email'
-        update_fields, phone_number, email = [], kwargs[key_phone], kwargs[key_email]
+        key_phone, key_email, access_type = 'phone_number', 'email', 'access_type'
+        update_fields, phone_number, email, block = [], kwargs[key_phone], kwargs[key_email], kwargs[access_type]
 
         if not driver.phone_number and phone_number:
             driver.phone_number = phone_number
@@ -153,6 +153,9 @@ class Synchronizer:
         elif driver.email != email and email:
             driver.email = email
             update_fields.append(key_email)
+        elif not block:
+            driver.manager = None
+            driver.save()
         elif update_fields:
             driver.save(update_fields=update_fields)
 
