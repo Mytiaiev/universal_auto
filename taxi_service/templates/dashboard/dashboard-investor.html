@@ -75,7 +75,7 @@
 		</div>
 		<ul class="sidebar-list">
 			<li class="sidebar-list-item">
-				<a href="{% url 'dashboard' %}">
+				<a href="{% url 'dashboard_investor' %}">
 					<span class="material-icons-outlined"></span> Dashboard
 				</a>
 			</li>
@@ -173,24 +173,23 @@
 					</div>
 				</div>
 			</div>
-
-			<div class="payback-car">
-				<div class="car-item">
-					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+		</div>
+		<div class="payback-car">
+			<div class="car-item">
+				<div class="car-image">
+					<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
+				</div>
+				<div class="car-details">
+					<p>Номер авто:<br>AB1234АВ</p>
+					<p>Заробіток:<br>$5000</p>
+					<p>Витрати:<br>$2500</p>
+					<div class="progress-bar">
+						<div class="progress" style="width: 70%;"></div>
 					</div>
-					<div class="car-details">
-						<p>Номер авто: AB1234</p>
-						<p>Заробіток: $5000</p>
-						<p>Витрати: $2500</p>
-						<div class="progress-bar">
-							<div class="progress" style="width: 70%;"></div>
-						</div>
-						<p>Повна сума авто: $20000</p>
-					</div>
+					<p>Повна сума авто:<br>$20000</p>
 				</div>
 			</div>
-		</div>
+			</div>
 	</main>
 </div>
 

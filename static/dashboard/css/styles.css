@@ -298,26 +298,37 @@ body {
   }
 }
 
-
 /*vehicle-block*/
 
 .payback-car {
-  /*!*тимчасово none*!   ########################*/
-  display: none;
+  display: flex;
   flex-wrap: wrap;
   gap: 20px;
 }
 
 .car-item {
-  width: 300px;
+  display: flex;
+  width: 100%;
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
 
 .car-image img {
-  width: 100%;
+  width: 200px;
   height: auto;
+}
+
+.car-details {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.car-details p {
+  display: inline-block;
+  white-space: nowrap;
+  padding: 10px 10px;
 }
 
 .car-details h3 {
