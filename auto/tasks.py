@@ -20,7 +20,6 @@ from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
-from auto_bot.handlers.order.handlers import fleet_order
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_spot_keyboard, inline_reject_order, inline_comment_for_client, accept_second_payment
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
@@ -593,6 +592,15 @@ def send_map_to_client(self, order_pk, licence, message, chat):
         if self.request.retries >= self.max_retries:
             bot.stopMessageLiveLocation(chat, message)
         return message
+
+
+def fleet_order(instance, state=FleetOrder.COMPLETED):
+    FleetOrder.objects.create(order_id=instance.pk, driver=instance.driver,
+                              from_address=instance.from_address, destination=instance.to_the_address,
+                              accepted_time=instance.accepted_time, finish_time=timezone.localtime(),
+                              state=state,
+                              partner=instance.driver.partner,
+                              fleet='Ninja')
 
 
 @app.task(bind=True, queue='bot_tasks')

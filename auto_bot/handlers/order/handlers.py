@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from app.models import Order, Driver, ParkSettings, Client, FleetOrder, Partner, ReportTelegramPayments
-from auto.tasks import get_distance_trip, send_map_to_client, order_create_task
+from auto.tasks import get_distance_trip, send_map_to_client, order_create_task, fleet_order
 from auto_bot.handlers.main.keyboards import markup_keyboard
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
     inline_repeat_keyboard, inline_reject_order, inline_increase_price_kb, inline_search_kb, inline_start_order_kb, \
@@ -424,15 +424,6 @@ def handle_callback_order(update, context):
             bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
             message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
             send_map_to_client.delay(order.id, driver.vehicle.licence_plate, message.message_id, message.chat_id)
-
-
-def fleet_order(instance, state=FleetOrder.COMPLETED):
-    FleetOrder.objects.create(order_id=instance.pk, driver=instance.driver,
-                              from_address=instance.from_address, destination=instance.to_the_address,
-                              accepted_time=instance.accepted_time, finish_time=timezone.localtime(),
-                              state=state,
-                              partner=instance.driver.partner,
-                              fleet='Ninja')
 
 
 def cash_order(update, query, order):
