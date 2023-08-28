@@ -13,22 +13,30 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-def assign_model_permissions(group):
-    models = {
-        'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
-        'Payments':                     {'view': True, 'add': False, 'change': False, 'delete': False},
-        'SummaryReport':                {'view': True, 'add': False, 'change': False, 'delete': False},
-        'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
-        'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
-        'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
-        'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
-        'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
-        'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
-        'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
-        'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
-    }
+models = {
+    'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Payments':                     {'view': True, 'add': False, 'change': False, 'delete': False},
+    'SummaryReport':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Manager':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
+    'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
+    'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
+}
 
-    for model, permissions in models.items():
+investor_permissions = {
+    'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
+    'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'VehicleSpendings':             {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Dashboard':                    {'view': True, 'add': False, 'change': False, 'delete': False},
+}
+
+
+def assign_model_permissions(group, permissions):
+    for model, permissions in permissions.items():
         content_type = ContentType.objects.get(app_label='app', model__iexact=model)
         model_permissions = Permission.objects.filter(content_type=content_type)
 
@@ -39,13 +47,21 @@ def assign_model_permissions(group):
             if value and permission_obj not in group.permissions.all():
                 group.permissions.add(permission_obj)
 
-
 try:
     group1, created = Group.objects.get_or_create(name='Partner')
     for user in group1.user_set.all():
         for permission in group1.permissions.all():
             user.user_permissions.add(permission)
-    assign_model_permissions(group1)
+    assign_model_permissions(group1, models)
+
+    group2, created = Group.objects.get_or_create(name='Investor')
+    assign_model_permissions(group2, investor_permissions)
+
+    group3, created = Group.objects.get_or_create(name='Manager')
+    for user in group3.user_set.all():
+        for permission in group3.permissions.all():
+            user.user_permissions.add(permission)
+    assign_model_permissions(group3, models)
 except (ProgrammingError, ObjectDoesNotExist):
     pass
 
@@ -66,6 +82,16 @@ def filter_queryset_by_group(*groups):
 
                 if not request.user.is_superuser and request.user.groups.filter(name__in=groups).exists():
                     queryset = queryset.filter(partner__user=request.user)
+
+                if request.user.is_superuser:
+                    return queryset
+
+                if request.user.groups.filter(name='Investor').exists():
+                    return queryset.filter(investor__user=request.user)
+                if request.user.groups.filter(name='Manager').exists():
+                    return queryset.filter(manager__user=request.user)
+                if request.user.groups.filter(name='Partner').exists():
+                    return queryset.filter(partner__user=request.user)
 
                 return queryset
 

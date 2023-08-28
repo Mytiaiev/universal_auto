@@ -404,18 +404,17 @@ def add_money_to_vehicle(self, partner_pk):
     car_efficiency_records = CarEfficiency.objects.filter(report_from=yesterday.date(), partner=partner_pk)
     sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'))
     for result in sum_by_plate:
-        vehicle = Vehicle.objects.get(licence_plate=result['licence_plate'], partner=partner_pk)
+        vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'], partner=partner_pk).first()
         if vehicle:
             currency = vehicle.сurrency_back
             total_kasa = result['total_sum']
             if currency != Vehicle.Currency.UAH:
                 result, rate = convert_to_currency(float(total_kasa), currency)
-                car_earnings = result / 2
-                vehicle.car_earnings += car_earnings
+                car_earnings = result * vehicle.investor_percentage
             else:
-                car_earnings = total_kasa / 2
-                vehicle.car_earnings += car_earnings
+                car_earnings = total_kasa * vehicle.investor_percentage
                 rate = 0.00
+            vehicle.car_earnings += car_earnings
             vehicle.save()
 
             TransactionsConversantion.objects.create(

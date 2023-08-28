@@ -1087,7 +1087,15 @@ $(document).ready(function () {
 	});
 
 	$("#loggedInUser").click(function () {
-		window.location.href = "/dashboard/";
+		if (localStorage.getItem('role') === 'investor') {
+			window.location.href = "/dashboard-investor/";
+		}
+		if (localStorage.getItem('role') === 'manager') {
+			window.location.href = "/dashboard/";
+		}
+		if (localStorage.getItem('role') === 'partner') {
+			window.location.href = "/dashboard-partner/";
+		}
 	});
 
 	$("#loginBtn").click(function () {
@@ -1123,6 +1131,7 @@ $(document).ready(function () {
 						$("#loginBtn").hide();
 						$("#loggedInUser").text('Кабінет Інвестора').show();
 						$("#loginForm").fadeOut();
+						localStorage.setItem('role', 'investor');
 						window.location.href = "/dashboard-investor/";
 					}
 
@@ -1130,6 +1139,7 @@ $(document).ready(function () {
 						$("#loginBtn").hide();
 						$("#loggedInUser").text('Кабінет Менеджера').show();
 						$("#loginForm").fadeOut();
+						localStorage.setItem('role', 'manager');
 						window.location.href = "/dashboard/";
 					}
 
@@ -1137,6 +1147,7 @@ $(document).ready(function () {
 						$("#loginBtn").hide();
 						$("#loggedInUser").text('Кабінет Партнера').show();
 						$("#loginForm").fadeOut();
+						localStorage.setItem('role', 'partner');
 						window.location.href = "/dashboard-partner/";
 					}
 
