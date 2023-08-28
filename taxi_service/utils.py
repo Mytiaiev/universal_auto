@@ -12,7 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
 						SummaryReport, CarEfficiency, Partner, ParkSettings,
-						Manager, Investor, Vehicle, )
+						Manager, Investor, Vehicle, VehicleSpendings, )
 from selenium_ninja.driver import SeleniumTools
 
 
@@ -167,8 +167,8 @@ def collect_total_earnings(period):
 	return total, total_amount, start_date_formatted, end_date_formatted
 
 
-def investor_cash_car(period, investor_pk):    #TODO: refactor this function
-	vehicle = {}
+def investor_cash_car(period, investor_pk):
+	vehicles = {}
 	total_amount = 0
 	total_km = 0
 
@@ -181,28 +181,58 @@ def investor_cash_car(period, investor_pk):    #TODO: refactor this function
 	end_date_formatted = end_period.strftime('%d.%m.%Y')
 
 	results = CarEfficiency.objects.filter(
-		Q(licence_plate__in=licence_plates)&
+		Q(licence_plate__in=licence_plates) &
 		Q(report_from__range=(start_period, end_period))
 	)
 
 	for result in results:
 		licence_plate = result.licence_plate
 		total_kasa = result.total_kasa
-		# investor_percentage = result.vehicle.investor_percentage
-		# print('#'*100)
-		# print(investor_percentage)
-		# print('#'*100)
-		earnings = float(total_kasa) * 0.35
+		vehicle = Vehicle.objects.get(licence_plate=licence_plate)
+		earnings = float(total_kasa) * float(vehicle.investor_percentage)
 
-		if licence_plate not in vehicle:
-			vehicle[licence_plate] = earnings
+		if licence_plate not in vehicles:
+			vehicles[licence_plate] = earnings
 		else:
-			vehicle[licence_plate] += earnings
+			vehicles[licence_plate] += earnings
 
 		total_amount += earnings
 		total_km += result.mileage
 
-	return vehicle, total_amount, total_km, start_date_formatted, end_date_formatted
+	return vehicles, total_amount, total_km, start_date_formatted, end_date_formatted
+
+
+def car_piggy_bank(request):
+	investor = Investor.objects.get(user_id=request.user.id)
+	investor_cars = Vehicle.objects.filter(investor_car=investor)
+
+	cars_data = []
+
+	for car in investor_cars:
+		licence_plate = car.licence_plate
+		purchase_price = car.purchase_price
+
+		spendings = VehicleSpendings.objects.filter(vehicle=car)
+		total_spent = sum(spending.amount for spending in spendings)
+
+		car_efficiencies = CarEfficiency.objects.filter(
+			licence_plate=licence_plate)
+		total_kasa = sum(
+			efficiency.total_kasa for efficiency in car_efficiencies)
+
+		progress_percentage = ((total_kasa - total_spent) / purchase_price) * 100
+		# progress_percentage = float('{:.2f}'.format(progress_percentage)) # TODO: check this
+		progress_percentage = int(progress_percentage)
+
+		cars_data.append({
+			'licence_plate': licence_plate,
+			'purchase_price': purchase_price,
+			'total_spent': total_spent,
+			'total_kasa': total_kasa,
+			'progress_percentage': progress_percentage
+		})
+
+	return cars_data
 
 
 def average_effective_vehicle():

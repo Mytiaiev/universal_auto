@@ -13,7 +13,8 @@ from django.utils.decorators import method_decorator
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-from taxi_service.utils import weekly_rent, average_effective_vehicle
+from taxi_service.utils import weekly_rent, average_effective_vehicle, \
+    car_piggy_bank
 from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
 
 
@@ -143,6 +144,7 @@ class DashboardInvestorView(TemplateView):
         investor_cars = Vehicle.objects.filter(investor_car=investor)
 
         context['get_all_vehicle'] = investor_cars
+        context['car_piggy_bank'] = car_piggy_bank(self.request)
 
         return context
 

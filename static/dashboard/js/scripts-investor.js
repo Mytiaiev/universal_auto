@@ -459,4 +459,12 @@ $(document).ready(function () {
 	$('.burger-menu').click(function () {
 		$('.burger-menu').toggleClass('open');
 	});
+
+	$('#investorVehicleBtn').click(function () {
+		$('.payback-car').show();
+		$('.payback-car').css('display', 'flex');
+		$('.charts').hide();
+		$('.main-cards').hide();
+	});
+
 });

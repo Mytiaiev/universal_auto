@@ -75,14 +75,14 @@
 		</div>
 		<ul class="sidebar-list">
 			<li class="sidebar-list-item">
-				<a href="{% url 'dashboard_investor' %}">
+				<a href="{% url 'dashboard_investor' %}" class="dashboardHome">
 					<span class="material-icons-outlined"></span> Dashboard
 				</a>
 			</li>
 			<li class="sidebar-list-item">
-				<a href="#" target="_blank">
+				<span id="investorVehicleBtn" class="clickable">
 					<span class="material-icons-outlined"></span> Автомобілі
-				</a>
+				</span>
 			</li>
 			<li class="sidebar-list-item">
 				<a href="#" target="_blank">
@@ -174,22 +174,26 @@
 				</div>
 			</div>
 		</div>
+		{% for car in car_piggy_bank %}
 		<div class="payback-car">
 			<div class="car-item">
 				<div class="car-image">
 					<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
 				</div>
 				<div class="car-details">
-					<p>Номер авто:<br>AB1234АВ</p>
-					<p>Заробіток:<br>$5000</p>
-					<p>Витрати:<br>$2500</p>
+					<p>Номер авто:<br>{{ car.licence_plate }}</p>
+					<p>Заробіток:<br>₴ {{ car.total_kasa }}</p>
+					<p>Витрати:<br>₴ {{ car.total_spent }}</p>
 					<div class="progress-bar">
-						<div class="progress" style="width: 70%;"></div>
+						<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
+							<div class="progress-label">{{ car.progress_percentage }}%</div>
+						</div>
 					</div>
-					<p>Повна сума авто:<br>$20000</p>
+					<p>Повна сума авто:<br>₴ {{ car.purchase_price }}</p>
 				</div>
 			</div>
 			</div>
+		{% endfor %}
 	</main>
 </div>
 

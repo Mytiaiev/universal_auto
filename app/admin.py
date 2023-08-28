@@ -404,6 +404,17 @@ class JobApplicationAdmin(admin.ModelAdmin):
     ]
 
 
+@admin.register(VehicleSpendings)
+class VehicleSpendingsAdmin(admin.ModelAdmin):
+    list_display = ['id', 'vehicle']
+
+    fieldsets = [
+        (None, {'fields': ['vehicle', 'amount',
+                           'category', 'description'
+                           ]}),
+    ]
+
+
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = ['licence_plate']
