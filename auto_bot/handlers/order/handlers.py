@@ -50,8 +50,7 @@ def get_location(update, context):
                               ParkSettings.get_value('GOOGLE_API_KEY'))
         if address is not None:
             redis_instance().hset(chat_id, 'location_address', address)
-            update.message.reply_text(text=f'Ваша адреса: {address}')
-            # update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=ReplyKeyboardRemove())
             update.message.reply_text(text=ask_spot_text, reply_markup=inline_location_kb())
         else:
             update.message.reply_text(text=no_location_text)
@@ -282,13 +281,13 @@ def increase_order_price(update, context):
 def choose_date_order(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
-    # order = Order.objects.filter(chat_id_client=chat_id,
-    #                              status_order__in=[Order.ON_TIME, Order.WAITING])
-    # if order:
-    #     query.edit_message_text(order_not_payment)
-    # else:
-    query.edit_message_text(order_date_text)
-    query.edit_message_reply_markup(inline_choose_date_kb())
+    order = Order.objects.filter(chat_id_client=chat_id,
+                                 status_order__in=[Order.ON_TIME, Order.WAITING])
+    if order:
+        query.edit_message_text(order_not_payment)
+    else:
+        query.edit_message_text(order_date_text)
+        query.edit_message_reply_markup(inline_choose_date_kb())
 
 
 def time_order(update, context):
