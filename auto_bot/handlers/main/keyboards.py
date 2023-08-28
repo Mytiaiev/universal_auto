@@ -41,6 +41,7 @@ def inline_user_kb():
     keyboard = [
         # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
+        [InlineKeyboardButton(main_buttons[8], callback_data="Personal_driver")],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")],
         [InlineKeyboardButton(main_buttons[7], callback_data="About_us")],
     ]

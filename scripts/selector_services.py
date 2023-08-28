@@ -62,7 +62,7 @@ uber_states = {
 }
 
 states = {
-    'UKLON_SESSION': ('https://fleets.uklon.com.ua/api/auth', 'url'),
+    'UKLON_SESSION': ('https://fleets.uklon.com.ua/api/', 'url'),
     'UKLON_1': ('https://fleets.uklon.com.ua/api/fleets/', 'url'),
     'UKLON_2': ('/vehicles', 'url'),
     'UKLON_3': ('https://fleets.uklon.com.ua/api/fleets/reports/', 'url'),

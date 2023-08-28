@@ -8,6 +8,25 @@ share_location = [
 ]
 
 
+def personal_order_start_kb():
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[3], callback_data="Personal_order"),
+         InlineKeyboardButton(order_inline_buttons[11], callback_data="Back_to_main")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def personal_order_time_kb():
+    keyboard = [
+        [InlineKeyboardButton(pd_time_buttons[0], callback_data="Hour 2"),
+         InlineKeyboardButton(pd_time_buttons[1], callback_data="Hour 3")],
+        [InlineKeyboardButton(pd_time_buttons[2], callback_data="Hour 4"),
+         InlineKeyboardButton(pd_time_buttons[3], callback_data="Hour 5")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
 def inline_payment_kb():
     keyboard = [
         [InlineKeyboardButton(price_inline_buttons[4], callback_data="Cash_payment 0")],
@@ -27,7 +46,7 @@ def inline_location_kb():
 
 def inline_start_order_kb():
     keyboard = [
-        [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
+        # [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
         [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]

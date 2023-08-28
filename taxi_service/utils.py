@@ -1,7 +1,9 @@
 import json
 import random
+import secrets
 from datetime import timedelta, date
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum
 from django.utils import timezone
 from django.core.mail import send_mail
@@ -213,6 +215,15 @@ def effective_vehicle(period, vehicle):
 
 	return result
 
+def update_park_set(partner, key, value, description=None):
+	try:
+		setting = ParkSettings.objects.get(key=key, partner=partner)
+		if setting.value != value:
+			setting.value = value
+			setting.save()
+	except ObjectDoesNotExist:
+		ParkSettings.objects.create(key=key, value=value, description=description, partner=partner)
+
 
 def login_in(action, login_name, password, user_id):
 	partner = Partner.objects.get(user_id=user_id)
@@ -223,40 +234,9 @@ def login_in(action, login_name, password, user_id):
 
 		if success_login[0]:
 			bolt_url_id = success_login[1].split('/')[-2]
-			try:
-				bolt_password_setting = ParkSettings.objects.get(
-					key='BOLT_PASSWORD', partner=partner)
-				if bolt_password_setting.value != password:
-					bolt_password_setting.value = password
-					bolt_password_setting.save()
-			except ParkSettings.DoesNotExist:
-				ParkSettings.objects.create(key='BOLT_PASSWORD', value=password,
-											description='Пароль користувача Bolt',
-											partner=partner)
-
-			try:
-				bolt_name_setting = ParkSettings.objects.get(key='BOLT_NAME',
-															 partner=partner)
-				if bolt_name_setting.value != login_name:
-					bolt_name_setting.value = login_name
-					bolt_name_setting.save()
-			except ParkSettings.DoesNotExist:
-				ParkSettings.objects.create(key='BOLT_NAME', value=login_name,
-											description='Ім\'я користувача Bolt',
-											partner=partner)
-
-			try:
-				bolt_url_setting = ParkSettings.objects.get(
-					key='BOLT_URL_ID_PARK', partner=partner)
-				if bolt_url_setting.value != bolt_url_id:
-					bolt_url_setting.value = bolt_url_id
-					bolt_url_setting.save()
-			except ParkSettings.DoesNotExist:
-				ParkSettings.objects.create(key='BOLT_URL_ID_PARK',
-											value=bolt_url_id,
-											description='BOLT_URL_ID_Парка',
-											partner=partner)
-
+			update_park_set(partner, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt')
+			update_park_set(partner, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt')
+			update_park_set(partner, 'BOLT_URL_ID_PARK', bolt_url_id, description='BOLT_URL_ID_Парка')
 			return True
 		else:
 			return False
@@ -265,28 +245,11 @@ def login_in(action, login_name, password, user_id):
 		success_login = selenium_tools.uklon_login(login=login_name[4:],
 												   password=password)
 		if success_login:
-			try:
-				uklon_password_setting = ParkSettings.objects.get(
-					key='UKLON_PASSWORD', partner=partner)
-				if uklon_password_setting.value != password:
-					uklon_password_setting.value = password
-					uklon_password_setting.save()
-			except ParkSettings.DoesNotExist:
-				ParkSettings.objects.create(key='UKLON_PASSWORD',
-											description='Пароль користувача Uklon',
-											value=password, partner=partner)
-
-			try:
-				uklon_name_setting = ParkSettings.objects.get(key='UKLON_NAME',
-															  partner=partner)
-				if uklon_name_setting.value != login_name:
-					uklon_name_setting.value = login_name
-					uklon_name_setting.save()
-			except ParkSettings.DoesNotExist:
-				ParkSettings.objects.create(key='UKLON_NAME', value=login_name,
-											description='Ім\'я користувача Uklon',
-											partner=partner)
-
+			update_park_set(partner, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon')
+			update_park_set(partner, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon')
+			hex_length = 16
+			random_hex = secrets.token_hex(hex_length)
+			update_park_set(partner, 'CLIENT_ID', random_hex, description='Ідентифікатор клієнта Uklon')
 			return True
 		else:
 			return False
@@ -296,27 +259,8 @@ def login_in(action, login_name, password, user_id):
 												  password=password)
 		selenium_tools.quit()
 		if success_login:
-			try:
-				uber_password_setting = ParkSettings.objects.get(
-					key='UBER_PASSWORD', partner=partner)
-				if uber_password_setting.value != password:
-					uber_password_setting.value = password
-					uber_password_setting.save()
-			except ObjectDoesNotExist:
-				ParkSettings.objects.create(key='UBER_PASSWORD', value=password,
-											description='Пароль користувача Uber',
-											partner=partner)
-
-			try:
-				uber_name_setting = ParkSettings.objects.get(key='UBER_NAME',
-															 partner=partner)
-				if uber_name_setting.value != login_name:
-					uber_name_setting.value = login_name
-					uber_name_setting.save()
-			except ObjectDoesNotExist:
-				ParkSettings.objects.create(key='UBER_NAME', value=login_name,
-											description='Ім\'я користувача Uber',
-											partner=partner)
+			update_park_set(partner, 'UBER_PASSWORD', password, description='Пароль користувача Uber')
+			update_park_set(partner, 'UBER_NAME', login_name, description='Ім\'я користувача Uber')
 
 			return True
 		else:
