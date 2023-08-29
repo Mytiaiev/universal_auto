@@ -22,9 +22,8 @@ from scripts.redis_conn import redis_instance
 def personal_driver_info(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
-    context.bot.send_message(chat_id=chat_id, text=personal_driver_text)
-    query.edit_message_text(ask_client_accept)
-    query.edit_message_reply_markup(personal_order_start_kb)
+    context.bot.send_message(chat_id=chat_id, text=ask_client_accept, reply_markup=personal_order_start_kb())
+    query.edit_message_text(personal_driver_text)
 
 
 def get_personal_time(update, context):
@@ -39,12 +38,15 @@ def get_personal_time(update, context):
 
 def payment_personal_order(update, context):
     query = update.callback_query
+
     chat_id = update.effective_chat.id
     hours = int(query.data.split()[1])
     redis_instance().hset(str(chat_id), 'hours', hours)
     price = hours * 500
+    query.edit_message_text(complete_personal_order(price))
+    payload = f"{chat_id} {query.message.message_id}"
     payment_request(update, context, chat_id, os.environ["PAYMENT_TOKEN"],
-                    os.environ["BOT_URL_IMAGE_TAXI"], price, chat_id)
+                    os.environ["BOT_URL_IMAGE_TAXI"], price, payload)
 
 
 def continue_order(update, context):
@@ -108,6 +110,7 @@ def to_the_address(update, context):
     chat_id = update.effective_chat.id
     if redis_instance().hget(str(chat_id), 'personal_flag'):
         payment_method(update, context)
+        return
     state = int(redis_instance().hget(str(chat_id), 'state'))
     if state == FROM_ADDRESS:
         buttons = [[InlineKeyboardButton(f'{NOT_CORRECT_ADDRESS}', callback_data='From_address 0')], ]
@@ -170,6 +173,7 @@ def get_additional_info(update, context):
     personal_order = redis_instance().hget(str(chat_id), 'personal_flag')
     if personal_order:
         get_personal_time(update, context)
+        return
     if query:
         query.edit_message_text(payment_text)
         query.edit_message_reply_markup(inline_payment_kb())
@@ -422,8 +426,8 @@ def payment_request(update, context, chat_id_client, provider_token, url,
                              prices=prices,
                              photo_url=url,
                              need_shipping_address=False,
-                             photo_width=615,
-                             photo_height=512,
+                             photo_width=360,
+                             photo_height=160,
                              photo_size=50000,
                              is_flexible=False)
 
@@ -518,7 +522,7 @@ def precheckout_callback(update, context):
     data = query.invoice_payload.split()
     order = Order.objects.filter(chat_id_client=chat_id).last()
     redis_instance().hset(chat_id, 'message_data', data[1])
-    if data[0] in [f'{order.pk}', chat_id]:
+    if data[0] in [f'{order.pk}', f'{chat_id}']:
         query.answer(ok=True)
     else:
         query.answer(ok=False, error_message=error_payment)
@@ -552,11 +556,20 @@ def successful_payment(update, context):
     else:
         save_location_to_redis(chat_id)
         user_data = redis_instance().hgetall(chat_id)
-        data = {'dispatch_time': user_data['time_order'],
+        client = Client.get_by_chat_id(chat_id)
+        data = {'order_time': user_data['time_order'],
+                'chat_id_client': chat_id,
+                'phone_number': client.phone_number,
+                'from_address': user_data['from_address'],
                 'latitude': user_data['latitude'],
                 'longitude': user_data['longitude'],
-                'hours': user_data['hours'],
-        }
+                'payment_hours': user_data['hours'],
+                'type_order': Order.PERSONAL_TYPE,
+                'status_order': Order.ON_TIME,
+                }
+        if user_data.get('info'):
+            data['info'] = user_data['info']
+        Order.objects.create(**data)
 
 
 

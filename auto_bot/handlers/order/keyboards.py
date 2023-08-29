@@ -27,6 +27,13 @@ def personal_order_time_kb():
     return InlineKeyboardMarkup(keyboard)
 
 
+def personal_order_continue_kb():
+    keyboard = [
+        [InlineKeyboardButton(pd_time_buttons[4], callback_data="Continue_personal")],
+        [InlineKeyboardButton(pd_time_buttons[5], callback_data="Finish_personal")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
 def inline_payment_kb():
     keyboard = [
         [InlineKeyboardButton(price_inline_buttons[4], callback_data="Cash_payment 0")],

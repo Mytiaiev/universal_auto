@@ -20,11 +20,11 @@ from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
-from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot,\
-    inline_spot_keyboard, inline_reject_order
+from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
+    inline_spot_keyboard, inline_reject_order, personal_order_continue_kb
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
-    client_order_text, order_customer_text, search_driver
+    client_order_text, order_customer_text, search_driver, personal_time_route_end
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
@@ -398,6 +398,21 @@ def check_time_order(self, order_id):
     redis_instance().hset('group_msg', order_id, group_msg.message_id)
     instance.checked = True
     instance.save()
+
+
+@app.task(bind=True, queue='bot_tasks')
+def check_personal_orders(self):
+    for order in Order.objects.filter(status_order=Order.IN_PROGRESS, type_order=Order.PERSONAL_TYPE):
+        finish_time = order.order_time + timedelta(hours=order.payment_hours)
+        distance = order.payment_hours * ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')
+        vehicle = order.driver.vehicle
+        gps = UaGpsSynchronizer()
+        route = gps.generate_report(gps.get_timestamp(order.order_time),
+                                    gps.get_timestamp(finish_time), vehicle.gps_id)[0]
+        if timezone.localtime() + timedelta(minutes=15) > finish_time or distance < route - 10:
+            bot.send_message(chat_id=order.chat_id_client, text=personal_time_route_end(finish_time, distance-route),
+                             reply_markup=personal_order_continue_kb())
+            bot.send_message(chat_id=order.driver.chat_id, text=personal_time_route_end(finish_time, distance-route))
 
 
 @app.task(bind=True, queue='beat_tasks')

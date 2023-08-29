@@ -64,6 +64,7 @@ personal_driver_text = "Основна ідея послуги <Персонал
 ask_client_accept = "Чи бажаєте продовжити?"
 pd_time_text = "Вкажіть на скільки годин потрібно авто?"
 
+
 order_inline_buttons = (
     "\u274c Відхилити",
     "\u2705 Прийняти замовлення",
@@ -105,7 +106,9 @@ pd_time_buttons = (
     "Дві години",
     "Три години",
     "Чотири години",
-    "П'ять годин"
+    "П'ять годин",
+    "Продовжити поїздку",
+    "Завершити замовлення"
 )
 
 date_inline_buttons = (
@@ -187,8 +190,19 @@ def manager_change_payments_info(order):
               f"Змінив спосіб оплати на: {order.payment_method}\n"
     return message
 
+
 def small_time_delta(time, delta):
     format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
     message = f'Вкажіть, будь ласка, більш пізній час.\n' \
               f'Мінімальний час для передзамовлення: {format_time}'
     return message
+
+
+def complete_personal_order(price):
+    return f'Замовлення сформоване, сума до сплати {price}грн.'
+
+
+def personal_time_route_end(end_time, route):
+    format_time = end_time.time().strftime('%H:%M')
+    return f'Замовлення завершується {format_time} або через {route}км'
+
