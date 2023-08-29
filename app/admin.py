@@ -813,6 +813,17 @@ class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         elif schema_field == 'RENT':
             obj.rate = 1
             obj.rental = int(obj.plan/2 - 400)
+        fleet = Fleet.objects.get(name='Ninja')
+        chat_id = form.cleaned_data.get('chat_id')
+        driver_fleet = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
+                                                                   driver_external_id=chat_id)
+        if chat_id and not driver_fleet:
+            Fleets_drivers_vehicles_rate.objects.create(fleet=fleet,
+                                                        driver_external_id=chat_id,
+                                                        driver=obj,
+                                                        partner=obj.partner,
+                                                        vehicle=obj.vehicle)
+
         super().save_model(request, obj, form, change)
 
 
