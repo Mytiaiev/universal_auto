@@ -336,12 +336,12 @@ def client_reject_order(update, context):
     try:
         driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
         bot.delete_message(chat_id=order.driver.chat_id, message_id=driver_msg)
-        bot.send_message(
-            chat_id=order.driver.chat_id,
-            text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
-        )
     except Exception:
         pass
+    bot.send_message(
+        chat_id=order.driver.chat_id,
+        text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
+    )
     text_to_client(order=order,
                    text=client_cancel,
                    button=inline_comment_for_client())

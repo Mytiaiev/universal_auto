@@ -1,4 +1,4 @@
-app = "workers"
+app = "workers-prod"
 kill_signal = "SIGINT"
 primary_region = "otp"
 kill_timeout = 5

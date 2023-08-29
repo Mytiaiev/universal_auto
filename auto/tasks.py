@@ -89,7 +89,7 @@ def get_uber_session(self, partner_pk):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_orders_from_fleets(self, partner_pk, day=None):
-    uber_driver = SeleniumTools(partner_pk)
+
     if day is None:
         day = timezone.localtime() - timedelta(days=1)
     else:
@@ -98,9 +98,11 @@ def get_orders_from_fleets(self, partner_pk, day=None):
     for driver in drivers:
         BoltRequest(partner_pk).get_fleet_orders(day, driver.pk)
         UklonRequest(partner_pk).get_fleet_orders(day, driver.pk)
-    uber_driver.download_payments_order("Uber", day)
-    uber_driver.save_trips_report("Uber", day)
-    uber_driver.quit()
+    if not FleetOrder.objects.filter(fleet="Uber", accepted_time__date=day):
+        uber_driver = SeleniumTools(partner_pk)
+        uber_driver.download_payments_order("Uber", day)
+        uber_driver.save_trips_report("Uber", day)
+        uber_driver.quit()
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -194,7 +196,7 @@ def get_driver_efficiency(self, partner_pk, day=None):
             yesterday = day - timedelta(days=1)
             for report in using_info:
                 if report.end_at:
-                    if report.end_at__date == day:
+                    if report.end_at.date() == day:
                         hours_online += report.end_at - report.created_at
                 else:
                     hours_online += end - report.created_at
@@ -378,7 +380,7 @@ def send_driver_efficiency(self, partner_pk):
         result = get_driver_efficiency_report(manager_id=manager.chat_id)
         if result:
             for k, v in result.items():
-                message += f"{k}\n" + "".join(v)
+                message += f"{k}\n" + "".join(v) + "\n"
             dict_msg[partner_pk] = message
     return dict_msg
 
@@ -664,21 +666,21 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
-    sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
-    # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
-    sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
-    sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute="0", hour="5"), add_money_to_vehicle.s(partner_id))
-    sender.add_periodic_task(crontab(minute="20", hour="4"), get_driver_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
+    sender.add_periodic_task(crontab(minute="0", hour="3"), download_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour='*/4'), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute="40", hour='3'), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute="15", hour='3'), get_orders_from_fleets.s(partner_id))
+    sender.add_periodic_task(crontab(minute="2", hour="8"), send_driver_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="8"), send_efficiency_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="30", hour="6"), get_car_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="4"), add_money_to_vehicle.s(partner_id))
+    sender.add_periodic_task(crontab(minute="20", hour="3"), get_driver_efficiency.s(partner_id))
+    sender.add_periodic_task(crontab(minute="1", hour="8"), send_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="55", hour="7", day_of_week="1"),
                              send_weekly_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
                              manager_paid_weekly.s(partner_id))
-    sender.add_periodic_task(crontab(minute="55", hour="10", day_of_week="1"),
+    sender.add_periodic_task(crontab(minute="55", hour="9", day_of_week="1"),
                              get_uber_session.s(partner_id))
 
 
