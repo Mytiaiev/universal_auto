@@ -366,6 +366,7 @@ class VehicleSpendings(models.Model):
     amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Сума')
     category = models.CharField(max_length=255, choices=Category.choices, verbose_name='Категорія витрат')
     description = models.TextField(blank=True, null=True, verbose_name='Опис')
+    photo = models.ImageField(upload_to='spendings/', blank=True, null=True, verbose_name='Фото')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
 
 
