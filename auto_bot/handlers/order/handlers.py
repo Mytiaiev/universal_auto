@@ -335,6 +335,14 @@ def client_reject_order(update, context):
                                   state=FleetOrder.CLIENT_CANCEL,
                                   partner=order.driver.partner,
                                   fleet='Ninja')
+    else:
+        try:
+            group_msg = redis_instance().hget('group_msg', order.pk)
+            context.bot.delete_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
+                                       message_id=group_msg)
+            redis_instance().hdel('group_msg', order.pk)
+        except:
+            pass
     order.status_order = Order.CANCELED
     order.finish_time = timezone.localtime()
     order.save()
@@ -347,12 +355,12 @@ def client_reject_order(update, context):
     try:
         driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
         bot.delete_message(chat_id=order.driver.chat_id, message_id=driver_msg)
-        bot.send_message(
-            chat_id=order.driver.chat_id,
-            text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
-        )
     except Exception:
         pass
+    bot.send_message(
+        chat_id=order.driver.chat_id,
+        text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
+    )
     text_to_client(order=order,
                    text=client_cancel,
                    button=inline_comment_for_client())
