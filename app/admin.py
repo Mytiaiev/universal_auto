@@ -80,14 +80,22 @@ def filter_queryset_by_group(*groups):
             def get_queryset(self, request):
                 queryset = super().get_queryset(request)
 
-                if not request.user.is_superuser and request.user.groups.filter(name__in=groups).exists():
+                if not request.user.is_superuser and request.user.groups.filter(
+                        name__in=groups).exists():
                     queryset = queryset.filter(partner__user=request.user)
 
                 if request.user.is_superuser:
                     return queryset
 
                 if request.user.groups.filter(name='Investor').exists():
-                    return queryset.filter(investor__user=request.user)
+
+                    investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
+                    investor_vehicle_ids = investor_vehicles.values_list('licence_plate', flat=True)
+
+                    queryset = queryset.filter(licence_plate__in=investor_vehicle_ids)
+
+                    return queryset
+
                 if request.user.groups.filter(name='Manager').exists():
                     return queryset.filter(manager__user=request.user)
                 if request.user.groups.filter(name='Partner').exists():
@@ -432,13 +440,28 @@ class JobApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(VehicleSpendings)
 class VehicleSpendingsAdmin(admin.ModelAdmin):
-    list_display = ['id', 'vehicle']
+    list_display = ['id', 'vehicle', 'amount', 'category', 'description']
 
     fieldsets = [
         (None, {'fields': ['vehicle', 'amount',
                            'category', 'description'
                            ]}),
     ]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if request.user.is_superuser:
+            return queryset
+        else:
+            request.user.groups.filter(name='Investor').exists()
+            investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
+            investor_vehicle_ids = investor_vehicles.values_list('licence_plate', flat=True)
+            queryset = queryset.filter(vehicle__licence_plate__in=investor_vehicle_ids)
+
+            return queryset
+
+
+VehicleSpendingsAdmin = filter_queryset_by_group('Investor')(VehicleSpendingsAdmin)
 
 
 @admin.register(CarEfficiency)
@@ -1035,7 +1058,18 @@ class ParkSettingsAdmin(admin.ModelAdmin):
 class DashboardAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         if request.method == "GET":
-            dashboard_url = reverse('dashboard')
+            user = request.user
+
+            if user.groups.filter(name='Investor').exists():
+                dashboard_url = reverse('dashboard_investor')
+            elif user.groups.filter(name='Partner').exists():
+                dashboard_url = reverse('dashboard_partner')
+            elif user.groups.filter(name='Manager').exists():
+                dashboard_url = reverse('dashboard')
+            else:
+                # Default dashboard for other users
+                dashboard_url = reverse('dashboard')
+
             return redirect(dashboard_url)
 
         return super().changelist_view(request, extra_context)
