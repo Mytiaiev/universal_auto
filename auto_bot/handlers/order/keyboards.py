@@ -39,7 +39,7 @@ def inline_search_kb():
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[0], callback_data="Increase_price")],
         [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
-        # [InlineKeyboardButton(search_inline_buttons[3], callback_data="No_driver_time_order")],
+        [InlineKeyboardButton(search_inline_buttons[3], callback_data="Tomorrow_order")],
         [InlineKeyboardButton(search_inline_buttons[2], callback_data="Cancel_order")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -127,6 +127,7 @@ def inline_choose_date_kb():
     keyboard = [
         [InlineKeyboardButton(date_inline_buttons[0], callback_data="Today_order")],
         [InlineKeyboardButton(date_inline_buttons[1], callback_data="Tomorrow_order")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

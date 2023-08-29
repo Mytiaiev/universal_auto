@@ -27,7 +27,7 @@ def inline_more_func_kb():
 
 def inline_driver_func_kb():
     keyboard = [
-        [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
+        # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         # [InlineKeyboardButton(driver_option_buttons[0], callback_data="Service_car")],
         # [InlineKeyboardButton(driver_option_buttons[1], callback_data="Crash_car")],
         [InlineKeyboardButton(driver_option_buttons[2], callback_data="Off day_driver")],

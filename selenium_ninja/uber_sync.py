@@ -114,7 +114,7 @@ class UberRequest(Synchronizer):
                             'pay_cash': True,
                             'vehicle_name': vehicle_name,
                             'vin_code': vin_code,
-                            'access_type': True})
+                            'worked': True})
         return drivers
 
     def save_report(self, day):

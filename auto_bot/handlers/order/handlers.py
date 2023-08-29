@@ -282,8 +282,8 @@ def choose_date_order(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     order = Order.objects.filter(chat_id_client=chat_id,
-                                 status_order__in=[Order.ON_TIME, Order.WAITING])
-    if order:
+                                 status_order__in=[Order.ON_TIME, Order.WAITING]).count()
+    if order > 3:
         query.edit_message_text(order_not_payment)
     else:
         query.edit_message_text(order_date_text)
