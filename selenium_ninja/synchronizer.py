@@ -154,7 +154,7 @@ class Synchronizer:
             driver.email = email
             update_fields.append(key_email)
         elif not block:
-            driver.manager = None
+            driver.worked = False
             driver.save()
         elif update_fields:
             driver.save(update_fields=update_fields)

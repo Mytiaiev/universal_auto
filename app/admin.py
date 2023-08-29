@@ -58,14 +58,14 @@ def add_partner_permissions(sender, instance, created, **kwargs):
             assign_model_permissions(user)
 
 
-def filter_queryset_by_group(*groups):
+def filter_queryset_by_group(*groups, field_to_filter=None):
     def decorator(model_admin_class):
         class FilteredModelAdmin(model_admin_class):
             def get_queryset(self, request):
                 queryset = super().get_queryset(request)
 
                 if not request.user.is_superuser and request.user.groups.filter(name__in=groups).exists():
-                    queryset = queryset.filter(partner__user=request.user)
+                    queryset = queryset.filter(partner__user=request.user, **{field_to_filter: True})
 
                 return queryset
 
@@ -668,7 +668,7 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(Driver)
 @add_partner_on_save_model(Driver)
-class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(admin.ModelAdmin)):
     search_fields = ('name', 'second_name')
     ordering = ('name', 'second_name')
     list_per_page = 25

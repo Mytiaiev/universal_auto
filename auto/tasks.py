@@ -273,8 +273,8 @@ def update_driver_status(self, partner_pk):
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
         BoltRequest(partner_pk).synchronize()
-        UklonRequest(partner_pk).synchronize()
         UberRequest(partner_pk).synchronize()
+        UklonRequest(partner_pk).synchronize()
         UaGpsSynchronizer().get_vehicle_id()
     except Exception as e:
         logger.error(e)

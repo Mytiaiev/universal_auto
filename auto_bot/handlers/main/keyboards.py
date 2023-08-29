@@ -106,9 +106,7 @@ def inline_work_driver_kb():
 
 def get_start_kb(user):
     role_reply_markup = {
-        "DRIVER": inline_start_driver_kb() if not UseOfCars.objects.filter(user_vehicle=user,
-                                                                           created_at__date=timezone.now().date(),
-                                                                           end_at=None) else inline_work_driver_kb(),
+        "DRIVER": inline_start_driver_kb(),
         "CLIENT": inline_user_kb(ParkSettings.get_value('SHIPPING_CHILDS')),
         "DRIVER_MANAGER": inline_manager_kb(),
         "OWNER": inline_owner_kb()
