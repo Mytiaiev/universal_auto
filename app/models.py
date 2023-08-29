@@ -25,12 +25,7 @@ class Role(models.TextChoices):
 
 
 class Partner(models.Model):
-    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
-    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
-    email = models.EmailField(max_length=254, blank=True, null=True, verbose_name='Електрона пошта')
-    phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
     role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
-
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
 
     @classmethod
@@ -254,9 +249,6 @@ class Manager(models.Model):
 
 
 class Investor(models.Model):
-    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
-    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
-    email = models.EmailField(max_length=254, blank=True, null=True, verbose_name='Електрона пошта')
     phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
     role = models.CharField(max_length=25, default=Role.INVESTOR, choices=Role.choices)
 
@@ -267,7 +259,7 @@ class Investor(models.Model):
         verbose_name_plural = 'Інвестори'
 
     def __str__(self) -> str:
-        return f'{self.first_name} {self.last_name}'
+       return f'{self.user.username}'
 
 
 class Vehicle(models.Model):
@@ -354,6 +346,13 @@ class TransactionsConversantion(models.Model):
     currency_rate = models.DecimalField(decimal_places=2, max_digits=10, default=0,
                                         verbose_name="Курс валюти")
     sum_after_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума після транзакції")
+
+    class Meta:
+        verbose_name = 'Транзакція'
+        verbose_name_plural = 'Транзакції'
+
+    def __str__(self) -> str:
+        return f'{self.vehicle} {self.sum_before_transaction} {self.сurrency}'
 
 
 class VehicleSpendings(models.Model):

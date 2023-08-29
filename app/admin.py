@@ -464,6 +464,17 @@ class VehicleSpendingsAdmin(admin.ModelAdmin):
 VehicleSpendingsAdmin = filter_queryset_by_group('Investor')(VehicleSpendingsAdmin)
 
 
+@admin.register(TransactionsConversantion)
+class TransactionsConversantionAdmin(admin.ModelAdmin):
+    list_filter = ['vehicle']
+
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['vehicle', 'sum_before_transaction', 'сurrency', 'currency_rate', 'sum_after_transaction']
+
+
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = ['licence_plate']
@@ -683,26 +694,21 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'role')
-    list_display_links = ('first_name', 'last_name')
-    list_filter = ['first_name']
-    ordering = ('first_name', 'last_name')
+    list_display = ('role',)
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['first_name', 'last_name', 'email', 'phone_number', 'user', 'role']}),
+        (None, {'fields': ['user', 'role']}),
     ]
 
 
 @admin.register(Investor)
 class InvestorAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'user', 'role')
-    list_display_links = ('first_name', 'last_name')
-    list_filter = ['first_name']
+    list_display = ('phone_number', 'user', 'role')
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['first_name', 'last_name', 'email', 'phone_number', 'user', 'role']}),
+        (None, {'fields': ['phone_number', 'user', 'role']}),
     ]
 
 
