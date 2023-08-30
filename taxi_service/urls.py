@@ -13,6 +13,7 @@ urlpatterns = [
     path('dashboard-investor/', DashboardInvestorView.as_view(), name='dashboard_investor'),
     path('dashboard-partner/', DashboardPartnerView.as_view(), name='dashboard_partner'),
     path('sign-in/', GoogleAuthView.as_view(), name='sign_in'),
+    path('send-to-telegram/', SendToTelegramView.as_view(), name='send_to_telegram'),
     path('blog/', blog, name='blog'),
     path('why/', why, name='why'),
     path('user-agreement/', agreement, name='user_agreement'),

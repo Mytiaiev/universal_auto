@@ -1,5 +1,8 @@
+import os
+
 import jwt
 import json
+import telegram
 
 from django.urls import reverse
 from django.shortcuts import render, redirect
@@ -200,6 +203,19 @@ class GoogleAuthView(View):
                 return redirect(reverse('index') + "?signed_in=false")
 
         return HttpResponseRedirect(redirect_url)
+
+
+class SendToTelegramView(View):
+    def get(self, request, *args, **kwargs):
+
+        bot_token = os.environ.get('TELEGRAM_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+
+        chat_id = os.environ.get('TELEGRAM_BOT_CHAT_ID')
+
+        telegram_link = f"https://t.me/{bot.username}?start={chat_id}"
+
+        return HttpResponseRedirect(telegram_link)
 
 
 def blog(request):
