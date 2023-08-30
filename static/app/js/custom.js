@@ -1087,15 +1087,25 @@ $(document).ready(function () {
 	});
 
 	$("#loggedInUser").click(function () {
-		if (localStorage.getItem('role') === 'investor') {
-			window.location.href = "/dashboard-investor/";
-		}
-		if (localStorage.getItem('role') === 'manager') {
-			window.location.href = "/dashboard/";
-		}
-		if (localStorage.getItem('role') === 'partner') {
-			window.location.href = "/dashboard-partner/";
-		}
+		$.ajax({
+			url: ajaxGetUrl,
+			type: "GET",
+			data: {
+				action: "get_role"
+			},
+			success: function (response) {
+				console.log(response.role);
+				if (response.role === 'Investor') {
+					window.location.href = "/dashboard-investor/";
+				}
+				if (response.role === 'Manager') {
+					window.location.href = "/dashboard-manager/";
+				}
+				if (response.role === 'Partner') {
+					window.location.href = "/dashboard-partner/";
+				}
+			}
+		});
 	});
 
 	$("#loginBtn").click(function () {
@@ -1113,37 +1123,35 @@ $(document).ready(function () {
 	$("#login-invest").click(function () {
 		let login = $("#login").val();
 		let password = $("#password").val();
-		let action = 'login_invest';
 
 		$.ajax({
 			url: ajaxPostUrl,
 			type: 'POST',
 			data: {
-				action: action,
+				action: 'login_invest',
 				login: login,
 				password: password,
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
 			},
-			success: function (data) {
-				console.log(data);
-				if (data.data['success'] === true) {
-					if (data.data['role'] === 'investor') {
+			success: function (response) {
+				console.log(response.data['role']);
+				if (response.data['success'] === true) {
+					if (response.data['role'] === 'Investor') {
 						$("#loginBtn").hide();
 						$("#loggedInUser").text('Кабінет Інвестора').show();
 						$("#loginForm").fadeOut();
-						localStorage.setItem('role', 'investor');
 						window.location.href = "/dashboard-investor/";
 					}
 
-					if (data.data['role'] === 'manager') {
+					if (response.data['role'] === 'Manager') {
 						$("#loginBtn").hide();
 						$("#loggedInUser").text('Кабінет Менеджера').show();
 						$("#loginForm").fadeOut();
 						localStorage.setItem('role', 'manager');
-						window.location.href = "/dashboard/";
+						window.location.href = "/dashboard-manager/";
 					}
 
-					if (data.data['role'] === 'partner') {
+					if (response.data['role'] === 'Partner') {
 						$("#loginBtn").hide();
 						$("#loggedInUser").text('Кабінет Партнера').show();
 						$("#loginForm").fadeOut();
@@ -1266,5 +1274,4 @@ $(document).ready(function () {
 			});
 		}
 	});
-})
-;
+});

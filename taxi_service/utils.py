@@ -437,15 +437,8 @@ def login_in_investor(request, login_name, password):
 	if user is not None:
 		if user.is_active:
 			login(request, user)
-			user_name = user.get_username()
-			if Partner.objects.filter(user=user).exists():
-				role = 'partner'
-			elif Manager.objects.filter(user=user).exists():
-				role = 'manager'
-			elif Investor.objects.filter(user=user).exists():
-				role = 'investor'
-			else:
-				role = 'admin'
+			user_name = user.username
+			role = user.groups.first().name
 
 			return {'success': True, 'user_name': user_name, 'role': role}
 		else:

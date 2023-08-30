@@ -200,5 +200,13 @@ class GetRequestHandler:
             response_data = {'is_logged_in': False}
         return JsonResponse(response_data, safe=False)
 
+    def handle_get_role(self, request):
+        if request.user.is_authenticated:
+            user_role = request.user.groups.first().name
+            response_data = {'role': user_role}
+        else:
+            response_data = {'role': None}
+        return JsonResponse(response_data, safe=False)
+
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)

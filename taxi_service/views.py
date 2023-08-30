@@ -95,6 +95,8 @@ class GetRequestView(View):
             return handler.handle_investor_effective_vehicle(request)
         elif action == 'is_logged_in':
             return handler.handle_is_logged_in(request)
+        elif action == 'get_role':
+            return handler.handle_get_role(request)
         else:
             return handler.handle_unknown_action(request)
 

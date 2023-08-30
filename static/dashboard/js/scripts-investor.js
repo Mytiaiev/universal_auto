@@ -467,4 +467,9 @@ $(document).ready(function () {
 		$('.main-cards').hide();
 	});
 
+	$(".close-btn").click(function () {
+		$("#settingsWindow").fadeOut();
+		sessionStorage.setItem('settings', 'false');
+		location.reload();
+	});
 });
