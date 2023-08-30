@@ -164,6 +164,19 @@ class DashboardPartnerView(TemplateView):
 
         return context
 
+class DashboardManagerView(TemplateView):
+    template_name = 'dashboard/dashboard-manager.html'
+
+    def get_context_data(self, **kwargs):
+
+        context = super().get_context_data(**kwargs)
+
+        context['total_distance_rent'] = weekly_rent()
+        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
+        context['average_effective_vehicle'] = average_effective_vehicle()
+
+        return context
+
 
 class GoogleAuthView(View):
     @method_decorator(csrf_exempt)
