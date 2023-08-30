@@ -10,6 +10,7 @@ urlpatterns = [
     path('drivers/', DriversView.as_view(), name='drivers'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('sign-in/', GoogleAuthView.as_view(), name='sign_in'),
+    path('send-to-telegram/', SendToTelegramView.as_view(), name='send_to_telegram'),
     path('blog/', blog, name='blog'),
     path('why/', why, name='why'),
     path('user-agreement/', agreement, name='user_agreement'),
