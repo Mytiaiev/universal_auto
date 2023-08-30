@@ -1,10 +1,9 @@
 import json
 import os
 import re
-from datetime import datetime, timedelta
-from django.utils import timezone
+from datetime import datetime
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, Driver, ParkSettings, Client, FleetOrder, Partner, ReportTelegramPayments
+from app.models import Order, Driver, Client, FleetOrder, ReportTelegramPayments, DriverManager
 from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
@@ -36,15 +35,35 @@ def get_personal_time(update, context):
         context.bot.send_message(chat_id=chat_id, text=pd_time_text, reply_markup=personal_order_time_kb())
 
 
+def finish_personal_driver(update, context):
+    query = update.callback_query
+    order_id = int(query.data.split()[1])
+    order = Order.objects.get(pk=order_id)
+    order.status_order = Order.COMPLETED
+    order.partner = order.driver.partner
+    order.save()
+    context.bot.send_message(chat_id=order.driver.chat_id, text=driver_complete_text(order.sum))
+    FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
+                              from_address=order.from_address,
+                              accepted_time=order.accepted_time, finish_time=timezone.localtime(),
+                              state=FleetOrder.COMPLETED,
+                              partner=order.driver.partner,
+                              fleet='Ninja')
+    redis_instance().delete(str(order.chat_id_client))
+    redis_instance().delete(str(order.driver.chat_id))
+    text_to_client(order, complete_order_text, button=inline_comment_for_client())
+
+
 def payment_personal_order(update, context):
     query = update.callback_query
 
     chat_id = update.effective_chat.id
     hours = int(query.data.split()[1])
     redis_instance().hset(str(chat_id), 'hours', hours)
-    price = hours * 500
+    price = hours * int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) * int(
+        ParkSettings.get_value('TARIFF_IN_THE_CITY'))
     query.edit_message_text(complete_personal_order(price))
-    payload = f"{chat_id} {query.message.message_id}"
+    payload = f"{chat_id} {price}"
     payment_request(update, context, chat_id, os.environ["PAYMENT_TOKEN"],
                     os.environ["BOT_URL_IMAGE_TAXI"], price, payload)
 
@@ -339,6 +358,12 @@ def client_reject_order(update, context):
                                   state=FleetOrder.CLIENT_CANCEL,
                                   partner=order.driver.partner,
                                   fleet='Ninja')
+        bot.send_message(chat_id=order.driver.chat_id,
+                         text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
+                         )
+        driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
+        bot.delete_message(chat_id=order.driver.chat_id, message_id=driver_msg)
+
     else:
         try:
             group_msg = redis_instance().hget('group_msg', order.pk)
@@ -356,15 +381,6 @@ def client_reject_order(update, context):
                                        message_id=query.message.message_id + i)
     except:
         pass
-    try:
-        driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
-        bot.delete_message(chat_id=order.driver.chat_id, message_id=driver_msg)
-    except Exception:
-        pass
-    bot.send_message(
-        chat_id=order.driver.chat_id,
-        text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
-    )
     text_to_client(order=order,
                    text=client_cancel,
                    button=inline_comment_for_client())
@@ -379,18 +395,32 @@ def handle_callback_order(update, context):
         query.edit_message_text(text=already_accepted)
         return
     if order.status_order == Order.ON_TIME:
-        if driver.vehicle:
-            order.driver = driver
-            order.save()
-            group_msg = redis_instance().hget('group_msg', order.pk)
-            context.bot.delete_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
-                                       message_id=group_msg)
-            redis_instance().hdel('group_msg', order.pk)
-            context.bot.send_message(chat_id=driver.chat_id,
-                                     text=time_order_accepted(order.from_address,
-                                                              timezone.localtime(order.order_time).time()))
+        if driver:
+            if driver.vehicle:
+                order.driver = driver
+                order.save()
+                group_msg = redis_instance().hget('group_msg', order.pk)
+                context.bot.delete_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
+                                           message_id=group_msg)
+                redis_instance().hdel('group_msg', order.pk)
+                for manager in DriverManager.objects.exclude(chat_id__isnull=True):
+                    if redis_instance().hexists(str(manager.chat_id), f'personal {order.id}'):
+                        context.bot.send_message(chat_id=manager.chat_id,
+                                                 text=f"Замовлення {order.id} прийнято")
+                        redis_instance().hdel(str(manager.chat_id), f'personal {order.id}')
+                report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
+                                                      driver.phone_number, order.sum)
+                message_info = redis_instance().hget(str(order.chat_id_client), 'client_msg')
+                client_msg = text_to_client(order, report_for_client, delete_id=message_info,
+                                            button=inline_reject_order(order.pk))
+                redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
+                context.bot.send_message(chat_id=driver.chat_id,
+                                         text=time_order_accepted(order.from_address,
+                                                                  timezone.localtime(order.order_time).time()))
+            else:
+                context.bot.send_message(chat_id=query.from_user.id, text=add_many_auto_text)
         else:
-            context.bot.send_message(chat_id=query.from_user.id, text=add_many_auto_text)
+            context.bot.send_message(chat_id=query.from_user.id, text=accept_order_error)
     else:
         order.driver = driver
         order.save()
@@ -521,7 +551,7 @@ def precheckout_callback(update, context):
     chat_id = query.from_user.id
     data = query.invoice_payload.split()
     order = Order.objects.filter(chat_id_client=chat_id).last()
-    redis_instance().hset(chat_id, 'message_data', data[1])
+    redis_instance().hset(chat_id, 'payload_data', data[1])
     if data[0] in [f'{order.pk}', f'{chat_id}']:
         query.answer(ok=True)
     else:
@@ -537,8 +567,8 @@ def successful_payment(update, context):
         telegram_payment_charge_id=successful_payment.telegram_payment_charge_id,
         currency=successful_payment.currency,
         total_amount=successful_payment.total_amount / 100)
+    payload_data = int(redis_instance().hget(chat_id, 'payload_data'))
     if not personal_order:
-        data = int(redis_instance().hget(chat_id, 'message_data'))
         order = Order.objects.filter(chat_id_client=chat_id).last()
         FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
                                   from_address=order.from_address, destination=order.to_the_address,
@@ -546,7 +576,7 @@ def successful_payment(update, context):
                                   state=FleetOrder.COMPLETED,
                                   partner=order.driver.partner,
                                   fleet='Ninja')
-        context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
+        context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=payload_data, text=trip_paymented)
         text_to_client(order, complete_order_text, button=inline_comment_for_client())
         order.report_tg = report_tg
         order.status_order = Order.COMPLETED
@@ -557,7 +587,8 @@ def successful_payment(update, context):
         save_location_to_redis(chat_id)
         user_data = redis_instance().hgetall(chat_id)
         client = Client.get_by_chat_id(chat_id)
-        data = {'order_time': user_data['time_order'],
+
+        data = {'order_time': datetime.fromisoformat(user_data['time_order']),
                 'chat_id_client': chat_id,
                 'phone_number': client.phone_number,
                 'from_address': user_data['from_address'],
@@ -566,6 +597,7 @@ def successful_payment(update, context):
                 'payment_hours': user_data['hours'],
                 'type_order': Order.PERSONAL_TYPE,
                 'status_order': Order.ON_TIME,
+                'sum': payload_data
                 }
         if user_data.get('info'):
             data['info'] = user_data['info']

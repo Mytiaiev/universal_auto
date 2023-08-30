@@ -21,10 +21,11 @@ from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_spot_keyboard, inline_reject_order, personal_order_continue_kb
+    inline_spot_keyboard, inline_reject_order, personal_order_end_kb, personal_driver_end_kb
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
-    client_order_text, order_customer_text, search_driver, personal_time_route_end
+    client_order_text, order_customer_text, search_driver, personal_time_route_end, personal_order_info, \
+    pd_order_not_accepted, driver_text_personal_end, client_text_personal_end
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
@@ -391,8 +392,10 @@ def check_time_order(self, order_id):
         instance = Order.objects.get(pk=order_id)
     except ObjectDoesNotExist:
         return
+    text = order_info(instance, time=True) if instance.type_order == Order.STANDARD_TYPE \
+        else personal_order_info(instance)
     group_msg = bot.send_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
-                                 text=order_info(instance, time=True),
+                                 text=text,
                                  reply_markup=inline_markup_accept(instance.pk),
                                  parse_mode=ParseMode.HTML)
     redis_instance().hset('group_msg', order_id, group_msg.message_id)
@@ -400,19 +403,35 @@ def check_time_order(self, order_id):
     instance.save()
 
 
-@app.task(bind=True, queue='bot_tasks')
+@app.task(bind=True, queue='beat_tasks')
 def check_personal_orders(self):
     for order in Order.objects.filter(status_order=Order.IN_PROGRESS, type_order=Order.PERSONAL_TYPE):
         finish_time = order.order_time + timedelta(hours=order.payment_hours)
-        distance = order.payment_hours * ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')
+        distance = int(order.payment_hours) * int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR'))
         vehicle = order.driver.vehicle
         gps = UaGpsSynchronizer()
         route = gps.generate_report(gps.get_timestamp(order.order_time),
                                     gps.get_timestamp(finish_time), vehicle.gps_id)[0]
-        if timezone.localtime() + timedelta(minutes=15) > finish_time or distance < route - 10:
-            bot.send_message(chat_id=order.chat_id_client, text=personal_time_route_end(finish_time, distance-route),
-                             reply_markup=personal_order_continue_kb())
-            bot.send_message(chat_id=order.driver.chat_id, text=personal_time_route_end(finish_time, distance-route))
+        if timezone.localtime() > finish_time or distance < route:
+            pc_message = redis_instance().hget(str(order.chat_id_client), "client_msg")
+            pd_message = redis_instance().hget(str(order.driver.chat_id), "driver_msg")
+            try:
+                text_to_client(order, text=client_text_personal_end,
+                               button=personal_order_end_kb(order.id), delete_id=pc_message)
+            except BadRequest:
+                pass
+            bot.edit_message(chat_id=order.driver.chat_id,
+                             message_id=pd_message,
+                             text=driver_text_personal_end,
+                             reply_markup=personal_driver_end_kb(order.id))
+        elif timezone.localtime() + timedelta(minutes=15) > finish_time or distance < route - 10:
+            pc_message = bot.send_message(chat_id=order.chat_id_client,
+                                          text=personal_time_route_end(finish_time, distance-route),
+                                          reply_markup=personal_order_end_kb(order.id, pre_finish=True))
+            pd_message = bot.send_message(chat_id=order.driver.chat_id,
+                                          text=personal_time_route_end(finish_time, distance-route))
+            redis_instance().hset(str(order.driver.chat_id), "driver_msg", pd_message.message_id)
+            redis_instance().hset(str(order.chat_id_client), "client_msg", pc_message.message_id)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -450,9 +469,18 @@ def order_not_accepted(self):
         if order.order_time < (timezone.localtime() + timedelta(
                 minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN')))):
             group_msg = redis_instance().hget('group_msg', order.id)
-            bot.delete_message(chat_id=ParkSettings.get_value("ORDER_CHAT"), message_id=group_msg)
-            redis_instance().hdel('group_msg', order.id)
-            search_driver_for_order.delay(order.id)
+            if order.type_order == Order.STANDARD_TYPE:
+                bot.delete_message(chat_id=ParkSettings.get_value("ORDER_CHAT"), message_id=group_msg)
+                redis_instance().hdel('group_msg', order.id)
+                search_driver_for_order.delay(order.id)
+            else:
+                for manager in DriverManager.objects.exclude(chat_id__isnull=True):
+                    if not redis_instance().hexists(str(manager.chat_id), f'personal {order.id}'):
+                        redis_instance().hset(str(manager.chat_id), f'personal {order.id}', order.id)
+                        bot.send_message(chat_id=manager.chat_id, text=pd_order_not_accepted)
+                        bot.forward_message(chat_id=manager.chat_id,
+                                            from_chat_id=ParkSettings.get_value("ORDER_CHAT"),
+                                            message_id=group_msg)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -461,16 +489,13 @@ def send_time_order(self):
     for order in accepted_orders:
         if timezone.localtime() < order.order_time < (timezone.localtime() + timedelta(minutes=int(
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
-            driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=order_info(order, time=True),
+            text = order_info(order, time=True) if order.type_order == Order.STANDARD_TYPE \
+                else personal_order_info(order)
+
+            driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=text,
                                           reply_markup=inline_spot_keyboard(order.latitude, order.longitude, order.id),
                                           parse_mode=ParseMode.HTML)
             driver = order.driver
-            report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
-                                                  driver.phone_number, order.sum)
-            message_info = redis_instance().hget(str(order.chat_id_client), 'client_msg')
-            client_msg = text_to_client(order, report_for_client, delete_id=message_info,
-                                        button=inline_reject_order(order.pk))
-            redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
             order.save()
@@ -672,6 +697,7 @@ def run_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute="*/2"), send_time_order.s())
     sender.add_periodic_task(crontab(minute='*/15'), auto_send_task_bot.s())
     sender.add_periodic_task(crontab(minute="*/2"), order_not_accepted.s())
+    sender.add_periodic_task(crontab(minute="*/4"), check_personal_orders.s())
     for partner in Partner.objects.exclude(user__is_superuser=True):
         setup_periodic_tasks(partner, sender)
 

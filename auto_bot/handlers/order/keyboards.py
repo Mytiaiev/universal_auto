@@ -16,7 +16,7 @@ def personal_order_start_kb():
     return InlineKeyboardMarkup(keyboard)
 
 
-def personal_order_time_kb():
+def personal_order_time_kb(pk=None):
     keyboard = [
         [InlineKeyboardButton(pd_time_buttons[0], callback_data="Hour 2"),
          InlineKeyboardButton(pd_time_buttons[1], callback_data="Hour 3")],
@@ -24,15 +24,33 @@ def personal_order_time_kb():
          InlineKeyboardButton(pd_time_buttons[3], callback_data="Hour 5")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")],
     ]
+    if pk:
+        keyboard = [
+            [InlineKeyboardButton(pd_time_buttons[7], callback_data=f"{pk} Hour 1")],
+            [InlineKeyboardButton(pd_time_buttons[0], callback_data=f"{pk} Hour 2")],
+            [InlineKeyboardButton(pd_time_buttons[1], callback_data=f"{pk} Hour 3")],
+            [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")],
+        ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def personal_order_continue_kb():
+def personal_order_end_kb(pk, pre_finish=None):
+
     keyboard = [
-        [InlineKeyboardButton(pd_time_buttons[4], callback_data="Continue_personal")],
-        [InlineKeyboardButton(pd_time_buttons[5], callback_data="Finish_personal")],
+        [InlineKeyboardButton(pd_time_buttons[4], callback_data=f"Continue_personal {pk}")],
+        [InlineKeyboardButton(pd_time_buttons[5], callback_data=f"End_personal {pk}")]
+    ]
+    if pre_finish:
+        keyboard.append([InlineKeyboardButton(pd_time_buttons[6], callback_data=f"Finish_personal {pk}")])
+    return InlineKeyboardMarkup(keyboard)
+
+
+def personal_driver_end_kb(pk):
+    keyboard = [
+        [InlineKeyboardButton(pd_time_buttons[5], callback_data=f"Finish_personal {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
+
 
 def inline_payment_kb():
     keyboard = [

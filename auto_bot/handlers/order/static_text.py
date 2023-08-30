@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from app.models import ParkSettings
+
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER, ADD_INFO = range(1, 7)
 NOT_CORRECT_ADDRESS = "На жаль, немає вірної адреси"
 LOCATION = "Поділитися місцезнаходженням"
@@ -24,6 +26,7 @@ order_customer_text = "Коли водій буде на місці, ви отр
 driver_accept_text = 'Ваше замовлення прийнято.Шукаємо водія'
 driver_arrived = "Машину подано. Водій вас очікує"
 select_car_error = "Для прийняття замовлень потрібно розпочати роботу."
+accept_order_error = "Для прийняття замовлень потрібно стати водієм Ninja Taxi."
 add_many_auto_text = 'Не вдається знайти авто для роботи зверніться до менеджера.'
 driver_cancel = "На жаль, водій відхилив замовлення. Пошук іншого водія..."
 client_cancel = "Ви відмовились від замовлення"
@@ -63,7 +66,9 @@ personal_driver_text = "Основна ідея послуги <Персонал
                        "4.Водія не можна фізично чіпати та примушувати щось робити"
 ask_client_accept = "Чи бажаєте продовжити?"
 pd_time_text = "Вкажіть на скільки годин потрібно авто?"
-
+pd_order_not_accepted = "Замовлення персонального водія не прийнято"
+driver_text_personal_end = "Замовлення завершено, спитайте клієнта чи буде він продовжувати, якщо ні завершіть замовлення за допомогою кнопки"
+client_text_personal_end = "У вас завершився ліміт часу або кілометраж, бажаєте продовжити?"
 
 order_inline_buttons = (
     "\u274c Відхилити",
@@ -108,7 +113,9 @@ pd_time_buttons = (
     "Чотири години",
     "П'ять годин",
     "Продовжити поїздку",
-    "Завершити замовлення"
+    "Не продовжувати поїздку",
+    "Завершити зараз",
+    "Одну годину"
 )
 
 date_inline_buttons = (
@@ -141,6 +148,19 @@ def order_info(order, time=None):
     return message
 
 
+def personal_order_info(order):
+    time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+    message = f"<u>Замовлення персонального водія {order.pk}:</u>\n" \
+              f"<b>Час подачі:{time}</b>\n" \
+              f"Адреса посадки: {order.from_address}\n" \
+              f"Номер телефону: {order.phone_number}\n" \
+              f"Кількість годин: {order.payment_hours}\n" \
+              f"Загальна вартість: {order.sum} грн\n"
+    if order.info:
+        message += f"Коментар: {order.info}"
+    return message
+
+
 def client_order_info(order):
     if order.car_delivery_price:
         message = f"Замовлення оновлено\n" \
@@ -158,6 +178,20 @@ def client_order_info(order):
     if order.order_time:
         time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
         message += f"Час подачі:{time}\n"
+    return message
+
+
+def client_personal_info(order):
+    time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+    message = f"Ваше замовлення {order.pk} прийняте:\n" \
+              f"Час подачі:{time}\n" \
+              f"Адреса посадки: {order.from_address}\n" \
+              f"Номер телефону: {order.phone_number}\n" \
+              f"Сплачено: {order.payment_hours}год або " \
+              f"{int(order.payment_hours) * int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR'))}км \n" \
+              f"Загальна вартість: {order.sum} грн\n"
+    if order.info:
+        message += f"Коментар: {order.info}"
     return message
 
 
