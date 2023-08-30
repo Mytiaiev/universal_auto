@@ -23,8 +23,6 @@ class Synchronizer:
         vehicles = self.get_vehicles()
         print(f'Received {self.__class__.__name__} vehicles: {len(vehicles)}')
         print(f'Received {self.__class__.__name__} drivers: {len(drivers)}')
-        drivers = Driver.objects.filter(partner=self.partner_id)
-        drivers.update(worked=False)
         for driver in drivers:
             self.create_driver(**driver)
         for vehicle in vehicles:
@@ -149,7 +147,7 @@ class Synchronizer:
         key_phone, key_email, worked = 'phone_number', 'email', 'worked'
         update_fields, phone_number, email, status = [], kwargs[key_phone], kwargs[key_email], kwargs[worked]
         driver.worked = status
-        driver.save()
+        update_fields.append(worked)
 
         if not driver.phone_number and phone_number:
             driver.phone_number = phone_number

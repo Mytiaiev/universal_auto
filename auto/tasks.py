@@ -272,6 +272,8 @@ def update_driver_status(self, partner_pk):
 @app.task(bind=True, queue='bot_tasks')
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
+        drivers = Driver.objects.filter(partner=partner_pk)
+        drivers.update(worked=False)
         BoltRequest(partner_pk).synchronize()
         UberRequest(partner_pk).synchronize()
         UklonRequest(partner_pk).synchronize()
