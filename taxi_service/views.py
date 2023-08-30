@@ -2,7 +2,6 @@ import os
 
 import jwt
 import json
-import telegram
 
 from django.urls import reverse
 from django.shortcuts import render, redirect
@@ -19,6 +18,7 @@ from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import weekly_rent, average_effective_vehicle, \
     car_piggy_bank
 from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
+from auto_bot.main import bot
 
 
 class IndexView(TemplateView):
@@ -207,9 +207,6 @@ class GoogleAuthView(View):
 
 class SendToTelegramView(View):
     def get(self, request, *args, **kwargs):
-
-        bot_token = os.environ.get('TELEGRAM_TOKEN')
-        bot = telegram.Bot(token=bot_token)
 
         chat_id = os.environ.get('TELEGRAM_BOT_CHAT_ID')
 
