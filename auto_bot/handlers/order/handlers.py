@@ -498,7 +498,7 @@ def handle_order(update, context):
         if order.payment_method == price_inline_buttons[5].split()[1]:   # first card second card
             first_payment = ReportTelegramPayments.objects.get(order=order.pk)
             total = order.sum - first_payment.total_amount
-            if total:
+            if total > 0:
                 payment_request(order.chat_id_client,
                                 os.environ["PAYMENT_TOKEN"],
                                 os.environ["BOT_URL_IMAGE_TAXI"],

@@ -823,9 +823,6 @@ class Comment(models.Model):
         ordering = ['-created_at']
 
 
-
-
-
 class Order(models.Model):
     WAITING = 'Очікується'
     IN_PROGRESS = 'Виконується'
