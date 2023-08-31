@@ -127,7 +127,8 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(handle_callback_order, pattern="^Accept_order [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(handle_order,
                                         pattern=re.compile("^(Reject_order|Along_the_route|Off_route|"
-                                                           "Accept|End_trip) [0-9]+$")))
+                                                           "Accept|End_trip|Second_cash_payment|"
+                                                           "Second_card_payment) [0-9]+$")))
     dp.add_handler(CallbackQueryHandler(handle_order, pattern="Client_on_site [0-9]+ [0-9]+"))
     dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
     dp.add_handler(MessageHandler(Filters.successful_payment, successful_payment))
