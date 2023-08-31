@@ -494,6 +494,11 @@ def handle_order(update, context):
     elif data[0] == 'Second_cash_payment':
         if order.payment_method == price_inline_buttons[4].split()[1]:   # first cash second cash
             cash_order(update, query, order.sum)
+        else:
+            first_payment = ReportTelegramPayments.objects.get(order=order.pk) #first card second cash
+            total = order.sum - first_payment.total_amount
+            if total > 0:
+                cash_order(update, query, total)
     elif data[0] == 'Second_card_payment':
         if order.payment_method == price_inline_buttons[5].split()[1]:   # first card second card
             first_payment = ReportTelegramPayments.objects.get(order=order.pk)
@@ -513,6 +518,13 @@ def handle_order(update, context):
                 order.save()
                 fleet_order(order)
                 redis_instance().delete(chat_id)
+        else:                                       #first cash second card
+            payment_request(order.chat_id_client,
+                            os.environ["PAYMENT_TOKEN"],
+                            os.environ["BOT_URL_IMAGE_TAXI"],
+                            order.pk,
+                            f'{order.pk} {query.message.message_id}',
+                            order.sum)
 
 
 def precheckout_callback(update, context):
