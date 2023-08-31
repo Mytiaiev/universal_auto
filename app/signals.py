@@ -103,7 +103,4 @@ def take_order_from_client(sender, instance, **kwargs):
             #         ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
             #     )
     elif instance.type_order == Order.PERSONAL_TYPE and not instance.checked:
-        message = bot.send_message(chat_id=instance.chat_id_client,
-                                   text=client_personal_info(instance), reply_markup=inline_reject_order(instance.pk))
-        redis_instance().hset(str(instance.chat_id_client), 'client_msg', message.message_id)
         check_time_order.delay(instance.pk)

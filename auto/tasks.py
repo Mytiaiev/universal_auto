@@ -406,30 +406,39 @@ def check_time_order(self, order_id):
 @app.task(bind=True, queue='beat_tasks')
 def check_personal_orders(self):
     for order in Order.objects.filter(status_order=Order.IN_PROGRESS, type_order=Order.PERSONAL_TYPE):
-        finish_time = order.order_time + timedelta(hours=order.payment_hours)
+        finish_time = timezone.localtime(order.order_time) + timedelta(hours=order.payment_hours)
         distance = int(order.payment_hours) * int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR'))
+        notify_min = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_MIN'))
+        notify_km = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_KM'))
         vehicle = order.driver.vehicle
         gps = UaGpsSynchronizer()
         route = gps.generate_report(gps.get_timestamp(order.order_time),
                                     gps.get_timestamp(finish_time), vehicle.gps_id)[0]
+        pc_message = redis_instance().hget(str(order.chat_id_client), "client_msg")
+        pd_message = redis_instance().hget(str(order.driver.chat_id), "driver_msg")
         if timezone.localtime() > finish_time or distance < route:
-            pc_message = redis_instance().hget(str(order.chat_id_client), "client_msg")
-            pd_message = redis_instance().hget(str(order.driver.chat_id), "driver_msg")
-            try:
-                text_to_client(order, text=client_text_personal_end,
-                               button=personal_order_end_kb(order.id), delete_id=pc_message)
-            except BadRequest:
-                pass
-            bot.edit_message(chat_id=order.driver.chat_id,
-                             message_id=pd_message,
-                             text=driver_text_personal_end,
-                             reply_markup=personal_driver_end_kb(order.id))
-        elif timezone.localtime() + timedelta(minutes=15) > finish_time or distance < route - 10:
+            if redis_instance().hget(str(order.chat_id_client), "finish") == order.id:
+                bot.edit_message_text(chat_id=order.driver.chat_id,
+                                      message_id=pd_message, text=driver_complete_text(order.sum))
+                order.status_order = Order.COMPLETED
+                order.partner = order.driver.partner
+                order.save()
+            else:
+                client_msg = text_to_client(order, text=client_text_personal_end,
+                                            button=personal_order_end_kb(order.id), delete_id=pc_message)
+                driver_msg = bot.edit_message_text(chat_id=order.driver.chat_id,
+                                                   message_id=pd_message,
+                                                   text=driver_text_personal_end,
+                                                   reply_markup=personal_driver_end_kb(order.id))
+                redis_instance().hset(str(order.driver.chat_id), "driver_msg", driver_msg.message_id)
+                redis_instance().hset(str(order.chat_id_client), "client_msg", client_msg)
+        elif timezone.localtime() + timedelta(minutes=notify_min) > finish_time or distance < route - notify_km:
+            pre_finish_text = personal_time_route_end(finish_time, distance-route)
             pc_message = bot.send_message(chat_id=order.chat_id_client,
-                                          text=personal_time_route_end(finish_time, distance-route),
+                                          text=pre_finish_text,
                                           reply_markup=personal_order_end_kb(order.id, pre_finish=True))
             pd_message = bot.send_message(chat_id=order.driver.chat_id,
-                                          text=personal_time_route_end(finish_time, distance-route))
+                                          text=pre_finish_text)
             redis_instance().hset(str(order.driver.chat_id), "driver_msg", pd_message.message_id)
             redis_instance().hset(str(order.chat_id_client), "client_msg", pc_message.message_id)
 
@@ -489,11 +498,14 @@ def send_time_order(self):
     for order in accepted_orders:
         if timezone.localtime() < order.order_time < (timezone.localtime() + timedelta(minutes=int(
                 ParkSettings.get_value('SEND_TIME_ORDER_MIN', 10)))):
-            text = order_info(order, time=True) if order.type_order == Order.STANDARD_TYPE \
-                else personal_order_info(order)
-
+            if order.type_order == Order.STANDARD_TYPE:
+                text = order_info(order, time=True)
+                reply_markup = inline_spot_keyboard(order.latitude, order.longitude, order.id)
+            else:
+                text = personal_order_info(order)
+                reply_markup = inline_spot_keyboard(order.latitude, order.longitude)
             driver_msg = bot.send_message(chat_id=order.driver.chat_id, text=text,
-                                          reply_markup=inline_spot_keyboard(order.latitude, order.longitude, order.id),
+                                          reply_markup=reply_markup,
                                           parse_mode=ParseMode.HTML)
             driver = order.driver
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
@@ -608,9 +620,11 @@ def send_map_to_client(self, order_pk, licence, message, chat):
                 driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
                 text_to_client(order, driver_arrived, delete_id=client_msg)
                 redis_instance().hset(str(order.driver.chat_id), 'start_route', int(timezone.localtime().timestamp()))
+                reply_markup = inline_client_spot(order_pk, message) if \
+                    order.type_order == Order.STANDARD_TYPE else None
                 bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                               message_id=driver_msg,
-                                              reply_markup=inline_client_spot(order_pk, message))
+                                              reply_markup=reply_markup)
             else:
                 bot.editMessageLiveLocation(chat, message, latitude=latitude, longitude=longitude)
                 self.retry(args=[order_pk, licence, message, chat], countdown=20)

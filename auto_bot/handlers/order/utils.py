@@ -1,6 +1,8 @@
 import json
 
 import requests
+from telegram.error import BadRequest
+
 from app.models import ParkSettings
 from auto_bot.main import bot
 from scripts.conversion import get_addresses_by_radius
@@ -58,7 +60,10 @@ def save_location_to_redis(chat_id):
 def text_to_client(order=None, text=None, button=None, delete_id=None, message_id=None):
     if order.chat_id_client:
         if delete_id:
-            bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=delete_id, reply_markup=None)
+            try:
+                bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=delete_id, reply_markup=None)
+            except BadRequest:
+                pass
         if message_id:
             bot.edit_message_text(chat_id=order.chat_id_client, text=text, reply_markup=button, message_id=message_id)
         else:
