@@ -499,6 +499,8 @@ def handle_order(update, context):
             total = order.sum - first_payment.total_amount
             if total > 0:
                 cash_order(update, query, total)
+            else:
+                cash_order(update, query, 0)
     elif data[0] == 'Second_card_payment':
         if order.payment_method == price_inline_buttons[5].split()[1]:   # first card second card
             first_payment = ReportTelegramPayments.objects.get(order=order.pk)
