@@ -269,8 +269,9 @@ $(document).ready(function () {
 				let data = response.data[0];
 				let totalAmount = parseFloat(response.data[1]).toFixed(2);
 				let totalKm = parseFloat(response.data[2]).toFixed(2);
-				let startDate = response.data[3];
-				let endDate = response.data[4];
+				let spending = response.data[3];
+				let startDate = response.data[4];
+				let endDate = response.data[5];
 				let formattedData = {};
 
 				Object.keys(data).forEach(function (key) {
@@ -294,6 +295,7 @@ $(document).ready(function () {
 				$('#weekly-income-dates').text(startDate + ' по ' + endDate);
 				$('#weekly-income-amount').text(totalAmount + ' грн');
 				$('#income-amount').text(totalAmount + ' грн');
+				$('#spending-all').text(spending + ' грн');
 				$('#income-km').text(totalKm + ' км');
 			}
 		});

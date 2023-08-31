@@ -17,16 +17,16 @@ from selenium_ninja.driver import SeleniumTools
 
 
 def active_vehicles_gps():
-    vehicles_gps = []
-    active_drivers = Driver.objects.filter(driver_status=Driver.ACTIVE, vehicle__isnull=False)
-    for driver in active_drivers:
-        vehicle = {'licence_plate': driver.vehicle.licence_plate,
-                   'lat': driver.vehicle.lat,
-                   'lon': driver.vehicle.lon
-                   }
-        vehicles_gps.append(vehicle)
-    json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
-    return json_data
+	vehicles_gps = []
+	active_drivers = Driver.objects.filter(driver_status=Driver.ACTIVE, vehicle__isnull=False)
+	for driver in active_drivers:
+		vehicle = {'licence_plate': driver.vehicle.licence_plate,
+					'lat': driver.vehicle.lat,
+					'lon': driver.vehicle.lon
+					}
+		vehicles_gps.append(vehicle)
+	json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
+	return json_data
 
 
 def order_confirm(id_order):
@@ -196,7 +196,15 @@ def investor_cash_car(period, investor_pk):
 		total_amount += earnings
 		total_km += result.mileage
 
-	return vehicles, total_amount, total_km, start_date_formatted, end_date_formatted
+	overall_spent = sum(
+		spending.amount
+		for spending in VehicleSpendings.objects.filter(
+			vehicle__licence_plate__in=licence_plates,
+			created_at__range=(start_period, end_period)
+		)
+	)
+
+	return vehicles, total_amount, total_km, overall_spent, start_date_formatted, end_date_formatted
 
 
 def car_piggy_bank(request):
