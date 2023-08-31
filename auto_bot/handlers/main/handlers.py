@@ -162,7 +162,7 @@ def error(update, context):
 
 def menu(update, context):
     # chat_id = update.effective_chat.id
-    # driver_manager = DriverManager.get_by_chat_id(chat_id)
+    # driver_manager = Manager.get_by_chat_id(chat_id)
     # driver = Driver.get_by_chat_id(chat_id)
     # manager = ServiceStationManager.get_by_chat_id(chat_id)
     # owner = Owner.get_by_chat_id(chat_id)

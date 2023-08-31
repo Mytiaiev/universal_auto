@@ -129,7 +129,7 @@ class VehicleSerializer(serializers.ModelSerializer):
         )
 
 
-class DriverManagerSerializer(serializers.ModelSerializer):
+class ManagerSerializer(serializers.ModelSerializer):
     partner = serializers.StringRelatedField(many=False)
 
     class Meta:
