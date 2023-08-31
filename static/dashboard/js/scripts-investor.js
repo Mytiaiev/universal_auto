@@ -24,7 +24,7 @@ function closeSidebar() {
 let barChartOptions = {
 	series: [{
 		data: [],
-		name: "Заробіток: ",
+		name: "Дохід: ",
 	}],
 	chart: {
 		type: "bar",
@@ -111,7 +111,7 @@ let barChartOptions = {
 	},
 	yaxis: {
 		title: {
-			text: "Каса",
+			text: "Дохід (грн.)",
 			style: {
 				color: "#f5f7ff",
 			},
@@ -139,10 +139,10 @@ barChart.render();
 // AREA CHART
 let areaChartOptions = {
 	series: [{
-		name: "",
+		name: "Вася",
 		data: ['Вася'],
 	}, {
-		name: "",
+		name: "Петя",
 		data: ['Петя'],
 	}],
 	chart: {
@@ -154,7 +154,7 @@ let areaChartOptions = {
 			show: false,
 		},
 	},
-	colors: ["#00ab57", "#d50000"],
+	colors: ["#00ab57", "#d50000", "#ff6d00", "#583cb3", "#c51162", "#00bfa5"],
 	labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
 	dataLabels: {
 		enabled: false,
@@ -218,7 +218,7 @@ let areaChartOptions = {
 		[
 			{
 				title: {
-					text: "Дохід грн/км",
+					text: "пробіг км",
 					style: {
 						color: "#f5f7ff",
 					},
@@ -232,7 +232,7 @@ let areaChartOptions = {
 			{
 				opposite: true,
 				title: {
-					text: "Дохід грн/км",
+					text: "пробіг км",
 					style: {
 						color: "#f5f7ff",
 					},
@@ -262,21 +262,22 @@ $(document).ready(function () {
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
-				action: 'get_cash',
+				action: 'get_cash_investor',
 				period: period
 			},
 			success: function (response) {
 				let data = response.data[0];
 				let totalAmount = parseFloat(response.data[1]).toFixed(2);
 				let totalKm = parseFloat(response.data[2]).toFixed(2);
-				let startDate = response.data[3];
-				let endDate = response.data[4];
+				let spending = response.data[3];
+				let startDate = response.data[4];
+				let endDate = response.data[5];
 				let formattedData = {};
 
 				Object.keys(data).forEach(function (key) {
 					let value = parseFloat(data[key]).toFixed(2);
 					if (value !== 0) {
-						let formattedKey = '< ' + key + ' >';
+						let formattedKey = key;
 						formattedData[formattedKey] = value;
 					}
 				});
@@ -294,86 +295,50 @@ $(document).ready(function () {
 				$('#weekly-income-dates').text(startDate + ' по ' + endDate);
 				$('#weekly-income-amount').text(totalAmount + ' грн');
 				$('#income-amount').text(totalAmount + ' грн');
+				$('#spending-all').text(spending + ' грн');
 				$('#income-km').text(totalKm + ' км');
 			}
 		});
 	}
 
-	function loadEffectiveChart(period, vehicleId1, vehicleId2) {
+	function loadEffectiveChart(period) {
 		$.ajax({
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
-				action: 'effective_vehicle',
+				action: 'investor_effective_vehicle',
 				period: period,
-				vehicle_id1: vehicleId1,
-				vehicle_id2: vehicleId2
 			},
 			success: function (response) {
-				console.log(response.data);
-				let dataArray1 = response.data.vehicle1;
-				let dataArray2 = response.data.vehicle2;
+				let dataObject = response.data;
 
-				let carNumbers = Array.from(new Set(dataArray1.map(item => item.car)));
-				let carNumbers2 = Array.from(new Set(dataArray2.map(item => item.car)));
-				let carData = {};
-				let carData2 = {};
+				let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
 
-				carNumbers.forEach(function (carNumber, index) {
-					let carIndex = index + 1;
-					let carNumberKey = 'carNumber' + carIndex;
-					let mileageKey = 'mileage' + carIndex;
-
-					carData[carNumberKey] = carNumber;
-					carData[mileageKey] = dataArray1
-						.filter(item => item.car === carNumber)
-						.map(item => parseFloat(item.mileage))
-						.join(', ');
-
-					if (carData[mileageKey] === '') {
-						carData[mileageKey] = "0";
-					}
+				// Проходимося по кожному ідентифікатору автомобіля
+				Object.keys(dataObject).forEach(function (carNumber) {
+					carData[carNumber] = dataObject[carNumber].map(function (item) {
+						return {
+							date: new Date(item.date_effective),
+							mileage: parseFloat(item.mileage)
+						};
+					});
 				});
 
-				carNumbers2.forEach(function (carNumber, index) {
-					let carIndex = index + 1;
-					let carNumberKey = 'carNumber' + carIndex;
-					let mileageKey = 'mileage' + carIndex;
-
-					carData2[carNumberKey] = carNumber;
-					carData2[mileageKey] = dataArray2
-						.filter(item => item.car === carNumber)
-						.map(item => parseFloat(item.mileage))
-						.join(', ');
-
-					if (carData2[mileageKey] === '') {
-						carData2[mileageKey] = "0";
-					}
-				});
-
-				let dates = dataArray1.map(item => {
-					let date = new Date(item.date_effective);
-					return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-				});
-
-				let mileageSeries = carNumbers.map(carNumber => {
-					let carIndex = carNumbers.indexOf(carNumber) + 1;
+				let mileageSeries = Object.keys(carData).map(function (carNumber) {
 					return {
-						name: carData['carNumber' + carIndex],
-						data: carData['mileage' + carIndex].split(', ').map(parseFloat)
+						name: carNumber,
+						data: carData[carNumber].map(function (entry) {
+							return entry.mileage;
+						})
 					};
 				});
 
-				let mileageSeries2 = carNumbers2.map(carNumber => {
-					let carIndex = carNumbers2.indexOf(carNumber) + 1;
-					return {
-						name: carData2['carNumber' + carIndex],
-						data: carData2['mileage' + carIndex].split(', ').map(parseFloat)
-					};
+				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
 				});
 
-				// Update chart options with new data
-				areaChartOptions.series = [...mileageSeries, ...mileageSeries2];
+				// Оновити опції графіка з новими даними
+				areaChartOptions.series = mileageSeries;
 				areaChartOptions.labels = dates;
 
 				areaChart.updateOptions(areaChartOptions);
@@ -383,7 +348,7 @@ $(document).ready(function () {
 
 
 	function updateEffectiveChart(vehicleId1, vehicleId2, period) {
-		loadEffectiveChart(period, vehicleId1, vehicleId2);
+		loadEffectiveChart(period);
 	}
 
 	loadDefaultKasa('day');
@@ -411,7 +376,6 @@ $(document).ready(function () {
 
 		const vehicleId1 = $('#vehicle-select').val();
 		const vehicleId2 = $('#vehicle-select-2').val();
-		console.log(vehicleId1, vehicleId2, period);
 		updateEffectiveChart(vehicleId1, vehicleId2, period);
 	});
 
@@ -424,164 +388,6 @@ $(document).ready(function () {
 		}[val];
 	}
 });
-
-$(document).ready(function () {
-
-	const partnerForm = $("#partnerForm");
-	const partnerLoginField = $("#partnerLogin");
-	const partnerRadioButtons = $("input[name='partner']");
-
-	partnerRadioButtons.change(function () {
-		const selectedPartner = $("input[name='partner']:checked").val();
-		updateLoginField(selectedPartner);
-	});
-
-	function updateLoginField(partner) {
-		if (partner === 'uklon') {
-			partnerLoginField.val('+380');
-		} else {
-			partnerLoginField.val('');
-			$("#partnerPassword").val("");
-		}
-	}
-
-	if (sessionStorage.getItem('settings') === 'true') {
-		$("#settingsWindow").fadeIn();
-	}
-
-	if (localStorage.getItem('uber')) {
-		$("#partnerLogin").hide()
-		$("#partnerPassword").hide()
-		$(".opt-partnerForm").hide()
-		$(".login-ok").show()
-		$("#loginErrorMessage").hide()
-	}
-
-	$("#settingBtn").click(function () {
-		sessionStorage.setItem('settings', 'true');
-		$("#settingsWindow").fadeIn();
-	});
-
-	$(".close-btn").click(function () {
-		$("#settingsWindow").fadeOut();
-		sessionStorage.setItem('settings', 'false');
-		location.reload();
-	});
-
-	$(".login-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		const partnerLogin = partnerForm.find("#partnerLogin").val();
-		const partnerPassword = partnerForm.find("#partnerPassword").val();
-
-		if (partnerForm[0].checkValidity() && selectedPartner) {
-			showLoader(partnerForm);
-			sendLoginDataToServer(selectedPartner, partnerLogin, partnerPassword);
-		}
-	});
-
-	$(".logout-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		sendLogautDataToServer(selectedPartner);
-		localStorage.removeItem(selectedPartner);
-		$("#partnerLogin").show()
-		$("#partnerPassword").show()
-		$(".opt-partnerForm").show()
-		$(".login-ok").hide()
-		$("#loginErrorMessage").hide()
-	});
-
-	// Show/hide password functionality
-	$("#showPasswordPartner").click(function () {
-		let $checkbox = $(this);
-		let $passwordField = $checkbox.closest('.settings-content').find('.partnerPassword');
-		let change = $checkbox.is(":checked") ? "text" : "password";
-		$passwordField.prop('type', change);
-	});
-
-	function showLoader(form) {
-		$(".opt-partnerForm").hide();
-		form.find(".loader-login").show();
-		$("input[name='partner']").prop("disabled", true);
-	}
-
-	function hideLoader(form) {
-		form.find(".loader-login").hide();
-		$("input[name='partner']").prop("disabled", false);
-	}
-
-
-	$('[name="partner"]').change(function () {
-		let partner = $(this).val()
-		let login = localStorage.getItem(partner)
-
-		if (login === "success") {
-			$("#partnerLogin").hide()
-			$("#partnerPassword").hide()
-			$(".opt-partnerForm").hide()
-			$(".login-ok").show()
-			$("#loginErrorMessage").hide()
-		} else {
-			$("#partnerLogin").show()
-			$("#partnerPassword").show()
-			$(".opt-partnerForm").show()
-			$(".login-ok").hide()
-			$("#loginErrorMessage").hide()
-		}
-	})
-
-	function sendLoginDataToServer(partner, login, password) {
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner,
-				login: login,
-				password: password,
-			},
-			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'success');
-					$("#partnerLogin").hide()
-					$("#partnerPassword").hide()
-					$(".opt-partnerForm").hide()
-					$(".login-ok").show()
-					$("#loginErrorMessage").hide()
-				} else {
-					$(".opt-partnerForm").show();
-					$("#loginErrorMessage").show()
-					$("#partnerLogin").val("").addClass("error-border");
-					$("#partnerPassword").val("").addClass("error-border");
-				}
-				hideLoader(partnerForm);
-			}
-		});
-	}
-
-	function sendLogautDataToServer(partner) {
-		console.log(partner + "_logout")
-		$("#partnerLogin").val("")
-		$("#partnerPassword").val("")
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner + "_logout",
-			},
-			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'false');
-					$("#partnerLogin").show()
-					$("#partnerPassword").show()
-					$(".opt-partnerForm").show()
-					$(".login-ok").hide()
-				}
-			}
-		});
-	}
-});
-
 
 $(document).ready(function () {
 
@@ -652,8 +458,20 @@ $(document).ready(function () {
 		}
 	});
 	// burger-menu
-
 	$('.burger-menu').click(function () {
 		$('.burger-menu').toggleClass('open');
+	});
+
+	$('#investorVehicleBtn').click(function () {
+		$('.payback-car').show();
+		$('.payback-car').css('display', 'flex');
+		$('.charts').hide();
+		$('.main-cards').hide();
+	});
+
+	$(".close-btn").click(function () {
+		$("#settingsWindow").fadeOut();
+		sessionStorage.setItem('settings', 'false');
+		location.reload();
 	});
 });

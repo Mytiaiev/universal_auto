@@ -3,7 +3,7 @@ from datetime import datetime
 from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
-from app.models import DriverManager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
+from app.models import Manager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
     Payments, ParkSettings
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
@@ -26,7 +26,7 @@ from auto_bot.handlers.main.keyboards import back_to_main_menu
 def remove_cash_driver(sender=None, **kwargs):
     if sender == manager_paid_weekly:
         partner_pk = kwargs.get('retval')
-        for manager in DriverManager.objects.filter(partner=partner_pk):
+        for manager in Manager.objects.filter(partner=partner_pk):
             for driver in Driver.objects.filter(manager=manager):
                 bot.send_message(chat_id=manager.chat_id, text=ask_driver_paid(driver),
                                  reply_markup=inline_driver_paid_kb(driver.id))
@@ -99,7 +99,7 @@ def remove_cash_by_manager(update, context):
 
 def get_drivers_from_fleets(update, context):
     query = update.callback_query
-    partner = DriverManager.get_by_chat_id(query.from_user.id).partner
+    partner = Manager.get_by_chat_id(query.from_user.id).partner
     update_driver_data.delay(partner.id, query.from_user.id)
     query.edit_message_text(get_drivers_text)
 
@@ -175,7 +175,7 @@ def create_driver_eff(update, context):
 
 def get_weekly_report(update, context):
     query = update.callback_query
-    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    manager = Manager.get_by_chat_id(query.from_user.id)
     messages = generate_message_weekly(manager.partner.pk)
     owner_message = messages.get(str(query.from_user.id)) or no_drivers_text
     query.edit_message_text(owner_message)
@@ -302,7 +302,7 @@ def send_week_report(sender=None, **kwargs):
 
 def get_partner_vehicles(update, context):
     query = update.callback_query
-    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    manager = Manager.get_by_chat_id(query.from_user.id)
     vehicles = Vehicle.objects.filter(partner=manager.partner, manager=manager)
     if vehicles:
         if query.data == "Pin_vehicle_to_driver":
@@ -318,7 +318,7 @@ def get_partner_vehicles(update, context):
 def get_partner_drivers(update, context):
     query = update.callback_query
     pk_vehicle = query.data.split()[1]
-    manager = DriverManager.get_by_chat_id(query.from_user.id)
+    manager = Manager.get_by_chat_id(query.from_user.id)
     drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
     if drivers:
         query.edit_message_text(partner_drivers)
@@ -343,7 +343,7 @@ def pin_partner_vehicle_to_driver(update, context):
 # Add users and vehicle to db and others
 def add(update, context):
     chat_id = update.message.chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    driver_manager = Manager.get_by_chat_id(chat_id)
     if driver_manager is not None:
         context.user_data['role'] = driver_manager
         update.message.reply_text('Оберіть опцію, кого ви бажаєте створити',
@@ -408,12 +408,12 @@ def create_user(update, context):
                 email=context.user_data['email'],
                 phone_number=phone_number)
 
-            manager = DriverManager.get_by_chat_id(chat_id)
+            manager = Manager.get_by_chat_id(chat_id)
             manager.driver_id.add(driver.id)
             manager.save()
             update.message.reply_text('Водія було добавленно в базу данних')
         elif context.user_data['role'] == USER_MANAGER_DRIVER:
-            DriverManager.objects.create(
+            Manager.objects.create(
                 name=context.user_data['name'],
                 second_name=context.user_data['second_name'],
                 email=context.user_data['email'],
@@ -428,7 +428,7 @@ def create_user(update, context):
 # Viewing broken car
 def broken_car(update, context):
     chat_id = update.message.chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    driver_manager = Manager.get_by_chat_id(chat_id)
     if driver_manager is not None:
         vehicle = Vehicle.objects.filter(car_status=f'{BROKEN}')
         report = ''
@@ -446,7 +446,7 @@ def broken_car(update, context):
 # Viewing status driver
 def driver_status(update, context):
     chat_id = update.message.chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    driver_manager = Manager.get_by_chat_id(chat_id)
     if driver_manager is not None:
         context.user_data['manager_state'] = STATUS
         context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть статус',
@@ -473,7 +473,7 @@ def viewing_status_driver(update, context):
 # Add Vehicle to driver
 def get_list_drivers(update, context):
     chat_id = update.message.chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    driver_manager = Manager.get_by_chat_id(chat_id)
     if driver_manager is not None:
         drivers = {i.id: f'{i.name } {i.second_name}' for i in Driver.objects.all()}
         if len(drivers) == 0:
@@ -591,7 +591,7 @@ def add_information_to_driver(update, context):
 # Push job application to fleets
 def get_list_job_application(update, context):
     chat_id = update.message.chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    driver_manager = Manager.get_by_chat_id(chat_id)
     if driver_manager is not None:
         applications = {i.id: f'{i}' for i in JobApplication.objects.all() if (i.role == driver_job_name and i.status_bolt == False)}
         if len(applications) == 0:
@@ -683,7 +683,7 @@ def get_vin_code_vehicle(update, context):
 
 def get_licence_plate_for_gps_imei(update, context):
     chat_id = update.message.chat.id
-    driver_manager = DriverManager.get_by_chat_id(chat_id)
+    driver_manager = Manager.get_by_chat_id(chat_id)
     vehicles = {i.id: i.licence_plate for i in Vehicle.objects.all()}
     vehicles = {k: vehicles[k] for k in sorted(vehicles)}
     report_list_vehicles = ''

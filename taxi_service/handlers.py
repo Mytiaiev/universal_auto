@@ -6,12 +6,14 @@ from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.contrib.auth import logout
 
+from app.models import Manager, Partner, Investor
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 login_in, partner_logout, login_in_investor,
-                                change_password_investor,send_reset_code,
+                                change_password_investor, send_reset_code,
                                 active_vehicles_gps, order_confirm,
-                                collect_total_earnings, effective_vehicle)
+                                collect_total_earnings, effective_vehicle,
+                                investor_cash_car, investor_effective_vehicle)
 
 
 class PostRequestHandler:
@@ -151,15 +153,40 @@ class GetRequestHandler:
 
     def handle_get_drivers_cash(self, request):
         period = request.GET.get('period')
-        get_drivers_cash = collect_total_earnings(period)
-        json_data = JsonResponse({'data': get_drivers_cash}, safe=False)
+        user = request.user
+        if user.is_active and Manager.objects.filter(user=user).exists():
+            get_drivers_cash = collect_total_earnings(period)
+            json_data = JsonResponse({'data': get_drivers_cash}, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
+        elif user.is_active and Partner.objects.filter(user=user).exists():
+            get_cash = investor_cash_car(period)
+            json_data = JsonResponse({'data': get_cash}, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
+
+    def handle_get_investor_cash(self, request):
+        period = request.GET.get('period')
+        investor_id = request.user.pk
+
+        get_cash = investor_cash_car(period, investor_id)
+        json_data = JsonResponse({'data': get_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
     def handle_effective_vehicle(self, request):
         period = request.GET.get('period')
-        vehicle = request.GET.get('vehicle_id')
-        get_efficiency_vehicle = effective_vehicle(period, vehicle)
+        vehicle1 = request.GET.get('vehicle_id1')
+        vehicle2 = request.GET.get('vehicle_id2')
+        get_efficiency_vehicle = effective_vehicle(period, vehicle1, vehicle2)
+        json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
+    def handle_investor_effective_vehicle(self, request):
+        period = request.GET.get('period')
+        investor_id = request.user.pk
+        get_efficiency_vehicle = investor_effective_vehicle(period, investor_id)
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
@@ -171,6 +198,14 @@ class GetRequestHandler:
             response_data = {'is_logged_in': True, 'user_name': user_name}
         else:
             response_data = {'is_logged_in': False}
+        return JsonResponse(response_data, safe=False)
+
+    def handle_get_role(self, request):
+        if request.user.is_authenticated:
+            user_role = request.user.groups.first().name
+            response_data = {'role': user_role}
+        else:
+            response_data = {'role': None}
         return JsonResponse(response_data, safe=False)
 
     def handle_unknown_action(self, request):

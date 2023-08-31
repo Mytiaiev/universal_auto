@@ -1087,7 +1087,25 @@ $(document).ready(function () {
 	});
 
 	$("#loggedInUser").click(function () {
-		window.location.href = "/dashboard/";
+		$.ajax({
+			url: ajaxGetUrl,
+			type: "GET",
+			data: {
+				action: "get_role"
+			},
+			success: function (response) {
+				console.log(response.role);
+				if (response.role === 'Investor') {
+					window.location.href = "/dashboard-investor/";
+				}
+				if (response.role === 'Manager') {
+					window.location.href = "/dashboard-manager/";
+				}
+				if (response.role === 'Partner') {
+					window.location.href = "/dashboard-partner/";
+				}
+			}
+		});
 	});
 
 	$("#loginBtn").click(function () {
@@ -1105,23 +1123,42 @@ $(document).ready(function () {
 	$("#login-invest").click(function () {
 		let login = $("#login").val();
 		let password = $("#password").val();
-		let action = 'login_invest';
 
 		$.ajax({
 			url: ajaxPostUrl,
 			type: 'POST',
 			data: {
-				action: action,
+				action: 'login_invest',
 				login: login,
 				password: password,
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
 			},
-			success: function (data) {
-				if (data.data['success'] === true) {
-					$("#loginBtn").hide();
-					$("#loggedInUser").text('Кабінет Інвестора').show();
-					$("#loginForm").fadeOut();
-					window.location.href = "/dashboard/";
+			success: function (response) {
+				console.log(response.data['role']);
+				if (response.data['success'] === true) {
+					if (response.data['role'] === 'Investor') {
+						$("#loginBtn").hide();
+						$("#loggedInUser").text('Кабінет Інвестора').show();
+						$("#loginForm").fadeOut();
+						window.location.href = "/dashboard-investor/";
+					}
+
+					if (response.data['role'] === 'Manager') {
+						$("#loginBtn").hide();
+						$("#loggedInUser").text('Кабінет Менеджера').show();
+						$("#loginForm").fadeOut();
+						localStorage.setItem('role', 'manager');
+						window.location.href = "/dashboard-manager/";
+					}
+
+					if (response.data['role'] === 'Partner') {
+						$("#loginBtn").hide();
+						$("#loggedInUser").text('Кабінет Партнера').show();
+						$("#loginForm").fadeOut();
+						localStorage.setItem('role', 'partner');
+						window.location.href = "/dashboard-partner/";
+					}
+
 				} else {
 					$("#loginErrorMessage").show();
 					$("#login").val("")

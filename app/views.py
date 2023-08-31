@@ -104,7 +104,7 @@ def gps_cars(request):
 
 
 from rest_framework import generics
-from app.models import Order, Payments, RentInformation, SummaryReport, Driver, Vehicle, DriverManager, Comment, \
+from app.models import Order, Payments, RentInformation, SummaryReport, Driver, Vehicle, Manager, Comment, \
     CarEfficiency
 from app.serializers import OrderSerializer, PaymentsSerializer, RentInformationSerializer, SummaryReportSerializer, \
     DriverSerializer, VehicleSerializer, DriverManagerSerializer, CommentSerializer, CarEfficiencySerializer

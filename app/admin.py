@@ -13,22 +13,30 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-def assign_model_permissions(group):
-    models = {
-        'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
-        'Payments':                     {'view': True, 'add': False, 'change': False, 'delete': False},
-        'SummaryReport':                {'view': True, 'add': False, 'change': False, 'delete': False},
-        'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
-        'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
-        'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
-        'DriverManager':                {'view': True, 'add': True, 'change': True, 'delete': True},
-        'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
-        'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
-        'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
-        'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
-    }
+models = {
+    'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Payments':                     {'view': True, 'add': False, 'change': False, 'delete': False},
+    'SummaryReport':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Manager':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
+    'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
+    'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
+}
 
-    for model, permissions in models.items():
+investor_permissions = {
+    'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
+    'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'VehicleSpendings':             {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Dashboard':                    {'view': True, 'add': False, 'change': False, 'delete': False},
+}
+
+
+def assign_model_permissions(group, permissions):
+    for model, permissions in permissions.items():
         content_type = ContentType.objects.get(app_label='app', model__iexact=model)
         model_permissions = Permission.objects.filter(content_type=content_type)
 
@@ -39,13 +47,21 @@ def assign_model_permissions(group):
             if value and permission_obj not in group.permissions.all():
                 group.permissions.add(permission_obj)
 
-
 try:
     group1, created = Group.objects.get_or_create(name='Partner')
     for user in group1.user_set.all():
         for permission in group1.permissions.all():
             user.user_permissions.add(permission)
-    assign_model_permissions(group1)
+    assign_model_permissions(group1, models)
+
+    group2, created = Group.objects.get_or_create(name='Investor')
+    assign_model_permissions(group2, investor_permissions)
+
+    group3, created = Group.objects.get_or_create(name='Manager')
+    for user in group3.user_set.all():
+        for permission in group3.permissions.all():
+            user.user_permissions.add(permission)
+    assign_model_permissions(group3, models)
 except (ProgrammingError, ObjectDoesNotExist):
     pass
 
@@ -63,8 +79,16 @@ def filter_queryset_by_group(*groups, field_to_filter=None):
         class FilteredModelAdmin(model_admin_class):
             def get_queryset(self, request):
                 queryset = super().get_queryset(request)
+                if request.user.groups.filter(name='Investor').exists():
 
-                if not request.user.is_superuser and request.user.groups.filter(name__in=groups).exists():
+                    investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
+                    investor_vehicle_ids = investor_vehicles.values_list('licence_plate', flat=True)
+
+                    queryset = queryset.filter(licence_plate__in=investor_vehicle_ids)
+
+                if request.user.groups.filter(name='Manager').exists():
+                    queryset = queryset.filter(manager__user=request.user)
+                if request.user.groups.filter(name='Partner').exists():
                     queryset = queryset.filter(partner__user=request.user, **{field_to_filter: True})
 
                 return queryset
@@ -404,6 +428,39 @@ class JobApplicationAdmin(admin.ModelAdmin):
     ]
 
 
+@admin.register(VehicleSpendings)
+class VehicleSpendingsAdmin(admin.ModelAdmin):
+    list_display = ['id', 'vehicle', 'amount', 'category', 'description']
+
+    fieldsets = [
+        (None, {'fields': ['vehicle', 'amount',
+                           'category', 'description'
+                           ]}),
+    ]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if request.user.groups.filter(name='Investor').exists():
+            investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
+            investor_vehicle_ids = investor_vehicles.values_list('licence_plate', flat=True)
+            queryset = queryset.filter(vehicle__licence_plate__in=investor_vehicle_ids)
+        return queryset
+
+
+VehicleSpendingsAdmin = filter_queryset_by_group('Investor')(VehicleSpendingsAdmin)
+
+
+@admin.register(TransactionsConversantion)
+class TransactionsConversantionAdmin(admin.ModelAdmin):
+    list_filter = ['vehicle']
+
+    def get_list_display(self, request):
+        if request.user.is_superuser:
+            return [f.name for f in self.model._meta.fields]
+        else:
+            return ['vehicle', 'sum_before_transaction', 'сurrency', 'currency_rate', 'sum_after_transaction']
+
+
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = ['licence_plate']
@@ -621,11 +678,31 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         return fieldsets
 
 
-@admin.register(DriverManager)
-@add_partner_on_save_model(DriverManager)
-class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+@admin.register(Partner)
+class PartnerAdmin(admin.ModelAdmin):
+    list_display = ('role',)
+    list_per_page = 25
+
+    fieldsets = [
+        (None, {'fields': ['user', 'role']}),
+    ]
+
+
+@admin.register(Investor)
+class InvestorAdmin(admin.ModelAdmin):
+    list_display = ('phone_number', 'user', 'role')
+    list_per_page = 25
+
+    fieldsets = [
+        (None, {'fields': ['phone_number', 'user', 'role']}),
+    ]
+
+
+@admin.register(Manager)
+@add_partner_on_save_model(Manager)
+class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('name', 'second_name')
-    ordering = ('name', 'second_name')
+    # ordering = ('name', 'second_name')
     list_per_page = 25
 
     def save_model(self, request, obj, form, change):
@@ -643,17 +720,16 @@ class DriverManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
-                ('Інформація про менеджера',    {'fields': ['name', 'second_name', 'email',
-                                                            'phone_number', 'chat_id',
-                                                            ]}),
-                ('Додатково',                   {'fields': ['partner',
+
+                ('Додатково',                   {'fields': ['last_name', 'first_name', 'email', 'chat_id',
+                                                            'phone_number', 'partner', 'user'
                                                             ]}),
             ]
 
         else:
             fieldsets = [
-                ('Інформація про менеджера',    {'fields': ['name', 'second_name', 'email', 'chat_id',
-                                                            'phone_number',
+                ('Інформація про менеджера',    {'fields': ['last_name', 'first_name', 'email', 'chat_id',
+                                                            'phone_number', 'partner', 'user'
                                                             ]}),
             ]
 
@@ -759,7 +835,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return ['id', 'name',
                     'licence_plate', 'type', 'vin_code',
                     'gps_imei', 'car_status', 'purchase_price',
-                    'сurrency', 'investor', 'investor_percentage',
+                    'сurrency', 'investor_car', 'investor_percentage',
                     'currency_rate',
                     'сurrency_back', 'car_earnings',
                     'created_at',
@@ -771,7 +847,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'type', 'purchase_price',
-                                                            'сurrency', 'investor', 'investor_percentage',
+                                                            'сurrency', 'investor_car', 'investor_percentage',
                                                             'currency_rate', 'сurrency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei', 'lat', 'lon',
@@ -786,7 +862,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'type', 'purchase_price',
-                                                            'сurrency', 'investor', 'investor_percentage',
+                                                            'сurrency', 'investor_car', 'investor_percentage',
                                                             'currency_rate', 'сurrency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei',
@@ -985,7 +1061,18 @@ class ParkSettingsAdmin(admin.ModelAdmin):
 class DashboardAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         if request.method == "GET":
-            dashboard_url = reverse('dashboard')
+            user = request.user
+
+            if user.groups.filter(name='Investor').exists():
+                dashboard_url = reverse('dashboard_investor')
+            elif user.groups.filter(name='Partner').exists():
+                dashboard_url = reverse('dashboard_partner')
+            elif user.groups.filter(name='Manager').exists():
+                dashboard_url = reverse('dashboard')
+            else:
+                # Default dashboard for other users
+                dashboard_url = reverse('dashboard')
+
             return redirect(dashboard_url)
 
         return super().changelist_view(request, extra_context)
