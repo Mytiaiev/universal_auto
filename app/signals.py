@@ -16,10 +16,10 @@ from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import create_event, datetime_with_timezone
 
 
-@receiver(post_save, sender=AuUser)
-def create_partner(sender, instance, created, **kwargs):
-    if created:
-        Partner.objects.create(user=instance)
+# @receiver(post_save, sender=AuUser)
+# def create_partner(sender, instance, created, **kwargs):
+#     if created:
+#         Partner.objects.create(user=instance)
 
 
 @receiver(post_save, sender=Partner)
@@ -31,11 +31,11 @@ def create_park_settings(sender, instance, created, **kwargs):
             ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
 
 
-@receiver(post_delete, sender=AuUser)
-def delete_park_settings(sender, instance, **kwargs):
-    partner = Partner.objects.filter(user=instance)
-    if partner:
-        remove_periodic_tasks(partner.first())
+# @receiver(post_delete, sender=AuUser)
+# def delete_park_settings(sender, instance, **kwargs):
+#     partner = Partner.objects.filter(user=instance)
+#     if partner:
+#         remove_periodic_tasks(partner.first())
 
 
 @receiver(pre_save, sender=Driver)

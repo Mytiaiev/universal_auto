@@ -14,7 +14,18 @@ from polymorphic.models import PolymorphicModel
 from django.contrib.auth.models import User as AuUser
 
 
+class Role(models.TextChoices):
+    CLIENT = 'CLIENT', 'Client'
+    DRIVER = 'DRIVER', 'Driver'
+    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
+    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
+    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
+    OWNER = 'OWNER', 'Owner'
+    INVESTOR = 'INVESTOR', 'Investor'
+
+
 class Partner(models.Model):
+    role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
 
     @classmethod
@@ -128,15 +139,6 @@ class FileNameProcessed(models.Model):
             order.save()
 
 
-class Role(models.TextChoices):
-    CLIENT = 'CLIENT', 'Client'
-    DRIVER = 'DRIVER', 'Driver'
-    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
-    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
-    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
-    OWNER = 'OWNER', 'Owner'
-
-
 class User(models.Model):
 
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
@@ -214,15 +216,50 @@ class User(models.Model):
                 return valid_phone_number
 
 
-class DriverManager(User):
+class Manager(models.Model):
+    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
+    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
+    email = models.EmailField(max_length=254, blank=True, null=True, verbose_name='Електрона пошта')
+    phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
+    chat_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індетифікатор чата')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+    user = models.OneToOneField(AuUser, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Користувач')
+    role = models.CharField(max_length=25, default=Role.DRIVER_MANAGER, choices=Role.choices)
 
     class Meta:
-        verbose_name = 'Менеджер водія'
-        verbose_name_plural = 'Менеджер водіїв'
+        verbose_name = 'Менеджер'
+        verbose_name_plural = 'Менеджери'
+
+    @classmethod
+    def get_by_chat_id(cls, chat_id):
+        """
+        Returns user by chat_id
+        :param chat_id: chat_id by which we need to find the user
+        :type chat_id: str
+        :return: user object or None if a user with such ID does not exist
+        """
+        try:
+            user = cls.objects.get(chat_id=chat_id)
+            return user
+        except ObjectDoesNotExist:
+            return None
 
     def __str__(self):
-        return f'{self.name} {self.second_name}'
+        return f"{self.first_name} {self.last_name}"
+
+
+class Investor(models.Model):
+    phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
+    role = models.CharField(max_length=25, default=Role.INVESTOR, choices=Role.choices)
+
+    user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        verbose_name = 'Інвестор'
+        verbose_name_plural = 'Інвестори'
+
+    def __str__(self) -> str:
+       return f'{self.user.username}'
 
 
 class Vehicle(models.Model):
@@ -242,7 +279,7 @@ class Vehicle(models.Model):
     lat = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Широта")
     lon = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Довгота")
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
-    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
+    manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
     purchase_price = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Ціна покупки")
     сurrency = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
                                 verbose_name='Валюта покупки')
@@ -251,7 +288,7 @@ class Vehicle(models.Model):
     car_earnings = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Заробіток авто")
     сurrency_back = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
                                      verbose_name='Валюта повернення коштів')
-    investor = models.BooleanField(default=False, verbose_name='Машина інвестора')
+    investor_car = models.ForeignKey(Investor, blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Машина інвестора')
     investor_percentage = models.DecimalField(decimal_places=2, max_digits=10, default=0.35,
                                               verbose_name="Відсоток інвестора")
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -310,6 +347,36 @@ class TransactionsConversantion(models.Model):
                                         verbose_name="Курс валюти")
     sum_after_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума після транзакції")
 
+    class Meta:
+        verbose_name = 'Транзакція'
+        verbose_name_plural = 'Транзакції'
+
+    def __str__(self) -> str:
+        return f'{self.vehicle} {self.sum_before_transaction} {self.сurrency}'
+
+
+class VehicleSpendings(models.Model):
+    class Category(models.TextChoices):
+        FUEL = 'FUEL', 'Паливо'
+        SERVICE = 'SERVICE', 'Сервісне обслуговування'
+        REPAIR = 'REPAIR', 'Ремонт'
+        WASHING = 'WASHING', 'Мийка'
+        OTHER = 'OTHER', 'Інше'
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True, verbose_name='Автомобіль')
+    amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Сума')
+    category = models.CharField(max_length=255, choices=Category.choices, verbose_name='Категорія витрат')
+    description = models.TextField(blank=True, null=True, verbose_name='Опис')
+    photo = models.ImageField(upload_to='spendings/', blank=True, null=True, verbose_name='Фото')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
+
+
+    class Meta:
+        verbose_name = 'Витрата'
+        verbose_name_plural = 'Витрати'
+
+    def __str__(self) -> str:
+        return f'{self.vehicle} {self.amount} {self.category}'
+
 
 class Driver(User):
     ACTIVE = 'Готовий прийняти заказ'
@@ -327,8 +394,7 @@ class Driver(User):
 
     fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-    manager = models.ForeignKey(DriverManager, on_delete=models.SET_NULL, null=True, blank=True,
-                                verbose_name='Менеджер водіїв')
+    manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
     schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
@@ -490,7 +556,7 @@ class StatusChange(models.Model):
 class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
-    vehicle = models.ForeignKey(Vehicle, null=True, on_delete=models.CASCADE, verbose_name='Автомобіль')
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True, verbose_name='Автомобіль')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
@@ -888,7 +954,7 @@ class FleetOrder(models.Model):
     COMPLETED = 'Виконаний'
     CLIENT_CANCEL = 'Скасовано клієнтом'
     DRIVER_CANCEL = 'Скасовано водієм'
-    
+
     order_id = models.CharField(max_length=50, verbose_name='Ідентифікатор замовлення')
     fleet = models.CharField(max_length=20, verbose_name='Агрегатор замовлення')
     driver = models.CharField(max_length=255, verbose_name='Водій')
@@ -899,11 +965,11 @@ class FleetOrder(models.Model):
     state = models.CharField(max_length=255, blank=True, null=True, verbose_name='Статус замовлення')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-    
+
     class Meta:
         verbose_name = 'Стороннє замовлення'
         verbose_name_plural = 'Сторонні замовлення'
-    
+
 
 class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
@@ -1032,6 +1098,7 @@ class CarEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
     licence_plate = models.CharField(null=True, max_length=25, verbose_name='Номер автомобіля')
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
+    total_spendings = models.DecimalField(null=True, decimal_places=2, max_digits=10, default=0, verbose_name='Всього витрат')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
     partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнер')
@@ -1060,6 +1127,9 @@ class DriverEfficiency(models.Model):
     class Meta:
         verbose_name = 'Ефективність водія'
         verbose_name_plural = 'Ефективність водіїв'
+
+    def __str__(self):
+        return f"{self.driver}"
 
 
 class UseOfCars(models.Model):

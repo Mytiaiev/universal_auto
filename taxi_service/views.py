@@ -1,3 +1,5 @@
+import os
+
 import jwt
 import json
 
@@ -13,8 +15,10 @@ from django.utils.decorators import method_decorator
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-from taxi_service.utils import weekly_rent, average_effective_vehicle
-from app.models import ParkSettings, Driver, Vehicle
+from taxi_service.utils import weekly_rent, average_effective_vehicle, \
+    car_piggy_bank
+from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
+from auto_bot.main import bot
 
 
 class IndexView(TemplateView):
@@ -88,12 +92,14 @@ class GetRequestView(View):
             return handler.handle_active_vehicles_locations(request)
         elif action == 'order_confirm':
             return handler.handle_order_confirm(request)
-        elif action == 'get_drivers_cash':
-            return handler.handle_get_drivers_cash(request)
-        elif action == 'effective_vehicle':
-            return handler.handle_effective_vehicle(request)
+        elif action == 'get_cash_investor':
+            return handler.handle_get_investor_cash(request)
+        elif action == 'investor_effective_vehicle':
+            return handler.handle_investor_effective_vehicle(request)
         elif action == 'is_logged_in':
             return handler.handle_is_logged_in(request)
+        elif action == 'get_role':
+            return handler.handle_get_role(request)
         else:
             return handler.handle_unknown_action(request)
 
@@ -119,10 +125,55 @@ class DriversView(TemplateView):
 
 
 class DashboardView(TemplateView):
-    template_name = 'dashboard.html'
+    template_name = 'dashboard/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+
+        context = super().get_context_data(**kwargs)
+
+        context['total_distance_rent'] = weekly_rent()
+        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
+        context['average_effective_vehicle'] = average_effective_vehicle()
+
+        return context
+
+
+class DashboardInvestorView(TemplateView):
+    template_name = 'dashboard/dashboard-investor.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        user_id = self.request.user.id
+        investor = Investor.objects.get(user_id=user_id)
+        investor_cars = Vehicle.objects.filter(investor_car=investor)
+
+        context['get_all_vehicle'] = investor_cars
+        context['car_piggy_bank'] = car_piggy_bank(self.request)
+
+        return context
+
+
+class DashboardPartnerView(TemplateView):
+    template_name = 'dashboard/dashboard-partner.html'
+
+    def get_context_data(self, **kwargs):
+
+        context = super().get_context_data(**kwargs)
+
+        context['total_distance_rent'] = weekly_rent()
+        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
+        context['average_effective_vehicle'] = average_effective_vehicle()
+
+        return context
+
+class DashboardManagerView(TemplateView):
+    template_name = 'dashboard/dashboard-manager.html'
+
+    def get_context_data(self, **kwargs):
+
+        context = super().get_context_data(**kwargs)
+
         context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
         context['average_effective_vehicle'] = average_effective_vehicle()
@@ -152,6 +203,16 @@ class GoogleAuthView(View):
                 return redirect(reverse('index') + "?signed_in=false")
 
         return HttpResponseRedirect(redirect_url)
+
+
+class SendToTelegramView(View):
+    def get(self, request, *args, **kwargs):
+
+        chat_id = os.environ.get('TELEGRAM_BOT_CHAT_ID')
+
+        telegram_link = f"https://t.me/{bot.username}?start={chat_id}"
+
+        return HttpResponseRedirect(telegram_link)
 
 
 def blog(request):
