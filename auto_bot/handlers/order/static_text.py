@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from app.models import ParkSettings
+
 FROM_ADDRESS, TO_THE_ADDRESS, COMMENT, TIME_ORDER, START_TIME_ORDER, ADD_INFO = range(1, 7)
 NOT_CORRECT_ADDRESS = "На жаль, немає вірної адреси"
 LOCATION = "Поділитися місцезнаходженням"
@@ -24,6 +26,7 @@ order_customer_text = "Коли водій буде на місці, ви отр
 driver_accept_text = 'Ваше замовлення прийнято.Шукаємо водія'
 driver_arrived = "Машину подано. Водій вас очікує"
 select_car_error = "Для прийняття замовлень потрібно розпочати роботу."
+accept_order_error = "Для прийняття замовлень потрібно стати водієм Ninja Taxi."
 add_many_auto_text = 'Не вдається знайти авто для роботи зверніться до менеджера.'
 driver_cancel = "На жаль, водій відхилив замовлення. Пошук іншого водія..."
 client_cancel = "Ви відмовились від замовлення"
@@ -52,6 +55,28 @@ update_text = "Оновлюємо інформацію"
 add_info_text = "Бажаєте додати коментар до замовлення?"
 ask_info_text = "Напишіть, будь ласка, Ваш коментар"
 too_long_text = "Занадто великий коментар, вкажіть тільки найважливіше"
+choose_action = "Оберіть необхідну дію"
+personal_order_text = "Основна ідея послуги <Персональний водій> полягає в наданні клієнту професійного водія," \
+                       " який буде керувати автомобілем за його замовленням та вимогами." \
+                       " Ця послуга спрямована на забезпечення комфорту, зручності, безпеки та гнучкості під час пересування." \
+                       " Ви можете замовити цю послугу для бізнес-зустрічей, спеціальних подій, довгих поїздок.\n"
+
+personal_terms_text = "Умови даної послуги від Ninja Taxi:\n" \
+                      "1. Ціна послуги визначається залежно від тривалості подорожі.\n" \
+                      "2. Мінімальний час замовлення 2 години або 50 км.\n" \
+                      "3. Вартість послуги 500₴ за годину або 25км поїздки\n" \
+                      "4. Тарифікація погодинна\n" \
+                      "5. Водія не можна фізично чіпати та примушувати щось робити"
+ask_client_accept = "Чи бажаєте продовжити?"
+pd_time_text = "Вкажіть період на скільки потрібно авто?"
+pd_update_time = "На скільки годин бажаєте подовжити поїздку?"
+pd_order_not_accepted = "Замовлення персонального водія не прийнято"
+driver_text_personal_end = "Замовлення завершено, спитайте клієнта чи буде він продовжувати, якщо ні завершіть замовлення за допомогою кнопки"
+client_text_personal_end = "У вас завершився ліміт часу або кілометраж, бажаєте продовжити?"
+client_finish_personal_order = "Замовлення завершиться автоматично після використання сплаченого часу/км."
+back_time_route_end = "Замовлення завершується, оберіть потрібну дію"
+
+
 order_inline_buttons = (
     "\u274c Відхилити",
     "\u2705 Прийняти замовлення",
@@ -66,6 +91,11 @@ order_inline_buttons = (
     "\U0001F4DD Додати коментар",
     "\u274c Ні, дякую",
     '\u2705 Змінити тип оплати',
+)
+personal_order_buttons = (
+    "\u2139 Інформація про послугу",
+    "\U0001F4DD Умови послуги",
+    "\U0001F9CD Замовити персонального водія"
 )
 
 search_inline_buttons = (
@@ -87,6 +117,17 @@ price_inline_buttons = (
     "150 \U000020B4",
     "\U0001f4b7 Готівка",
     "\U0001f4b8 Картка"
+)
+
+pd_time_buttons = (
+    "\U000024F6 години",
+    "\U000024F7 години",
+    "\U000024F8 години",
+    "\U000024F9 годин",
+    "\U000027A1 Продовжити поїздку",
+    "\U0001F645 Не продовжувати поїздку",
+    "\U000023F9 Завершити зараз",
+    "\U000024F5 годину"
 )
 
 date_inline_buttons = (
@@ -119,6 +160,19 @@ def order_info(order, time=None):
     return message
 
 
+def personal_order_info(order):
+    time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+    message = f"<u>Замовлення персонального водія {order.pk}:</u>\n" \
+              f"<b>Час подачі:{time}</b>\n" \
+              f"Адреса посадки: {order.from_address}\n" \
+              f"Номер телефону: {order.phone_number}\n" \
+              f"Кількість годин: {order.payment_hours}\n" \
+              f"Загальна вартість: {order.sum} грн\n"
+    if order.info:
+        message += f"Коментар: {order.info}"
+    return message
+
+
 def client_order_info(order):
     if order.car_delivery_price:
         message = f"Замовлення оновлено\n" \
@@ -136,6 +190,20 @@ def client_order_info(order):
     if order.order_time:
         time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
         message += f"Час подачі:{time}\n"
+    return message
+
+
+def client_personal_info(order):
+    time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+    message = f"Ваше замовлення {order.pk}:\n" \
+              f"Час подачі:{time}\n" \
+              f"Адреса посадки: {order.from_address}\n" \
+              f"Номер телефону: {order.phone_number}\n" \
+              f"Сплачено: {order.payment_hours}год або " \
+              f"{int(order.payment_hours) * int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR'))}км \n" \
+              f"Загальна вартість: {order.sum} грн\n"
+    if order.info:
+        message += f"Коментар: {order.info}"
     return message
 
 
@@ -168,8 +236,32 @@ def manager_change_payments_info(order):
               f"Змінив спосіб оплати на: {order.payment_method}\n"
     return message
 
+
 def small_time_delta(time, delta):
     format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
     message = f'Вкажіть, будь ласка, більш пізній час.\n' \
               f'Мінімальний час для передзамовлення: {format_time}'
     return message
+
+
+def complete_personal_order(price):
+    return f'Замовлення сформоване, сума до сплати {price}грн.'
+
+
+def update_hours_text(hours):
+    return f'Замовлення успішно продовжено на {hours}год.'
+
+
+def update_hours_driver_text(hours):
+    return f'Кліент продовжив замовлення на {hours}год.'
+
+
+def add_hours_text(price):
+    return f'Замовлення оновлюється, сума до сплати {price}грн.'
+
+
+def personal_time_route_end(end_time, route):
+    format_time = end_time.time().strftime('%H:%M')
+    not_negative_route = 0 if route < 0 else route
+    return f'Замовлення завершується в {format_time} або через {not_negative_route}км'
+

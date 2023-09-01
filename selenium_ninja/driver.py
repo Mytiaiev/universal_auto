@@ -271,6 +271,7 @@ class SeleniumTools:
                 self.save_uber()
         except NoSuchElementException:
             login_success = False
+        self.quit()
         return login_success
 
     def save_uber(self):

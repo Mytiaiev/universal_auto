@@ -911,6 +911,9 @@ class Order(models.Model):
     CANCELED = 'Скасовано клієнтом'
     ON_TIME = 'На певний час'
 
+    STANDARD_TYPE = 'Звичайне замовлення'
+    PERSONAL_TYPE = 'Персональний водій'
+
     from_address = models.CharField(max_length=255, verbose_name='Місце посадки')
     latitude = models.CharField(max_length=10, verbose_name='Широта місця посадки')
     longitude = models.CharField(max_length=10, verbose_name='Довгота місця посадки')
@@ -919,15 +922,13 @@ class Order(models.Model):
     to_longitude = models.CharField(max_length=10, null=True, verbose_name='Довгота місця висадки')
     phone_number = models.CharField(max_length=13, verbose_name='Номер телефона клієнта')
     chat_id_client = models.CharField(max_length=10, blank=True, null=True, verbose_name='Ідентифікатор чату клієнта')
-    driver_message_id = models.CharField(max_length=10, blank=True, null=True,
-                                         verbose_name='Ідентифікатор повідомлення водія')
-    client_message_id = models.CharField(max_length=10, blank=True, null=True,
-                                         verbose_name='Ідентифікатор повідомлення клієнта')
+    type_order = models.CharField(max_length=100, default=STANDARD_TYPE, verbose_name='Тип замовлення')
     info = models.CharField(max_length=255, null=True, verbose_name='Додаткова інформація')
     car_delivery_price = models.IntegerField(default=0, verbose_name='Сума за подачу автомобіля')
     sum = models.IntegerField(default=0, verbose_name='Загальна сума')
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
-    payment_method = models.CharField(max_length=70, verbose_name='Спосіб оплати')
+    payment_hours = models.IntegerField(null=True, verbose_name='Годин Сплачено')
+    payment_method = models.CharField(max_length=70, null=True, verbose_name='Спосіб оплати')
     status_order = models.CharField(max_length=70, verbose_name='Статус замовлення')
     distance_gps = models.CharField(max_length=10, blank=True, null=True, verbose_name='Дистанція по GPS')
     distance_google = models.CharField(max_length=10, verbose_name='Дистанція Google')
@@ -1168,6 +1169,14 @@ class ParkSettings(models.Model):
         except ObjectDoesNotExist:
             return default
         return setting.value
+
+    @classmethod
+    def get_key(cls, key, default=None):
+        try:
+            setting = cls.objects.get(key=key)
+            print(setting.key)
+        except (ProgrammingError, ObjectDoesNotExist):
+            return default
 
 
 class Service(PolymorphicModel):

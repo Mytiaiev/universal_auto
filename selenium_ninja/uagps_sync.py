@@ -143,6 +143,10 @@ class UaGpsSynchronizer:
         day = timezone.localtime() - datetime.timedelta(days=delta)
         in_road = self.get_road_distance(partner_id, delta=delta)
         for driver, result in in_road.items():
+            if RentInformation.objects.filter(report_from=day,
+                                              driver=driver,
+                                              partner=Partner.get_partner(partner_id)):
+                continue
             if driver.vehicle:
 
                 total_km = self.total_per_day(driver.vehicle.licence_plate, day)[0]

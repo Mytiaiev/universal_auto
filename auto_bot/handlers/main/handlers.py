@@ -53,7 +53,9 @@ def start(update, context):
 
 def start_query(update, context):
     query = update.callback_query
-    users = User.objects.filter(chat_id=update.effective_chat.id)
+    chat_id = update.effective_chat.id
+    redis_instance().delete(str(chat_id))
+    users = User.objects.filter(chat_id=chat_id)
     if len(users) == 1:
         user = users.first()
         reply_markup = get_start_kb(user)
