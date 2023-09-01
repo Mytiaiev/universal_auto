@@ -482,7 +482,7 @@ def order_not_accepted(self):
                 redis_instance().hdel('group_msg', order.id)
                 search_driver_for_order.delay(order.id)
             else:
-                for manager in DriverManager.objects.exclude(chat_id__isnull=True):
+                for manager in Manager.objects.exclude(chat_id__isnull=True):
                     if not redis_instance().hexists(str(manager.chat_id), f'personal {order.id}'):
                         redis_instance().hset(str(manager.chat_id), f'personal {order.id}', order.id)
                         bot.send_message(chat_id=manager.chat_id, text=pd_order_not_accepted)

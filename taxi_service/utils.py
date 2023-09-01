@@ -11,24 +11,23 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
 
-from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
-						SummaryReport, CarEfficiency, Partner, ParkSettings,
-						Manager, Investor, Vehicle, VehicleSpendings, )
+from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation, SummaryReport, CarEfficiency,
+                        Partner, ParkSettings, Manager, Investor, Vehicle, VehicleSpendings, )
 from selenium_ninja.driver import SeleniumTools
 from scripts.redis_conn import get_logger
 
 
 def active_vehicles_gps():
-	vehicles_gps = []
-	active_drivers = Driver.objects.filter(driver_status=Driver.ACTIVE, vehicle__isnull=False)
-	for driver in active_drivers:
-		vehicle = {'licence_plate': driver.vehicle.licence_plate,
-					'lat': driver.vehicle.lat,
-					'lon': driver.vehicle.lon
-					}
-		vehicles_gps.append(vehicle)
-	json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
-	return json_data
+    vehicles_gps = []
+    active_drivers = Driver.objects.filter(driver_status=Driver.ACTIVE, vehicle__isnull=False)
+    for driver in active_drivers:
+        vehicle = {'licence_plate': driver.vehicle.licence_plate,
+                   'lat': driver.vehicle.lat,
+                   'lon': driver.vehicle.lon
+                   }
+        vehicles_gps.append(vehicle)
+    json_data = json.dumps(vehicles_gps, cls=DjangoJSONEncoder)
+    return json_data
 
 
 def order_confirm(id_order):
@@ -39,11 +38,11 @@ def order_confirm(id_order):
     if vehicle is not None:
         vehicle_gps = VehicleGPS.objects.filter(
             vehicle__licence_plate=vehicle.licence_plate
-        ).values('vehicle__licence_plate', 'lat', 'lon')
+            ).values('vehicle__licence_plate', 'lat', 'lon')
         data = {
-            'vehicle_gps': list(vehicle_gps),
-            'car_delivery_price': car_delivery_price
-        }
+                'vehicle_gps': list(vehicle_gps),
+                'car_delivery_price': car_delivery_price
+                }
         json_data = json.dumps(data, cls=DjangoJSONEncoder)
         return json_data
     else:
@@ -51,10 +50,10 @@ def order_confirm(id_order):
 
 
 def update_order_sum_or_status(id_order, action):
-	if action == 'user_opt_out':
-		order = Order.objects.get(id=id_order)
-		order.status_order = Order.CANCELED
-		order.save()
+    if action == 'user_opt_out':
+        order = Order.objects.get(id=id_order)
+        order.status_order = Order.CANCELED
+        order.save()
 
 
 def restart_order(id_order, car_delivery_price, action):
@@ -74,16 +73,14 @@ def restart_order(id_order, car_delivery_price, action):
 
 
 def get_dates(period=None):
+    current_date = timezone.now().date()
     if period == 'day':
-        current_date = timezone.now().date()
         previous_date = current_date - timedelta(days=1)
 
         start_date = previous_date
         end_date = current_date
-        return start_date, end_date
 
     elif period == 'week':
-        current_date = timezone.now().date()
         weekday = current_date.weekday()
 
         if weekday == 0:
@@ -92,38 +89,34 @@ def get_dates(period=None):
         else:
             start_date = current_date - timedelta(days=weekday)
             end_date = start_date + timedelta(days=6)
-        return start_date, end_date
 
     elif period == 'month':
         current_date = timezone.now().date()
         start_date = current_date.replace(day=1)
         next_month = current_date.replace(day=28) + timedelta(days=4)
         end_date = next_month - timedelta(days=next_month.day)
-        return start_date, end_date
 
     elif period == 'quarter':
-        current_date = timezone.now().date()
         current_month = current_date.month
         current_quarter = (current_month - 1) // 3 + 1
 
         if current_quarter == 1:
             start_date = date(current_date.year, 1, 1)
             end_date = date(current_date.year, 3, 31)
-            return start_date, end_date
+
         elif current_quarter == 2:
             start_date = date(current_date.year, 4, 1)
             end_date = date(current_date.year, 6, 30)
-            return start_date, end_date
+
         elif current_quarter == 3:
             start_date = date(current_date.year, 7, 1)
             end_date = date(current_date.year, 9, 30)
-            return start_date, end_date
-        elif current_quarter == 4:
+
+        else:
             start_date = date(current_date.year, 10, 1)
             end_date = date(current_date.year, 12, 31)
-            return start_date, end_date
+
     else:
-        current_date = timezone.now().date()
         weekday = current_date.weekday()
 
         if weekday == 0:
@@ -132,7 +125,7 @@ def get_dates(period=None):
         else:
             start_date = current_date - timedelta(days=weekday)
             end_date = start_date + timedelta(days=6)
-        return start_date, end_date
+    return start_date, end_date
 
 
 def weekly_rent():
@@ -156,90 +149,85 @@ def collect_total_earnings(period):
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
-    reports = SummaryReport.objects.filter(
-        report_from__range=(start_period, end_period))
+    reports = SummaryReport.objects.filter(report_from__range=(start_period, end_period))
     for driver in Driver.objects.all():
         total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
-            clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
+                    clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]
     return total, total_amount, start_date_formatted, end_date_formatted
 
 
 def investor_cash_car(period, investor_pk):
-	vehicles = {}
-	total_amount = 0
-	total_km = 0
+    vehicles = {}
+    total_amount = 0
+    total_km = 0
 
-	investor = Investor.objects.get(user_id=investor_pk)
-	investor_cars = Vehicle.objects.filter(investor_car=investor)
-	licence_plates = [car.licence_plate for car in investor_cars]
+    investor = Investor.objects.get(user_id=investor_pk)
+    investor_cars = Vehicle.objects.filter(investor_car=investor)
+    licence_plates = [car.licence_plate for car in investor_cars]
 
-	start_period, end_period = get_dates(period)
-	start_date_formatted = start_period.strftime('%d.%m.%Y')
-	end_date_formatted = end_period.strftime('%d.%m.%Y')
+    start_period, end_period = get_dates(period)
+    start_date_formatted = start_period.strftime('%d.%m.%Y')
+    end_date_formatted = end_period.strftime('%d.%m.%Y')
 
-	results = CarEfficiency.objects.filter(
-		Q(licence_plate__in=licence_plates) &
-		Q(report_from__range=(start_period, end_period))
-	)
+    results = CarEfficiency.objects.filter(
+        Q(licence_plate__in=licence_plates) &
+        Q(report_from__range=(start_period, end_period))
+    )
 
-	for result in results:
-		licence_plate = result.licence_plate
-		total_kasa = result.total_kasa
-		vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-		earnings = float(total_kasa) * float(vehicle.investor_percentage)
+    for result in results:
+        licence_plate = result.licence_plate
+        total_kasa = result.total_kasa
+        vehicle = Vehicle.objects.get(licence_plate=licence_plate)
+        earnings = float(total_kasa) * float(vehicle.investor_percentage)
 
-		if licence_plate not in vehicles:
-			vehicles[licence_plate] = earnings
-		else:
-			vehicles[licence_plate] += earnings
+        if licence_plate not in vehicles:
+            vehicles[licence_plate] = earnings
+        else:
+            vehicles[licence_plate] += earnings
 
-		total_amount += earnings
-		total_km += result.mileage
+        total_amount += earnings
+        total_km += result.mileage
 
-	overall_spent = sum(
-		spending.amount
-		for spending in VehicleSpendings.objects.filter(
-			vehicle__licence_plate__in=licence_plates,
-			created_at__range=(start_period, end_period)
-		)
-	)
+    overall_spent = sum(spending.amount for spending in VehicleSpendings.objects.filter(
+        vehicle__licence_plate__in=licence_plates,
+        created_at__range=(start_period, end_period)
+    )
+    )
 
-	return vehicles, total_amount, total_km, overall_spent, start_date_formatted, end_date_formatted
+    return vehicles, total_amount, total_km, overall_spent, start_date_formatted, end_date_formatted
 
 
 def car_piggy_bank(request):
-	investor = Investor.objects.get(user_id=request.user.id)
-	investor_cars = Vehicle.objects.filter(investor_car=investor)
+    investor = Investor.objects.get(user_id=request.user.id)
+    investor_cars = Vehicle.objects.filter(investor_car=investor)
 
-	cars_data = []
+    cars_data = []
 
-	for car in investor_cars:
-		licence_plate = car.licence_plate
-		purchase_price = car.purchase_price
+    for car in investor_cars:
+        licence_plate = car.licence_plate
+        purchase_price = car.purchase_price
 
-		spendings = VehicleSpendings.objects.filter(vehicle=car)
-		total_spent = sum(spending.amount for spending in spendings)
+        spendings = VehicleSpendings.objects.filter(vehicle=car)
+        total_spent = sum(spending.amount for spending in spendings)
 
-		car_efficiencies = CarEfficiency.objects.filter(
-			licence_plate=licence_plate)
-		total_kasa = sum(
-			efficiency.total_kasa for efficiency in car_efficiencies)
+        car_efficiencies = CarEfficiency.objects.filter(licence_plate=licence_plate)
+        total_kasa = sum(efficiency.total_kasa for efficiency in car_efficiencies)
 
-		progress_percentage = ((total_kasa - total_spent) / purchase_price) * 100
-		# progress_percentage = float('{:.2f}'.format(progress_percentage)) # TODO: check this
-		progress_percentage = int(progress_percentage)
+        progress_percentage = ((total_kasa - total_spent) / purchase_price) * 100
+        # progress_percentage = float('{:.2f}'.format(progress_percentage)) # TODO: check this
+        progress_percentage = int(progress_percentage)
 
-		cars_data.append({
-			'licence_plate': licence_plate,
-			'purchase_price': purchase_price,
-			'total_spent': total_spent,
-			'total_kasa': total_kasa,
-			'progress_percentage': progress_percentage
-		})
+        cars_data.append({
+            'licence_plate': licence_plate,
+            'purchase_price': purchase_price,
+            'total_spent': total_spent,
+            'total_kasa': total_kasa,
+            'progress_percentage': progress_percentage
+        })
 
-	return cars_data
+    return cars_data
 
 
 def average_effective_vehicle():
@@ -248,66 +236,64 @@ def average_effective_vehicle():
     start_date_formatted = start_date.strftime('%d.%m.%Y')
     end_date_formatted = end_date.strftime('%d.%m.%Y')
 
-	vehicle = CarEfficiency.objects.filter(report_from__range=(start_date, end_date))
-	effective = 0
-	if vehicle:
-		mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum'] or 0
-		total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
-		effective = total_kasa / mileage
-		effective = float('{:.2f}'.format(effective))
-
+    vehicle = CarEfficiency.objects.filter(report_from__range=(start_date, end_date))
+    effective = 0
+    if vehicle:
+        mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum'] or 0
+        total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
+        effective = total_kasa / mileage
+        effective = float('{:.2f}'.format(effective))
     return effective, start_date_formatted, end_date_formatted
 
 
 def effective_vehicle(period, vehicle1, vehicle2):
-	start_date, end_date = get_dates(period=period)
+    start_date, end_date = get_dates(period=period)
 
-	effective_objects = CarEfficiency.objects.filter(
-		Q(licence_plate=vehicle1) | Q(licence_plate=vehicle2),
-		report_from__range=(start_date, end_date)
-	).order_by('licence_plate', 'report_from')
+    effective_objects = CarEfficiency.objects.filter(Q(licence_plate=vehicle1) | Q(licence_plate=vehicle2),
+                                                     report_from__range=(start_date, end_date)
+                                                     ).order_by('licence_plate', 'report_from')
 
-	result = {'vehicle1': [], 'vehicle2': []}
+    result = {'vehicle1': [], 'vehicle2': []}
 
-	for effective in effective_objects:
-		car_data = {
-			'date_effective': effective.report_from,
-			'car': effective.licence_plate,
-			'total_amount': effective.total_kasa,
-			'mileage': effective.mileage,
-			'effective': effective.efficiency
-		}
-		result_key = 'vehicle1' if effective.licence_plate == vehicle1 else 'vehicle2'
-		result[result_key].append(car_data)
+    for effective in effective_objects:
+        car_data = {
+            'date_effective': effective.report_from,
+            'car': effective.licence_plate,
+            'total_amount': effective.total_kasa,
+            'mileage': effective.mileage,
+            'effective': effective.efficiency
+        }
+        result_key = 'vehicle1' if effective.licence_plate == vehicle1 else 'vehicle2'
+        result[result_key].append(car_data)
 
     return result
 
 
 def investor_effective_vehicle(period, investor_pk):
-	start_date, end_date = get_dates(period=period)
+    start_date, end_date = get_dates(period=period)
 
-	investor = Investor.objects.get(user_id=investor_pk)
-	investor_cars = Vehicle.objects.filter(investor_car=investor)
-	licence_plates = [car.licence_plate for car in investor_cars]
+    investor = Investor.objects.get(user_id=investor_pk)
+    investor_cars = Vehicle.objects.filter(investor_car=investor)
+    licence_plates = [car.licence_plate for car in investor_cars]
 
-	effective_objects = CarEfficiency.objects.filter(
-		licence_plate__in=licence_plates,
-		report_from__range=(start_date, end_date)
-	).order_by('licence_plate', 'report_from')
+    effective_objects = CarEfficiency.objects.filter(
+            licence_plate__in=licence_plates,
+            report_from__range=(start_date, end_date)
+    ).order_by('licence_plate', 'report_from')
 
-	result = {}
+    result = {}
 
-	for effective in effective_objects:
-		car_data = {
-			'date_effective': effective.report_from,
-			'car': effective.licence_plate,
-			'mileage': effective.mileage,
-		}
-		if effective.licence_plate not in result:
-			result[effective.licence_plate] = [car_data]
-		else:
-			result[effective.licence_plate].append(car_data)
-	return result
+    for effective in effective_objects:
+        car_data = {
+            'date_effective': effective.report_from,
+            'car': effective.licence_plate,
+            'mileage': effective.mileage,
+        }
+        if effective.licence_plate not in result:
+            result[effective.licence_plate] = [car_data]
+        else:
+            result[effective.licence_plate].append(car_data)
+    return result
 
 
 def update_park_set(partner, key, value, description=None, check_value=True):
@@ -367,18 +353,18 @@ def partner_logout(action, user_pk):
 
 
 def login_in_investor(request, login_name, password):
-	user = authenticate(username=login_name, password=password)
-	if user is not None:
-		if user.is_active:
-			login(request, user)
-			user_name = user.username
-			role = user.groups.first().name
+    user = authenticate(username=login_name, password=password)
+    if user is not None:
+        if user.is_active:
+            login(request, user)
+            user_name = user.username
+            role = user.groups.first().name
 
-			return {'success': True, 'user_name': user_name, 'role': role}
-		else:
-			return {'success': False, 'message': 'User is not active'}
-	else:
-		return {'success': False, 'message': 'User is not found'}
+            return {'success': True, 'user_name': user_name, 'role': role}
+        else:
+            return {'success': False, 'message': 'User is not active'}
+    else:
+        return {'success': False, 'message': 'User is not found'}
 
 
 def change_password_investor(request, password, new_password, user_email):

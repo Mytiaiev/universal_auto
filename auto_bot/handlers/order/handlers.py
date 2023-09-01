@@ -5,7 +5,9 @@ from datetime import datetime
 
 from django.db.models import F
 from telegram import ReplyKeyboardRemove,  LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Order, Driver, Client, FleetOrder, ReportTelegramPayments, DriverManager
+from telegram.error import BadRequest
+
+from app.models import Order, Driver, Client, FleetOrder, ReportTelegramPayments, Manager
 from auto.tasks import get_distance_trip, order_create_task, send_map_to_client
 from auto_bot.handlers.main.keyboards import markup_keyboard
 from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route_keyboard, inline_finish_order, \
@@ -18,7 +20,7 @@ from auto_bot.handlers.order.utils import buttons_addresses, text_to_client, val
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db
 from auto_bot.handlers.order.static_text import *
-from scripts.redis_conn import redis_instance
+from scripts.redis_conn import redis_instance, get_logger
 
 
 def personal_driver_info(update, context):
@@ -411,8 +413,8 @@ def client_reject_order(update, context):
             context.bot.delete_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
                                        message_id=group_msg)
             redis_instance().hdel('group_msg', order.pk)
-        except:
-            pass
+        except BadRequest as e:
+            get_logger().error(e)
     order.status_order = Order.CANCELED
     order.finish_time = timezone.localtime()
     order.save()
@@ -420,8 +422,8 @@ def client_reject_order(update, context):
         for i in range(3):
             context.bot.delete_message(chat_id=order.chat_id_client,
                                        message_id=query.message.message_id + i)
-    except:
-        pass
+    except BadRequest as e:
+        get_logger().error(e)
     text_to_client(order=order,
                    text=client_cancel,
                    button=inline_comment_for_client())
@@ -444,7 +446,7 @@ def handle_callback_order(update, context):
                 context.bot.delete_message(chat_id=ParkSettings.get_value('ORDER_CHAT'),
                                            message_id=group_msg)
                 redis_instance().hdel('group_msg', order.pk)
-                for manager in DriverManager.objects.exclude(chat_id__isnull=True):
+                for manager in Manager.objects.exclude(chat_id__isnull=True):
                     if redis_instance().hexists(str(manager.chat_id), f'personal {order.id}'):
                         context.bot.send_message(chat_id=manager.chat_id,
                                                  text=f"Замовлення {order.id} прийнято")
@@ -455,9 +457,10 @@ def handle_callback_order(update, context):
                 client_msg = text_to_client(order, report_for_client, delete_id=message_info,
                                             button=inline_reject_order(order.pk))
                 redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
-                context.bot.send_message(chat_id=driver.chat_id,
-                                         text=time_order_accepted(order.from_address,
-                                                                  timezone.localtime(order.order_time).time()))
+                driver_msg = context.bot.send_message(
+                    chat_id=driver.chat_id,
+                    text=time_order_accepted(order.from_address, timezone.localtime(order.order_time).time()))
+                redis_instance().hset(str(driver.chat_id), 'driver_msg', driver_msg.message_id)
             else:
                 context.bot.send_message(chat_id=query.from_user.id, text=add_many_auto_text)
         else:
@@ -487,20 +490,21 @@ def payment_request(update, context, chat_id_client, provider_token, url,
     prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
 
     # Sending a request for payment
-    context.bot.send_invoice(chat_id=chat_id_client,
-                             title=payment_title,
-                             description=payment_description,
-                             payload=payload,
-                             provider_token=provider_token,
-                             currency=payment_currency,
-                             start_parameter=start_parameter,
-                             prices=prices,
-                             photo_url=url,
-                             need_shipping_address=False,
-                             photo_width=360,
-                             photo_height=160,
-                             photo_size=50000,
-                             is_flexible=False)
+    invoice_msg = context.bot.send_invoice(chat_id=chat_id_client,
+                                           title=payment_title,
+                                           description=payment_description,
+                                           payload=payload,
+                                           provider_token=provider_token,
+                                           currency=payment_currency,
+                                           start_parameter=start_parameter,
+                                           prices=prices,
+                                           photo_url=url,
+                                           need_shipping_address=False,
+                                           photo_width=360,
+                                           photo_height=160,
+                                           photo_size=50000,
+                                           is_flexible=False)
+    redis_instance().hset(str(chat_id_client), 'invoice', invoice_msg.message_id)
 
 
 def cash_order(update, query, order):
@@ -543,8 +547,8 @@ def handle_order(update, context):
         try:
             context.bot.delete_message(order.chat_id_client, message_id=data[2])
             context.bot.delete_message(order.chat_id_client, message_id=int(data[2])-1)
-        except:
-            pass
+        except BadRequest as e:
+            get_logger().error(e)
         query.edit_message_text(order_info(order))
 
         reply_markup = inline_finish_order(order.to_latitude,
@@ -622,9 +626,14 @@ def successful_payment(update, context):
             payment_hours=F('payment_hours') + update_hours,
             sum=F('sum') + int(list_payload[2])
         )
-        context.bot.edit_message_text(chat_id=order.first().chat_id_client,
-                                      text=update_hours_text(update_hours),
-                                      message_id=int(list_payload[1]))
+        context.bot.delete_message(chat_id=chat_id, message_id=redis_instance().hget(chat_id, 'invoice'))
+        context.bot.send_message(chat_id=chat_id,
+                                 text=update_hours_text(update_hours))
+        try:
+            msg = redis_instance().hget(str(order.first().driver.chat_id), "driver_msg")
+            context.bot.delete_message(chat_id=order.first().driver.chat_id, message_id=msg)
+        except BadRequest as e:
+            get_logger().error(e)
         driver_msg = context.bot.send_message(chat_id=order.first().driver.chat_id,
                                               text=update_hours_driver_text(update_hours))
         redis_instance().hset(str(order.first().driver.chat_id), "driver_msg", driver_msg.message_id)
@@ -647,10 +656,10 @@ def successful_payment(update, context):
         if user_data.get('info'):
             data['info'] = user_data['info']
         order = Order.objects.create(**data)
-        message = bot.edit_message_text(chat_id=chat_id,
-                                        text=client_personal_info(order),
-                                        message_id=int(list_payload[1]),
-                                        reply_markup=inline_reject_order(order.pk))
+        context.bot.delete_message(chat_id=chat_id, message_id=redis_instance().hget(chat_id, 'invoice'))
+        message = bot.send_message(chat_id=chat_id,
+                                   text=client_personal_info(order),
+                                   reply_markup=inline_reject_order(order.pk))
         redis_instance().hset(chat_id, 'client_msg', message.message_id)
     else:
         order = Order.objects.filter(chat_id_client=chat_id).last()
