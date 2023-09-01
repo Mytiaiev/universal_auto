@@ -13,7 +13,7 @@ from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
-from scripts.google_calendar import create_event, datetime_with_timezone
+from scripts.google_calendar import datetime_with_timezone
 
 
 # @receiver(post_save, sender=AuUser)

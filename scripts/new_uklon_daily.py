@@ -1,14 +1,11 @@
-import pendulum
+from datetime import timedelta
 
-from auto.drivers import NewUklon
+import pendulum
+from django.utils import timezone
+
+from app.models import Driver
+from scripts.google_calendar import GoogleCalendar
 
 
 def run(*args):
-    if args:
-        day = f"{args[0]}"
-    else:
-        day = pendulum.now().start_of('day').subtract(days=1)
-    b = NewUklon(driver=True, day=day, sleep=5, headless=True)
-    b.login()
-    b.download_payments_order()
-    b.save_report()
+    calendar = GoogleCalendar()

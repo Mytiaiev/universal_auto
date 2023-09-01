@@ -443,6 +443,14 @@ class Driver(User):
         return f'{self.name} {self.second_name}'
 
 
+class DriverReshuffle(models.Model):
+    calendar_event = models.CharField(max_length=255)
+    swap_vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, verbose_name='Автомобіль')
+    driver_start = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій що приймає')
+    driver_finish = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій що віддає')
+    swap_time = models.DateTimeField(verbose_name='Час початку/закінчення зміни')
+
+
 class RentInformation(models.Model):
     report_from = models.DateField(verbose_name='Дата звіту')
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій')
