@@ -60,7 +60,7 @@ def inline_partner_vehicles(vehicles, callback, back_step):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_partner_drivers(callback, drivers, back_step, pk_vehicle=None,):
+def inline_partner_drivers(callback, drivers, back_step, pk_vehicle=None):
     keyboard = [
         [InlineKeyboardButton(f"{str(driver).split()[0][0]}.{str(driver).split()[1]}",
                               callback_data=f"{callback} {driver.id} {pk_vehicle}")] for driver in drivers]

@@ -37,11 +37,11 @@ def inline_driver_func_kb():
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_user_kb(url1):
+def inline_user_kb():
     keyboard = [
         # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
-        [InlineKeyboardButton(main_buttons[9], url=url1)],
+        [InlineKeyboardButton(main_buttons[9], url=ParkSettings.get_value('SHIPPING_CHILDS'))],
         [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")],
         [InlineKeyboardButton(main_buttons[7], callback_data="About_us")],
     ]
@@ -107,11 +107,11 @@ def inline_work_driver_kb():
 def get_start_kb(user):
     role_reply_markup = {
         "DRIVER": inline_start_driver_kb(),
-        "CLIENT": inline_user_kb(ParkSettings.get_value('SHIPPING_CHILDS')),
+        "CLIENT": inline_user_kb(),
         "DRIVER_MANAGER": inline_manager_kb(),
         "OWNER": inline_owner_kb()
     }
-    reply_markup = role_reply_markup.get(user.role, inline_user_kb(ParkSettings.get_value('SHIPPING_CHILDS')))
+    reply_markup = role_reply_markup.get(user.role, inline_user_kb())
     return reply_markup
 
 
@@ -133,9 +133,8 @@ def markup_keyboard_onetime(keyboard):
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
 
-main = [InlineKeyboardButton(main_buttons[8], callback_data="Main_")]
+main = [InlineKeyboardButton(main_buttons[8], callback_data="Back_to_main")]
 
 
 def back_to_main_menu():
-    keyboard = [main]
-    return InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup([main])
