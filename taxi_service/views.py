@@ -94,8 +94,12 @@ class GetRequestView(View):
             return handler.handle_order_confirm(request)
         elif action == 'get_cash_investor':
             return handler.handle_get_investor_cash(request)
+        elif action == 'get_cash_manager':
+            return handler.handle_get_manager_cash(request)
         elif action == 'investor_effective_vehicle':
             return handler.handle_investor_effective_vehicle(request)
+        elif action == 'manager_effective_vehicle':
+            return handler.handle_manager_effective_vehicle(request)
         elif action == 'is_logged_in':
             return handler.handle_is_logged_in(request)
         elif action == 'get_role':

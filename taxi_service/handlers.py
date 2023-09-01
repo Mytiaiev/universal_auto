@@ -174,6 +174,13 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
+    def handle_get_manager_cash(self, request):
+        period = request.GET.get('period')
+        get_cash = collect_total_earnings(period)
+        json_data = JsonResponse({'data': get_cash}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
     def handle_effective_vehicle(self, request):
         period = request.GET.get('period')
         vehicle1 = request.GET.get('vehicle_id1')
@@ -187,6 +194,15 @@ class GetRequestHandler:
         period = request.GET.get('period')
         investor_id = request.user.pk
         get_efficiency_vehicle = investor_effective_vehicle(period, investor_id)
+        json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
+    def handle_manager_effective_vehicle(self, request):
+        period = request.GET.get('period')
+        vehicle_id1 = request.GET.get('vehicle_id1')
+        vehicle_id2 = request.GET.get('vehicle_id2')
+        get_efficiency_vehicle = effective_vehicle(period, vehicle_id1, vehicle_id2)
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
