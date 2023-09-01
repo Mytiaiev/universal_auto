@@ -13,9 +13,11 @@ from celery.utils.log import get_task_logger
 from telegram import ParseMode
 from telegram.error import BadRequest
 
-from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, \
-    UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, \
-    TransactionsConversantion
+from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, \
+    ParkSettings, \
+    UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, \
+    DriverEfficiency, FleetOrder, \
+    TransactionsConversantion, VehicleSpendings
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
@@ -138,26 +140,38 @@ def get_car_efficiency(self, partner_pk, day=None):
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
+
     for vehicle in Vehicle.objects.filter(driver__isnull=False, partner=partner_pk):
         efficiency = CarEfficiency.objects.filter(report_from=day,
                                                   partner=partner_pk,
                                                   licence_plate=vehicle.licence_plate)
         if not efficiency:
             total_kasa = 0
+            total_spendings = 0
             total_km, vehicle = UaGpsSynchronizer().total_per_day(vehicle.licence_plate, day)
+
             if total_km:
                 drivers = Driver.objects.filter(vehicle=vehicle)
+
                 for driver in drivers:
                     report = SummaryReport.objects.filter(report_from=day,
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
-                result = Decimal(total_kasa)/Decimal(total_km)
+                spendings = VehicleSpendings.objects.filter(vehicle=vehicle, created_at__date=day)
+                for spending in spendings:
+                    total_spendings += spending.amount
+
+                result = (Decimal(total_kasa) - Decimal(total_spendings))/Decimal(total_km)
+                if result < 0:
+                    result = 0
             else:
                 result = 0
+
             CarEfficiency.objects.create(report_from=day,
                                          licence_plate=vehicle.licence_plate,
                                          total_kasa=total_kasa,
+                                         total_spendings=total_spendings or 0,
                                          mileage=total_km or 0,
                                          efficiency=result,
                                          partner=Partner.get_partner(partner_pk))

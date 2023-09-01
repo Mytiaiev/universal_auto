@@ -3,8 +3,9 @@ from datetime import datetime
 from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
-from app.models import Manager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
-    Payments, ParkSettings
+from app.models import Manager, Vehicle, User, Driver, \
+    Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
+    Payments, ParkSettings, VehicleSpendings
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
@@ -75,7 +76,7 @@ def save_car_spending(update, context):
         # data = {'category': user_data['category'],
         #         'vehicle': vehicle,
         #         'amount': round(spending, 2)}
-        # Vehicle.objects.create(**data)
+        # VehicleSpendings.objects.create(**data)
         redis_instance().delete(str(update.effective_chat.id))
     else:
         update.message.reply_text(wrong_sum_type)
