@@ -1,12 +1,4 @@
-from datetime import timedelta
-
-import pendulum
-from django.utils import timezone
-
-from app.models import Driver
-from scripts.google_calendar import GoogleCalendar
 
 
 def run(*args):
-    calendar = b'gAAAAABk8gUS_vWjIaGoFDebLJmCj6fnRIa6EbjBZgFo9xRymMLBRkviRq9U1wKBc-brlAPzGczbfYU_5dUwRKkgY-qmgIfCJVeusJqQbFgzh-mZKQp0K1ExoEfJguJucRNZhHpojXXh-DuyPpqcFQyRiQYGs2AgvxMVEQEx28gIEyDkEqGWjpw_-ZZytWn9lChTL5Xo9QxEWRd4LTPHVZkwe5OrQtMStLEO6IM9ewpPVa_K9b7GDaX7iT0lTmaoeiB-4QDpxtT8bGTaf6Gn8JHpLjQFGHx7mrTgS6WMadFyYzsYgiI8DCFFP641KNC5Wq39mB5TEK5yPkS1DC9ggCEU8jjHfcSF5T_PKz43Pzt1nIbadcnA7VYJY2UuF6TiLaLoivzuCwiqHhuYad0n7iGyAbCTLipQHQ=='
-    print(calendar.decode())
+    pass

@@ -15,7 +15,7 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, \
-    TransactionsConversantion
+    TransactionsConversantion, DriverReshuffle
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
@@ -29,6 +29,7 @@ from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
 from auto.celery import app
+from scripts.google_calendar import GoogleCalendar
 from scripts.redis_conn import redis_instance
 from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
@@ -612,6 +613,44 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         logger.info(e)
 
 
+@app.task(bind=True, queue='beat_tasks')
+def get_driver_reshuffles(self):
+    calendar = GoogleCalendar()
+    cal_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
+    start = timezone.localtime()
+    end = timezone.localtime() + timedelta(days=1)
+    events = calendar.get_list_events(cal_id, start, end)
+    for event in events['items']:
+        calendar_event_id = event['id']
+        event_summary = event['summary'].split(',')
+        if len(event_summary) == 2:
+            licence_plate, driver = event_summary
+            name, second_name = driver.split()
+            driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
+            driver_finish = None
+            vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
+            swap_time = datetime.strptime(event['start']['date'], "%Y-%m-%d")
+        else:
+            swap_time = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z")
+            licence_plate, first_driver, second_driver = event_summary
+            name, second_name = first_driver.split()
+            other_name, other_second_name = second_driver.split()
+            driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
+            driver_finish = Driver.objects.filter(name=other_name, second_name=other_second_name).first()
+            vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
+        obj_data = {
+            "swap_vehicle": vehicle,
+            "driver_start": driver_start,
+            "driver_finish": driver_finish,
+            "swap_time": swap_time
+        }
+        reshuffle, created = DriverReshuffle.objects.get_or_create(calendar_event_id=calendar_event_id,
+                                                                   defaults=obj_data)
+        if not created:
+            reshuffle.__dict__.update(**obj_data)
+            reshuffle.save()
+
+
 def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=fleet_name, partner=partner_pk)
     if reports:
@@ -666,6 +705,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute="00", hour='23'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
