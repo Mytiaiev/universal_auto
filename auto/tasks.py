@@ -147,7 +147,6 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                   licence_plate=vehicle.licence_plate)
         if not efficiency:
             total_kasa = 0
-            total_spendings = 0
             total_km, vehicle = UaGpsSynchronizer().total_per_day(vehicle.licence_plate, day)
 
             if total_km:
@@ -158,9 +157,8 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
-                spendings = VehicleSpendings.objects.filter(vehicle=vehicle, created_at__date=day)
-                for spending in spendings:
-                    total_spendings += spending.amount
+                total_spendings = VehicleSpendings.objects.filter(
+                    vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
 
                 result = (Decimal(total_kasa) - Decimal(total_spendings))/Decimal(total_km)
                 if result < 0:
