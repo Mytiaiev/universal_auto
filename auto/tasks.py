@@ -149,27 +149,25 @@ def get_car_efficiency(self, partner_pk, day=None):
             total_kasa = 0
             total_km, vehicle = UaGpsSynchronizer().total_per_day(vehicle.licence_plate, day)
 
-            if total_km:
-                drivers = Driver.objects.filter(vehicle=vehicle)
+            total_spendings = VehicleSpendings.objects.filter(
+                vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
 
-                for driver in drivers:
-                    report = SummaryReport.objects.filter(report_from=day,
-                                                          full_name=driver).first()
-                    if report:
-                        total_kasa += report.total_amount_without_fee
-                total_spendings = VehicleSpendings.objects.filter(
-                    vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
 
-                result = (Decimal(total_kasa) - Decimal(total_spendings))/Decimal(total_km)
-                if result < 0:
-                    result = 0
-            else:
-                result = 0
+            drivers = Driver.objects.filter(vehicle=vehicle)
+
+            for driver in drivers:
+                report = SummaryReport.objects.filter(report_from=day,
+                                                      full_name=driver).first()
+                if report:
+                    total_kasa += report.total_amount_without_fee
+
+            result = max(
+                Decimal(total_kasa) - Decimal(total_spendings), Decimal(0)) / Decimal(total_km) if total_km else 0
 
             CarEfficiency.objects.create(report_from=day,
                                          licence_plate=vehicle.licence_plate,
                                          total_kasa=total_kasa,
-                                         total_spendings=total_spendings or 0,
+                                         total_spendings=total_spendings,
                                          mileage=total_km or 0,
                                          efficiency=result,
                                          partner=Partner.get_partner(partner_pk))
