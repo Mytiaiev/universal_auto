@@ -22,7 +22,6 @@ def inline_second_payment_kb(pk):
     keyboard = [
         [InlineKeyboardButton(price_inline_buttons[4], callback_data=f"Second_cash_payment {pk}")],
         [InlineKeyboardButton(price_inline_buttons[5], callback_data=f"Second_card_payment {pk}")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data=f"Accept {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -47,7 +46,7 @@ def inline_start_order_kb():
 def inline_search_kb(pk):
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[0], callback_data=f"Increase_price {pk}")],
-        [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
+        # [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
         [InlineKeyboardButton(search_inline_buttons[3], callback_data="Tomorrow_order")],
         [InlineKeyboardButton(search_inline_buttons[2], callback_data=f"Client_reject {pk}")]
     ]

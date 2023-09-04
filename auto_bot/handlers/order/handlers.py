@@ -274,8 +274,9 @@ def order_create(update, context):
 
 def increase_search_radius(update, context):
     query = update.callback_query
+    data = int(query.data.split(' ')[1])
     query.edit_message_text(increase_radius_text)
-    query.edit_message_reply_markup(inline_increase_price_kb())
+    query.edit_message_reply_markup(inline_increase_price_kb(data))
 
 
 def ask_client_action(update, context):
@@ -455,12 +456,11 @@ def handle_order(update, context):
         client_msg = redis_instance().hget(order.chat_id_client, 'client_msg')
         context.bot.edit_message_reply_markup(chat_id=order.chat_id_client,
                                               message_id=client_msg,
-                                              reply_markup=None)
+                                              )
         fleet_order(order, FleetOrder.DRIVER_CANCEL)
         text_to_client(order, driver_cancel)
         order.status_order, order.driver, order.checked = Order.WAITING, None, False
         order.save()
-
     elif data[0] == "Client_on_site":
         try:
             context.bot.delete_message(order.chat_id_client, message_id=data[2])
@@ -495,7 +495,7 @@ def handle_order(update, context):
         if order.payment_method == price_inline_buttons[4].split()[1]:   # first cash second cash
             cash_order(update, query, order.sum)
         else:
-            first_payment = ReportTelegramPayments.objects.get(order=order.pk) #first card second cash
+            first_payment = ReportTelegramPayments.objects.get(order=order.pk) # first card second cash
             total = order.sum - first_payment.total_amount
             if total > 0:
                 cash_order(update, query, total)
@@ -544,6 +544,21 @@ def precheckout_callback(update, context):
         query.answer(ok=True)
 
 
+def create_report_payment(successful_payment, order=None):
+    report_payment_data = {
+        'provider_payment_charge_id': successful_payment.provider_payment_charge_id,
+        'telegram_payment_charge_id': successful_payment.telegram_payment_charge_id,
+        'currency': successful_payment.currency,
+        'total_amount': successful_payment.total_amount / 100,
+    }
+
+    if order is not None:
+        report_payment_data['order'] = order
+
+    report = ReportTelegramPayments.objects.create(**report_payment_data)
+    return report
+
+
 def successful_payment(update, context):
     chat_id = str(update.message.chat.id)
     successful_payment = update.message.successful_payment
@@ -554,7 +569,8 @@ def successful_payment(update, context):
         order_time = redis_instance().hget(chat_id, 'time_order')
         order_data['order_time'] = datetime.fromisoformat(order_time)
         redis_instance().delete(f'{chat_id}_')
-        order_create_task.delay(order_data)
+        report = create_report_payment(successful_payment)
+        order_create_task.delay(order_data, report.pk)
     else:
         data = int(redis_instance().hget(chat_id, 'message_data'))
         fleet_order(order)
@@ -566,12 +582,7 @@ def successful_payment(update, context):
         order.save()
         redis_instance().delete(chat_id)
 
-    ReportTelegramPayments.objects.create(
-        provider_payment_charge_id=successful_payment.provider_payment_charge_id,
-        telegram_payment_charge_id=successful_payment.telegram_payment_charge_id,
-        currency=successful_payment.currency,
-        total_amount=successful_payment.total_amount / 100,
-        order=order)
+        create_report_payment(successful_payment, order)
 
 
 

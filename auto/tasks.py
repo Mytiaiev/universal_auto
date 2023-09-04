@@ -15,13 +15,13 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, \
-    TransactionsConversantion
+    TransactionsConversantion, ReportTelegramPayments
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_spot_keyboard, inline_second_payment_kb
+    inline_spot_keyboard, inline_second_payment_kb, inline_reject_order
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, client_order_text, order_customer_text, search_driver, \
     payment_text
@@ -452,7 +452,7 @@ def send_time_order(self):
             report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
                                                   driver.phone_number, order.sum)
             message_info = redis_instance().hget(str(order.chat_id_client), 'client_msg')
-            client_msg = text_to_client(order, report_for_client, delete_id=message_info,)
+            client_msg = text_to_client(order, report_for_client, delete_id=message_info)
             redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
@@ -465,9 +465,13 @@ def send_time_order(self):
 
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
-def order_create_task(self, order_data):
+def order_create_task(self, order_data, report=None):
     try:
-        Order.objects.create(**order_data)
+        order = Order.objects.create(**order_data)
+        if report is not None:
+            response = ReportTelegramPayments.objects.filter(pk=report).first()
+            response.order = order
+            response.save()
     except Exception as e:
         if self.request.retries <= self.max_retries:
             self.retry(exc=e, countdown=5)
@@ -505,9 +509,9 @@ def search_driver_for_order(self, order_pk):
             last_msg = text_to_client(order, search_driver)
             redis_instance().hset(order.chat_id_client, 'client_msg', last_msg)
         elif self.request.retries == 1:
-            text_to_client(order, search_driver_1, message_id=client_msg)
+            text_to_client(order, search_driver_1, message_id=client_msg, button=inline_reject_order(order.pk))
         else:
-            text_to_client(order, search_driver_2, message_id=client_msg)
+            text_to_client(order, search_driver_2, message_id=client_msg, button=inline_reject_order(order.pk))
         drivers = Driver.objects.filter(chat_id__isnull=False, vehicle__isnull=False)
         for driver in drivers:
             if driver.driver_status == Driver.ACTIVE:
@@ -556,7 +560,7 @@ def send_map_to_client(self, order_pk, licence, message, chat):
                 bot.stopMessageLiveLocation(chat, message)
                 client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
                 driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
-                text_to_client(order, driver_arrived, delete_id=client_msg)
+                text_to_client(order, driver_arrived, message_id=client_msg)
                 redis_instance().hset(str(order.driver.chat_id), 'start_route', int(timezone.localtime().timestamp()))
                 bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                               message_id=driver_msg,
@@ -607,7 +611,7 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         else:
             instance.sum = int(price_per_minute) + int(instance.car_delivery_price)
         instance.save()
-        bot.edit_message_text(chat_id=instance.driver.chat_id, message_id=query,
+        bot.edit_message_text(chat_id=instance.chat_id_client, message_id=query,
                               text=payment_text, reply_markup=inline_second_payment_kb(instance.pk))
     except Exception as e:
         logger.info(e)

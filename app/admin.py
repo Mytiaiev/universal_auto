@@ -89,7 +89,10 @@ def filter_queryset_by_group(*groups, field_to_filter=None):
                 if request.user.groups.filter(name='Manager').exists():
                     queryset = queryset.filter(manager__user=request.user)
                 if request.user.groups.filter(name='Partner').exists():
-                    queryset = queryset.filter(partner__user=request.user, **{field_to_filter: True})
+                    if field_to_filter is not None:
+                        queryset = queryset.filter(partner__user=request.user, **{field_to_filter: True})
+                    else:
+                        queryset = queryset.filter(partner__user=request.user)
 
                 return queryset
 
