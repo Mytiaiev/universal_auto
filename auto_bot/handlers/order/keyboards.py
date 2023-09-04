@@ -46,8 +46,8 @@ def inline_start_order_kb():
 def inline_search_kb(pk):
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[0], callback_data=f"Increase_price {pk}")],
-        # [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
-        [InlineKeyboardButton(search_inline_buttons[3], callback_data="Tomorrow_order")],
+        [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
+        # [InlineKeyboardButton(search_inline_buttons[3], callback_data="Tomorrow_order")],
         [InlineKeyboardButton(search_inline_buttons[2], callback_data=f"Client_reject {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
