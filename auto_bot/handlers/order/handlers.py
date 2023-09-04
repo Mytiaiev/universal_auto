@@ -435,8 +435,8 @@ def handle_callback_order(update, context):
             send_map_to_client.delay(order.id, driver.vehicle.licence_plate, message.message_id, message.chat_id)
 
 
-def cash_order(update, query, order):
-    query.edit_message_text(driver_complete_text(order))
+def cash_order(update, query, order, sum):
+    query.edit_message_text(driver_complete_text(sum))
     text_to_client(order, complete_order_text, button=inline_comment_for_client())
     order.status_order = Order.COMPLETED
     order.partner = order.driver.partner
@@ -493,14 +493,14 @@ def handle_order(update, context):
                              reply_markup=inline_second_payment_kb(order.pk))
     elif data[0] == 'Second_cash_payment':
         if order.payment_method == price_inline_buttons[4].split()[1]:   # first cash second cash
-            cash_order(update, query, order.sum)
+            cash_order(update, query, order, order.sum)
         else:
             first_payment = ReportTelegramPayments.objects.get(order=order.pk) # first card second cash
             total = order.sum - first_payment.total_amount
             if total > 0:
-                cash_order(update, query, total)
+                cash_order(update, query, order, total)
             else:
-                cash_order(update, query, 0)
+                cash_order(update, query, order, 0)
     elif data[0] == 'Second_card_payment':
         if order.payment_method == price_inline_buttons[5].split()[1]:   # first card second card
             first_payment = ReportTelegramPayments.objects.get(order=order.pk)
