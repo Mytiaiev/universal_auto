@@ -168,7 +168,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                          licence_plate=vehicle.licence_plate,
                                          total_kasa=total_kasa,
                                          total_spendings=total_spendings,
-                                         mileage=total_km or 0,
+                                         mileage=total_km,
                                          efficiency=result,
                                          partner=Partner.get_partner(partner_pk))
 
