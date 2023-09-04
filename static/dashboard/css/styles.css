@@ -598,3 +598,95 @@ body {
   display: none;
   color: #d50000;
 }
+
+
+/* Стилізація контейнера "info-driver" */
+.info-driver {
+  background-color: #263043;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Стилізація таблиці */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+/* Стилізація заголовка таблиці */
+th {
+  background-color: #333;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+/* Стилізація рядків таблиці */
+tr:nth-child(even) {
+  background-color: #263043;
+}
+
+tr:nth-child(odd) {
+  background-color: #263043;
+}
+
+/* Стилізація комірок таблиці */
+td {
+  padding: 8px;
+}
+
+/* Збільште відступи для кращого вигляду */
+h2, table {
+  margin-bottom: 20px;
+}
+
+/* Налаштування тексту заголовка таблиці */
+th, td {
+  border: 1px solid #ddd;
+}
+
+
+/* Стилізація форми */
+form {
+  display: flex;
+  align-items: center;
+}
+
+/* Стилізація мітки (label) */
+label {
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+/* Стилізація випадаючого списку (select) */
+select {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  margin-right: 10px;
+}
+
+/* Стилізація кнопки (input type="submit") */
+input[type="submit"] {
+  padding: 8px 16px;
+  font-size: 16px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Збільште відступи для кращого вигляду */
+form {
+  margin-bottom: 20px;
+}
+
+/* Оформлення вибору періоду при фокусі */
+select:focus {
+  border-color: #007BFF;
+}

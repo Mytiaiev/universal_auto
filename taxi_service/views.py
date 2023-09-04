@@ -16,7 +16,7 @@ from django.utils.decorators import method_decorator
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import weekly_rent, average_effective_vehicle, \
-    car_piggy_bank
+    car_piggy_bank, get_driver_info
 from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
 from auto_bot.main import bot
 
@@ -171,12 +171,18 @@ class DashboardPartnerView(TemplateView):
 
         return context
 
+
 class DashboardManagerView(TemplateView):
     template_name = 'dashboard/dashboard-manager.html'
 
     def get_context_data(self, **kwargs):
-
         context = super().get_context_data(**kwargs)
+
+        select_period = self.request.POST
+        print("#" * 100)
+        print(select_period)
+        print("#" * 100)
+        context['driver_info'] = get_driver_info(request=self.request, period=select_period)
 
         context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')

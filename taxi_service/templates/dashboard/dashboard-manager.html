@@ -262,6 +262,47 @@
 				</div>
 			</div>
 		{% endfor %}
+		<div class="info-driver">
+			<h2>Топ Водіїв</h2>
+
+			<form>
+				{% csrf_token %}
+				<label for="period">Виберіть період:</label>
+				<select id="period" name="period">
+					<option value="day">День</option>
+					<option value="week">Тиждень</option>
+					<option value="month">Місяць</option>
+					<option value="quarter">Квартал</option>
+				</select>
+				<input type="submit" value="Показати">
+			</form>
+
+			<table>
+				<tr>
+					<th>Водій Авто</th>
+					<th>Всього Каса</th>
+					<th>Всього Замовлень</th>
+					<th>Відсоток Прийнятих Замовлень</th>
+					<th>Середній чек, грн</th>
+					<th>Пробіг, км</th>
+					<th>Ефективність, грн/км</th>
+					<th>Час в Дорозі</th>
+				</tr>
+
+				{% for driver_info_item in driver_info %}
+					<tr>
+						<td>{{ driver_info_item.driver }}</td>
+						<td>{{ driver_info_item.total_kasa }}</td>
+						<td>{{ driver_info_item.total_orders }}</td>
+						<td>{{ driver_info_item.accept_percent }} %</td>
+						<td>{{ driver_info_item.average_price }}</td>
+						<td>{{ driver_info_item.mileage }}</td>
+						<td>{{ driver_info_item.efficiency }}</td>
+						<td>{{ driver_info_item.road_time }}</td>
+					</tr>
+				{% endfor %}
+			</table>
+		</div>
 	</main>
 	<!-- End Main Manager-->
 </div>
