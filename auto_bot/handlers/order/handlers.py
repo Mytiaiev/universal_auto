@@ -111,6 +111,7 @@ def back_step_to_finish_personal(update, context):
     query.edit_message_text(back_time_route_end)
     query.edit_message_reply_markup(personal_order_end_kb(order_id, pre_finish=True))
 
+
 def continue_order(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
@@ -170,9 +171,6 @@ def to_the_address(update, context):
 
     query = update.callback_query
     chat_id = update.effective_chat.id
-    if redis_instance().hget(str(chat_id), 'personal_flag'):
-        payment_method(update, context)
-        return
     state = int(redis_instance().hget(str(chat_id), 'state'))
     if state == FROM_ADDRESS:
         buttons = [[InlineKeyboardButton(f'{NOT_CORRECT_ADDRESS}', callback_data='From_address 0')], ]
@@ -189,6 +187,9 @@ def to_the_address(update, context):
         else:
             context.bot.send_message(chat_id=chat_id, text=wrong_address_request, reply_markup=ReplyKeyboardRemove())
             from_address(update, context)
+    elif redis_instance().hget(str(chat_id), 'personal_flag'):
+        payment_method(update, context)
+        return
     else:
         if query:
             query.edit_message_text(arrival_text)

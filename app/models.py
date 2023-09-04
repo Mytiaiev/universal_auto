@@ -443,6 +443,16 @@ class Driver(User):
         return f'{self.name} {self.second_name}'
 
 
+class DriverReshuffle(models.Model):
+    calendar_event_id = models.CharField(max_length=100)
+    swap_vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, verbose_name="Автомобіль")
+    driver_start = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True,
+                                     verbose_name="Водій, що приймає авто", related_name="driver_start")
+    driver_finish = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True,
+                                      verbose_name="Водій, що віддає авто", related_name="driver_finish")
+    swap_time = models.DateTimeField(verbose_name="Час початку/завершення зміни")
+
+
 class RentInformation(models.Model):
     report_from = models.DateField(verbose_name='Дата звіту')
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій')
@@ -928,7 +938,7 @@ class Order(models.Model):
     sum = models.IntegerField(default=0, verbose_name='Загальна сума')
     order_time = models.DateTimeField(null=True, blank=True, verbose_name='Час подачі')
     payment_hours = models.IntegerField(null=True, verbose_name='Годин Сплачено')
-    payment_method = models.CharField(max_length=70, null=True, verbose_name='Спосіб оплати')
+    payment_method = models.CharField(max_length=70, default="Картка", verbose_name='Спосіб оплати')
     status_order = models.CharField(max_length=70, verbose_name='Статус замовлення')
     distance_gps = models.CharField(max_length=10, blank=True, null=True, verbose_name='Дистанція по GPS')
     distance_google = models.CharField(max_length=10, verbose_name='Дистанція Google')
