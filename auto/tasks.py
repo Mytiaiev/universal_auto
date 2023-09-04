@@ -611,8 +611,9 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         else:
             instance.sum = int(price_per_minute) + int(instance.car_delivery_price)
         instance.save()
-        bot.edit_message_text(chat_id=instance.chat_id_client, message_id=query,
-                              text=payment_text, reply_markup=inline_second_payment_kb(instance.pk))
+        bot.send_message(chat_id=instance.chat_id_client,
+                         text=payment_text,
+                         reply_markup=inline_second_payment_kb(instance.pk))
     except Exception as e:
         logger.info(e)
 
