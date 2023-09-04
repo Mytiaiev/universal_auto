@@ -446,8 +446,9 @@ class Driver(User):
 class DriverReshuffle(models.Model):
     calendar_event = models.CharField(max_length=255)
     swap_vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, verbose_name='Автомобіль')
-    driver_start = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій що приймає')
-    driver_finish = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій що віддає')
+    driver_start = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True,
+                                     verbose_name='Водій що приймає', related_name='start_driver')
+    driver_finish = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій що віддає', related_name='finish_driver')
     swap_time = models.DateTimeField(verbose_name='Час початку/закінчення зміни')
 
 
