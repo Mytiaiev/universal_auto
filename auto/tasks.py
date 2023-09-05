@@ -152,10 +152,7 @@ def get_car_efficiency(self, partner_pk, day=None):
             total_spendings = VehicleSpendings.objects.filter(
                 vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
 
-
-            drivers = Driver.objects.filter(vehicle=vehicle)
-
-            for driver in drivers:
+            for driver in Driver.objects.filter(vehicle=vehicle):
                 report = SummaryReport.objects.filter(report_from=day,
                                                       full_name=driver).first()
                 if report:
