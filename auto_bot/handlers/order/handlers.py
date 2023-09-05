@@ -496,14 +496,21 @@ def handle_order(update, context):
             s, e = int(start_route), int(timezone.localtime().timestamp())
             get_distance_trip.delay(data[1], query.message.message_id, s, e, driver.vehicle.gps_id)
         else:
-            query.edit_message_text(text=second_payment_info)
-            bot.send_message(chat_id=order.chat_id_client, text=payment_text,
-                             reply_markup=inline_second_payment_kb(order.pk))
+            if order.payment_method == price_inline_buttons[4].split()[1]:
+                cash_order(update, query, order, order.sum)
+            else:
+                text_to_client(order, complete_order_text, button=inline_comment_for_client())
+                bot.send_message(text=trip_paymented, chat_id=order.driver.chat_id)
+                order.status_order = Order.COMPLETED
+                order.partner = order.driver.partner
+                order.save()
+                fleet_order(order)
+                redis_instance().delete(str(update.effective_chat.id))
     elif data[0] == 'Second_cash_payment':
         if order.payment_method == price_inline_buttons[4].split()[1]:   # first cash second cash
             cash_order(update, query, order, order.sum)
         else:
-            first_payment = ReportTelegramPayments.objects.get(order=order.pk) # first card second cash
+            first_payment = ReportTelegramPayments.objects.get(order=order.pk)   # first card second cash
             total = order.sum - first_payment.total_amount
             if total > 0:
                 cash_order(update, query, order, total)
