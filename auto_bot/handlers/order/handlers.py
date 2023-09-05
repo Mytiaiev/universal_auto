@@ -308,7 +308,7 @@ def choose_date_order(update, context):
     chat_id = update.effective_chat.id
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order__in=[Order.ON_TIME, Order.WAITING]).count()
-    if order > 3:
+    if order >= 3:
         query.edit_message_text(order_not_payment)
     else:
         query.edit_message_text(order_date_text)
@@ -442,7 +442,9 @@ def handle_callback_order(update, context):
 
 
 def cash_order(update, query, order, sum):
-    query.edit_message_text(driver_complete_text(sum))
+    query.edit_message_reply_markup(reply_markup=None)
+    bot.send_message(text=driver_complete_text(sum), chat_id=order.driver.chat_id)
+    bot.send_message(text=driver_complete_text(sum), chat_id=order.chat_id_client)
     text_to_client(order, complete_order_text, button=inline_comment_for_client())
     order.status_order = Order.COMPLETED
     order.partner = order.driver.partner
