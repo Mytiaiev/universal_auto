@@ -69,33 +69,43 @@ class UaGpsSynchronizer:
         return road_distance, road_time
 
     @staticmethod
+    def get_start_end(day, driver, reshuffle):
+        start = timezone.make_aware(datetime.datetime.combine(day, datetime.time.min))
+        end = timezone.make_aware(datetime.datetime.combine(day, datetime.time.max))
+        if reshuffle:
+            if driver == reshuffle.driver_start:
+                start = timezone.localtime(reshuffle.swap_time)
+            if driver == reshuffle.driver_finish:
+                end = timezone.localtime(reshuffle.swap_time)
+        return start, end
+
+    @staticmethod
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
 
-    def get_road_distance(self, partner_id, start=None, end=None, delta=None):
+    def get_road_distance(self, partner_id, delta=None):
         day = timezone.localtime() - datetime.timedelta(days=delta)
-        if not start:
-            start = timezone.datetime.combine(day, datetime.datetime.min.time()).astimezone()
-            end = timezone.datetime.combine(day, datetime.datetime.max.time()).astimezone()
-        else:
-            pass
         road_dict = {}
         for _driver in Driver.objects.filter(partner=partner_id):
             reshuffle = DriverReshuffle.objects.filter(Q(swap_time__date=day) &
                                                        (Q(driver_start=_driver) | Q(driver_finish=_driver))).first()
             if reshuffle:
-                vehicle = reshuffle.swap_vehicle
+                start, end = self.get_start_end(day, _driver, reshuffle)
+                print(start, end)
+                gps_id = reshuffle.swap_vehicle.gps_id
                 road_distance = 0
                 road_time = datetime.timedelta()
                 completed = FleetOrder.objects.filter(driver=_driver,
                                                       state=FleetOrder.COMPLETED,
                                                       accepted_time__gte=start,
                                                       accepted_time__lt=end)
+                print(_driver)
                 for order in completed:
                     end_report = order.finish_time if order.finish_time < end else end
+                    print(end_report)
                     report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
                                                   self.get_timestamp(timezone.localtime(end_report)),
-                                                  vehicle.gps_id)
+                                                  gps_id)
                     road_distance += report[0]
                     road_time += report[1]
                 # canceled = FleetOrder.objects.filter(driver=_driver,
@@ -124,45 +134,35 @@ class UaGpsSynchronizer:
                                                             finish_time__gt=start,
                                                             accepted_time__lte=start).first()
                 if yesterday_order:
-                    report = self.generate_report(self.get_timestamp(timezone.localtime(start)),
+                    report = self.generate_report(self.get_timestamp(start),
                                                   self.get_timestamp(timezone.localtime(yesterday_order.finish_time)),
-                                                  vehicle.gps_id)
+                                                  gps_id)
                     road_distance += report[0]
                     road_time += report[1]
                 road_dict[_driver] = (road_distance, road_time, reshuffle)
         return road_dict
 
-    def total_per_day(self, licence_plate, day, time_end=None, time_start=None):
-        start = datetime.datetime.combine(day, datetime.time.min)
-        end = datetime.datetime.combine(day, datetime.time.max)
-        if time_end:
-            end = datetime.datetime.combine(day, time_end)
-        if time_start:
-            start = datetime.datetime.combine(day, time_start)
+    def total_per_day(self, gps_id, day, driver=None, reshuffle=None):
+        start, end = self.get_start_end(day, driver, reshuffle)
 
-        vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
-        if vehicle:
-            distance = self.generate_report(self.get_timestamp(start),
-                                            self.get_timestamp(end),
-                                            vehicle.gps_id)[0]
-            return distance, vehicle
+        distance = self.generate_report(self.get_timestamp(start),
+                                        self.get_timestamp(end),
+                                        gps_id)[0]
+        return distance
+
+
 
     def save_daily_rent(self, partner_id, delta):
         day = timezone.localtime() - datetime.timedelta(days=delta)
         in_road = self.get_road_distance(partner_id, delta=delta)
-        for driver, result, reshuffle in in_road.items():
-            rent_distance = 0
-            if driver == reshuffle.driver_start:
-                total_km = self.total_per_day(reshuffle.swap_vehicle.licence_plate,
-                                              day, time_start=datetime.time(12, 0, 0))[0]
-                rent_distance = total_km - result[0]
-            elif driver == reshuffle.driver_finish:
-                total_km = self.total_per_day(reshuffle.swap_vehicle.licence_plate,
-                                              day, time_end=datetime.time(11, 59, 59))[0]
-                rent_distance = total_km - result[0]
+        for driver, result in in_road.items():
+            distance, road_time, reshuffle = result
+            total_km = self.total_per_day(reshuffle.swap_vehicle.gps_id,
+                                          day, driver, reshuffle)
+            rent_distance = total_km - distance
             driver_eff = DriverEfficiency.objects.filter(driver=driver, report_from=day).first()
             if driver_eff:
-                driver_eff.road_time = result[1]
+                driver_eff.road_time = road_time
                 driver_eff.save()
             RentInformation.objects.create(report_from=day,
                                            driver=driver,

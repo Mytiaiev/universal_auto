@@ -16,7 +16,7 @@ from telegram.error import BadRequest
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, \
     TransactionsConversantion, DriverReshuffle
-from django.db.models import Sum, IntegerField, FloatField
+from django.db.models import Sum, IntegerField, FloatField, Q
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
@@ -145,7 +145,8 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                   licence_plate=vehicle.licence_plate)
         if not efficiency:
             total_kasa = 0
-            total_km, vehicle = UaGpsSynchronizer().total_per_day(vehicle.licence_plate, day)
+            result = 0
+            total_km = UaGpsSynchronizer().total_per_day(vehicle.gps_id, day)
             if total_km:
                 drivers = Driver.objects.filter(vehicle=vehicle)
                 for driver in drivers:
@@ -154,8 +155,6 @@ def get_car_efficiency(self, partner_pk, day=None):
                     if report:
                         total_kasa += report.total_amount_without_fee
                 result = Decimal(total_kasa)/Decimal(total_km)
-            else:
-                result = 0
             CarEfficiency.objects.create(report_from=day,
                                          licence_plate=vehicle.licence_plate,
                                          total_kasa=total_kasa,
@@ -170,14 +169,18 @@ def get_driver_efficiency(self, partner_pk, day=None):
         day = timezone.localtime() - timedelta(days=1)
     else:
         day = datetime.strptime(day, "%Y-%m-%d")
-    for driver in Driver.objects.filter(partner=partner_pk, vehicle__isnull=False):
+    for driver in Driver.objects.filter(partner=partner_pk):
         efficiency = DriverEfficiency.objects.filter(report_from=day,
                                                      partner=partner_pk,
                                                      driver=driver)
-        if not efficiency:
+        reshuffle = DriverReshuffle.objects.filter(Q(swap_time__date=day) &
+                                                   (Q(driver_start=driver) | Q(driver_finish=driver))).first()
+        if not efficiency and reshuffle:
+            accept = 0
+            avg_price = 0
             report = SummaryReport.objects.filter(report_from=day, full_name=driver).first()
             total_kasa = report.total_amount_without_fee if report else 0
-            total_km, vehicle = UaGpsSynchronizer().total_per_day(driver.vehicle.licence_plate, day)
+            total_km = UaGpsSynchronizer().total_per_day(reshuffle.swap_vehicle.gps_id, day, driver, reshuffle)
             result = Decimal(total_kasa)/Decimal(total_km) if total_km else 0
             orders = FleetOrder.objects.filter(driver=driver, accepted_time__date=day)
             total_orders = orders.count()
@@ -185,9 +188,6 @@ def get_driver_efficiency(self, partner_pk, day=None):
                 canceled = orders.filter(state=FleetOrder.DRIVER_CANCEL).count()
                 accept = int((total_orders-canceled)/total_orders * 100) if canceled else 100
                 avg_price = Decimal(total_kasa) / Decimal(total_orders)
-            else:
-                accept = 0
-                avg_price = 0
             hours_online = timedelta()
             using_info = UseOfCars.objects.filter(created_at__date=day, user_vehicle=driver)
             start = timezone.datetime.combine(day, datetime.min.time()).astimezone()
@@ -617,8 +617,8 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
 def get_driver_reshuffles(self):
     calendar = GoogleCalendar()
     cal_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
-    start = timezone.localtime()
-    end = timezone.localtime() + timedelta(days=1)
+    start = timezone.localtime() - timedelta(days=2)
+    end = timezone.localtime() - timedelta(days=1)
     events = calendar.get_list_events(cal_id, start, end)
     for event in events['items']:
         calendar_event_id = event['id']
@@ -629,9 +629,9 @@ def get_driver_reshuffles(self):
             driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
             driver_finish = None
             vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
-            swap_time = datetime.strptime(event['start']['date'], "%Y-%m-%d")
+            swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))
         else:
-            swap_time = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z")
+            swap_time = timezone.make_aware(datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z"))
             licence_plate, first_driver, second_driver = event_summary
             name, second_name = first_driver.split()
             other_name, other_second_name = second_driver.split()

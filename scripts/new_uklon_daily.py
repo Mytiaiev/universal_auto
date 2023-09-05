@@ -1,4 +1,8 @@
+from django.utils import timezone
+
+from app.models import DriverReshuffle
 
 
 def run(*args):
-    pass
+    for resh in DriverReshuffle.objects.all():
+        print(timezone.localtime(resh.swap_time))
