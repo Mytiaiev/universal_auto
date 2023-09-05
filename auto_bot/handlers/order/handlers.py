@@ -292,6 +292,10 @@ def increase_order_price(update, context):
     chat_id = query.from_user.id
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order=Order.WAITING).last()
+    client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
+    bot.edit_message_reply_markup(chat_id=order.chat_id_client,
+                                  message_id=client_msg,
+                                  reply_markup=inline_reject_order(order.pk))
     if query.data != "Continue_search":
         order.car_delivery_price += int(query.data)
         order.sum += int(query.data)
@@ -380,6 +384,8 @@ def client_reject_order(update, context):
     order.status_order = Order.CANCELED
     order.finish_time = timezone.localtime()
     order.save()
+    redis_instance().delete(order.chat_id_client)
+
     try:
         for i in range(3):
             context.bot.delete_message(chat_id=order.chat_id_client,

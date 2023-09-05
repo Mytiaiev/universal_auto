@@ -485,6 +485,7 @@ def search_driver_for_order(self, order_pk):
 
     try:
         order = Order.objects.get(id=order_pk)
+        client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
         if order.status_order == Order.CANCELED:
             return
         if order.status_order == Order.ON_TIME:
@@ -495,23 +496,27 @@ def search_driver_for_order(self, order_pk):
                 bot.send_message(chat_id=order.chat_id_client,
                                  text=no_driver_in_radius,
                                  reply_markup=inline_search_kb(order.pk))
+                text_to_client(order, delete_id=client_msg)
             return
-        client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
         if self.request.retries == self.max_retries:
             if order.chat_id_client:
                 bot.edit_message_text(chat_id=order.chat_id_client,
                                       text=no_driver_in_radius,
                                       reply_markup=inline_search_kb(order.pk),
                                       message_id=client_msg)
+                text_to_client(order, delete_id=client_msg)
             return
         if self.request.retries == 0:
-            bot.edit_message_text(chat_id=order.chat_id_client, text=client_order_info(order), message_id=client_msg)
+            bot.edit_message_text(chat_id=order.chat_id_client,
+                                  text=client_order_info(order),
+                                  message_id=client_msg,
+                                  reply_markup=inline_reject_order(order.pk))
             last_msg = text_to_client(order, search_driver)
             redis_instance().hset(order.chat_id_client, 'client_msg', last_msg)
         elif self.request.retries == 1:
-            text_to_client(order, search_driver_1, message_id=client_msg, button=inline_reject_order(order.pk))
+            text_to_client(order, search_driver_1, message_id=client_msg)
         else:
-            text_to_client(order, search_driver_2, message_id=client_msg, button=inline_reject_order(order.pk))
+            text_to_client(order, search_driver_2, message_id=client_msg)
         drivers = Driver.objects.filter(chat_id__isnull=False, vehicle__isnull=False)
         for driver in drivers:
             if driver.driver_status == Driver.ACTIVE:
