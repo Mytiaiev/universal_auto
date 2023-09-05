@@ -2,7 +2,8 @@ import json
 import random
 from datetime import timedelta, date
 
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Avg
+from django.db.models.functions import Round
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
@@ -309,37 +310,52 @@ def investor_effective_vehicle(period, investor_pk):
 
 
 def get_driver_info(request, period):
-
     start_date, end_date = get_dates(period=period)
-    print("#"*100)
-    print(start_date, end_date)
-    print("#"*100)
 
     current_user = request.user
     manager = Manager.objects.filter(user=current_user).first()
 
     if manager:
         drivers = Driver.objects.filter(manager=manager)
-
         driver_info_list = []
 
         for driver in drivers:
-            effective = DriverEfficiency.objects.filter(driver=driver).first()
+            driver_efficiency = DriverEfficiency.objects.filter(
+                driver=driver,
+                report_from__gte=start_date,
+                report_from__lte=end_date
+            ).aggregate(
+                total_kasa=Sum('total_kasa'),
+                total_orders=Sum('total_orders'),
+                accept_percent=Avg('accept_percent'),
+                average_price=Round(Avg('average_price'), 2),
+                mileage=Sum('mileage'),
+                efficiency=Round(Avg('efficiency'), 2),
+                road_time=Sum('road_time')
+            )
+
+            if driver_efficiency['total_orders'] > 0:
+                average_price = round((driver_efficiency['total_kasa'] / driver_efficiency['total_orders']), 2)
+            else:
+                average_price = 0.0
 
             driver_info = {
                 'driver': driver,
-                'total_kasa': effective.total_kasa,
-                'total_orders': effective.total_orders,
-                'accept_percent': effective.accept_percent,
-                'average_price': effective.average_price,
-                'mileage': effective.mileage,
-                'efficiency': effective.efficiency,
-                'road_time': effective.road_time
+                'total_kasa': driver_efficiency['total_kasa'],
+                'total_orders': driver_efficiency['total_orders'],
+                'accept_percent': driver_efficiency['accept_percent'],
+                'average_price': average_price,
+                'mileage': driver_efficiency['mileage'],
+                'efficiency': driver_efficiency['efficiency'],
+                'road_time': driver_efficiency['road_time']
             }
 
             driver_info_list.append(driver_info)
 
+        driver_info_list.sort(key=lambda x: x['total_kasa'], reverse=True)
+
         return driver_info_list
+
 
 
 def login_in(action, login_name, password, user_id):

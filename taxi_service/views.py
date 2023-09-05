@@ -175,14 +175,14 @@ class DashboardPartnerView(TemplateView):
 class DashboardManagerView(TemplateView):
     template_name = 'dashboard/dashboard-manager.html'
 
+    def post(self, request, *args, **kwargs):
+        select_period = self.request.POST.get('period')
+        context = self.get_context_data(**kwargs)
+        context['driver_info'] = get_driver_info(request=self.request, period=select_period)
+        return render(request, 'dashboard/dashboard-manager.html', context=context)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        select_period = self.request.POST
-        print("#" * 100)
-        print(select_period)
-        print("#" * 100)
-        context['driver_info'] = get_driver_info(request=self.request, period=select_period)
 
         context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
