@@ -176,7 +176,8 @@ class GetRequestHandler:
 
     def handle_get_manager_cash(self, request):
         period = request.GET.get('period')
-        get_cash = collect_total_earnings(period)
+        user_id = request.user.pk
+        get_cash = collect_total_earnings(period, user_id)
         json_data = JsonResponse({'data': get_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response

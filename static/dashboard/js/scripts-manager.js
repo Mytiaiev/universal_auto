@@ -672,7 +672,7 @@ $(document).ready(function () {
 					row.append('<td>' + item.driver + '</td>');
 					row.append('<td>' + item.total_kasa + '</td>');
 					row.append('<td>' + item.total_orders + '</td>');
-					row.append('<td>' + item.accept_percent + '</td>');
+					row.append('<td>' + item.accept_percent + " %" +'</td>');
 					row.append('<td>' + item.average_price + '</td>');
 					row.append('<td>' + item.mileage + '</td>');
 					row.append('<td>' + item.efficiency + '</td>');

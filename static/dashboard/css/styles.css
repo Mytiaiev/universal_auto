@@ -644,7 +644,7 @@ th, td {
 
 /* Стилізація форми періода */
 form {
-  display: flex;
+  /*display: flex;*/
   align-items: center;
 }
 

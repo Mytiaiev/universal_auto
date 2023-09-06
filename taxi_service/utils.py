@@ -146,7 +146,7 @@ def weekly_rent():
     return total_distance, start_date_formatted, end_date_formatted
 
 
-def collect_total_earnings(period):
+def collect_total_earnings(period, user_id):
     total = {}
     total_amount = 0
 
@@ -154,13 +154,15 @@ def collect_total_earnings(period):
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
-    reports = SummaryReport.objects.filter(
-        report_from__range=(start_period, end_period))
-    for driver in Driver.objects.all():
+    manager = Manager.objects.filter(user_id=user_id).first()
+
+    reports = SummaryReport.objects.filter(report_from__range=(start_period, end_period))
+    for driver in Driver.objects.filter(manager=manager):
         total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
             clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]
+
     return total, total_amount, start_date_formatted, end_date_formatted
 
 
