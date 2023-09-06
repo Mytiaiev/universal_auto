@@ -59,26 +59,29 @@ class PostRequestView(View):
         handler = PostRequestHandler()
         action = request.POST.get('action')
 
-        if action == 'order':
-            return handler.handler_order_form(request)
-        elif action == 'subscribe':
-            return handler.handler_subscribe_form(request)
-        elif action == 'send_comment':
-            return handler.handler_comment_form(request)
-        elif action in ['order_sum', 'user_opt_out']:
-            return handler.handler_update_order(request)
-        elif action in ['increase_price', 'continue_search']:
-            return handler.handler_restarting_order(request)
-        elif action in ['uber', 'uklon', 'bolt']:
-            return handler.handler_success_login(request)
-        elif action in ['uber_logout', 'uklon_logout', 'bolt_logout']:
-            return handler.handler_handler_logout(request)
-        elif action == 'login_invest':
-            return handler.handler_success_login_investor(request)
-        elif action == 'logout_invest':
-            return handler.handler_logout_investor(request)
-        elif action in ['change_password', 'send_reset_code', 'update_password']:
-            return handler.handler_change_password(request)
+        method = {
+            'order': handler.handler_order_form,
+            'subscribe': handler.handler_subscribe_form,
+            'send_comment': handler.handler_comment_form,
+            'order_sum': handler.handler_update_order,
+            'user_opt_out': handler.handler_update_order,
+            'increase_price': handler.handler_restarting_order,
+            'continue_search': handler.handler_restarting_order,
+            'uber': handler.handler_success_login,
+            'uber_logout': handler.handler_handler_logout,
+            'uklon': handler.handler_success_login,
+            'uklon_logout': handler.handler_handler_logout,
+            'bolt': handler.handler_success_login,
+            'bolt_logout': handler.handler_handler_logout,
+            'login_invest': handler.handler_success_login_investor,
+            'logout_invest': handler.handler_logout_investor,
+            'change_password': handler.handler_change_password,
+            'send_reset_code': handler.handler_change_password,
+            'update_password': handler.handler_change_password
+        }
+
+        if action in method:
+            return method[action](request)
         else:
             return handler.handler_unknown_action(request)
 
@@ -88,24 +91,20 @@ class GetRequestView(View):
         handler = GetRequestHandler()
         action = request.GET.get('action')
 
-        if action == 'active_vehicles_locations':
-            return handler.handle_active_vehicles_locations(request)
-        elif action == 'order_confirm':
-            return handler.handle_order_confirm(request)
-        elif action == 'get_cash_investor':
-            return handler.handle_get_investor_cash(request)
-        elif action == 'get_cash_manager':
-            return handler.handle_get_manager_cash(request)
-        elif action == 'get_drivers_manager':
-            return handler.handle_get_drivers_manager(request)
-        elif action == 'investor':
-            return handler.handle_effective_vehicle(request)
-        elif action == 'manager':
-            return handler.handle_effective_vehicle(request)
-        elif action == 'is_logged_in':
-            return handler.handle_is_logged_in(request)
-        elif action == 'get_role':
-            return handler.handle_get_role(request)
+        method = {
+            'active_vehicles_locations': handler.handle_active_vehicles_locations,
+            'order_confirm': handler.handle_order_confirm,
+            'get_cash_investor': handler.handle_get_investor_cash,
+            'get_cash_manager': handler.handle_get_manager_cash,
+            'get_drivers_manager': handler.handle_get_drivers_manager,
+            'investor': handler.handle_effective_vehicle,
+            'manager': handler.handle_effective_vehicle,
+            'is_logged_in': handler.handle_is_logged_in,
+            'get_role': handler.handle_get_role
+        }
+
+        if action in method:
+            return method[action](request)
         else:
             return handler.handle_unknown_action(request)
 
