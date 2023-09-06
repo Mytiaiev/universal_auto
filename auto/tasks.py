@@ -1,6 +1,6 @@
 import os
-from datetime import datetime, timedelta
-import time
+from datetime import datetime, timedelta, time
+import time as tm
 import requests
 from _decimal import Decimal
 from celery import current_app
@@ -76,7 +76,7 @@ def auto_send_task_bot(self):
                     "message": {"message_id": 6993, "chat": {"id": 515224934, "type": "private"},
                                 "text": "/test_celery",
                                 "from": {"id": 515224934, "first_name": "Родіон", "is_bot": False},
-                                "date": int(time.time()),
+                                "date": int(tm.time()),
                                 "entities": [{"offset": 0, "length": 12, "type": "bot_command"}]}}
     requests.post(webhook_url, json=message_data)
 
@@ -302,12 +302,10 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def get_rent_information(self, partner_pk, delta=None):
+def get_rent_information(self, partner_pk, delta=1):
     try:
-        if not delta:
-            delta = 1
         UaGpsSynchronizer().save_daily_rent(partner_pk, delta)
-        logger.info('write rent report in uagps')
+        logger.info('write rent report')
     except Exception as e:
         logger.error(e)
 
@@ -528,8 +526,8 @@ def search_driver_for_order(self, order_pk):
                     accept_message = bot.send_message(chat_id=driver.chat_id,
                                                       text=order_info(order),
                                                       reply_markup=inline_markup_accept(order.pk))
-                    end_time = time.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
-                    while time.time() < end_time:
+                    end_time = tm.time() + int(ParkSettings.get_value("MESSAGE_APPEAR"))
+                    while tm.time() < end_time:
                         Driver.objects.filter(id=driver.id).update(driver_status=Driver.GET_ORDER)
                         upd_driver = Driver.objects.get(id=driver.id)
                         instance = Order.objects.get(id=order.id)
@@ -615,11 +613,10 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_driver_reshuffles(self):
-    calendar = GoogleCalendar()
-    cal_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
-    start = timezone.localtime() - timedelta(days=2)
-    end = timezone.localtime() - timedelta(days=1)
-    events = calendar.get_list_events(cal_id, start, end)
+    day = timezone.localtime() - timedelta(days=1)
+    start = timezone.make_aware(datetime.combine(day, time.min))
+    end = timezone.make_aware(datetime.combine(day, time.max))
+    events = GoogleCalendar().get_list_events(ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR"), start, end)
     for event in events['items']:
         calendar_event_id = event['id']
         event_summary = event['summary'].split(',')
@@ -631,24 +628,24 @@ def get_driver_reshuffles(self):
             vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
             swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))
         else:
-            swap_time = timezone.make_aware(datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z"))
+            swap_time = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z").astimezone()
             licence_plate, first_driver, second_driver = event_summary
             name, second_name = first_driver.split()
             other_name, other_second_name = second_driver.split()
-            driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
-            driver_finish = Driver.objects.filter(name=other_name, second_name=other_second_name).first()
+            driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
+                                                 Q(name=second_name, second_name=name)).first()
+            driver_finish = Driver.objects.filter(Q(name=other_name, second_name=other_second_name) |
+                                                  Q(name=other_second_name, second_name=other_name)).first()
             vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
         obj_data = {
+            "calendar_event_id": calendar_event_id,
             "swap_vehicle": vehicle,
             "driver_start": driver_start,
             "driver_finish": driver_finish,
             "swap_time": swap_time
         }
-        reshuffle, created = DriverReshuffle.objects.get_or_create(calendar_event_id=calendar_event_id,
-                                                                   defaults=obj_data)
-        if not created:
-            reshuffle.__dict__.update(**obj_data)
-            reshuffle.save()
+        reshuffle = DriverReshuffle.objects.filter(calendar_event_id=calendar_event_id)
+        reshuffle.update(**obj_data) if reshuffle else DriverReshuffle.objects.create(**obj_data)
 
 
 def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
@@ -705,7 +702,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute="00", hour='23'), get_driver_reshuffles.s(partner_id))
+    sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))

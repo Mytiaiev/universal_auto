@@ -91,7 +91,6 @@ class UaGpsSynchronizer:
                                                        (Q(driver_start=_driver) | Q(driver_finish=_driver))).first()
             if reshuffle:
                 start, end = self.get_start_end(day, _driver, reshuffle)
-                print(start, end)
                 gps_id = reshuffle.swap_vehicle.gps_id
                 road_distance = 0
                 road_time = datetime.timedelta()
@@ -99,10 +98,8 @@ class UaGpsSynchronizer:
                                                       state=FleetOrder.COMPLETED,
                                                       accepted_time__gte=start,
                                                       accepted_time__lt=end)
-                print(_driver)
                 for order in completed:
                     end_report = order.finish_time if order.finish_time < end else end
-                    print(end_report)
                     report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
                                                   self.get_timestamp(timezone.localtime(end_report)),
                                                   gps_id)
@@ -149,8 +146,6 @@ class UaGpsSynchronizer:
                                         self.get_timestamp(end),
                                         gps_id)[0]
         return distance
-
-
 
     def save_daily_rent(self, partner_id, delta):
         day = timezone.localtime() - datetime.timedelta(days=delta)
