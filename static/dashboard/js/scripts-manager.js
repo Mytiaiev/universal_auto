@@ -154,7 +154,7 @@ let areaChartOptions = {
 			show: false,
 		},
 	},
-	colors: ["#00ab57", "#d50000"],
+	colors: ["#00ab57", "#d50000", "#2e7d32", "#ff6d00", "#583cb3", "#c51162", "#00bfa5",],
 	labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
 	dataLabels: {
 		enabled: false,
@@ -296,81 +296,44 @@ $(document).ready(function () {
 		});
 	}
 
-	function loadEffectiveChart(period, vehicleId1, vehicleId2) {
+	function loadEffectiveChart(period) {
 		$.ajax({
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
-				action: 'manager_effective_vehicle',
+				action: 'manager',
 				period: period,
-				vehicle_id1: vehicleId1,
-				vehicle_id2: vehicleId2
 			},
 			success: function (response) {
-				console.log(response.data);
-				let dataArray1 = response.data.vehicle1;
-				let dataArray2 = response.data.vehicle2;
+				let dataObject = response.data;
 
-				let carNumbers = Array.from(new Set(dataArray1.map(item => item.car)));
-				let carNumbers2 = Array.from(new Set(dataArray2.map(item => item.car)));
-				let carData = {};
-				let carData2 = {};
+				let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
 
-				carNumbers.forEach(function (carNumber, index) {
-					let carIndex = index + 1;
-					let carNumberKey = 'carNumber' + carIndex;
-					let mileageKey = 'mileage' + carIndex;
-
-					carData[carNumberKey] = carNumber;
-					carData[mileageKey] = dataArray1
-						.filter(item => item.car === carNumber)
-						.map(item => parseFloat(item.mileage))
-						.join(', ');
-
-					if (carData[mileageKey] === '') {
-						carData[mileageKey] = "0";
-					}
+				// Проходимося по кожному ідентифікатору автомобіля
+				Object.keys(dataObject).forEach(function (carNumber) {
+					carData[carNumber] = dataObject[carNumber].map(function (item) {
+						return {
+							date: new Date(item.date_effective),
+							efficiency: parseFloat(item.efficiency)
+						};
+					});
 				});
 
-				carNumbers2.forEach(function (carNumber, index) {
-					let carIndex = index + 1;
-					let carNumberKey = 'carNumber' + carIndex;
-					let mileageKey = 'mileage' + carIndex;
-
-					carData2[carNumberKey] = carNumber;
-					carData2[mileageKey] = dataArray2
-						.filter(item => item.car === carNumber)
-						.map(item => parseFloat(item.mileage))
-						.join(', ');
-
-					if (carData2[mileageKey] === '') {
-						carData2[mileageKey] = "0";
-					}
-				});
-
-				let dates = dataArray1.map(item => {
-					let date = new Date(item.date_effective);
-					return `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-				});
-
-				let mileageSeries = carNumbers.map(carNumber => {
-					let carIndex = carNumbers.indexOf(carNumber) + 1;
+				let efficiencySeries = Object.keys(carData).map(function (carNumber) {
 					return {
-						name: carData['carNumber' + carIndex],
-						data: carData['mileage' + carIndex].split(', ').map(parseFloat)
+						name: carNumber,
+						data: carData[carNumber].map(function (entry) {
+							return entry.efficiency;
+						})
 					};
 				});
 
-				let mileageSeries2 = carNumbers2.map(carNumber => {
-					let carIndex = carNumbers2.indexOf(carNumber) + 1;
-					return {
-						name: carData2['carNumber' + carIndex],
-						data: carData2['mileage' + carIndex].split(', ').map(parseFloat)
-					};
+				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
 				});
 
-				// Update chart options with new data
-				areaChartOptions.series = [...mileageSeries, ...mileageSeries2];
+				// Оновити опції графіка з новими даними
+				areaChartOptions.series = efficiencySeries;
 				areaChartOptions.labels = dates;
 
 				areaChart.updateOptions(areaChartOptions);
@@ -380,7 +343,7 @@ $(document).ready(function () {
 
 
 	function updateEffectiveChart(vehicleId1, vehicleId2, period) {
-		loadEffectiveChart(period, vehicleId1, vehicleId2);
+		loadEffectiveChart(period);
 	}
 
 	loadDefaultKasa('day');
@@ -651,5 +614,73 @@ $(document).ready(function () {
 
 	$('.burger-menu').click(function () {
 		$('.burger-menu').toggleClass('open');
+	});
+
+	$('#managerVehicleBtn').click(function () {
+		$('.payback-car').show();
+		$('.payback-car').css('display', 'flex');
+		$('.charts').hide();
+		$('.main-cards').hide();
+		$('.info-driver').hide();
+	});
+
+	$('#managerDriverBtn').click(function () {
+		$('.info-driver').show();
+		$('.payback-car').hide();
+		$('.charts').hide();
+		$('.main-cards').hide();
+	});
+
+	$(".close-btn").click(function () {
+		$("#settingsWindow").fadeOut();
+		sessionStorage.setItem('settings', 'false');
+		location.reload();
+	});
+});
+
+$(document).ready(function () {
+	const periodSelect = $('#period');
+	const showButton = $('input[type="button"]');
+	const managerDriverBtn = $('#managerDriverBtn');
+
+	periodSelect.val("day");
+
+	managerDriverBtn.on('click', function (event) {
+		showButton.click();
+	});
+
+	showButton.on('click', function (event) {
+		event.preventDefault();
+
+		const selectedPeriod = periodSelect.val();
+
+		$.ajax({
+			type: "GET",
+			url: ajaxGetUrl,
+			data: {
+				action: 'get_drivers_manager',
+				period: selectedPeriod
+			},
+			success: function (response) {
+				console.log(response.data);
+				let table = $('.info-driver table');
+				table.find('tr:gt(0)').remove();
+
+				response.data.forEach(function (item) {
+					let row = $('<tr></tr>');
+
+					row.append('<td>' + item.driver + '</td>');
+					row.append('<td>' + item.total_kasa + '</td>');
+					row.append('<td>' + item.total_orders + '</td>');
+					row.append('<td>' + item.accept_percent + '</td>');
+					row.append('<td>' + item.average_price + '</td>');
+					row.append('<td>' + item.mileage + '</td>');
+					row.append('<td>' + item.efficiency + '</td>');
+					row.append('<td>' + item.road_time + '</td>');
+
+					table.append(row);
+				});
+			}
+		});
 	});
 });

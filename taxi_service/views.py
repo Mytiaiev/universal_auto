@@ -16,7 +16,7 @@ from django.utils.decorators import method_decorator
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import weekly_rent, average_effective_vehicle, \
-    car_piggy_bank, get_driver_info
+    car_piggy_bank, get_driver_info, manager_car_piggy_bank
 from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
 from auto_bot.main import bot
 
@@ -96,10 +96,12 @@ class GetRequestView(View):
             return handler.handle_get_investor_cash(request)
         elif action == 'get_cash_manager':
             return handler.handle_get_manager_cash(request)
-        elif action == 'investor_effective_vehicle':
-            return handler.handle_investor_effective_vehicle(request)
-        elif action == 'manager_effective_vehicle':
-            return handler.handle_manager_effective_vehicle(request)
+        elif action == 'get_drivers_manager':
+            return handler.handle_get_drivers_manager(request)
+        elif action == 'investor':
+            return handler.handle_effective_vehicle(request)
+        elif action == 'manager':
+            return handler.handle_effective_vehicle(request)
         elif action == 'is_logged_in':
             return handler.handle_is_logged_in(request)
         elif action == 'get_role':
@@ -175,18 +177,13 @@ class DashboardPartnerView(TemplateView):
 class DashboardManagerView(TemplateView):
     template_name = 'dashboard/dashboard-manager.html'
 
-    def post(self, request, *args, **kwargs):
-        select_period = self.request.POST.get('period')
-        context = self.get_context_data(**kwargs)
-        context['driver_info'] = get_driver_info(request=self.request, period=select_period)
-        return render(request, 'dashboard/dashboard-manager.html', context=context)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
         context['average_effective_vehicle'] = average_effective_vehicle()
+        context['car_piggy_bank'] = manager_car_piggy_bank(self.request)
 
         return context
 

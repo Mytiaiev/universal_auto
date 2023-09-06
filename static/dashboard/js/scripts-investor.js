@@ -306,7 +306,7 @@ $(document).ready(function () {
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
-				action: 'investor_effective_vehicle',
+				action: 'investor',
 				period: period,
 			},
 			success: function (response) {

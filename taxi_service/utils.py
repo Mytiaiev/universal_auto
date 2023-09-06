@@ -3,7 +3,6 @@ import random
 from datetime import timedelta, date
 
 from django.db.models import Sum, Q, Avg
-from django.db.models.functions import Round
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
@@ -208,13 +207,10 @@ def investor_cash_car(period, investor_pk):
     return vehicles, total_amount, total_km, overall_spent, start_date_formatted, end_date_formatted
 
 
-def car_piggy_bank(request):
-    investor = Investor.objects.get(user_id=request.user.id)
-    investor_cars = Vehicle.objects.filter(investor_car=investor)
-
+def get_car_data(cars, investor=None):
     cars_data = []
 
-    for car in investor_cars:
+    for car in cars:
         licence_plate = car.licence_plate
         purchase_price = car.purchase_price
 
@@ -223,21 +219,37 @@ def car_piggy_bank(request):
 
         car_efficiencies = CarEfficiency.objects.filter(
             licence_plate=licence_plate)
-        total_kasa = sum(
-            efficiency.total_kasa for efficiency in car_efficiencies)
+        total_kasa = round(sum(efficiency.total_kasa for efficiency in car_efficiencies), 2)
 
-        progress_percentage = ((total_kasa - total_spent) / purchase_price) * 100
-        # progress_percentage = float('{:.2f}'.format(progress_percentage)) # TODO: check this
-        progress_percentage = int(progress_percentage)
+        percentage = car.investor_percentage if investor and hasattr(car, 'investor_percentage') else None
+        if percentage is not None:
+            total_kasa *= percentage
+
+        progress_percentage = round(((total_kasa - total_spent) / purchase_price) * 100) \
+            if purchase_price > 0 else 0
 
         cars_data.append({
             'licence_plate': licence_plate,
             'purchase_price': purchase_price,
             'total_spent': total_spent,
-            'total_kasa': total_kasa,
+            'total_kasa': round(total_kasa, 2),
             'progress_percentage': progress_percentage
         })
 
+    return cars_data
+
+
+def car_piggy_bank(request):
+    investor = Investor.objects.get(user_id=request.user.id)
+    investor_cars = Vehicle.objects.filter(investor_car=investor)
+    cars_data = get_car_data(investor_cars, investor=investor)
+    return cars_data
+
+
+def manager_car_piggy_bank(request):
+    manager = Manager.objects.get(user_id=request.user.id)
+    manager_cars = Vehicle.objects.filter(manager=manager)
+    cars_data = get_car_data(manager_cars)
     return cars_data
 
 
@@ -258,36 +270,42 @@ def average_effective_vehicle():
     return effective, start_date_formatted, end_date_formatted
 
 
-def effective_vehicle(period, vehicle1, vehicle2):
+# def effective_vehicle(period, vehicle1, vehicle2):
+#     start_date, end_date = get_dates(period=period)
+#
+#     effective_objects = CarEfficiency.objects.filter(
+#         Q(licence_plate=vehicle1) | Q(licence_plate=vehicle2),
+#         report_from__range=(start_date, end_date)
+#     ).order_by('licence_plate', 'report_from')
+#
+#     result = {'vehicle1': [], 'vehicle2': []}
+#
+#     for effective in effective_objects:
+#         car_data = {
+#             'date_effective': effective.report_from,
+#             'car': effective.licence_plate,
+#             'total_amount': effective.total_kasa,
+#             'mileage': effective.mileage,
+#             'effective': effective.efficiency
+#         }
+#         result_key = 'vehicle1' if effective.licence_plate == vehicle1 else 'vehicle2'
+#         result[result_key].append(car_data)
+#
+#     return result
+
+
+def effective_vehicle(period, user_id, action):
     start_date, end_date = get_dates(period=period)
+    licence_plates = []
 
-    effective_objects = CarEfficiency.objects.filter(
-        Q(licence_plate=vehicle1) | Q(licence_plate=vehicle2),
-        report_from__range=(start_date, end_date)
-    ).order_by('licence_plate', 'report_from')
-
-    result = {'vehicle1': [], 'vehicle2': []}
-
-    for effective in effective_objects:
-        car_data = {
-            'date_effective': effective.report_from,
-            'car': effective.licence_plate,
-            'total_amount': effective.total_kasa,
-            'mileage': effective.mileage,
-            'effective': effective.efficiency
-        }
-        result_key = 'vehicle1' if effective.licence_plate == vehicle1 else 'vehicle2'
-        result[result_key].append(car_data)
-
-    return result
-
-
-def investor_effective_vehicle(period, investor_pk):
-    start_date, end_date = get_dates(period=period)
-
-    investor = Investor.objects.get(user_id=investor_pk)
-    investor_cars = Vehicle.objects.filter(investor_car=investor)
-    licence_plates = [car.licence_plate for car in investor_cars]
+    if action == 'investor':
+        investor = Investor.objects.get(user_id=user_id)
+        investor_cars = Vehicle.objects.filter(investor_car=investor)
+        licence_plates = [car.licence_plate for car in investor_cars]
+    elif action == 'manager':
+        manager = Manager.objects.get(user_id=user_id)
+        manager_cars = Vehicle.objects.filter(manager=manager)
+        licence_plates = [car.licence_plate for car in manager_cars]
 
     effective_objects = CarEfficiency.objects.filter(
         licence_plate__in=licence_plates,
@@ -301,6 +319,7 @@ def investor_effective_vehicle(period, investor_pk):
             'date_effective': effective.report_from,
             'car': effective.licence_plate,
             'mileage': effective.mileage,
+            'efficiency': effective.efficiency
         }
         if effective.licence_plate not in result:
             result[effective.licence_plate] = [car_data]
@@ -328,34 +347,32 @@ def get_driver_info(request, period):
                 total_kasa=Sum('total_kasa'),
                 total_orders=Sum('total_orders'),
                 accept_percent=Avg('accept_percent'),
-                average_price=Round(Avg('average_price'), 2),
                 mileage=Sum('mileage'),
-                efficiency=Round(Avg('efficiency'), 2),
                 road_time=Sum('road_time')
             )
 
-            if driver_efficiency['total_orders'] > 0:
-                average_price = round((driver_efficiency['total_kasa'] / driver_efficiency['total_orders']), 2)
-            else:
-                average_price = 0.0
+            driver_name = driver.__str__()
+            total_orders = driver_efficiency['total_orders'] or 0
+            total_kasa = driver_efficiency['total_kasa'] or 0
+
+            average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
+            efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
 
             driver_info = {
-                'driver': driver,
+                'driver': driver_name,
                 'total_kasa': driver_efficiency['total_kasa'],
                 'total_orders': driver_efficiency['total_orders'],
-                'accept_percent': driver_efficiency['accept_percent'],
+                'accept_percent': round(driver_efficiency['accept_percent'],2),
                 'average_price': average_price,
-                'mileage': driver_efficiency['mileage'],
-                'efficiency': driver_efficiency['efficiency'],
-                'road_time': driver_efficiency['road_time']
+                'mileage': round(driver_efficiency['mileage'],2),
+                'efficiency': efficiency,
+                'road_time': str(driver_efficiency['road_time'])
             }
-
             driver_info_list.append(driver_info)
 
         driver_info_list.sort(key=lambda x: x['total_kasa'], reverse=True)
 
         return driver_info_list
-
 
 
 def login_in(action, login_name, password, user_id):
