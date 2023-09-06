@@ -415,6 +415,8 @@ def login_in(action, login_name, password, user_id):
 			return True
 		else:
 			return False
+	if action == 'gps':
+		pass
 
 
 def partner_logout(action, user_pk):

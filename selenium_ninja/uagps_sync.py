@@ -22,6 +22,18 @@ class UaGpsSynchronizer:
         login = requests.get(self.url, params=params)
         return login.json()['eid']
 
+    def get_gps_id(self):
+
+        payload = {"spec": {"itemsType": "avl_resource", "propName": "sys_name", "propValueMask": "*", "sortType": ""},
+                   "force": 1, "flags": 5, "from": 0, "to": 4294967295}
+        params = {
+            'sid': self.session,
+            'svc': 'core/search_items',
+        }
+        params.update({'params': json.dumps(payload)})
+        response = requests.post(url=UaGpsService.get_value("BASE_URL"), params=params)
+        return response.json()['items'][0]['id']
+
     def get_vehicle_id(self):
         params = {
             'sid': self.session,

@@ -39,6 +39,8 @@ settings_for_partner = {
     'UBER_PASSWORD': ('Enter password for Uber', 'Пароль користувача Uber'),
     'BOLT_NAME': ('Enter username for Bolt', 'Ім\'я користувача Bolt'),
     'BOLT_PASSWORD': ('Enter password for Bolt', 'Пароль користувача Bolt'),
+    'GPS_LOGIN': ('Enter username for gps', 'Ім\'я користувача gps'),
+    'GPS_PASSWORD': ('Enter password for gps', 'Пароль gps'),
     'ID_PARK': ('Enter ID', 'Індифікатор парка з url'),
     'CLIENT_ID': ('Enter ID', 'Payload з Uklon'),
     'CLIENT_SECRET': ('Enter Secret', 'Payload з Uklon'),

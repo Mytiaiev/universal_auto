@@ -1,5 +1,6 @@
 import base64
 import csv
+import json
 import re
 import time
 import os
@@ -17,7 +18,7 @@ from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException, NoSuchElementException
 
 from app.models import ParkSettings, UberService, UberSession, Partner, BoltService, NewUklonService, NewUklonFleet, \
-    FleetOrder, Fleets_drivers_vehicles_rate
+    FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService
 from auto import settings
 from scripts.redis_conn import redis_instance, get_logger
 
@@ -100,26 +101,51 @@ class SeleniumTools:
             self.driver.quit()
             self.driver = None
 
-    def bolt_login(self, login=None, password=None):
+    def gps_login(self, login, password):
+        session = None
+        self.driver.get(UaGpsService.get_value('LOGIN_URL'))
+        time.sleep(self.sleep)
+        user_field = WebDriverWait(self.driver, self.sleep).until(
+            ec.presence_of_element_located((By.ID, UaGpsService.get_value('UAGPS_LOGIN_1'))))
+        clickandclear(user_field)
+        user_field.send_keys(login)
+        pass_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_2'))
+        clickandclear(pass_field)
+        pass_field.send_keys(password)
+        self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
+        time.sleep(self.sleep)
+        cookies = self.driver.get_cookies()
+        for cookie in cookies:
+            if cookie.get('name') == 'sessions':
+                session = cookie.get('value')
+        self.quit()
+        infinity_token = None
+        params = {
+            'sid': session,
+            'svc': 'token/list',
+            'params': json.dumps({})
+        }
+        response = requests.get(url=UaGpsService.get_value("BASE_URL"), params=params)
+        tokens_list = response.json()
+        for token in tokens_list:
+            if not token.get('dur'):
+                infinity_token = token['h']
+                break
+        return infinity_token
+
+    def bolt_login(self, login, password):
         self.driver.get(f"{BoltService.get_value('BOLT_LOGIN_URL')}")
         if self.sleep:
             time.sleep(self.sleep)
         element = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_1'))))
         element.clear()
-        if login:
-            element.send_keys(login)
-        else:
-            element.send_keys(ParkSettings.get_value("BOLT_NAME", partner=self.partner))
+        element.send_keys(login)
         element = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_2'))))
         element.clear()
-        if password:
-            element.send_keys(password)
-        else:
-            element.send_keys(ParkSettings.get_value("BOLT_PASSWORD", partner=self.partner))
+        element.send_keys(password)
         self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_3')).click()
-
         time.sleep(self.sleep)
         try:
             self.driver.find_element(By.XPATH, BoltService.get_value('CHECK_LOGIN_BOLT'))
@@ -131,22 +157,15 @@ class SeleniumTools:
         self.quit()
         return login_success, url
 
-    def uklon_login(self, login=None, password=None):
+    def uklon_login(self, login, password):
         self.driver.get(NewUklonService.get_value('UKLON_LOGIN_1'))
         if self.sleep:
             time.sleep(self.sleep)
         log = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_2'))
-        if login:
-            log.send_keys(login)
-        else:
-            log.send_keys(ParkSettings.get_value("UKLON_NAME", partner=self.partner)[4:])
+        log.send_keys(login)
         pas = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_3'))
-        if password:
-            clickandclear(pas)
-            pas.send_keys(password)
-        else:
-            clickandclear(pas)
-            pas.send_keys(ParkSettings.get_value("UKLON_PASSWORD", partner=self.partner))
+        clickandclear(pas)
+        pas.send_keys(password)
         self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_4')).click()
         time.sleep(self.sleep)
         try:
