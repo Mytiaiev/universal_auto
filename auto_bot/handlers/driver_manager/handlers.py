@@ -3,8 +3,7 @@ from datetime import datetime
 from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
-from app.models import Manager, Vehicle, User, Driver, \
-    Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
+from app.models import Manager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
     Payments, ParkSettings, VehicleSpendings
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
@@ -52,7 +51,7 @@ def statistic_functions(update, context):
 
 def choose_spending_category(update, context):
     query = update.callback_query
-    redis_instance().hset(str(update.effective_chat.id), 'vehicle', query.data[1])
+    redis_instance().hset(str(update.effective_chat.id), 'vehicle', query.data.split()[1])
     query.edit_message_text(choose_category_text)
     query.edit_message_reply_markup(vehicle_spending_kb())
 
@@ -60,7 +59,7 @@ def choose_spending_category(update, context):
 def ask_spending_sum(update, context):
     query = update.callback_query
     data = {
-        'category': query.data,
+        'category': query.data.split()[0],
         'state': SPENDING_CAR
     }
     redis_instance().hmset(str(update.effective_chat.id), data)
@@ -69,15 +68,18 @@ def ask_spending_sum(update, context):
 
 def save_car_spending(update, context):
     spending = update.message.text
+    chat_id = str(update.effective_chat.id)
     if validate_sum(spending):
-        print("created")
-        # user_data = redis_instance().hgetall(str(update.effective_chat.id))
-        # vehicle = Vehicle.objects.get(pk=int(user_data['vehicle']))
-        # data = {'category': user_data['category'],
-        #         'vehicle': vehicle,
-        #         'amount': round(spending, 2)}
-        # VehicleSpendings.objects.create(**data)
-        redis_instance().delete(str(update.effective_chat.id))
+        user_data = redis_instance().hgetall(chat_id)
+        vehicle = Vehicle.objects.get(pk=int(user_data['vehicle']))
+        data = {'category': user_data['category'],
+                'vehicle': vehicle,
+                'amount': round(int(spending), 2)}
+        VehicleSpendings.objects.create(**data)
+        redis_instance().delete(chat_id)
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text=spending_saved_text,
+                                 reply_markup=inline_manager_kb())
     else:
         update.message.reply_text(wrong_sum_type)
 
@@ -312,7 +314,7 @@ def get_partner_vehicles(update, context):
         query.edit_message_text(partner_vehicles)
         query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback))
     else:
-        query.edit_message_text(no_vehicles_text)
+        query.edit_message_text(no_manager_vehicles)
 
 
 def get_partner_drivers(update, context):
