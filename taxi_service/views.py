@@ -74,6 +74,7 @@ class PostRequestView(View):
             'bolt': handler.handler_success_login,
             'bolt_logout': handler.handler_handler_logout,
             'gps': handler.handler_success_login,
+            'gps_logout': handler.handler_handler_logout,
             'login_invest': handler.handler_success_login_investor,
             'logout_invest': handler.handler_logout_investor,
             'change_password': handler.handler_change_password,
