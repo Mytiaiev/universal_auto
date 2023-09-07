@@ -2,6 +2,7 @@ from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.models import Driver
 from auto_bot.handlers.driver_manager.static_text import *
+from auto_bot.handlers.main.static_text import main_buttons
 from auto_bot.handlers.order.static_text import order_inline_buttons
 
 
@@ -35,7 +36,7 @@ def inline_statistic_kb():
         [InlineKeyboardButton(manager_buttons[2], callback_data="Get_report")],
         [InlineKeyboardButton(manager_buttons[3], callback_data="Get_efficiency_report")],
         [InlineKeyboardButton(manager_buttons[4], callback_data="Get_driver_efficiency")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -45,7 +46,7 @@ def inline_earning_report_kb():
         [InlineKeyboardButton(report_period[0], callback_data="Weekly_report")],
         [InlineKeyboardButton(report_period[1], callback_data="Daily_report")],
         [InlineKeyboardButton(report_period[2], callback_data="Custom_report")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -53,7 +54,7 @@ def inline_earning_report_kb():
 def inline_partner_vehicles(vehicles, callback):
     keyboard = [
         [InlineKeyboardButton(f"{vehicle}", callback_data=f"{callback} {vehicle.id}")] for vehicle in vehicles]
-    keyboard.append([InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")])
+    keyboard.append([InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")])
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -68,7 +69,7 @@ def inline_efficiency_report_kb():
     keyboard = [
         [InlineKeyboardButton(report_period[1], callback_data="Efficiency_daily")],
         [InlineKeyboardButton(report_period[2], callback_data="Efficiency_custom")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -77,7 +78,7 @@ def inline_driver_eff_kb():
     keyboard = [
         [InlineKeyboardButton(report_period[1], callback_data="Driver_daily")],
         [InlineKeyboardButton(report_period[2], callback_data="Driver_custom")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -88,7 +89,7 @@ def vehicle_spending_kb():
          InlineKeyboardButton(spending_buttons[1], callback_data="FUEL")],
         [InlineKeyboardButton(spending_buttons[2], callback_data="SERVICE"),
          InlineKeyboardButton(spending_buttons[3], callback_data="REPAIR")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

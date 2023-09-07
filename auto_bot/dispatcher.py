@@ -25,7 +25,9 @@ from auto_bot.handlers.order.handlers import continue_order, to_the_address, fro
     order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
     ask_client_action, handle_order, choose_date_order, precheckout_callback, add_info_to_order, get_additional_info, \
-    successful_payment
+    successful_payment, personal_driver_info, payment_personal_order, finish_personal_driver, \
+    not_continue_personal_order, update_personal_order, back_step_to_finish_personal, personal_order_terms,\
+    personal_order_info
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
     more_function, start_query, get_about_us, celery_test
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
@@ -120,7 +122,8 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(get_additional_info, pattern="Choose_payment"))
     dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))
     dp.add_handler(CallbackQueryHandler(increase_search_radius, pattern="Increase_price"))
-    dp.add_handler(CallbackQueryHandler(choose_date_order, pattern="On_time_order"))
+    dp.add_handler(CallbackQueryHandler(choose_date_order, pattern="^(On_time_order|Personal_order)$"))
+    dp.add_handler(CallbackQueryHandler(payment_personal_order, pattern="^([0-9]+|None) Hour [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(time_order, pattern="Today_order|Tomorrow_order|No_driver_time_order"))
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
     dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
@@ -128,8 +131,15 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(handle_order,
                                         pattern=re.compile("^(Reject_order|Along_the_route|Off_route|"
                                                            "Accept|End_trip|Change_payments) [0-9]+$")))
-    dp.add_handler(CallbackQueryHandler(handle_order, pattern="Client_on_site [0-9]+ [0-9]+"))
+    dp.add_handler(CallbackQueryHandler(handle_order, pattern="^Client_on_site [0-9]+ [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(client_reject_order, pattern="^Client_reject [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(personal_driver_info, pattern="Personal_driver"))
+    dp.add_handler(CallbackQueryHandler(personal_order_info, pattern="^Personal_order_info$"))
+    dp.add_handler(CallbackQueryHandler(personal_order_terms, pattern="^Personal_order_terms$"))
+    dp.add_handler(CallbackQueryHandler(finish_personal_driver, pattern="^Finish_personal [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(not_continue_personal_order, pattern="^End_personal [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(update_personal_order, pattern="^Continue_personal [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(back_step_to_finish_personal, pattern="^[0-9]+ Back_step_to_finish$"))
     dp.add_handler(MessageHandler(Filters.successful_payment, successful_payment))
     # sending comment
     dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))

@@ -1,11 +1,65 @@
 from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
+from auto_bot.handlers.main.static_text import main_buttons
 from auto_bot.handlers.order.static_text import *
 from scripts.conversion import coord_to_link
 
 share_location = [
     [KeyboardButton(text=search_inline_buttons[5], request_location=True)]
 ]
+
+
+def personal_order_start_kb():
+    keyboard = [
+        [InlineKeyboardButton(personal_order_buttons[0], callback_data="Personal_order_info")],
+        [InlineKeyboardButton(personal_order_buttons[1], callback_data="Personal_order_terms")],
+        [InlineKeyboardButton(personal_order_buttons[2], callback_data="Personal_order")],
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def personal_order_back_kb():
+    keyboard = [
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Personal_driver")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def personal_order_time_kb(pk=None):
+    keyboard = [
+        [InlineKeyboardButton(pd_time_buttons[0], callback_data=f"{pk} Hour 2"),
+         InlineKeyboardButton(pd_time_buttons[1], callback_data=f"{pk} Hour 3")],
+        [InlineKeyboardButton(pd_time_buttons[2], callback_data=f"{pk} Hour 4"),
+         InlineKeyboardButton(pd_time_buttons[3], callback_data=f"{pk} Hour 5")],
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")],
+    ]
+    if pk:
+        keyboard = [
+            [InlineKeyboardButton(pd_time_buttons[7], callback_data=f"{pk} Hour 1")],
+            [InlineKeyboardButton(pd_time_buttons[0], callback_data=f"{pk} Hour 2")],
+            [InlineKeyboardButton(pd_time_buttons[1], callback_data=f"{pk} Hour 3")],
+            [InlineKeyboardButton(order_inline_buttons[6], callback_data=f"{pk} Back_step_to_finish")],
+        ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def personal_order_end_kb(pk, pre_finish=None):
+
+    keyboard = [
+        [InlineKeyboardButton(pd_time_buttons[4], callback_data=f"Continue_personal {pk}")],
+        [InlineKeyboardButton(pd_time_buttons[6], callback_data=f"Finish_personal {pk}")]
+    ]
+    if pre_finish:
+        keyboard.append([InlineKeyboardButton(pd_time_buttons[5], callback_data=f"End_personal {pk}")])
+    return InlineKeyboardMarkup(keyboard)
+
+
+def personal_driver_end_kb(pk):
+    keyboard = [
+        [InlineKeyboardButton(pd_time_buttons[5], callback_data=f"Finish_personal {pk}")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 
 def inline_payment_kb():
@@ -27,9 +81,9 @@ def inline_location_kb():
 
 def inline_start_order_kb():
     keyboard = [
-        [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
+        # [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
         [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -58,8 +112,9 @@ def inline_increase_price_kb():
 def inline_spot_keyboard(end_lat, end_lng, pk=None):
     keyboard = [
         [InlineKeyboardButton(order_inline_buttons[8], url=coord_to_link(end_lat, end_lng))],
-        [InlineKeyboardButton(order_inline_buttons[0], callback_data=f"Reject_order {pk}")]
     ]
+    if pk:
+        keyboard.append([InlineKeyboardButton(order_inline_buttons[0], callback_data=f"Reject_order {pk}")])
     return InlineKeyboardMarkup(keyboard)
 
 

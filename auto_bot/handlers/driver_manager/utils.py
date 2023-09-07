@@ -199,13 +199,16 @@ def calculate_efficiency_driver(driver, start, end):
     efficiency_objects = DriverEfficiency.objects.filter(report_from__range=(start, end),
                                                          driver=driver)
     if efficiency_objects:
+        efficiency = 0
+        accept_percent = 0
+        avg_price = 0
         total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
         total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
         total_orders = efficiency_objects.aggregate(total_orders=Sum('total_orders'))['total_orders']
-        accept_percent = float('{:.2f}'.format(efficiency_objects.exclude(accept_percent=0).aggregate(
-            accept=Avg('accept_percent'))['accept']))
-        avg_price = float('{:.2f}'.format(total_kasa / total_orders)) if total_orders else 0
-        efficiency = 0
+        if total_orders:
+            accept_percent = float('{:.2f}'.format(efficiency_objects.exclude(accept_percent=0).aggregate(
+                accept=Avg('accept_percent'))['accept']))
+            avg_price = float('{:.2f}'.format(total_kasa / total_orders))
         if total_distance:
             efficiency = float('{:.2f}'.format(total_kasa / total_distance))
         return efficiency, total_orders, accept_percent, avg_price

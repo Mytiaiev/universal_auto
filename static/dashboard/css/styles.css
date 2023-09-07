@@ -310,13 +310,12 @@ body {
 .car-item {
   display: flex;
   width: 100%;
-  padding: 20px;
-  border: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
   border-radius: 5px;
 }
 
 .car-image img {
-  width: 200px;
+  width: 150px;
   height: auto;
 }
 
@@ -597,4 +596,86 @@ body {
 .danger-message {
   display: none;
   color: #d50000;
+}
+
+
+/* Стилізація контейнера "info-driver" */
+.info-driver {
+  display: none;
+  background-color: #263043;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th {
+  background-color: #333;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+tr:nth-child(even) {
+  background-color: #263043;
+}
+
+tr:nth-child(odd) {
+  background-color: #263043;
+}
+
+td {
+  padding: 8px;
+}
+
+h2, table {
+  margin-bottom: 20px;
+}
+
+th, td {
+  border-bottom: 1px solid #ddd;
+}
+
+
+/* Стилізація форми періода */
+form {
+  /*display: flex;*/
+  align-items: center;
+}
+
+label {
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+select {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  margin-right: 10px;
+}
+
+input[type="button"] {
+  padding: 8px 16px;
+  font-size: 16px;
+  background-color: #3e8f3e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+form {
+  margin-bottom: 20px;
+}
+
+select:focus {
+  border-color: #3e8f3e;
 }
