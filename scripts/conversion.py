@@ -117,23 +117,6 @@ def get_address(latitude, longitude, api_key) -> str or None:
         return None
 
 
-def geocode(place_id, api_key) -> tuple or None:
-    """
-    Returns lat, lon address using Google Places API
-    """
-
-    url = f"https://maps.googleapis.com/maps/api/place/details/json?placeid={place_id}&language=uk&key={api_key}"
-    response = requests.get(url).json()
-
-    if response['status'] == 'OK':
-        result = response['result']
-        latitude = result['geometry']['location']['lat']
-        longitude = result['geometry']['location']['lng']
-        return str(latitude)[:10], str(longitude)[:10]
-    else:
-        return None
-
-
 def get_addresses_by_radius(address, center_lat, center_lng, center_radius: int, api_key) -> list or None:
     """"Returns addresses by pattern {CITY_PARK} """
 
