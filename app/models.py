@@ -217,6 +217,8 @@ class User(models.Model):
 
 
 class Manager(models.Model):
+    login = models.CharField(max_length=255, blank=True, null=True, verbose_name='Логін')
+    password = models.CharField(max_length=255, blank=True, null=True, verbose_name='Пароль')
     first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
     email = models.EmailField(max_length=254, blank=True, null=True, verbose_name='Електрона пошта')
