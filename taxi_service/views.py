@@ -69,7 +69,7 @@ class PostRequestView(View):
             return handler.handler_update_order(request)
         elif action in ['increase_price', 'continue_search']:
             return handler.handler_restarting_order(request)
-        elif action in ['uber', 'uklon', 'bolt']:
+        elif action in ['uber', 'uklon', 'bolt', 'gps']:
             return handler.handler_success_login(request)
         elif action in ['uber_logout', 'uklon_logout', 'bolt_logout']:
             return handler.handler_handler_logout(request)

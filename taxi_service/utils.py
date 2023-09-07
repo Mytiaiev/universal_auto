@@ -416,7 +416,21 @@ def login_in(action, login_name, password, user_id):
 		else:
 			return False
 	if action == 'gps':
-		pass
+		success_login = selenium_tools.gps_login(login=login_name, password=password)
+		if success_login:
+			try:
+				gps_token_setting = ParkSettings.objects.get(
+					key='UAGPS_TOKEN', partner=partner)
+				if gps_token_setting.value != success_login:
+					gps_token_setting.value = success_login
+					gps_token_setting.save()
+			except ObjectDoesNotExist:
+				ParkSettings.objects.create(key='UAGPS_TOKEN', value=success_login,
+											description='Токен для GPS сервісу',
+											partner=partner)
+			return True
+		else:
+			return False
 
 
 def partner_logout(action, user_pk):
