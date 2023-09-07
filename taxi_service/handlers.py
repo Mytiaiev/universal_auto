@@ -13,7 +13,7 @@ from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 change_password_investor, send_reset_code,
                                 active_vehicles_gps, order_confirm,
                                 collect_total_earnings, effective_vehicle,
-                                investor_cash_car, get_driver_info)
+                                investor_cash_car, get_driver_info, partner_total_earnings)
 
 
 class PostRequestHandler:
@@ -182,22 +182,42 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_get_drivers_manager(self, request):
+    def handle_get_partner_cash(self, request):
         period = request.GET.get('period')
+        partner_id = request.user.pk
+        get_cash = partner_total_earnings(period, partner_id)
+        json_data = JsonResponse({'data': get_cash}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
 
-        driver_info = get_driver_info(request, period)
+    def handle_get_drivers_manager(self, request):
+        action = request.GET.get('action')
+        period = request.GET.get('period')
+        manager_id = request.user.pk
+
+        driver_info = get_driver_info(request, period, manager_id, action)
         json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_effective_vehicle(self, request):
+    def handle_get_drivers_partner(self, request):
+        action = request.GET.get('action')
         period = request.GET.get('period')
-        vehicle1 = request.GET.get('vehicle_id1')
-        vehicle2 = request.GET.get('vehicle_id2')
-        get_efficiency_vehicle = effective_vehicle(period, vehicle1, vehicle2)
-        json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
+        partner_id = request.user.pk
+
+        driver_info = get_driver_info(request, period, partner_id, action)
+        json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
+
+    # def handle_effective_vehicle(self, request):
+    #     period = request.GET.get('period')
+    #     vehicle1 = request.GET.get('vehicle_id1')
+    #     vehicle2 = request.GET.get('vehicle_id2')
+    #     get_efficiency_vehicle = effective_vehicle(period, vehicle1, vehicle2)
+    #     json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
+    #     response = HttpResponse(json_data, content_type='application/json')
+    #     return response
 
     def handle_effective_vehicle(self, request):
         period = request.GET.get('period')

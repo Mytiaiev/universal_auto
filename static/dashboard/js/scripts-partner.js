@@ -262,7 +262,7 @@ $(document).ready(function () {
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
-				action: 'get_cash_investor',
+				action: 'get_cash_partner',
 				period: period
 			},
 			success: function (response) {
@@ -276,7 +276,7 @@ $(document).ready(function () {
 
 				Object.keys(data).forEach(function (key) {
 					let value = parseFloat(data[key]).toFixed(2);
-					if (value !== 0) {
+					if (value > 0) {
 						let formattedKey = key;
 						formattedData[formattedKey] = value;
 					}
@@ -306,7 +306,7 @@ $(document).ready(function () {
 			type: "GET",
 			url: ajaxGetUrl,
 			data: {
-				action: 'investor',
+				action: 'partner',
 				period: period,
 			},
 			success: function (response) {
@@ -391,6 +391,163 @@ $(document).ready(function () {
 
 $(document).ready(function () {
 
+	const partnerForm = $("#partnerForm");
+	const partnerLoginField = $("#partnerLogin");
+	const partnerRadioButtons = $("input[name='partner']");
+
+	partnerRadioButtons.change(function () {
+		const selectedPartner = $("input[name='partner']:checked").val();
+		updateLoginField(selectedPartner);
+	});
+
+	function updateLoginField(partner) {
+		if (partner === 'uklon') {
+			partnerLoginField.val('+380');
+		} else {
+			partnerLoginField.val('');
+			$("#partnerPassword").val("");
+		}
+	}
+
+	if (sessionStorage.getItem('settings') === 'true') {
+		$("#settingsWindow").fadeIn();
+	}
+
+	if (localStorage.getItem('uber')) {
+		$("#partnerLogin").hide()
+		$("#partnerPassword").hide()
+		$(".opt-partnerForm").hide()
+		$(".login-ok").show()
+		$("#loginErrorMessage").hide()
+	}
+
+	$("#settingBtn").click(function () {
+		sessionStorage.setItem('settings', 'true');
+		$("#settingsWindow").fadeIn();
+	});
+
+	$(".close-btn").click(function () {
+		$("#settingsWindow").fadeOut();
+		sessionStorage.setItem('settings', 'false');
+		location.reload();
+	});
+
+	$(".login-btn").click(function () {
+		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
+		const partnerLogin = partnerForm.find("#partnerLogin").val();
+		const partnerPassword = partnerForm.find("#partnerPassword").val();
+
+		if (partnerForm[0].checkValidity() && selectedPartner) {
+			showLoader(partnerForm);
+			sendLoginDataToServer(selectedPartner, partnerLogin, partnerPassword);
+		}
+	});
+
+	$(".logout-btn").click(function () {
+		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
+		sendLogautDataToServer(selectedPartner);
+		localStorage.removeItem(selectedPartner);
+		$("#partnerLogin").show()
+		$("#partnerPassword").show()
+		$(".opt-partnerForm").show()
+		$(".login-ok").hide()
+		$("#loginErrorMessage").hide()
+	});
+
+	// Show/hide password functionality
+	$("#showPasswordPartner").click(function () {
+		let $checkbox = $(this);
+		let $passwordField = $checkbox.closest('.settings-content').find('.partnerPassword');
+		let change = $checkbox.is(":checked") ? "text" : "password";
+		$passwordField.prop('type', change);
+	});
+
+	function showLoader(form) {
+		$(".opt-partnerForm").hide();
+		form.find(".loader-login").show();
+		$("input[name='partner']").prop("disabled", true);
+	}
+
+	function hideLoader(form) {
+		form.find(".loader-login").hide();
+		$("input[name='partner']").prop("disabled", false);
+	}
+
+
+	$('[name="partner"]').change(function () {
+		let partner = $(this).val()
+		let login = localStorage.getItem(partner)
+
+		if (login === "success") {
+			$("#partnerLogin").hide()
+			$("#partnerPassword").hide()
+			$(".opt-partnerForm").hide()
+			$(".login-ok").show()
+			$("#loginErrorMessage").hide()
+		} else {
+			$("#partnerLogin").show()
+			$("#partnerPassword").show()
+			$(".opt-partnerForm").show()
+			$(".login-ok").hide()
+			$("#loginErrorMessage").hide()
+		}
+	})
+
+	function sendLoginDataToServer(partner, login, password) {
+		$.ajax({
+			type: "POST",
+			url: ajaxPostUrl,
+			data: {
+				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
+				action: partner,
+				login: login,
+				password: password,
+			},
+			success: function (response) {
+				if (response.data === true) {
+					localStorage.setItem(partner, 'success');
+					$("#partnerLogin").hide()
+					$("#partnerPassword").hide()
+					$(".opt-partnerForm").hide()
+					$(".login-ok").show()
+					$("#loginErrorMessage").hide()
+				} else {
+					$(".opt-partnerForm").show();
+					$("#loginErrorMessage").show()
+					$("#partnerLogin").val("").addClass("error-border");
+					$("#partnerPassword").val("").addClass("error-border");
+				}
+				hideLoader(partnerForm);
+			}
+		});
+	}
+
+	function sendLogautDataToServer(partner) {
+		console.log(partner + "_logout")
+		$("#partnerLogin").val("")
+		$("#partnerPassword").val("")
+		$.ajax({
+			type: "POST",
+			url: ajaxPostUrl,
+			data: {
+				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
+				action: partner + "_logout",
+			},
+			success: function (response) {
+				if (response.data === true) {
+					localStorage.setItem(partner, 'false');
+					$("#partnerLogin").show()
+					$("#partnerPassword").show()
+					$(".opt-partnerForm").show()
+					$(".login-ok").hide()
+				}
+			}
+		});
+	}
+});
+
+$(document).ready(function () {
+
 	$.ajax({
 		url: ajaxGetUrl,
 		type: "GET",
@@ -462,9 +619,17 @@ $(document).ready(function () {
 		$('.burger-menu').toggleClass('open');
 	});
 
-	$('#investorVehicleBtn').click(function () {
+	$('#partnerVehicleBtn').click(function () {
 		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
+		$('.charts').hide();
+		$('.main-cards').hide();
+		$('.info-driver').hide();
+	});
+
+	$('#partnerDriverBtn').click(function () {
+		$('.info-driver').show();
+		$('.payback-car').hide();
 		$('.charts').hide();
 		$('.main-cards').hide();
 	});
@@ -473,5 +638,52 @@ $(document).ready(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
+	});
+});
+
+$(document).ready(function () {
+	const periodSelect = $('#period');
+	const showButton = $('input[type="button"]');
+	const partnerDriverBtn = $('#partnerDriverBtn');
+
+	periodSelect.val("day");
+
+	partnerDriverBtn.on('click', function (event) {
+		showButton.click();
+	});
+
+	showButton.on('click', function (event) {
+		event.preventDefault();
+
+		const selectedPeriod = periodSelect.val();
+
+		$.ajax({
+			type: "GET",
+			url: ajaxGetUrl,
+			data: {
+				action: 'get_drivers_partner',
+				period: selectedPeriod
+			},
+			success: function (response) {
+				console.log(response.data);
+				let table = $('.info-driver table');
+				table.find('tr:gt(0)').remove();
+
+				response.data.forEach(function (item) {
+					let row = $('<tr></tr>');
+
+					row.append('<td>' + item.driver + '</td>');
+					row.append('<td>' + item.total_kasa + '</td>');
+					row.append('<td>' + item.total_orders + '</td>');
+					row.append('<td>' + item.accept_percent + " %" +'</td>');
+					row.append('<td>' + item.average_price + '</td>');
+					row.append('<td>' + item.mileage + '</td>');
+					row.append('<td>' + item.efficiency + '</td>');
+					row.append('<td>' + item.road_time + '</td>');
+
+					table.append(row);
+				});
+			}
+		});
 	});
 });
