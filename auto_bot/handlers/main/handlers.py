@@ -8,7 +8,7 @@ from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 from auto.tasks import health_check
-from app.models import User, Client, ParkSettings
+from app.models import User, Client, ParkSettings, Manager
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
     inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_about_us
 import logging
@@ -28,14 +28,15 @@ def start(update, context):
     redis_instance().delete(str(chat_id))
     redis_instance().expire(str(chat_id), 3600)
     menu(update, context)
-    users = User.objects.filter(chat_id=chat_id)
-
+    clients = list(User.objects.filter(chat_id=chat_id))
+    managers = list(Manager.objects.filter(chat_id=chat_id))
+    users = clients + managers
     if not users:
         Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
                               second_name=update.message.from_user.last_name)
         update.message.reply_text(share_phone_text, reply_markup=markup_keyboard([contact_keyboard]))
     elif users and len(users) == 1:
-        user = users.first()
+        user = users[0]
         if user.phone_number:
             update.message.reply_text(user_greetings_text, reply_markup=get_start_kb(user))
         else:
@@ -46,18 +47,22 @@ def start(update, context):
         elif any(user.role == "DRIVER_MANAGER" for user in users):
             reply_markup = inline_manager_kb()
         else:
-            user = users.filter(role="DRIVER").first()
-            reply_markup = get_start_kb(user)
+            driver_users = [user for user in users if user.role == "DRIVER"]
+            if driver_users:
+                user = driver_users[0]
+                reply_markup = get_start_kb(user)
+            else:
+                reply_markup = inline_user_kb()
         update.message.reply_text(user_greetings_text, reply_markup=reply_markup)
 
 
 def start_query(update, context):
     query = update.callback_query
-    chat_id = update.effective_chat.id
-    redis_instance().delete(str(chat_id))
-    users = User.objects.filter(chat_id=chat_id)
+    clients = list(User.objects.filter(chat_id=update.effective_chat.id))
+    managers = list(Manager.objects.filter(chat_id=update.effective_chat.id))
+    users = clients + managers
     if len(users) == 1:
-        user = users.first()
+        user = users[0]
         reply_markup = get_start_kb(user)
     else:
         if any(user.role == "OWNER" for user in users):
@@ -65,8 +70,12 @@ def start_query(update, context):
         elif any(user.role == "DRIVER_MANAGER" for user in users):
             reply_markup = inline_manager_kb()
         else:
-            user = users.filter(role="DRIVER").first()
-            reply_markup = get_start_kb(user)
+            driver_users = [user for user in users if user.role == "DRIVER"]
+            if driver_users:
+                user = driver_users[0]
+                reply_markup = get_start_kb(user)
+            else:
+                reply_markup = inline_user_kb()
     query.edit_message_text(text=user_greetings_text)
     query.edit_message_reply_markup(reply_markup=reply_markup)
 

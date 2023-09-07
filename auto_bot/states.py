@@ -108,7 +108,7 @@ def code(update, context):
     pattern = r'^\d{4}$'
     m = update.message.text
     if re.match(pattern, m) is not None:
-        redis_instance.publish('code', update.message.text)
+        redis_instance().publish('code', update.message.text)
         update.message.reply_text('Формування звіту...')
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
     else:
