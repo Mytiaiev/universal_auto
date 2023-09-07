@@ -155,8 +155,9 @@ def inline_change_currency_trip(pk):
     return InlineKeyboardMarkup(keyboard)
 
 
-def accept_second_payment(pk):
+def user_duty():
     keyboard = [
-        [InlineKeyboardButton(order_inline_buttons[13], callback_data=f"Accept {pk}")],
+        [InlineKeyboardButton(order_inline_buttons[13], callback_data="Duty")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)

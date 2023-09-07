@@ -1306,8 +1306,14 @@ class UserBank(models.Model):
         verbose_name = 'Банк боргів'
         verbose_name_plural = 'Банк боргів'
 
-    def get_or_create(self, chat_id):
+    @staticmethod
+    def get_or_create(chat_id):
         try:
             UserBank.objects.get(chat_id=chat_id)
         except ObjectDoesNotExist:
             UserBank.objects.create(chat_id=chat_id)
+
+    @staticmethod
+    def get_duty(chat_id):
+        return UserBank.objects.filter(chat_id=chat_id).first()
+
