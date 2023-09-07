@@ -1,8 +1,5 @@
 from django.contrib import admin
-from django.contrib.admin import AdminSite
-from django.forms import BaseInlineFormSet
-from django.utils import timezone
-
+from django.contrib.auth.models import User as AusUser
 from taxi_service.views import *
 from .models import *
 from django.shortcuts import redirect
@@ -702,36 +699,45 @@ class InvestorAdmin(admin.ModelAdmin):
 @admin.register(Manager)
 @add_partner_on_save_model(Manager)
 class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    search_fields = ('name', 'second_name')
-    # ordering = ('name', 'second_name')
+    search_fields = ('first_name', 'last_name')
     list_per_page = 25
 
     def save_model(self, request, obj, form, change):
+
+        user = AusUser.objects.create_user(
+            username=obj.login,
+            password=obj.password,
+            is_staff=True,
+            is_active=True,
+            is_superuser=False,
+            first_name=obj.first_name,
+            last_name=obj.last_name,
+            email=obj.email
+        )
+        user.groups.add(Group.objects.get(name='Manager'))
+
+        obj.user = user
+        obj.partner = Partner.objects.get(user=request.user)
         obj.role = Role.DRIVER_MANAGER
+
         super().save_model(request, obj, form, change)
 
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['id', 'name', 'second_name', 'email',
-                    'phone_number', 'chat_id', 'created_at',
-                    ]
+            return ['id', 'first_name', 'last_name', 'email', 'phone_number', 'chat_id']
 
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
-
-                ('Додатково',                   {'fields': ['last_name', 'first_name', 'email', 'chat_id',
-                                                            'phone_number', 'partner', 'user'
-                                                            ]}),
+                ('Додатково',
+                 {'fields': ['login', 'password', 'last_name', 'first_name', 'email', 'chat_id', 'phone_number', 'partner', 'user']}),
             ]
-
         else:
             fieldsets = [
-                ('Інформація про менеджера',    {'fields': ['last_name', 'first_name', 'email', 'chat_id',
-                                                            'phone_number', 'partner', 'user'
-                                                            ]}),
+                ('Інформація про менеджера',
+                 {'fields': ['login', 'password', 'last_name', 'first_name', 'email', 'chat_id', 'phone_number', 'partner', 'user']}),
             ]
 
         return fieldsets

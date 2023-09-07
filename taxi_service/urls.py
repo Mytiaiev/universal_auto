@@ -1,4 +1,3 @@
-from django.contrib import admin
 from django.urls import path
 from taxi_service.views import *
 from django.views.i18n import JavaScriptCatalog
@@ -13,7 +12,6 @@ urlpatterns = [
     path('dashboard-manager/', DashboardManagerView.as_view(), name='dashboard_manager'),
     path('dashboard-investor/', DashboardInvestorView.as_view(), name='dashboard_investor'),
     path('dashboard-partner/', DashboardPartnerView.as_view(), name='dashboard_partner'),
-    path('admin/', admin.site.urls, name='admin-panel'),
     path('sign-in/', GoogleAuthView.as_view(), name='sign_in'),
     path('send-to-telegram/', SendToTelegramView.as_view(), name='send_to_telegram'),
     path('blog/', blog, name='blog'),
