@@ -415,17 +415,24 @@ def login_in(action, login_name, password, user_id):
         if success_login:
             update_park_set(partner, 'UBER_PASSWORD', password, description='Пароль користувача Uber')
             update_park_set(partner, 'UBER_NAME', login_name, description='Ім\'я користувача Uber')
+    elif action == 'gps':
+        success_login = selenium_tools.gps_login(login=login_name, password=password)
+        if success_login:
+            update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
     return success_login
 
 
 def partner_logout(action, user_pk):
     settings = ParkSettings.objects.filter(partner=Partner.get_partner(user_pk))
-    if action == 'uber_logout':
-        settings.filter(key__in=['UBER_NAME', 'UBER_PASSWORD']).delete()
-    elif action == 'bolt_logout':
-        settings.filter(key__in=['BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK']).delete()
-    elif action == 'uklon_logout':
-        settings.filter(key__in=['UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID']).delete()
+    action_dict = {
+        'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),
+        'bolt_logout': ('BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK'),
+        'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID'),
+        'gps_logout': ('UAGPS_TOKEN',)
+    }
+    choose_action = action_dict.get(action)
+    if choose_action:
+        settings.filter(key__in=choose_action).delete()
     return True
 
 

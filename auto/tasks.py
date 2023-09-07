@@ -150,7 +150,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                   licence_plate=vehicle.licence_plate)
         if not efficiency:
             total_kasa = 0
-            total_km, vehicle = UaGpsSynchronizer().total_per_day(vehicle.licence_plate, day)
+            total_km, vehicle = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.licence_plate, day)
 
             total_spendings = VehicleSpendings.objects.filter(
                 vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
@@ -186,7 +186,7 @@ def get_driver_efficiency(self, partner_pk, day=None):
         if not efficiency:
             report = SummaryReport.objects.filter(report_from=day, full_name=driver).first()
             total_kasa = report.total_amount_without_fee if report else 0
-            total_km, vehicle = UaGpsSynchronizer().total_per_day(driver.vehicle.licence_plate, day)
+            total_km, vehicle = UaGpsSynchronizer(partner_pk).total_per_day(driver.vehicle.licence_plate, day)
             result = Decimal(total_kasa)/Decimal(total_km) if total_km else 0
             orders = FleetOrder.objects.filter(driver=driver, accepted_time__date=day)
             total_orders = orders.count()
@@ -284,7 +284,7 @@ def update_driver_data(self, partner_pk, manager_id=None):
         BoltRequest(partner_pk).synchronize()
         UklonRequest(partner_pk).synchronize()
         UberRequest(partner_pk).synchronize()
-        UaGpsSynchronizer().get_vehicle_id()
+        UaGpsSynchronizer(partner_pk).get_vehicle_id()
     except Exception as e:
         logger.error(e)
     return manager_id
@@ -315,7 +315,7 @@ def get_rent_information(self, partner_pk, delta=None):
     try:
         if not delta:
             delta = 1
-        UaGpsSynchronizer().save_daily_rent(partner_pk, delta)
+        UaGpsSynchronizer(partner_pk).save_daily_rent(delta)
         logger.info('write rent report in uagps')
     except Exception as e:
         logger.error(e)
@@ -655,9 +655,9 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
     format_end = datetime.fromtimestamp(end)
     delta = format_end - start
     try:
-        result = UaGpsSynchronizer().generate_report(start_trip_with_client, end, gps_id)
-        minutes = delta.total_seconds() // 60
         instance = Order.objects.filter(pk=order).first()
+        result = UaGpsSynchronizer(instance.driver.partner).generate_report(start_trip_with_client, end, gps_id)
+        minutes = delta.total_seconds() // 60
         instance.distance_gps = result[0]
         price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
                             int(ParkSettings.get_value('COST_PER_KM'))) / 60
