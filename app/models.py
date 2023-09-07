@@ -1293,3 +1293,21 @@ class UberPaymentsOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     vendor_name = 'Uber'
+
+
+class UserBank(models.Model):
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
+    duty = models.IntegerField(default=0, verbose_name='Борг>')
+
+    def __str__(self):
+        return self.duty
+
+    class Meta:
+        verbose_name = 'Банк боргів'
+        verbose_name_plural = 'Банк боргів'
+
+    def get_or_create(self, chat_id):
+        try:
+            UserBank.objects.get(chat_id=chat_id)
+        except ObjectDoesNotExist:
+            UserBank.objects.create(chat_id=chat_id)

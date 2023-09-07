@@ -15,7 +15,7 @@ class StatusCodeError(Exception):
 
 
 class Portmone():
-    def __init__(self, sum, commission=None, **kwargs):
+    def __init__(self, sum=None, commission=None, **kwargs):
         self.sum = sum
         self.commission = commission
         self.url = 'https://www.portmone.com.ua/gateway/'
@@ -145,6 +145,22 @@ class Portmone():
         response = self.response(payload)
         return response.json()
 
-
-
-
+    def return_amount(self, amount, order, message):
+        payload = {
+                    "method": "return",
+                    "params":
+                        {
+                            "data":
+                                {
+                                    "login": self.login,
+                                    "password": self.password,
+                                    "payeeId": self.payee_id,
+                                    "shopOrderNumber": order,
+                                    "returnAmount": amount,
+                                    "message": message
+                                }
+                        },
+                    "id": "1"
+                  }
+        response = self.response(payload)
+        return response
