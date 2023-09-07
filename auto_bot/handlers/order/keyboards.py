@@ -1,5 +1,6 @@
 from telegram import KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
+from auto_bot.handlers.main.static_text import main_buttons
 from auto_bot.handlers.order.static_text import *
 from scripts.conversion import coord_to_link
 
@@ -13,7 +14,7 @@ def personal_order_start_kb():
         [InlineKeyboardButton(personal_order_buttons[0], callback_data="Personal_order_info")],
         [InlineKeyboardButton(personal_order_buttons[1], callback_data="Personal_order_terms")],
         [InlineKeyboardButton(personal_order_buttons[2], callback_data="Personal_order")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -31,7 +32,7 @@ def personal_order_time_kb(pk=None):
          InlineKeyboardButton(pd_time_buttons[1], callback_data=f"{pk} Hour 3")],
         [InlineKeyboardButton(pd_time_buttons[2], callback_data=f"{pk} Hour 4"),
          InlineKeyboardButton(pd_time_buttons[3], callback_data=f"{pk} Hour 5")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")],
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")],
     ]
     if pk:
         keyboard = [
@@ -82,7 +83,7 @@ def inline_start_order_kb():
     keyboard = [
         # [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
         [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

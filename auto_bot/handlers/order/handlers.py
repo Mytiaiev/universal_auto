@@ -299,7 +299,7 @@ def order_create(update, context):
         'from_address': redis_instance().hget(chat_id, 'from_address'),
         'latitude': redis_instance().hget(chat_id, 'latitude'),
         'longitude': redis_instance().hget(chat_id, 'longitude'),
-        'to_the_address': to_the_address,
+        'to_the_address': redis_instance().hget(chat_id, 'to_the_address'),
         'to_latitude': destination_lat,
         'to_longitude': destination_long,
         'phone_number': user.phone_number,
@@ -314,7 +314,6 @@ def order_create(update, context):
         order_data['status_order'] = Order.ON_TIME
         order_time = redis_instance().hget(chat_id, 'time_order')
         order_data['order_time'] = datetime.fromisoformat(order_time)
-
     order_create_task.delay(order_data)
 
 

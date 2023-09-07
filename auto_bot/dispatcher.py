@@ -139,7 +139,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(finish_personal_driver, pattern="^Finish_personal [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(not_continue_personal_order, pattern="^End_personal [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(update_personal_order, pattern="^Continue_personal [0-9]+$"))
-    dp.add_handler(CallbackQueryHandler(back_step_to_finish_personal, pattern="Back_step_to_finish"))
+    dp.add_handler(CallbackQueryHandler(back_step_to_finish_personal, pattern="^[0-9]+ Back_step_to_finish$"))
     dp.add_handler(MessageHandler(Filters.successful_payment, successful_payment))
     # sending comment
     dp.add_handler(CallbackQueryHandler(comment, pattern="Cancel_order|Comment client"))

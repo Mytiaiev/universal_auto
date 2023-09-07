@@ -120,14 +120,14 @@ price_inline_buttons = (
 )
 
 pd_time_buttons = (
-    "\U000024F6 години",
-    "\U000024F7 години",
-    "\U000024F8 години",
-    "\U000024F9 годин",
+    "\U000024F6 години (50км)",
+    "\U000024F7 години (75км)",
+    "\U000024F8 години (100км)",
+    "\U000024F9 годин (125км)",
     "\U000027A1 Продовжити поїздку",
     "\U0001F645 Не продовжувати поїздку",
     "\U000023F9 Завершити зараз",
-    "\U000024F5 годину"
+    "\U000024F5 годину (25км)"
 )
 
 date_inline_buttons = (
@@ -249,11 +249,13 @@ def complete_personal_order(price):
 
 
 def update_hours_text(hours):
-    return f'Замовлення успішно продовжено на {hours}год.'
+    return f'Замовлення успішно продовжено на {hours}год (' \
+           f'{int(hours)*int(ParkSettings.get_value("AVERAGE_DISTANCE_PER_HOUR"))}км)'
 
 
 def update_hours_driver_text(hours):
-    return f'Кліент продовжив замовлення на {hours}год.'
+    return f'Кліент продовжив замовлення на {hours}год (' \
+           f'{int(hours)*int(ParkSettings.get_value("AVERAGE_DISTANCE_PER_HOUR"))}км)'
 
 
 def add_hours_text(price):
