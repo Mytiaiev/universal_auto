@@ -679,3 +679,65 @@ form {
 select:focus {
   border-color: #3e8f3e;
 }
+
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+  background-color: #263043;
+  margin: 10% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  border-radius: 25px;
+  width: 50%;
+}
+
+/* Стилі для галочки */
+.checkmark {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  display: none;
+}
+
+.checkmark::before {
+  content: "";
+  position: absolute;
+  top: 25%;
+  left: 800%;
+  width: 50px;
+  height: 15px;
+  border-bottom: 3px solid #4CAF50;
+  border-right: 3px solid #4CAF50;
+  transform: rotate(45deg);
+}
+
+/* Стилі для індикатора завантаження */
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 2s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

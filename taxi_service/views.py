@@ -79,7 +79,8 @@ class PostRequestView(View):
             'logout_invest': handler.handler_logout_investor,
             'change_password': handler.handler_change_password,
             'send_reset_code': handler.handler_change_password,
-            'update_password': handler.handler_change_password
+            'update_password': handler.handler_change_password,
+            'upd_database': handler.handler_update_database,
         }
 
         if action in method:

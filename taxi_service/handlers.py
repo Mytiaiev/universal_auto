@@ -15,6 +15,8 @@ from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 collect_total_earnings, effective_vehicle,
                                 investor_cash_car, get_driver_info, partner_total_earnings)
 
+from auto.tasks import update_driver_data
+
 
 class PostRequestHandler:
     def handler_order_form(self, request):
@@ -81,7 +83,6 @@ class PostRequestHandler:
 
         return JsonResponse({}, status=200)
 
-
     def handler_success_login_investor(self, request):
         login = request.POST.get('login')
         password = request.POST.get('password')
@@ -131,6 +132,16 @@ class PostRequestHandler:
                 return response
             else:
                 response = HttpResponse(json.dumps({'success': False}), content_type='application/json')
+                return response
+
+    def handler_update_database(self, request):
+        partner_pk = request.user.pk
+        upd = update_driver_data.delay(partner_pk)
+        while True:
+            if upd.ready():
+                result = upd.get()
+                json_data = JsonResponse({'data': result[1]}, safe=False)
+                response = HttpResponse(json_data, content_type='application/json')
                 return response
 
     def handler_unknown_action(self, request):

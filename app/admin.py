@@ -1,13 +1,13 @@
 from django.contrib import admin
-from django.contrib.auth.models import User as AusUser
-from taxi_service.views import *
-from .models import *
+from django.contrib.auth.models import User as AuthUser
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+from .models import *
 
 
 models = {
@@ -59,6 +59,7 @@ try:
         for permission in group3.permissions.all():
             user.user_permissions.add(permission)
     assign_model_permissions(group3, models)
+
 except (ProgrammingError, ObjectDoesNotExist):
     pass
 
@@ -697,28 +698,32 @@ class InvestorAdmin(admin.ModelAdmin):
 
 
 @admin.register(Manager)
-@add_partner_on_save_model(Manager)
 class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('first_name', 'last_name')
     list_per_page = 25
 
     def save_model(self, request, obj, form, change):
 
-        user = AusUser.objects.create_user(
-            username=obj.login,
-            password=obj.password,
-            is_staff=True,
-            is_active=True,
-            is_superuser=False,
-            first_name=obj.first_name,
-            last_name=obj.last_name,
-            email=obj.email
-        )
-        user.groups.add(Group.objects.get(name='Manager'))
+        if not change:
+            user = AuthUser.objects.create_user(
+                username=obj.email,
+                password=obj.password,
+                is_staff=True,
+                is_active=True,
+                is_superuser=False,
+                first_name=obj.first_name,
+                last_name=obj.last_name,
+                email=obj.email
+            )
+            user.groups.add(Group.objects.get(name='Manager'))
 
-        obj.user = user
-        obj.partner = Partner.objects.get(user=request.user)
-        obj.role = Role.DRIVER_MANAGER
+            obj.user = user
+            obj.partner = Partner.objects.get(user=request.user)
+            obj.role = Role.DRIVER_MANAGER
+        if change and not obj.user.is_active:
+            obj.partner = None
+            user = AuthUser.objects.get(username=obj.login)
+            user.delete()
 
         super().save_model(request, obj, form, change)
 
@@ -726,18 +731,18 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['id', 'first_name', 'last_name', 'email', 'phone_number', 'chat_id']
+            return ['first_name', 'last_name', 'email', 'phone_number', 'chat_id']
 
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
                 ('Додатково',
-                 {'fields': ['login', 'password', 'last_name', 'first_name', 'email', 'chat_id', 'phone_number', 'partner', 'user']}),
+                 {'fields': ['email', 'password', 'last_name', 'first_name', 'chat_id', 'phone_number', 'partner', 'user']}),
             ]
         else:
             fieldsets = [
                 ('Інформація про менеджера',
-                 {'fields': ['login', 'password', 'last_name', 'first_name', 'email', 'chat_id', 'phone_number', 'partner', 'user']}),
+                 {'fields': ['email', 'password', 'last_name', 'first_name', 'chat_id', 'phone_number']}),
             ]
 
         return fieldsets

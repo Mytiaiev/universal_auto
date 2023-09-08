@@ -429,6 +429,7 @@ def login_in(action, login_name, password, user_id):
         success_login = selenium_tools.gps_login(login=login_name, password=password)
         if success_login:
             update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
+            success_login = True
     return success_login
 
 

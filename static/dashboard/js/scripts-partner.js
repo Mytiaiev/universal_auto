@@ -395,6 +395,19 @@ $(document).ready(function () {
 	const partnerLoginField = $("#partnerLogin");
 	const partnerRadioButtons = $("input[name='partner']");
 
+	var uklonStatus = localStorage.getItem('uklon');
+  var boltStatus = localStorage.getItem('bolt');
+  var uberStatus = localStorage.getItem('uber');
+
+  // Перевірка умови, коли показувати або ховати елемент
+  if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
+    // Показуємо елемент
+    $("#updateDatabase").show();
+  } else {
+    // Ховаємо елемент
+    $("#updateDatabase").hide();
+  }
+
 	partnerRadioButtons.change(function () {
 		const selectedPartner = $("input[name='partner']:checked").val();
 		updateLoginField(selectedPartner);
@@ -523,7 +536,6 @@ $(document).ready(function () {
 	}
 
 	function sendLogautDataToServer(partner) {
-		console.log(partner + "_logout")
 		$("#partnerLogin").val("")
 		$("#partnerPassword").val("")
 		$.ajax({
@@ -544,6 +556,37 @@ $(document).ready(function () {
 			}
 		});
 	}
+
+	$("#updateDatabase").click(function () {
+
+		$("#loadingModal").css("display", "block")
+
+		$.ajax({
+			type: "POST",
+			url: ajaxPostUrl,
+			data: {
+				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
+				action: "upd_database",
+			},
+			success: function (response) {
+				if (response.data === true) {
+					$("#loadingMessage").text("База даних оновлено");
+					$("#loader").css("display", "none");
+					$("#checkmark").css("display", "block");
+
+					setTimeout(function () {
+						$("#loadingModal").css("display", "none");
+					}, 3000);
+				} else {
+					$("#loadingMessage").text("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора");
+
+					setTimeout(function () {
+						$("#loadingModal").css("display", "none");
+					}, 3000);
+				}
+			}
+		});
+	});
 });
 
 $(document).ready(function () {
@@ -665,7 +708,6 @@ $(document).ready(function () {
 				period: selectedPeriod
 			},
 			success: function (response) {
-				console.log(response.data);
 				let table = $('.info-driver table');
 				table.find('tr:gt(0)').remove();
 
@@ -675,7 +717,7 @@ $(document).ready(function () {
 					row.append('<td>' + item.driver + '</td>');
 					row.append('<td>' + item.total_kasa + '</td>');
 					row.append('<td>' + item.total_orders + '</td>');
-					row.append('<td>' + item.accept_percent + " %" +'</td>');
+					row.append('<td>' + item.accept_percent + " %" + '</td>');
 					row.append('<td>' + item.average_price + '</td>');
 					row.append('<td>' + item.mileage + '</td>');
 					row.append('<td>' + item.efficiency + '</td>');
