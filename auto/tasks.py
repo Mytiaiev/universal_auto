@@ -175,12 +175,16 @@ def get_driver_efficiency(self, partner_pk, day=None):
                                                      driver=driver)
         reshuffle = DriverReshuffle.objects.filter(Q(swap_time__date=day) &
                                                    (Q(driver_start=driver) | Q(driver_finish=driver))).first()
-        if not efficiency and reshuffle:
+        if not efficiency and (reshuffle or driver.vehicle):
             accept = 0
             avg_price = 0
+            total_km = 0
+            if reshuffle:
+                total_km = UaGpsSynchronizer().total_per_day(reshuffle.swap_vehicle.gps_id, day, driver, reshuffle)
+            elif driver.vehicle:
+                total_km = UaGpsSynchronizer().total_per_day(driver.vehicle.gps_id, day)
             report = SummaryReport.objects.filter(report_from=day, full_name=driver).first()
             total_kasa = report.total_amount_without_fee if report else 0
-            total_km = UaGpsSynchronizer().total_per_day(reshuffle.swap_vehicle.gps_id, day, driver, reshuffle)
             result = Decimal(total_kasa)/Decimal(total_km) if total_km else 0
             orders = FleetOrder.objects.filter(driver=driver, accepted_time__date=day)
             total_orders = orders.count()
@@ -272,10 +276,23 @@ def update_driver_status(self, partner_pk):
 @app.task(bind=True, queue='bot_tasks')
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
-        BoltRequest(partner_pk).synchronize()
-        UklonRequest(partner_pk).synchronize()
-        UberRequest(partner_pk).synchronize()
-        UaGpsSynchronizer().get_vehicle_id()
+        settings = ParkSettings.objects.filter(
+            Q(key="BOLT_PASSWORD") |
+            Q(key="UKLON_PASSWORD") |
+            Q(key="UBER_PASSWORD") |
+            Q(key="UAGPS_TOKEN"),
+            partner=partner_pk
+        )
+        synchronize_classes = {
+            "BOLT_PASSWORD": BoltRequest,
+            "UKLON_PASSWORD": UklonRequest,
+            "UBER_PASSWORD": UberRequest,
+            "UAGPS_TOKEN": UaGpsSynchronizer,
+        }
+        for setting in settings:
+            synchronization_class = synchronize_classes.get(setting.key)
+            if synchronization_class:
+                synchronization_class(partner_pk).synchronize()
     except Exception as e:
         logger.error(e)
     return manager_id

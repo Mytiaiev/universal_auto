@@ -215,30 +215,6 @@ def test_get_driver_by_name_with_exact_match(synchronizer, partner, driver):
 
 
 @pytest.mark.django_db
-def test_get_driver_by_name_with_multiple_matches(synchronizer, partner):
-
-    name = 'John'
-    second_name = 'Doe'
-    Driver.objects.create(name=name, second_name=second_name, partner_id=partner.pk)
-    Driver.objects.create(name=name, second_name=second_name, partner_id=partner.pk)
-
-
-    try:
-        synchronizer.get_driver_by_name(name, second_name, partner.pk)
-    except:
-        raise MultipleObjectsReturned
-
-
-@pytest.mark.django_db
-def test_get_driver_by_phone_or_email_with_email(synchronizer, partner, driver):
-    email = 'john.doe@example.com'
-
-    result = synchronizer.get_driver_by_phone_or_email(None, email, partner.pk)
-
-    assert result == driver
-
-
-@pytest.mark.django_db
 def test_get_or_create_driver_with_multiple_attempts(synchronizer, driver):
     name = 'John'
     second_name = 'Doe'

@@ -23,7 +23,7 @@ class UaGpsSynchronizer:
         login = requests.get(self.url, params=params)
         return login.json()['eid']
 
-    def get_vehicle_id(self):
+    def synchronize(self):
         params = {
             'sid': self.session,
             'svc': 'core/update_data_flags',
@@ -87,11 +87,13 @@ class UaGpsSynchronizer:
         day = timezone.localtime() - datetime.timedelta(days=delta)
         road_dict = {}
         for _driver in Driver.objects.filter(partner=partner_id):
+            if RentInformation.objects.filter(report_from=day, driver=_driver):
+                continue
             reshuffle = DriverReshuffle.objects.filter(Q(swap_time__date=day) &
                                                        (Q(driver_start=_driver) | Q(driver_finish=_driver))).first()
-            if reshuffle:
-                start, end = self.get_start_end(day, _driver, reshuffle)
-                gps_id = reshuffle.swap_vehicle.gps_id
+            start, end = self.get_start_end(day, _driver, reshuffle)
+            if reshuffle or _driver.vehicle:
+                gps_id = reshuffle.swap_vehicle.gps_id if reshuffle else _driver.vehicle.gps_id
                 road_distance = 0
                 road_time = datetime.timedelta()
                 completed = FleetOrder.objects.filter(driver=_driver,
@@ -152,13 +154,14 @@ class UaGpsSynchronizer:
         in_road = self.get_road_distance(partner_id, delta=delta)
         for driver, result in in_road.items():
             distance, road_time, reshuffle = result
-            total_km = self.total_per_day(reshuffle.swap_vehicle.gps_id,
-                                          day, driver, reshuffle)
+            total_km = 0
+            if reshuffle:
+                total_km = self.total_per_day(reshuffle.swap_vehicle.gps_id,
+                                              day, driver, reshuffle)
+            elif driver.vehicle:
+                total_km = self.total_per_day(driver.vehicle.gps_id, day)
             rent_distance = total_km - distance
-            driver_eff = DriverEfficiency.objects.filter(driver=driver, report_from=day).first()
-            if driver_eff:
-                driver_eff.road_time = road_time
-                driver_eff.save()
+            DriverEfficiency.objects.filter(driver=driver, report_from=day).update(road_time=road_time)
             RentInformation.objects.create(report_from=day,
                                            driver=driver,
                                            partner=Partner.get_partner(partner_id),

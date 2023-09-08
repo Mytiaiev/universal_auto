@@ -565,7 +565,6 @@ class StatusChange(models.Model):
 class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True, verbose_name='Автомобіль')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
