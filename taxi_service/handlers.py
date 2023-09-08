@@ -135,8 +135,8 @@ class PostRequestHandler:
                 return response
 
     def handler_update_database(self, request):
-        partner_pk = request.user.pk
-        upd = update_driver_data.delay(partner_pk)
+        partner = Partner.objects.get(user=request.user.pk)
+        upd = update_driver_data.delay(partner.pk)
         while True:
             if upd.ready():
                 result = upd.get()
@@ -239,15 +239,6 @@ class GetRequestHandler:
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
-
-    # def handle_manager_effective_vehicle(self, request):
-    #     period = request.GET.get('period')
-    #     vehicle_id1 = request.GET.get('vehicle_id1')
-    #     vehicle_id2 = request.GET.get('vehicle_id2')
-    #     get_efficiency_vehicle = effective_vehicle(period, vehicle_id1, vehicle_id2)
-    #     json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
-    #     response = HttpResponse(json_data, content_type='application/json')
-    #     return response
 
     def handle_is_logged_in(self, request):
         if request.user.is_authenticated:
