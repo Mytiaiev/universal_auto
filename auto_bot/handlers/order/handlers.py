@@ -665,7 +665,7 @@ def successful_payment(update, context):
     else:
         data = int(redis_instance().hget(chat_id, 'message_data'))
         fleet_order(order)
-        context.bot.edit_message_text(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
+        context.bot.send_message(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
         text_to_client(order, complete_order_text, button=inline_comment_for_client())
 
         order.status_order = Order.COMPLETED
