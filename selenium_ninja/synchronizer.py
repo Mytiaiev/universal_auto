@@ -139,5 +139,5 @@ class Synchronizer:
     @staticmethod
     def r_dup(text):
         if 'DUP' in text:
-            return text[:-3]
+            text = text[:-3]
         return text

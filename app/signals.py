@@ -8,7 +8,7 @@ from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order, UseOfCars
 from auto_bot.handlers.order.keyboards import inline_reject_order
-from auto_bot.handlers.order.static_text import client_order_info
+from auto_bot.handlers.order.static_text import client_order_info, client_personal_info
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from scripts.settings_for_park import settings_for_partner
@@ -77,28 +77,30 @@ def run_add_drivers_task(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Order)
 def take_order_from_client(sender, instance, **kwargs):
-    if instance.status_order == Order.WAITING and not instance.checked:
-        instance.checked = True
-        instance.save()
-        search_driver_for_order.delay(instance.pk)
-    elif all([instance.status_order == Order.ON_TIME, instance.sum, not instance.checked]):
-        client_msg = redis_instance().hget(instance.chat_id_client, 'client_msg')
-        bot.edit_message_text(chat_id=instance.chat_id_client,
-                              text=client_order_info(instance),
-                              reply_markup=inline_reject_order(instance.pk),
-                              message_id=client_msg)
+    if instance.type_order == Order.STANDARD_TYPE and not instance.checked:
+        if instance.status_order == Order.WAITING:
+            instance.checked = True
+            instance.save()
+            search_driver_for_order.delay(instance.pk)
+        elif all([instance.status_order == Order.ON_TIME, instance.sum]):
+            client_msg = redis_instance().hget(instance.chat_id_client, 'client_msg')
+            bot.edit_message_text(chat_id=instance.chat_id_client,
+                                  text=client_order_info(instance),
+                                  reply_markup=inline_reject_order(instance.pk),
+                                  message_id=client_msg)
+            check_time_order.delay(instance.pk)
+            # g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
+            # if g_id:
+            #     description = f"Адреса посадки: {instance.address}\n" \
+            #                   f"Місце прибуття: {instance.to_address}\n" \
+            #                   f"Спосіб оплати: {instance.payment}\n" \
+            #                   f"Номер телефону: {instance.phone}\n"
+            #     create_event(
+            #         f"Замовлення {instance.pk}",
+            #         description,
+            #         datetime_with_timezone(instance.order_time),
+            #         datetime_with_timezone(instance.order_time),
+            #         ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
+            #     )
+    elif instance.type_order == Order.PERSONAL_TYPE and not instance.checked:
         check_time_order.delay(instance.pk)
-        # g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
-        # if g_id:
-        #     description = f"Адреса посадки: {instance.address}\n" \
-        #                   f"Місце прибуття: {instance.to_address}\n" \
-        #                   f"Спосіб оплати: {instance.payment}\n" \
-        #                   f"Номер телефону: {instance.phone}\n"
-        #     create_event(
-        #         f"Замовлення {instance.pk}",
-        #         description,
-        #         datetime_with_timezone(instance.order_time),
-        #         datetime_with_timezone(instance.order_time),
-        #         ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
-        #     )
-

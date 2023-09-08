@@ -228,4 +228,35 @@ class UberRequest(Synchronizer):
                 'with_client': with_client}
 
     def get_vehicles(self):
-        return []
+        query = '''query vehiclesTableVehicles($orgUUID: String, $pageSize: Int) {
+                      getSupplierVehicles(
+                        orgUUID: $orgUUID
+                        pageSize: $pageSize
+                      ) {
+                        vehicles {
+                          ...VehicleDetailsFields
+                        }
+                      }
+                    }
+                    fragment VehicleDetailsFields on Vehicle {
+                      make
+                      model
+                      licensePlate
+                      vin
+                    }'''
+        variables = {
+            "orgUUID": self.get_uuid(),
+            "pageSize": 25
+        }
+        data = self.get_payload(query, variables)
+        response = requests.post(self.base_url, headers=self.get_header(), json=data)
+        if response.status_code == 200:
+            vehicles_list = []
+            vehicles = response.json()["data"]["getSupplierVehicles"]["vehicles"]
+            for vehicle in vehicles:
+                vehicles_list.append({
+                    'licence_plate': vehicle['licensePlate'],
+                    'vehicle_name': f'{vehicle["make"]} {vehicle["model"]}',
+                    'vin_code': vehicle['vin']})
+            return vehicles_list
+

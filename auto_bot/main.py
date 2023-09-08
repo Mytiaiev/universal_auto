@@ -9,6 +9,7 @@ from scripts.redis_conn import redis_instance
 
 bot = Bot(token=os.environ['TELEGRAM_TOKEN'])
 
+
 def setup_webhook():
     retry_count = 0
     retry_limit = 5

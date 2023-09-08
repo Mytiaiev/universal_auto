@@ -1,7 +1,12 @@
+import json
+
 import requests
+from telegram.error import BadRequest
+
 from app.models import ParkSettings
 from auto_bot.main import bot
 from scripts.conversion import get_addresses_by_radius
+from scripts.redis_conn import redis_instance
 
 
 def validate_text(text):
@@ -20,10 +25,45 @@ def buttons_addresses(address):
         return None
 
 
+def get_geocoding_address(chat_id: str, addresses_key: str, address_key: str):
+    addresses_list = redis_instance().hget(chat_id, addresses_key)
+    address = redis_instance().hget(chat_id, address_key)
+    value_dict = json.loads(addresses_list)
+    place_id = value_dict.get(address)
+    params = {"placeid": place_id, "language": "uk",
+              "key": ParkSettings.get_value('GOOGLE_API_KEY')}
+    url = "https://maps.googleapis.com/maps/api/place/details/json"
+    response = requests.get(url, params=params).json()
+
+    if response['status'] == 'OK':
+        result = response['result']
+        latitude = result['geometry']['location']['lat']
+        longitude = result['geometry']['location']['lng']
+        return str(latitude)[:10], str(longitude)[:10]
+    else:
+        return None
+
+
+def save_location_to_redis(chat_id):
+    if not redis_instance().hexists(chat_id, 'from_address'):
+        location_address = redis_instance().hget(chat_id, 'location_address')
+        redis_instance().hset(chat_id, 'from_address', location_address)
+    else:
+        result = get_geocoding_address(chat_id, 'addresses_first', 'from_address')
+        data_ = {
+            'latitude': result[0],
+            'longitude': result[1]
+        }
+        redis_instance().hmset(chat_id, data_)
+
+
 def text_to_client(order=None, text=None, button=None, delete_id=None, message_id=None):
     if order.chat_id_client:
         if delete_id:
-            bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=delete_id, reply_markup=None)
+            try:
+                bot.edit_message_reply_markup(chat_id=order.chat_id_client, message_id=delete_id, reply_markup=None)
+            except BadRequest:
+                pass
         if message_id:
             bot.edit_message_text(chat_id=order.chat_id_client, text=text, reply_markup=button, message_id=message_id)
         else:
