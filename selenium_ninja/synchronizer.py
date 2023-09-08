@@ -45,6 +45,7 @@ class Synchronizer:
                         "driver": self.get_or_create_driver(**kwargs),
                         "pay_cash": kwargs['pay_cash'],
                         "partner": Partner.get_partner(self.partner_id)})
+
         if not created and drivers.pay_cash != kwargs["pay_cash"]:
             drivers.pay_cash = kwargs["pay_cash"]
             drivers.save(update_fields=['pay_cash'])
@@ -52,8 +53,8 @@ class Synchronizer:
     def get_or_create_driver(self, **kwargs):
         driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
                                         Q(name=kwargs['second_name'], second_name=kwargs['name']) |
-                                        Q(phone_number__icontains=kwargs['phone_number'][-10:]) |
-                                        Q(email__icontains=kwargs['email'])) & Q(partner=self.partner_id)).first()
+                                        Q(phone_number__icontains=kwargs['phone_number'][-10:])) &
+                                       Q(partner=self.partner_id)).first()
         if not driver:
             driver = Driver.objects.create(name=kwargs['name'],
                                            second_name=kwargs['second_name'],
@@ -79,6 +80,7 @@ class Synchronizer:
 
     def get_or_create_vehicle(self, **kwargs):
         licence_plate, v_name, vin = kwargs['licence_plate'], kwargs['vehicle_name'], kwargs['vin_code']
+
         if licence_plate:
             vehicle, created = Vehicle.objects.get_or_create(licence_plate=licence_plate,
                                                              partner=self.partner_id,
@@ -106,18 +108,21 @@ class Synchronizer:
         if vehicle_name or vin_code:
             vehicle.save()
 
-    @staticmethod
-    def update_driver_fields(driver, **kwargs):
+    def update_driver_fields(self, driver, **kwargs):
+
         phone_number = kwargs.get('phone_number')
         email = kwargs.get('email')
 
+        vehicle = self.get_or_create_vehicle(**kwargs)
+        if vehicle and driver.vehicle != vehicle:
+            driver.vehicle = vehicle
         if phone_number and not driver.phone_number:
             driver.phone_number = phone_number
 
         if email and driver.email != email:
             driver.email = email
 
-        if phone_number or email:
+        if phone_number or email or vehicle:
             driver.save()
 
     @staticmethod

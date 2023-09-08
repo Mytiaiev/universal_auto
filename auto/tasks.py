@@ -28,7 +28,7 @@ from auto_bot.handlers.order.static_text import decline_order, order_info, clien
     search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
     client_order_text, order_customer_text, search_driver, personal_time_route_end, personal_order_info, \
     pd_order_not_accepted, driver_text_personal_end, client_text_personal_end
-from auto_bot.handlers.order.utils import text_to_client
+from auto_bot.handlers.order.utils import text_to_client, check_reshuffle
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
 from auto.celery import app
@@ -184,16 +184,16 @@ def get_driver_efficiency(self, partner_pk, day=None):
         efficiency = DriverEfficiency.objects.filter(report_from=day,
                                                      partner=partner_pk,
                                                      driver=driver)
-        reshuffle = DriverReshuffle.objects.filter(Q(swap_time__date=day) &
-                                                   (Q(driver_start=driver) | Q(driver_finish=driver))).first()
-        if not efficiency and (reshuffle or driver.vehicle):
+        vehicle, reshuffle = check_reshuffle(driver, day)
+        if not efficiency and vehicle:
             accept = 0
             avg_price = 0
             total_km = 0
             if reshuffle:
-                total_km = UaGpsSynchronizer().total_per_day(reshuffle.swap_vehicle.gps_id, day, driver, reshuffle)
-            elif driver.vehicle:
-                total_km = UaGpsSynchronizer().total_per_day(driver.vehicle.gps_id, day)
+                total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id,
+                                                                       day, driver, reshuffle)
+            elif vehicle:
+                total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
             report = SummaryReport.objects.filter(report_from=day, full_name=driver).first()
             total_kasa = report.total_amount_without_fee if report else 0
             result = Decimal(total_kasa)/Decimal(total_km) if total_km else 0
@@ -270,10 +270,11 @@ def update_driver_status(self, partner_pk):
             driver.driver_status = current_status
             driver.save()
             if current_status != Driver.OFFLINE:
-                if not work_ninja and driver.vehicle and driver.chat_id:
+                vehicle = check_reshuffle(driver)[0]
+                if not work_ninja and vehicle and driver.chat_id:
                     UseOfCars.objects.create(user_vehicle=driver,
                                              partner=Partner.get_partner(partner_pk),
-                                             licence_plate=driver.vehicle.licence_plate,
+                                             licence_plate=vehicle.licence_plate,
                                              chat_id=driver.chat_id)
                 logger.warning(f'{driver}: {current_status}')
             else:
@@ -332,7 +333,7 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 @app.task(bind=True, queue='beat_tasks')
 def get_rent_information(self, partner_pk, delta=1):
     try:
-        UaGpsSynchronizer(partner_pk).save_daily_rent(partner_pk, delta)
+        UaGpsSynchronizer(partner_pk).save_daily_rent(delta)
         logger.info('write rent report')
     except Exception as e:
         logger.error(e)
@@ -434,8 +435,8 @@ def check_personal_orders(self):
         distance = int(order.payment_hours) * int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR'))
         notify_min = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_MIN'))
         notify_km = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_KM'))
-        vehicle = order.driver.vehicle
-        gps = UaGpsSynchronizer()
+        vehicle = check_reshuffle(order.driver)[0]
+        gps = UaGpsSynchronizer(order.driver.partner)
         route = gps.generate_report(gps.get_timestamp(order.order_time),
                                     gps.get_timestamp(finish_time), vehicle.gps_id)[0]
         pc_message = redis_instance().hget(str(order.chat_id_client), "client_msg")
@@ -535,10 +536,11 @@ def send_time_order(self):
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
             order.save()
             if order.chat_id_client:
-                lat, long = get_location_from_db(driver.vehicle.licence_plate)
+                vehicle = check_reshuffle(driver)[0]
+                lat, long = get_location_from_db(vehicle.licence_plate)
                 bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
                 message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
-                send_map_to_client.delay(order.id, driver.vehicle.licence_plate, message.message_id, message.chat_id)
+                send_map_to_client.delay(order.id, vehicle.licence_plate, message.message_id, message.chat_id)
 
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
@@ -596,7 +598,8 @@ def search_driver_for_order(self, order_pk):
         drivers = Driver.objects.filter(chat_id__isnull=False, vehicle__isnull=False)
         for driver in drivers:
             if driver.driver_status == Driver.ACTIVE:
-                driver_lat, driver_long = get_location_from_db(driver.vehicle.licence_plate)
+                vehicle = check_reshuffle(driver)[0]
+                driver_lat, driver_long = get_location_from_db(vehicle.licence_plate)
                 distance = haversine(float(driver_lat), float(driver_long),
                                      float(order.latitude), float(order.longitude))
                 radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
