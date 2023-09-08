@@ -31,6 +31,10 @@ newuklon_states = {
 
 uagps_states = {
     'BASE_URL': ('https://uagps.net/wialon/ajax.html', 'url'),
+    'LOGIN_URL': ('https://uagps.net/', 'url'),
+    'UAGPS_LOGIN_1': ('user', 'ID'),
+    'UAGPS_LOGIN_2': ('passw', 'ID'),
+    'UAGPS_LOGIN_3': ('submit', 'ID')
 }
 
 uber_states = {
@@ -62,7 +66,7 @@ uber_states = {
 }
 
 states = {
-    'UKLON_SESSION': ('https://fleets.uklon.com.ua/api/auth', 'url'),
+    'UKLON_SESSION': ('https://fleets.uklon.com.ua/api/', 'url'),
     'UKLON_1': ('https://fleets.uklon.com.ua/api/fleets/', 'url'),
     'UKLON_2': ('/vehicles', 'url'),
     'UKLON_3': ('https://fleets.uklon.com.ua/api/fleets/reports/', 'url'),

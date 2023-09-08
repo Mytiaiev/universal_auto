@@ -1,5 +1,6 @@
 import json
 import random
+import secrets
 from datetime import timedelta, date
 
 from django.db.models import Sum, Q, Avg
@@ -14,6 +15,7 @@ from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
                         SummaryReport, CarEfficiency, Partner, ParkSettings,
                         Manager, Investor, Vehicle, VehicleSpendings, DriverEfficiency, )
 from selenium_ninja.driver import SeleniumTools
+from scripts.redis_conn import get_logger
 
 
 def active_vehicles_gps():
@@ -72,16 +74,14 @@ def restart_order(id_order, car_delivery_price, action):
 
 
 def get_dates(period=None):
+    current_date = timezone.now().date()
     if period == 'day':
-        current_date = timezone.now().date()
         previous_date = current_date - timedelta(days=1)
 
         start_date = previous_date
         end_date = current_date
-        return start_date, end_date
 
     elif period == 'week':
-        current_date = timezone.now().date()
         weekday = current_date.weekday()
 
         if weekday == 0:
@@ -90,38 +90,34 @@ def get_dates(period=None):
         else:
             start_date = current_date - timedelta(days=weekday)
             end_date = start_date + timedelta(days=6)
-        return start_date, end_date
 
     elif period == 'month':
         current_date = timezone.now().date()
         start_date = current_date.replace(day=1)
         next_month = current_date.replace(day=28) + timedelta(days=4)
         end_date = next_month - timedelta(days=next_month.day)
-        return start_date, end_date
 
     elif period == 'quarter':
-        current_date = timezone.now().date()
         current_month = current_date.month
         current_quarter = (current_month - 1) // 3 + 1
 
         if current_quarter == 1:
             start_date = date(current_date.year, 1, 1)
             end_date = date(current_date.year, 3, 31)
-            return start_date, end_date
+
         elif current_quarter == 2:
             start_date = date(current_date.year, 4, 1)
             end_date = date(current_date.year, 6, 30)
-            return start_date, end_date
+
         elif current_quarter == 3:
             start_date = date(current_date.year, 7, 1)
             end_date = date(current_date.year, 9, 30)
-            return start_date, end_date
-        elif current_quarter == 4:
+
+        else:
             start_date = date(current_date.year, 10, 1)
             end_date = date(current_date.year, 12, 31)
-            return start_date, end_date
+
     else:
-        current_date = timezone.now().date()
         weekday = current_date.weekday()
 
         if weekday == 0:
@@ -130,7 +126,7 @@ def get_dates(period=None):
         else:
             start_date = current_date - timedelta(days=weekday)
             end_date = start_date + timedelta(days=6)
-        return start_date, end_date
+    return start_date, end_date
 
 
 def weekly_rent():
@@ -337,6 +333,16 @@ def effective_vehicle(period, user_id, action):
     return result
 
 
+def update_park_set(partner, key, value, description=None, check_value=True):
+    try:
+        setting = ParkSettings.objects.get(key=key, partner=partner)
+        if setting.value != value and check_value:
+            setting.value = value
+            setting.save()
+    except ObjectDoesNotExist:
+        ParkSettings.objects.create(key=key, value=value, description=description, partner=partner)
+
+
 def get_driver_info(request, period, user_id, action):
     start_date, end_date = get_dates(period=period)
 
@@ -364,33 +370,21 @@ def get_driver_info(request, period, user_id, action):
 
             driver_name = driver.__str__()
 
-            try:
-                total_orders = driver_efficiency['total_orders'] or 0
-                total_kasa = driver_efficiency['total_kasa'] or 0
+            total_orders = driver_efficiency['total_orders'] or 0
+            total_kasa = driver_efficiency['total_kasa'] or 0
 
-                average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
-                efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
-                accept_percent = round(driver_efficiency['accept_percent'], 2)
-                mileage = round(driver_efficiency['mileage'], 2)
-                road_time = str(driver_efficiency['road_time'])
-            except TypeError:
-                total_orders = 0
-                total_kasa = 0
-                average_price = 0.0
-                efficiency = 0.0
-                accept_percent = 0.0
-                mileage = 0.0
-                road_time = "0"
+            average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
+            efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
 
             driver_info = {
                 'driver': driver_name,
-                'total_kasa': total_kasa,
-                'total_orders': total_orders,
-                'accept_percent': accept_percent,
+                'total_kasa': driver_efficiency['total_kasa'],
+                'total_orders': driver_efficiency['total_orders'],
+                'accept_percent': round(driver_efficiency['accept_percent'],2),
                 'average_price': average_price,
-                'mileage': mileage,
+                'mileage': round(driver_efficiency['mileage'],2),
                 'efficiency': efficiency,
-                'road_time': road_time
+                'road_time': str(driver_efficiency['road_time'])
             }
             driver_info_list.append(driver_info)
 
@@ -402,132 +396,54 @@ def get_driver_info(request, period, user_id, action):
 def login_in(action, login_name, password, user_id):
     partner = Partner.objects.get(user_id=user_id)
     selenium_tools = SeleniumTools(partner=partner.pk)
+    success_login = False
     if action == 'bolt':
-        success_login = selenium_tools.bolt_login(login=login_name, password=password)
-
-        if success_login[0]:
-            bolt_url_id = success_login[1].split('/')[-2]
-            try:
-                bolt_password_setting = ParkSettings.objects.get(
-                    key='BOLT_PASSWORD', partner=partner)
-                if bolt_password_setting.value != password:
-                    bolt_password_setting.value = password
-                    bolt_password_setting.save()
-            except ParkSettings.DoesNotExist:
-                ParkSettings.objects.create(key='BOLT_PASSWORD', value=password,
-                                            description='Пароль користувача Bolt',
-                                            partner=partner)
-
-            try:
-                bolt_name_setting = ParkSettings.objects.get(key='BOLT_NAME',
-                                                             partner=partner)
-                if bolt_name_setting.value != login_name:
-                    bolt_name_setting.value = login_name
-                    bolt_name_setting.save()
-            except ParkSettings.DoesNotExist:
-                ParkSettings.objects.create(key='BOLT_NAME', value=login_name,
-                                            description='Ім\'я користувача Bolt',
-                                            partner=partner)
-
-            try:
-                bolt_url_setting = ParkSettings.objects.get(
-                    key='BOLT_URL_ID_PARK', partner=partner)
-                if bolt_url_setting.value != bolt_url_id:
-                    bolt_url_setting.value = bolt_url_id
-                    bolt_url_setting.save()
-            except ParkSettings.DoesNotExist:
-                ParkSettings.objects.create(key='BOLT_URL_ID_PARK',
-                                            value=bolt_url_id,
-                                            description='BOLT_URL_ID_Парка',
-                                            partner=partner)
-
-            return True
-        else:
-            return False
-
-    if action == 'uklon':
-        success_login = selenium_tools.uklon_login(login=login_name[4:],
-                                                   password=password)
+        success_login, url = selenium_tools.bolt_login(
+            login=login_name,
+            password=password)
         if success_login:
-            try:
-                uklon_password_setting = ParkSettings.objects.get(
-                    key='UKLON_PASSWORD', partner=partner)
-                if uklon_password_setting.value != password:
-                    uklon_password_setting.value = password
-                    uklon_password_setting.save()
-            except ParkSettings.DoesNotExist:
-                ParkSettings.objects.create(key='UKLON_PASSWORD',
-                                            description='Пароль користувача Uklon',
-                                            value=password, partner=partner)
-
-            try:
-                uklon_name_setting = ParkSettings.objects.get(key='UKLON_NAME',
-                                                              partner=partner)
-                if uklon_name_setting.value != login_name:
-                    uklon_name_setting.value = login_name
-                    uklon_name_setting.save()
-            except ParkSettings.DoesNotExist:
-                ParkSettings.objects.create(key='UKLON_NAME', value=login_name,
-                                            description='Ім\'я користувача Uklon',
-                                            partner=partner)
-
-            return True
-        else:
-            return False
-
-    if action == 'uber':
-        success_login = selenium_tools.uber_login(login=login_name,
-                                                  password=password)
-        selenium_tools.quit()
+            bolt_url_id = url.split('/')[-2]
+            update_park_set(partner, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt')
+            update_park_set(partner, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt')
+            update_park_set(partner, 'BOLT_URL_ID_PARK', bolt_url_id, description='BOLT_URL_ID_Парка')
+    elif action == 'uklon':
+        success_login = selenium_tools.uklon_login(
+            login=login_name[4:],
+            password=password)
         if success_login:
-            try:
-                uber_password_setting = ParkSettings.objects.get(
-                    key='UBER_PASSWORD', partner=partner)
-                if uber_password_setting.value != password:
-                    uber_password_setting.value = password
-                    uber_password_setting.save()
-            except ObjectDoesNotExist:
-                ParkSettings.objects.create(key='UBER_PASSWORD', value=password,
-                                            description='Пароль користувача Uber',
-                                            partner=partner)
-
-            try:
-                uber_name_setting = ParkSettings.objects.get(key='UBER_NAME',
-                                                             partner=partner)
-                if uber_name_setting.value != login_name:
-                    uber_name_setting.value = login_name
-                    uber_name_setting.save()
-            except ObjectDoesNotExist:
-                ParkSettings.objects.create(key='UBER_NAME', value=login_name,
-                                            description='Ім\'я користувача Uber',
-                                            partner=partner)
-
-            return True
-        else:
-            return False
+            update_park_set(partner, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon')
+            update_park_set(partner, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon')
+            hex_length = 16
+            random_hex = secrets.token_hex(hex_length)
+            update_park_set(
+                partner, 'CLIENT_ID', random_hex,
+                description='Ідентифікатор клієнта Uklon', check_value=False)
+    elif action == 'uber':
+        success_login = selenium_tools.uber_login(
+            login=login_name,
+            password=password)
+        if success_login:
+            update_park_set(partner, 'UBER_PASSWORD', password, description='Пароль користувача Uber')
+            update_park_set(partner, 'UBER_NAME', login_name, description='Ім\'я користувача Uber')
+    elif action == 'gps':
+        success_login = selenium_tools.gps_login(login=login_name, password=password)
+        if success_login:
+            update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
+    return success_login
 
 
 def partner_logout(action, user_pk):
-    if action == 'uber_logout':
-        partner = Partner.objects.get(user_id=user_pk)
-        settings = ParkSettings.objects.filter(partner=partner)
-        settings.filter(key__in=['UBER_NAME', 'UBER_PASSWORD']).delete()
-
-        return True
-
-    if action == 'bolt_logout':
-        partner = Partner.objects.get(user_id=user_pk)
-        settings = ParkSettings.objects.filter(partner=partner)
-        settings.filter(key__in=['BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK']).delete()
-
-        return True
-
-    if action == 'uklon_logout':
-        partner = Partner.objects.get(user_id=user_pk)
-        settings = ParkSettings.objects.filter(partner=partner)
-        settings.filter(key__in=['UKLON_NAME', 'UKLON_PASSWORD']).delete()
-
-        return True
+    settings = ParkSettings.objects.filter(partner=Partner.get_partner(user_pk))
+    action_dict = {
+        'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),
+        'bolt_logout': ('BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK'),
+        'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID'),
+        'gps_logout': ('UAGPS_TOKEN',)
+    }
+    choose_action = action_dict.get(action)
+    if choose_action:
+        settings.filter(key__in=choose_action).delete()
+    return True
 
 
 def login_in_investor(request, login_name, password):
@@ -580,4 +496,4 @@ def send_reset_code(email, user_login):
         send_mail(subject, message, from_email, recipient_list)
         return email, reset_code
     except Exception as error:
-        print(error)
+        get_logger().error(error)

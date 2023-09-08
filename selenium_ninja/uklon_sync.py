@@ -6,6 +6,7 @@ import requests
 from django.utils import timezone
 
 from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder
+from scripts.redis_conn import redis_instance
 from selenium_ninja.synchronizer import Synchronizer
 from django.db import IntegrityError
 
@@ -22,7 +23,6 @@ class UklonRequest(Synchronizer):
     def park_payload(self) -> dict:
         payload = {
             'client_id': ParkSettings.get_value(key='CLIENT_ID', partner=self.partner_id),
-            'client_secret': ParkSettings.get_value(key='CLIENT_SECRET', partner=self.partner_id),
             'contact': ParkSettings.get_value(key='UKLON_NAME', partner=self.partner_id),
             'device_id': "38c13dc5-2ef3-4637-99f5-8de26b2e8216",
             'grant_type': "password_mfa",
@@ -30,8 +30,15 @@ class UklonRequest(Synchronizer):
         }
         return payload
 
+    def uklon_id(self):
+        if not redis_instance().exists(f"{self.partner_id}_park_id"):
+            response = self.response_data(url=f"{Service.get_value('UKLON_SESSION')}me")
+            redis_instance().set(f"{self.partner_id}_park_id", response['fleets'][0]['id'])
+        return redis_instance().get(f"{self.partner_id}_park_id")
+
+
     def create_session(self):
-        response = requests.post(Service.get_value('UKLON_SESSION'), json=self.park_payload()).json()
+        response = requests.post(f"{Service.get_value('UKLON_SESSION')}auth", json=self.park_payload()).json()
         self.redis.set(f"{self.partner_id}token", response["access_token"])
 
     @staticmethod
@@ -113,7 +120,7 @@ class UklonRequest(Synchronizer):
         param = self.parameters()
         param['dateFrom'] = int(self.start_report_interval(day).timestamp())
         param['dateTo'] = int(self.end_report_interval(day).timestamp())
-        url = f"{Service.get_value('UKLON_3')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url = f"{Service.get_value('UKLON_3')}{self.uklon_id()}"
         url += Service.get_value('UKLON_4')
         data = self.response_data(url=url, params=param)['items']
         if data:
@@ -170,7 +177,7 @@ class UklonRequest(Synchronizer):
                 first_key: [],
                 second_key: [],
             }
-        url = f"{Service.get_value('UKLON_5')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url = f"{Service.get_value('UKLON_5')}{self.uklon_id()}"
         url += Service.get_value('UKLON_6')
         data = self.response_data(url, params=self.parameters())
 
@@ -189,7 +196,7 @@ class UklonRequest(Synchronizer):
         drivers = []
         param = self.parameters()
         param['name'], param['phone'], param['status'], param['limit'] = ('', '', 'All', '30')
-        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url_1 = url + Service.get_value('UKLON_6')
         url_2 = url + Service.get_value('UKLON_2')
 
@@ -235,7 +242,7 @@ class UklonRequest(Synchronizer):
         if driver_id:
             str_driver_id = driver_id.replace("-", "")
             params = {"limit": 50,
-                      "fleetId": ParkSettings.get_value(key='ID_PARK', partner=self.partner_id),
+                      "fleetId": self.uklon_id(),
                       "driverId": driver_id,
                       "from": int(self.start_report_interval(day).timestamp()),
                       "to": int(self.end_report_interval(day).timestamp())
@@ -272,7 +279,7 @@ class UklonRequest(Synchronizer):
                 FleetOrder.objects.create(**data)
 
     def disable_cash(self, pk, enable):
-        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         driver_id = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
         url += f'{Service.get_value("UKLON_6")}/{driver_id}/restrictions'
         headers = self.get_header()
@@ -292,7 +299,7 @@ class UklonRequest(Synchronizer):
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
 
     def withdraw_money(self):
-        base_url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        base_url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url = base_url + f"{Service.get_value('UKLON_7')}"
         balance = {}
         items = []
@@ -321,7 +328,7 @@ class UklonRequest(Synchronizer):
             self.response_data(url=url2, headers=headers, data=json.dumps(payload), method='POST')
 
     def detaching_the_driver_from_the_car(self, licence_plate):
-        base_url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        base_url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url = base_url + Service.get_value('UKLON_2')
         params = {
             'limit': '30',
@@ -338,7 +345,7 @@ class UklonRequest(Synchronizer):
 
         param = self.parameters()
         param.update({"limit": 30})
-        url = f"{Service.get_value('UKLON_1')}{ParkSettings.get_value(key='ID_PARK', partner=self.partner_id)}"
+        url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url += Service.get_value('UKLON_2')
         all_vehicles = self.response_data(url=url, params=param)
         for vehicle in all_vehicles['data']:

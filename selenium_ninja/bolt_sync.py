@@ -308,4 +308,19 @@ class BoltRequest(Synchronizer):
         job_application.save()
 
     def get_vehicles(self):
-        return []
+        vehicles_list = []
+        start = end = pendulum.now().strftime('%Y-%m-%d')
+        params = {"start_date": start,
+                  "end_date": end,
+                  "offset": 0,
+                  "limit": 25}
+        params.update(self.param)
+        response = self.get_target_url(f'{self.base_url}getCarsPaginated', params=params)
+        vehicles = response['data']['rows']
+        for vehicle in vehicles:
+            vehicles_list.append({
+                'licence_plate': vehicle['reg_number'],
+                'vehicle_name': vehicle['model'],
+                'vin_code': ''
+            })
+        return vehicles_list
