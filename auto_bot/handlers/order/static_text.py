@@ -161,6 +161,12 @@ def driver_complete_text(price):
     return message
 
 
+def driver_duty(price, client=True):
+    message_to = "Водій Вам винен: " if client else "Ви винні клієнту: "
+    message = f"Поїздку завершено\n {message_to}{price}грн"
+    return message
+
+
 def time_order_accepted(address, time):
     return f"Ви прийняли замовлення, за адресою {address} на {time}.\n" \
            f"Ми повідомимо вам, коли буде наближатись час до виконання."

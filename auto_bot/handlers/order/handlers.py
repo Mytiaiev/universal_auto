@@ -260,8 +260,8 @@ def order_create(update, context):
     order_data['distance_google'] = round(distance_price[1], 2)
     duty = UserBank.get_duty(chat_id)
     if duty:
-        order_data['sum'] += duty
-        order_data['car_delivery_price'] = duty
+        order_data['sum'] += duty.duty
+        order_data['car_delivery_price'] = duty.duty
         redis_instance().hset(chat_id, 'delivary_price_duty', 1)
     if order_data['payment_method'] == price_inline_buttons[5].split()[1]:
         bot.send_message(chat_id=order_data['chat_id_client'],
@@ -313,7 +313,10 @@ def choose_date_order(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     duty = UserBank.get_duty(chat_id)
-    if duty <= int(ParkSettings.get_value('USER_DUTY')):
+    if duty.duty >= int(ParkSettings.get_value('USER_DUTY')):
+        query.edit_message_text(duty_of_user)
+        query.edit_message_reply_markup(user_duty())
+    else:
         order = Order.objects.filter(chat_id_client=chat_id,
                                      status_order__in=[Order.ON_TIME, Order.WAITING]).count()
         if order >= 1:
@@ -321,9 +324,6 @@ def choose_date_order(update, context):
         else:
             query.edit_message_text(order_date_text)
             query.edit_message_reply_markup(inline_choose_date_kb())
-    else:
-        query.edit_message_text(duty_of_user)
-        query.edit_message_reply_markup(user_duty())
 
 
 def time_order(update, context):
@@ -387,26 +387,26 @@ def client_reject_order(update, context):
         duty = UserBank.get_duty(order.chat_id_client)
         cancel = int(ParkSettings.get_value('CANCEL_ORDER'))
         report = ReportTelegramPayments.objects.filter(order=order.pk).first()
-        back_money = f'{get_money} {cancel}{report.currency}'
+
         if order.payment_method == price_inline_buttons[4].split()[1]:
-            duty += cancel
-            report_for_client = f'{back_money} {put_on_bank}'
+            duty.duty += cancel
+            report_for_client = f'{get_money} {cancel}UAH. {put_on_bank}'
         else:
             portmone = Portmone()
             total_amount = report.total_amount
             total_sum = total_amount - (total_amount * 0.02)
             if total_sum > cancel:
                 portmone.return_amount(total_sum-cancel, report.provider_payment_charge_id, return_money)
-                report_for_client = f'{return_money_from_system} {back_money}'
+                report_for_client = f'{return_money_from_system} {get_money} {cancel}{report.currency}'
                 if redis_instance().hexists(order.chat_id_client, 'delivary_price_duty'):
                     report_for_client += f'{get_money_cash} {cancel}{report.currency}'
-                    duty = 0
+                    duty.duty = 0
                     report.order = None
+                    report.save()
             else:
-                duty += cancel - total_sum
+                duty.duty += cancel - total_sum
                 report_for_client = have_duty
         duty.save()
-        report.save()
         text_to_client(order=order,
                        text=report_for_client)
     else:
@@ -453,6 +453,8 @@ def handle_callback_order(update, context):
             send = context.bot.send_message(chat_id=driver.chat_id,
                                             text=time_order_accepted(order.from_address,
                                                  timezone.localtime(order.order_time).time()))
+            context.bot.send_message(chat_id=order.chat_id_client,
+                                     text=order_complete)
             redis_instance().hset(str(query.from_user.id), 'driver_msg', send.message_id)
 
         else:
@@ -477,10 +479,12 @@ def handle_callback_order(update, context):
             send_map_to_client.delay(order.id, driver.vehicle.licence_plate, message.message_id, message.chat_id)
 
 
-def cash_order(update, query, order, sum):
+def cash_order(update, query, order, sum, default=True):
     query.edit_message_reply_markup(reply_markup=None)
-    bot.send_message(text=driver_complete_text(sum), chat_id=order.driver.chat_id)
-    bot.send_message(text=driver_complete_text(sum), chat_id=order.chat_id_client)
+    bot.send_message(text=driver_complete_text(sum) if default else driver_duty(sum, client=False),
+                     chat_id=order.driver.chat_id)
+    bot.send_message(text=driver_complete_text(sum) if default else driver_duty(sum),
+                     chat_id=order.chat_id_client)
     text_to_client(order, complete_order_text, button=inline_comment_for_client())
     order.status_order = Order.COMPLETED
     order.partner = order.driver.partner
@@ -532,9 +536,14 @@ def handle_order(update, context):
             s, e = int(start_route), int(timezone.localtime().timestamp())
             get_distance_trip.delay(data[1], query.message.message_id, s, e, driver.vehicle.gps_id)
         else:
+            if redis_instance().hexists(chat_id, 'delivary_price_duty'):
+                bank = UserBank.get_duty(chat_id)
+                bank.duty = 0
+                bank.save()
             if order.payment_method == price_inline_buttons[4].split()[1]:
                 cash_order(update, query, order, order.sum)
             else:
+                query.edit_message_reply_markup(reply_markup=None)
                 text_to_client(order, complete_order_text, button=inline_comment_for_client())
                 bot.send_message(text=trip_paymented, chat_id=order.driver.chat_id)
                 order.status_order = Order.COMPLETED
@@ -543,6 +552,10 @@ def handle_order(update, context):
                 fleet_order(order)
                 redis_instance().delete(str(update.effective_chat.id))
     elif data[0] == 'Second_cash_payment':
+        if redis_instance().hexists(chat_id, 'delivary_price_duty'):
+            bank = UserBank.get_duty(chat_id)
+            bank.duty = 0
+            bank.save()
         if order.payment_method == price_inline_buttons[4].split()[1]:   # first cash second cash
             cash_order(update, query, order, order.sum)
         else:
@@ -551,11 +564,17 @@ def handle_order(update, context):
             if total > 0:
                 cash_order(update, query, order, total)
             else:
-                cash_order(update, query, order, 0)
+                cash_order(update, query, order, abs(total), default=False)
     elif data[0] == 'Second_card_payment':
+        query.edit_message_reply_markup(reply_markup=None)
+        if redis_instance().hexists(chat_id, 'delivary_price_duty'):
+            bank = UserBank.get_duty(chat_id)
+            bank.duty = 0
+            bank.save()
         if order.payment_method == price_inline_buttons[5].split()[1]:   # first card second card
             first_payment = ReportTelegramPayments.objects.get(order=order.pk)
-            total = order.sum - first_payment.total_amount
+            total_amount = first_payment.total_amount - (first_payment.total_amount * 0.02)
+            total = order.sum - total_amount
             if total > 0:
                 payment_request(order.chat_id_client,
                                 os.environ["PAYMENT_TOKEN"],
@@ -564,14 +583,17 @@ def handle_order(update, context):
                                 f'{order.pk} {query.message.message_id}',
                                 total)
             else:
-                context.bot.edit_message_text(chat_id=order.driver.chat_id, text=end_trip)
+                context.bot.send_message(chat_id=order.chat_id_client, text=f'return_money_from_system {abs(total)}грн')
                 text_to_client(order, complete_order_text, button=inline_comment_for_client())
                 order.status_order = Order.COMPLETED
                 order.partner = order.driver.partner
                 order.save()
                 fleet_order(order)
                 redis_instance().delete(chat_id)
-        else:                                       #first cash second card
+                portmone = Portmone()
+                portmone.return_amount(total, first_payment.provider_payment_charge_id, return_money)
+
+        else:                                       # first cash second card
             payment_request(order.chat_id_client,
                             os.environ["PAYMENT_TOKEN"],
                             os.environ["BOT_URL_IMAGE_TAXI"],
@@ -581,15 +603,15 @@ def handle_order(update, context):
 
 
 def payment_duty(update, context):
-    chat_id = update.effective_chat.id
+    chat_id = str(update.effective_chat.id)
     duty = UserBank.get_duty(chat_id)
     payment_request(chat_id,
                     os.environ["PAYMENT_TOKEN"],
                     os.environ["BOT_URL_IMAGE_TAXI"],
                     chat_id,
                     chat_id,
-                    duty)
-    redis_instance().hset(str(chat_id), 'duty', 1)
+                    duty.duty)
+    redis_instance().hset(chat_id, 'duty', 1)
 
 
 def precheckout_callback(update, context):
@@ -627,6 +649,9 @@ def successful_payment(update, context):
     successful_payment = update.message.successful_payment
     order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.IN_PROGRESS).last()
     if redis_instance().hexists(chat_id, 'duty'):
+        bank = UserBank.get_duty(chat_id)
+        bank.duty = 0
+        bank.save()
         context.bot.send_message(chat_id=chat_id, text=success_duty, reply_markup=back_to_main_menu())
         create_report_payment(successful_payment)
     elif not order:

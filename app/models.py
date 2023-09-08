@@ -259,7 +259,7 @@ class Investor(models.Model):
         verbose_name_plural = 'Інвестори'
 
     def __str__(self) -> str:
-       return f'{self.user.username}'
+        return f'{self.user.username}'
 
 
 class Vehicle(models.Model):
@@ -1299,9 +1299,6 @@ class UserBank(models.Model):
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     duty = models.IntegerField(default=0, verbose_name='Борг>')
 
-    def __str__(self):
-        return self.duty
-
     class Meta:
         verbose_name = 'Банк боргів'
         verbose_name_plural = 'Банк боргів'
@@ -1315,5 +1312,9 @@ class UserBank(models.Model):
 
     @staticmethod
     def get_duty(chat_id):
-        return UserBank.objects.filter(chat_id=chat_id).first()
+        try:
+            ubank = UserBank.objects.filter(chat_id=chat_id).first()
+        except TypeError:
+            pass
+        return ubank
 
