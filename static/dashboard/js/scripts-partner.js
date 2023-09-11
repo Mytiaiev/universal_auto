@@ -574,7 +574,7 @@ $(document).ready(function () {
 			},
 			success: function (response) {
 				if (response.data === true) {
-					$("#loadingMessage").text("База даних оновлено");
+					$("#loadingMessage").text(gettext("База даних оновлено"));
 					$("#loader").css("display", "none");
 					$("#checkmark").css("display", "block");
 
@@ -582,7 +582,7 @@ $(document).ready(function () {
 						$("#loadingModal").css("display", "none");
 					}, 3000);
 				} else {
-					$("#loadingMessage").text("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора");
+					$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора"));
 
 					setTimeout(function () {
 						$("#loadingModal").css("display", "none");
