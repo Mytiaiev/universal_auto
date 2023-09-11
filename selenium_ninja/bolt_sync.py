@@ -121,19 +121,20 @@ class BoltRequest(Synchronizer):
             driver_params = self.param.copy()
             driver_params['id'] = driver['id']
             driver_info = self.get_target_url(f'{self.base_url}getDriver', driver_params)
-            driver_list.append({
-                'fleet_name': self.fleet,
-                'name': driver_info['data']['first_name'],
-                'second_name': driver_info['data']['last_name'],
-                'email': driver_info['data']['email'],
-                'phone_number': driver_info['data']['phone'],
-                'driver_external_id': driver_info['data']['id'],
-                'pay_cash': driver_info['data']['has_cash_payment'],
-                'licence_plate': '',
-                'vehicle_name': '',
-                'vin_code': '',
 
-            })
+            if driver_info['message'] == 'OK':
+                driver_list.append({
+                    'fleet_name': self.fleet,
+                    'name': driver_info['data']['first_name'],
+                    'second_name': driver_info['data']['last_name'],
+                    'email': driver_info['data']['email'],
+                    'phone_number': driver_info['data']['phone'],
+                    'driver_external_id': driver_info['data']['id'],
+                    'pay_cash': driver_info['data']['has_cash_payment'],
+                    'licence_plate': '',
+                    'vehicle_name': '',
+                    'vin_code': '',
+                })
             time.sleep(0.5)
         return driver_list
 

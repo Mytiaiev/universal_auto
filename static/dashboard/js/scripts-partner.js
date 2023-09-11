@@ -575,8 +575,9 @@ $(document).ready(function () {
 				action: "upd_database",
 			},
 			success: function (response) {
+				console.log(response.data)
 				if (response.data === true) {
-					$("#loadingMessage").text(gettext("База даних оновлено"));
+					$("#loadingMessage").text("База даних оновлено");
 					$("#loader").css("display", "none");
 					$("#checkmark").css("display", "block");
 
@@ -584,7 +585,7 @@ $(document).ready(function () {
 						$("#loadingModal").css("display", "none");
 					}, 3000);
 				} else {
-					$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора"));
+					$("#loadingMessage").text("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора");
 
 					setTimeout(function () {
 						$("#loadingModal").css("display", "none");
