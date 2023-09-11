@@ -16,7 +16,6 @@ settings = {
     'AVERAGE_DISTANCE_PER_HOUR': ('25', 'Середня проходимість авто по місту (км)'),
     'COST_PER_KM': ('20', 'Середня ціна за км (грн, для UaGPS)'),
     'GOOGLE_API_KEY': ('Enter google api', 'Ключ Google api'),
-    'UAGPS_TOKEN': ('Enter token for GPS service', 'Токен для GPS сервісу'),
     'MOBIZON_DOMAIN': ('https://api.mobizon.ua/service/message/sendsmsmessage', 'Домен для смс розсилки'),
     'MOBIZON_API_KEY': ('Enter api key', 'API KEY для розсилки смс'),
     'SEND_DISPATCH_MESSAGE': ('0.3', 'Повідомити про подачу (км)'),
@@ -32,21 +31,3 @@ settings = {
     'CONTRACT_OFFER': ('url', 'Договір оферти'),
 }
 
-settings_for_partner = {
-    'FREE_RENT': ('15', 'Безкоштовна оренда (км)'),
-    'RENT_PRICE': ('15', 'Ціна за аренду (грн)'),
-    'UKLON_NAME': ('Enter username for Uklon', 'Ім\'я користувача Uklon'),
-    'UKLON_PASSWORD': ('Enter password for Uklon', 'Пароль користувача Uklon'),
-    'UBER_NAME': ('Enter username for Uber', 'Ім\'я користувача Uber'),
-    'UBER_PASSWORD': ('Enter password for Uber', 'Пароль користувача Uber'),
-    'BOLT_NAME': ('Enter username for Bolt', 'Ім\'я користувача Bolt'),
-    'BOLT_PASSWORD': ('Enter password for Bolt', 'Пароль користувача Bolt'),
-    'GPS_LOGIN': ('Enter username for gps', 'Ім\'я користувача gps'),
-    'GPS_PASSWORD': ('Enter password for gps', 'Пароль gps'),
-    'ID_PARK': ('Enter ID', 'Індифікатор парка з url'),
-    'CLIENT_ID': ('Enter ID', 'Payload з Uklon'),
-    'CLIENT_SECRET': ('Enter Secret', 'Payload з Uklon'),
-    'DRIVERS_CHAT': ('-863882769', 'Чат водіїв'),
-    'WITHDRAW_UKLON': ('150', 'Залишок грн на карті водія Uklon'),
-    'GOOGLE_ID_OFF_DAY_CALENDAR': ('Введіть ID календаря для вихідних водіїв', 'ID календаря автопарку (Вихідні водіїв)'),
-}

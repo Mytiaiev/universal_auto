@@ -44,6 +44,31 @@ from scripts.nbu_conversion import convert_to_currency
 
 logger = get_task_logger(__name__)
 
+fleets = {
+        "BOLT_PASSWORD": BoltRequest,
+        "UKLON_PASSWORD": UklonRequest,
+        "UBER_PASSWORD": UberRequest,
+    }
+
+
+def check_available_fleets(partner_pk):
+    settings = ParkSettings.objects.filter(
+                Q(key="BOLT_PASSWORD") |
+                Q(key="UKLON_PASSWORD") |
+                Q(key="UBER_PASSWORD") |
+                Q(key="UAGPS_TOKEN"),
+                partner=partner_pk
+            )
+    return settings
+
+
+def get_day_for_task(day=None):
+    if day is None:
+        day = timezone.localtime() - timedelta(days=1)
+    else:
+        day = datetime.strptime(day, "%Y-%m-%d")
+    return day
+
 
 @app.task(queue='bot_tasks')
 def raw_gps_handler(pk):
@@ -93,31 +118,24 @@ def get_uber_session(self, partner_pk):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_orders_from_fleets(self, partner_pk, day=None):
-
-    if day is None:
-        day = timezone.localtime() - timedelta(days=1)
-    else:
-        day = datetime.strptime(day, "%Y-%m-%d")
+    settings = check_available_fleets(partner_pk)
+    day = get_day_for_task(day)
     drivers = Driver.objects.filter(partner=partner_pk)
-    for driver in drivers:
-        BoltRequest(partner_pk).get_fleet_orders(day, driver.pk)
-        UklonRequest(partner_pk).get_fleet_orders(day, driver.pk)
-    if not FleetOrder.objects.filter(fleet="Uber", accepted_time__date=day):
-        uber_driver = SeleniumTools(partner_pk)
-        uber_driver.download_payments_order("Uber", day)
-        uber_driver.save_trips_report("Uber", day)
-        uber_driver.quit()
+    for setting in settings:
+        request_class = fleets.get(setting.key)
+        if request_class:
+            for driver in drivers:
+                request_class(partner_pk).get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
-    if day is None:
-        day = timezone.localtime() - timedelta(days=1)
-    else:
-        day = datetime.strptime(day, "%Y-%m-%d")
-    BoltRequest(partner_pk).save_report(day)
-    UklonRequest(partner_pk).save_report(day)
-    UberRequest(partner_pk).save_report(day)
+
+    settings = check_available_fleets(partner_pk)
+    for setting in settings:
+        request_class = fleets.get(setting.key)
+        if request_class:
+            request_class(partner_pk).save_report(day)
     save_report_to_ninja_payment(day, partner_pk)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
     for driver in Driver.objects.filter(partner=partner_pk):
@@ -140,12 +158,8 @@ def download_daily_report(self, partner_pk, day=None):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_car_efficiency(self, partner_pk, day=None):
-    if not day:
-        day = timezone.localtime() - timedelta(days=1)
-    else:
-        day = datetime.strptime(day, "%Y-%m-%d")
-
-    for vehicle in Vehicle.objects.filter(driver__isnull=False, partner=partner_pk):
+    day = get_day_for_task(day)
+    for vehicle in Vehicle.objects.filter(partner=partner_pk):
         efficiency = CarEfficiency.objects.filter(report_from=day,
                                                   partner=partner_pk,
                                                   licence_plate=vehicle.licence_plate)
@@ -176,10 +190,7 @@ def get_car_efficiency(self, partner_pk, day=None):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_driver_efficiency(self, partner_pk, day=None):
-    if not day:
-        day = timezone.localtime() - timedelta(days=1)
-    else:
-        day = datetime.strptime(day, "%Y-%m-%d")
+    day = get_day_for_task(day)
     for driver in Driver.objects.filter(partner=partner_pk):
         efficiency = DriverEfficiency.objects.filter(report_from=day,
                                                      partner=partner_pk,
@@ -288,19 +299,10 @@ def update_driver_status(self, partner_pk):
 @app.task(bind=True, queue='bot_tasks')
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
-        settings = ParkSettings.objects.filter(
-            Q(key="BOLT_PASSWORD") |
-            Q(key="UKLON_PASSWORD") |
-            Q(key="UBER_PASSWORD") |
-            Q(key="UAGPS_TOKEN"),
-            partner=partner_pk
-        )
-        synchronize_classes = {
-            "BOLT_PASSWORD": BoltRequest,
-            "UKLON_PASSWORD": UklonRequest,
-            "UBER_PASSWORD": UberRequest,
-            "UAGPS_TOKEN": UaGpsSynchronizer,
-        }
+        settings = check_available_fleets(partner_pk)
+        synchronize_classes = fleets.copy()
+        gps_class = {"UAGPS_TOKEN": UaGpsSynchronizer}
+        synchronize_classes.update(gps_class)
         for setting in settings:
             synchronization_class = synchronize_classes.get(setting.key)
             if synchronization_class:
@@ -504,6 +506,8 @@ def order_not_accepted(self):
             group_msg = redis_instance().hget('group_msg', order.id)
             if order.type_order == Order.STANDARD_TYPE:
                 bot.delete_message(chat_id=ParkSettings.get_value("ORDER_CHAT"), message_id=group_msg)
+                bot.edit_message_reply_markup(chat_id=order.chat_id_client,
+                                              message_id=redis_instance().hget(order.chat_id_client, 'client_msg'))
                 redis_instance().hdel('group_msg', order.id)
                 search_driver_for_order.delay(order.id)
             else:
@@ -557,7 +561,6 @@ def order_create_task(self, order_data):
         if self.request.retries <= self.max_retries:
             self.retry(exc=e, countdown=5)
         else:
-            bot.send_message(chat_id=515224934, text=str(e))
             raise MaxRetriesExceededError("Max retries exceeded for task.")
 
 
@@ -696,8 +699,8 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def get_driver_reshuffles(self):
-    day = timezone.localtime() - timedelta(days=1)
+def get_driver_reshuffles(self, delta=0):
+    day = timezone.localtime() - timedelta(days=delta)
     start = timezone.make_aware(datetime.combine(day, time.min))
     end = timezone.make_aware(datetime.combine(day, time.max))
     events = GoogleCalendar().get_list_events(ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR"), start, end)
@@ -787,7 +790,8 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id))
+    sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))
+    sender.add_periodic_task(crontab(minute="30", hour='3'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))

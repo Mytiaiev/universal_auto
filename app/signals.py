@@ -11,7 +11,6 @@ from auto_bot.handlers.order.keyboards import inline_reject_order
 from auto_bot.handlers.order.static_text import client_order_info, client_personal_info
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
-from scripts.settings_for_park import settings_for_partner
 from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import datetime_with_timezone
 
@@ -26,9 +25,6 @@ from scripts.google_calendar import datetime_with_timezone
 def create_park_settings(sender, instance, created, **kwargs):
     if created and not instance.user.is_superuser:
         setup_periodic_tasks(instance)
-        for key in settings_for_partner.keys():
-            response = settings_for_partner[key]
-            ParkSettings.objects.create(key=key, value=response[0], description=response[1], partner=instance)
 
 
 # @receiver(post_delete, sender=AuUser)
@@ -84,6 +80,7 @@ def take_order_from_client(sender, instance, **kwargs):
             search_driver_for_order.delay(instance.pk)
         elif all([instance.status_order == Order.ON_TIME, instance.sum]):
             client_msg = redis_instance().hget(instance.chat_id_client, 'client_msg')
+            redis_instance().hdel(instance.chat_id_client, 'time_order')
             bot.edit_message_text(chat_id=instance.chat_id_client,
                                   text=client_order_info(instance),
                                   reply_markup=inline_reject_order(instance.pk),

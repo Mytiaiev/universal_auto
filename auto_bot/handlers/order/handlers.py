@@ -376,7 +376,8 @@ def order_on_time(update, context):
             if not redis_instance().hexists(chat_id, 'time_order'):
                 order = Order.objects.filter(chat_id_client=user.chat_id,
                                              status_order=Order.WAITING).last()
-                order.status_order, order.order_time, order.checked = Order.ON_TIME, order_time, False
+                order.status_order = Order.ON_TIME
+                order.order_time, order.checked = timezone.make_aware(order_time), False
                 order.save()
                 update.message.reply_text(order_complete)
             else:
@@ -433,7 +434,7 @@ def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
-    vehicle = check_reshuffle(driver)
+    vehicle = check_reshuffle(driver)[0]
     order = Order.objects.filter(pk=int(data[1])).first()
     if order.status_order in (Order.COMPLETED, Order.IN_PROGRESS):
         query.edit_message_text(text=already_accepted)
