@@ -22,6 +22,7 @@ class Synchronizer:
         drivers = self.get_drivers_table()
         vehicles = self.get_vehicles()
         print(f'Received {self.__class__.__name__} vehicles: {len(vehicles)}')
+        print(vehicles)
         print(f'Received {self.__class__.__name__} drivers: {len(drivers)}')
         for driver in drivers:
             self.create_driver(**driver)
@@ -113,33 +114,31 @@ class Synchronizer:
         return driver
 
     def get_or_create_vehicle(self, **kwargs):
-        licence_plate, unk, v_name, vin = kwargs['licence_plate'], 'Unknown car', 'vehicle_name', 'vin_code'
+        licence_plate, v_name, vin = kwargs['licence_plate'], kwargs['vehicle_name'], kwargs['vin_code']
         if not licence_plate:
-            licence_plate = unk
+            licence_plate = 'Unknown car'
         try:
             vehicle = Vehicle.objects.get(licence_plate=licence_plate, partner=self.partner_id)
         except ObjectDoesNotExist:
             vehicle = Vehicle.objects.create(
-                name=kwargs[v_name].upper(),
+                name=v_name.upper(),
                 licence_plate=licence_plate,
-                vin_code=kwargs[vin],
+                vin_code=vin,
                 partner=Partner.get_partner(self.partner_id)
             )
-            vehicle.save()
         return vehicle
 
     @staticmethod
     def update_vehicle_fields(vehicle, **kwargs):
-        key_vehicle_name, key_vin = 'vehicle_name', 'vin_code'
-        update_fields, vehicle_name, vin_code = [], kwargs[key_vehicle_name], kwargs[key_vin]
+        update_fields, vehicle_name, vin_code = [], kwargs['vehicle_name'], kwargs['vin_code']
 
         if vehicle.name != vehicle_name and vehicle_name:
             vehicle.name = vehicle_name
-            update_fields.append(key_vehicle_name[-4:])
-        elif vehicle.vin_code != vin_code and vin_code:
+            update_fields.append('name')
+        if vehicle.vin_code != vin_code and vin_code:
             vehicle.vin_code = vin_code
-            update_fields.append(key_vin)
-        elif update_fields:
+            update_fields.append('vin_code')
+        if update_fields:
             vehicle.save(update_fields=update_fields)
 
     @staticmethod
@@ -152,10 +151,10 @@ class Synchronizer:
         if not driver.phone_number and phone_number:
             driver.phone_number = phone_number
             update_fields.append(key_phone)
-        elif driver.email != email and email:
+        if driver.email != email and email:
             driver.email = email
             update_fields.append(key_email)
-        elif update_fields:
+        if update_fields:
             driver.save(update_fields=update_fields)
 
     @staticmethod
@@ -177,5 +176,5 @@ class Synchronizer:
     @staticmethod
     def r_dup(text):
         if 'DUP' in text:
-            return text[:-3]
+            text = text[:-3]
         return text
