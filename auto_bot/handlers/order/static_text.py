@@ -163,7 +163,7 @@ def driver_complete_text(price):
 
 def driver_duty(price, client=True):
     message_to = "Водій Вам винен: " if client else "Ви винні клієнту: "
-    message = f"Поїздку завершено\n {message_to}{price}грн"
+    message = f"Поїздку завершено\n{message_to}{price}грн"
     return message
 
 

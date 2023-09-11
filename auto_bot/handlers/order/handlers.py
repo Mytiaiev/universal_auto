@@ -124,7 +124,6 @@ def payment_method(update, context):
     else:
         query.edit_message_text(add_info_text)
         query.edit_message_reply_markup(inline_add_info_kb())
-        redis_instance().hdel(str(chat_id), 'state')
 
 
 def add_info_to_order(update, context):
@@ -141,7 +140,6 @@ def get_additional_info(update, context):
         query.edit_message_reply_markup(inline_payment_kb())
     else:
         if validate_text(update.message.text):
-            redis_instance().hdel(str(update.effective_chat.id), 'state')
             redis_instance().hset(str(chat_id), 'info', update.message.text)
             context.bot.send_message(chat_id=chat_id, text=payment_text, reply_markup=inline_payment_kb())
         else:
@@ -583,7 +581,7 @@ def handle_order(update, context):
                                 f'{order.pk} {query.message.message_id}',
                                 total)
             else:
-                context.bot.send_message(chat_id=order.chat_id_client, text=f'return_money_from_system {abs(total)}грн')
+                context.bot.send_message(chat_id=order.chat_id_client, text=f'{return_money_from_system} {abs(total)}грн')
                 text_to_client(order, complete_order_text, button=inline_comment_for_client())
                 order.status_order = Order.COMPLETED
                 order.partner = order.driver.partner
@@ -663,9 +661,8 @@ def successful_payment(update, context):
         report = create_report_payment(successful_payment)
         order_create_task.delay(order_data, report.pk)
     else:
-        data = int(redis_instance().hget(chat_id, 'message_data'))
         fleet_order(order)
-        context.bot.send_message(chat_id=order.driver.chat_id, message_id=data, text=trip_paymented)
+        context.bot.send_message(chat_id=order.driver.chat_id, text=trip_paymented)
         text_to_client(order, complete_order_text, button=inline_comment_for_client())
 
         order.status_order = Order.COMPLETED

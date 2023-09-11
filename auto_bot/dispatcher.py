@@ -25,7 +25,7 @@ from auto_bot.handlers.order.handlers import continue_order, to_the_address, fro
     order_create, get_location, handle_callback_order, increase_search_radius, \
     increase_order_price, first_address_check, second_address_check, client_reject_order, \
     ask_client_action, handle_order, choose_date_order, precheckout_callback, add_info_to_order, get_additional_info, \
-    successful_payment, payment_duty
+    successful_payment, payment_duty, payment_method
 from auto_bot.handlers.main.handlers import start, update_phone_number, helptext, get_id, cancel, error_handler, \
     more_function, start_query, get_about_us, celery_test
 from auto_bot.handlers.driver_job.handlers import update_name, restart_job_application, update_second_name, \
@@ -125,6 +125,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(increase_order_price, pattern="30|50|100|150|Continue_search"))
     dp.add_handler(CallbackQueryHandler(ask_client_action, pattern="Ask_action"))
     dp.add_handler(CallbackQueryHandler(payment_duty, pattern="Duty"))
+    dp.add_handler(CallbackQueryHandler(payment_method, pattern="Back_to_payment"))
     dp.add_handler(CallbackQueryHandler(handle_callback_order, pattern="^Accept_order [0-9]+$"))
     dp.add_handler(CallbackQueryHandler(handle_order,
                                         pattern=re.compile("^(Reject_order|Along_the_route|Off_route|"

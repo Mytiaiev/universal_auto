@@ -569,9 +569,8 @@ def send_map_to_client(self, order_pk, licence, message, chat):
                 return
             elif distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
                 bot.stopMessageLiveLocation(chat, message)
-                client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
                 driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
-                text_to_client(order, driver_arrived, message_id=client_msg)
+                text_to_client(order, driver_arrived)
                 redis_instance().hset(str(order.driver.chat_id), 'start_route', int(timezone.localtime().timestamp()))
                 bot.edit_message_reply_markup(chat_id=order.driver.chat_id,
                                               message_id=driver_msg,
