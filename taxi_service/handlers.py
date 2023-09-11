@@ -221,15 +221,6 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    # def handle_effective_vehicle(self, request):
-    #     period = request.GET.get('period')
-    #     vehicle1 = request.GET.get('vehicle_id1')
-    #     vehicle2 = request.GET.get('vehicle_id2')
-    #     get_efficiency_vehicle = effective_vehicle(period, vehicle1, vehicle2)
-    #     json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
-    #     response = HttpResponse(json_data, content_type='application/json')
-    #     return response
-
     def handle_effective_vehicle(self, request):
         period = request.GET.get('period')
         action = request.GET.get('action')

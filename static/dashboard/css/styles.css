@@ -1,15 +1,24 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #1d2634;
+  background-color: #313A34;
   color: #9e9ea4;
-  font-family: "Montserrat", sans-serif;
+}
+
+/* Заголовки використовують Montserrat */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Інший текст використовує Open Sans */
+p, span, div {
+  font-family: 'Open Sans', sans-serif;
 }
 
 .material-icons-outlined {
   vertical-align: middle;
   line-height: 1px;
-  font-size: 35px;
+  /*font-size: 10px;*/
 }
 
 .grid-container {
@@ -44,7 +53,7 @@ body {
 #sidebar {
   grid-area: sidebar;
   height: 100%;
-  background-color: #263043;
+  background-color: #38423B;
   overflow-y: auto;
   transition: all 0.5s;
   -webkit-transition: all 0.5s;
@@ -141,17 +150,17 @@ body {
 
 .card:first-child,
 .card-partner:first-child {
-  background-color: #2962ff;
+  background-color: #1858A6;
 }
 
 .card:nth-child(2),
 .card-partner:nth-child(2) {
-  background-color: #ff6d00;
+  background-color: #EC6323;
 }
 
 .card:nth-child(3),
 .card-partner:nth-child(3) {
-  background-color: #2e7d32;
+  background-color: #18A64D;
 }
 
 .card:nth-child(4),
@@ -171,7 +180,7 @@ body {
 
 .card-inner > .material-icons-outlined,
 .card-inner-partner > .material-icons-outlined {
-  font-size: 30px;
+  /*font-size: 20px;*/
 }
 
 .charts {
@@ -182,7 +191,7 @@ body {
 }
 
 .charts-card {
-  background-color: #263043;
+  background-color: #38423B;
   margin-bottom: 20px;
   padding: 25px;
   box-sizing: border-box;
@@ -395,11 +404,11 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: #263043;
+  background-color: #38423B;
   padding: 30px;
   border-radius: 25px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  max-width: 400px;
+  max-width: 500px;
   width: 90%;
   z-index: 897;
 }
@@ -465,7 +474,7 @@ body {
 }
 
 .opt-partnerForm #showPasswordPartner {
-  margin-top: -9px;
+  margin-top: -17px;
 }
 
 .partner-options {
@@ -480,15 +489,6 @@ body {
   display: none;
 }
 
-.opt-partnerForm {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.opt-partnerForm #showPasswordPartner {
-  margin-top: -9px;
-}
 
 .partner-options label:hover {
   padding: 5px 10px;
@@ -563,7 +563,7 @@ body {
   display: block;
   width: 100%;
   height: 4px;
-  background-color: #9e9ea4;
+  background-color: #53785E;
   position: absolute;
   transition: transform 0.2s ease-in-out;
   margin-top: 5px;
@@ -582,7 +582,7 @@ body {
   position: absolute;
   top: 100%;
   right: -25px;
-  background-color: #1d2634;
+  background-color: #313A34;
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
   padding: 10px;
   z-index: 1;
@@ -602,7 +602,7 @@ body {
 /* Стилізація контейнера "info-driver" */
 .info-driver {
   display: none;
-  background-color: #263043;
+  background-color: #38423B;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
@@ -622,11 +622,11 @@ th {
 }
 
 tr:nth-child(even) {
-  background-color: #263043;
+  background-color: #38423B;
 }
 
 tr:nth-child(odd) {
-  background-color: #263043;
+  background-color: #38423B;
 }
 
 td {
@@ -694,7 +694,7 @@ select:focus {
 }
 
 .modal-content {
-  background-color: #263043;
+  background-color: #38423B;
   margin: 10% auto;
   padding: 20px;
   border: 1px solid #888;

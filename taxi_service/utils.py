@@ -273,7 +273,7 @@ def manager_car_piggy_bank(request):
 
 def partner_car_piggy_bank(request):
     partner = Partner.objects.get(user_id=request.user.id)
-    partner_cars = Vehicle.objects.filter(partner=partner)
+    partner_cars = Vehicle.objects.filter(partner=partner).exclude(licence_plate='Unknown car')
     cars_data = get_car_data(partner_cars)
     return cars_data
 
@@ -375,16 +375,19 @@ def get_driver_info(request, period, user_id, action):
 
             average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
             efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
+            accept_percent = round(driver_efficiency['accept_percent'], 2) if driver_efficiency['accept_percent'] is not None else 0.0
+            mileage = round(driver_efficiency['mileage'], 2) if driver_efficiency['mileage'] is not None else 0.0
+            road_time = str(driver_efficiency['road_time']) if driver_efficiency['road_time'] is not None else '00:00:00'
 
             driver_info = {
                 'driver': driver_name,
-                'total_kasa': driver_efficiency['total_kasa'],
-                'total_orders': driver_efficiency['total_orders'],
-                'accept_percent': round(driver_efficiency['accept_percent'],2),
+                'total_kasa': driver_efficiency['total_kasa'] or 0,
+                'total_orders': driver_efficiency['total_orders'] or 0,
+                'accept_percent': accept_percent,
                 'average_price': average_price,
-                'mileage': round(driver_efficiency['mileage'],2),
+                'mileage': mileage,
                 'efficiency': efficiency,
-                'road_time': str(driver_efficiency['road_time'])
+                'road_time': road_time
             }
             driver_info_list.append(driver_info)
 

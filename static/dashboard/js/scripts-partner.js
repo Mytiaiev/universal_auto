@@ -35,13 +35,13 @@ let barChartOptions = {
 		},
 	},
 	colors: [
-		"#2962ff",
-		"#d50000",
-		"#2e7d32",
-		"#ff6d00",
-		"#583cb3",
-		"#c51162",
-		"#00bfa5",
+		"#89A632",
+		"#FDCA10",
+		"#18A64D",
+		"#1858A6",
+		"#79C8C5",
+		"#EC6323",
+		"#018B72"
 	],
 	plotOptions: {
 		bar: {
@@ -154,7 +154,15 @@ let areaChartOptions = {
 			show: false,
 		},
 	},
-	colors: ["#00ab57", "#d50000", "#ff6d00", "#583cb3", "#c51162", "#00bfa5"],
+	colors: [
+		"#DCE43F",
+		"#89A632",
+		"#018B72",
+		"#79C8C5",
+		"#EC6323",
+		"#1858A6",
+		"#FDCA10"
+	],
 	labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
 	dataLabels: {
 		enabled: false,
@@ -268,10 +276,8 @@ $(document).ready(function () {
 			success: function (response) {
 				let data = response.data[0];
 				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let totalKm = parseFloat(response.data[2]).toFixed(2);
-				let spending = response.data[3];
-				let startDate = response.data[4];
-				let endDate = response.data[5];
+				let startDate = response.data[2];
+				let endDate = response.data[3];
 				let formattedData = {};
 
 				Object.keys(data).forEach(function (key) {
@@ -295,8 +301,6 @@ $(document).ready(function () {
 				$('#weekly-income-dates').text(startDate + ' по ' + endDate);
 				$('#weekly-income-amount').text(totalAmount + ' грн');
 				$('#income-amount').text(totalAmount + ' грн');
-				$('#spending-all').text(spending + ' грн');
-				$('#income-km').text(totalKm + ' км');
 			}
 		});
 	}
@@ -312,7 +316,7 @@ $(document).ready(function () {
 			success: function (response) {
 				let dataObject = response.data;
 
-				let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
+				let carData = {};
 
 				// Проходимося по кожному ідентифікатору автомобіля
 				Object.keys(dataObject).forEach(function (carNumber) {
