@@ -173,10 +173,12 @@ def personal_order_info(order):
     return message
 
 
-def client_order_info(order):
+def client_order_info(order, time_update=None):
     if order.car_delivery_price:
         message = f"Замовлення оновлено\n" \
                   f"Нова сума замовлення: {order.sum} грн\n"
+    elif time_update:
+        message = f"Замовлення оновлено\n"
     else:
         message = f"Ваше замовлення {order.pk}:\n"
     message += f"Адреса посадки: {order.from_address}\n" \

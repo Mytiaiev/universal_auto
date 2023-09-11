@@ -972,6 +972,7 @@ class FleetOrder(models.Model):
     destination = models.CharField(max_length=255, blank=True, null=True, verbose_name='Місце висадки')
     accepted_time = models.DateTimeField(blank=True, null=True, verbose_name='Час прийняття замовленя')
     finish_time = models.DateTimeField(blank=True, null=True, verbose_name='Час завершення замовлення')
+    distance = models.DecimalField(null=True, decimal_places=2, max_digits=6, verbose_name="Відстань за маршрутом")
     state = models.CharField(max_length=255, blank=True, null=True, verbose_name='Статус замовлення')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')

@@ -374,12 +374,18 @@ def order_on_time(update, context):
         if time_difference.total_seconds() / 60 > int(ParkSettings.get_value('TIME_ORDER_MIN', 60)):
             redis_instance().hdel(chat_id, 'state')
             if not redis_instance().hexists(chat_id, 'time_order'):
+
                 order = Order.objects.filter(chat_id_client=user.chat_id,
                                              status_order=Order.WAITING).last()
+                try:
+                    client_msg = redis_instance().hget(order.chat_id_client, 'client_msg')
+                    context.bot.delete_message(chat_id=order.chat_id_client, message_id=client_msg)
+                    redis_instance().hdel(order.chat_id_client, 'client_msg')
+                except BadRequest:
+                    pass
                 order.status_order = Order.ON_TIME
                 order.order_time, order.checked = timezone.make_aware(order_time), False
                 order.save()
-                update.message.reply_text(order_complete)
             else:
                 redis_instance().hset(chat_id, 'time_order', timezone.make_aware(order_time).isoformat())
                 from_address(update, context)

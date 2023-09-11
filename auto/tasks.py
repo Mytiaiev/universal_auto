@@ -505,10 +505,12 @@ def order_not_accepted(self):
                 minutes=int(ParkSettings.get_value('SEND_TIME_ORDER_MIN')))):
             group_msg = redis_instance().hget('group_msg', order.id)
             if order.type_order == Order.STANDARD_TYPE:
-                bot.delete_message(chat_id=ParkSettings.get_value("ORDER_CHAT"), message_id=group_msg)
+                if group_msg:
+                    bot.delete_message(chat_id=ParkSettings.get_value("ORDER_CHAT"), message_id=group_msg)
+                    redis_instance().hdel('group_msg', order.id)
                 bot.edit_message_reply_markup(chat_id=order.chat_id_client,
                                               message_id=redis_instance().hget(order.chat_id_client, 'client_msg'))
-                redis_instance().hdel('group_msg', order.id)
+
                 search_driver_for_order.delay(order.id)
             else:
                 for manager in Manager.objects.exclude(chat_id__isnull=True):
@@ -790,8 +792,8 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))
-    sender.add_periodic_task(crontab(minute="30", hour='3'), get_driver_reshuffles.s(partner_id))
+    sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(delta=1))
+    sender.add_periodic_task(crontab(minute="30", hour='3'), get_driver_reshuffles.s())
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))

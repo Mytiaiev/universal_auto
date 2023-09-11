@@ -81,10 +81,16 @@ def take_order_from_client(sender, instance, **kwargs):
         elif all([instance.status_order == Order.ON_TIME, instance.sum]):
             client_msg = redis_instance().hget(instance.chat_id_client, 'client_msg')
             redis_instance().hdel(instance.chat_id_client, 'time_order')
-            bot.edit_message_text(chat_id=instance.chat_id_client,
-                                  text=client_order_info(instance),
-                                  reply_markup=inline_reject_order(instance.pk),
-                                  message_id=client_msg)
+            if client_msg:
+                bot.edit_message_text(chat_id=instance.chat_id_client,
+                                      text=client_order_info(instance),
+                                      reply_markup=inline_reject_order(instance.pk),
+                                      message_id=client_msg)
+            else:
+                client_msg = bot.send_message(chat_id=instance.chat_id_client,
+                                              text=client_order_info(instance, True),
+                                              reply_markup=inline_reject_order(instance.pk))
+                redis_instance().hset(instance.chat_id_client, 'client_msg', client_msg.message_id)
             check_time_order.delay(instance.pk)
             # g_id = ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR")
             # if g_id:

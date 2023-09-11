@@ -122,6 +122,8 @@ class UaGpsSynchronizer:
                                                   gps_id)
                     road_distance += report[0]
                     road_time += report[1]
+                    order.distance = report[0]
+                    order.save()
                 # canceled = FleetOrder.objects.filter(driver=_driver,
                 #                                      state__in=[FleetOrder.DRIVER_CANCEL,
                 #                                                 FleetOrder.SYSTEM_CANCEL,

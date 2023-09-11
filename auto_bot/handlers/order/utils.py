@@ -22,6 +22,7 @@ def check_reshuffle(driver, date=timezone.localtime().date()):
     vehicle = reshuffle.swap_vehicle if reshuffle else driver.vehicle
     return vehicle, reshuffle
 
+
 def buttons_addresses(address):
     center_lat, center_lng = ParkSettings.get_value('CENTRE_CITY_LAT'), ParkSettings.get_value('CENTRE_CITY_LNG')
     center_radius = int(ParkSettings.get_value('CENTRE_CITY_RADIUS'))
