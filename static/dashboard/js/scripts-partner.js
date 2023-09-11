@@ -3,18 +3,20 @@
 let sidebarOpen = false;
 let sidebar = document.getElementById("sidebar");
 
-function openSidebar() {
-	if (!sidebarOpen) {
-		sidebar.classList.add("sidebar-responsive");
-		sidebarOpen = true;
-	}
-}
+// Визначте змінну для стану бічного бару
 
-function closeSidebar() {
-	if (sidebarOpen) {
-		sidebar.classList.remove("sidebar-responsive");
-		sidebarOpen = false;
-	}
+function toggleSidebar() {
+  const sidebar = document.getElementById("sidebar");
+
+  if (sidebarOpen) {
+    // Закрити бічний бар
+    sidebar.classList.remove("sidebar-responsive");
+    sidebarOpen = false;
+  } else {
+    // Відкрити бічний бар
+    sidebar.classList.add("sidebar-responsive");
+    sidebarOpen = true;
+  }
 }
 
 
