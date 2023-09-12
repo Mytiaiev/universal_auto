@@ -194,8 +194,8 @@ class GetRequestHandler:
 
     def handle_get_partner_cash(self, request):
         period = request.GET.get('period')
-        partner_id = request.user.pk
-        get_cash = partner_total_earnings(period, partner_id)
+
+        get_cash = partner_total_earnings(period, request.user.pk)
         json_data = JsonResponse({'data': get_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
@@ -203,9 +203,8 @@ class GetRequestHandler:
     def handle_get_drivers_manager(self, request):
         action = request.GET.get('action')
         period = request.GET.get('period')
-        manager_id = request.user.pk
 
-        driver_info = get_driver_info(request, period, manager_id, action)
+        driver_info = get_driver_info(request, period, request.user.pk, action)
         json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
@@ -213,9 +212,8 @@ class GetRequestHandler:
     def handle_get_drivers_partner(self, request):
         action = request.GET.get('action')
         period = request.GET.get('period')
-        partner_id = request.user.pk
 
-        driver_info = get_driver_info(request, period, partner_id, action)
+        driver_info = get_driver_info(request, period, request.user.pk, action)
         json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response

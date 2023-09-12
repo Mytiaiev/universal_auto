@@ -6,17 +6,17 @@ let sidebar = document.getElementById("sidebar");
 // Визначте змінну для стану бічного бару
 
 function toggleSidebar() {
-  const sidebar = document.getElementById("sidebar");
+	const sidebar = document.getElementById("sidebar");
 
-  if (sidebarOpen) {
-    // Закрити бічний бар
-    sidebar.classList.remove("sidebar-responsive");
-    sidebarOpen = false;
-  } else {
-    // Відкрити бічний бар
-    sidebar.classList.add("sidebar-responsive");
-    sidebarOpen = true;
-  }
+	if (sidebarOpen) {
+		// Закрити бічний бар
+		sidebar.classList.remove("sidebar-responsive");
+		sidebarOpen = false;
+	} else {
+		// Відкрити бічний бар
+		sidebar.classList.add("sidebar-responsive");
+		sidebarOpen = true;
+	}
 }
 
 
@@ -113,7 +113,7 @@ let barChartOptions = {
 	},
 	yaxis: {
 		title: {
-			text: "Дохід (грн.)",
+			text: gettext("Дохід (грн.)"),
 			style: {
 				color: "#f5f7ff",
 			},
@@ -141,11 +141,11 @@ barChart.render();
 // AREA CHART
 let areaChartOptions = {
 	series: [{
-		name: "Вася",
-		data: ['Вася'],
+		name: "",
+		data: [''],
 	}, {
-		name: "Петя",
-		data: ['Петя'],
+		name: "",
+		data: [''],
 	}],
 	chart: {
 		type: "area",
@@ -300,9 +300,10 @@ $(document).ready(function () {
 				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 				barChart.updateOptions(barChartOptions);
 
-				$('#weekly-income-dates').text(startDate + ' по ' + endDate);
-				$('#weekly-income-amount').text(totalAmount + ' грн');
-				$('#income-amount').text(totalAmount + ' грн');
+				$('#weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
+				$('#weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('#income-amount').text(totalAmount + ' ' + gettext('грн'));
+
 			}
 		});
 	}
@@ -402,17 +403,17 @@ $(document).ready(function () {
 	const partnerRadioButtons = $("input[name='partner']");
 
 	var uklonStatus = localStorage.getItem('uklon');
-  var boltStatus = localStorage.getItem('bolt');
-  var uberStatus = localStorage.getItem('uber');
+	var boltStatus = localStorage.getItem('bolt');
+	var uberStatus = localStorage.getItem('uber');
 
-  // Перевірка умови, коли показувати або ховати елемент
-  if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
-    // Показуємо елемент
-    $("#updateDatabase").show();
-  } else {
-    // Ховаємо елемент
-    $("#updateDatabase").hide();
-  }
+	// Перевірка умови, коли показувати або ховати елемент
+	if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
+		// Показуємо елемент
+		$("#updateDatabase").show();
+	} else {
+		// Ховаємо елемент
+		$("#updateDatabase").hide();
+	}
 
 	partnerRadioButtons.change(function () {
 		const selectedPartner = $("input[name='partner']:checked").val();
@@ -577,7 +578,7 @@ $(document).ready(function () {
 			success: function (response) {
 				console.log(response.data)
 				if (response.data === true) {
-					$("#loadingMessage").text("База даних оновлено");
+					$("#loadingMessage").text(gettext("База даних оновлено"));
 					$("#loader").css("display", "none");
 					$("#checkmark").css("display", "block");
 
@@ -585,7 +586,7 @@ $(document).ready(function () {
 						$("#loadingModal").css("display", "none");
 					}, 3000);
 				} else {
-					$("#loadingMessage").text("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора");
+					$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора"));
 
 					setTimeout(function () {
 						$("#loadingModal").css("display", "none");

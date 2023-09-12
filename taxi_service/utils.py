@@ -301,16 +301,13 @@ def effective_vehicle(period, user_id, action):
 
     if action == 'investor':
         investor = Investor.objects.get(user_id=user_id)
-        investor_cars = Vehicle.objects.filter(investor_car=investor)
-        licence_plates = [car.licence_plate for car in investor_cars]
+        licence_plates = Vehicle.objects.filter(investor_car=investor).values_list('licence_plate', flat=True)
     elif action == 'manager':
         manager = Manager.objects.get(user_id=user_id)
-        manager_cars = Vehicle.objects.filter(manager=manager)
-        licence_plates = [car.licence_plate for car in manager_cars]
+        licence_plates = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
     elif action == 'partner':
         partner = Partner.objects.get(user_id=user_id)
-        partner_cars = Vehicle.objects.filter(partner=partner)
-        licence_plates = [car.licence_plate for car in partner_cars]
+        licence_plates = Vehicle.objects.filter(partner=partner).values_list('licence_plate', flat=True)
 
     effective_objects = CarEfficiency.objects.filter(
         licence_plate__in=licence_plates,

@@ -57,7 +57,7 @@
 				<input type="password" id="newPassword" name="newPassword" required>
 				<p class="error-message" id="ChangeErrorMessage"
 					 style="display:none; color: red">{% trans 'Пароль не співпадає' %}</p>
-				<h4>{% trans 'Підтвердити новий пароль:' %}</h4>
+				<h4>{% trans 'Підтвердіть:' %}</h4>
 				<input type="password" id="confirmPassword" name="confirmPassword"
 							 required>
 
@@ -217,13 +217,13 @@
 								<div class="progress-label">{{ car.progress_percentage }}%</div>
 							</div>
 						</div>
-						<p>{% trans 'Повна сума авто:' %}<br>₴ {{ car.purchase_price }}</p>
+						<p>{% trans 'Загальна сума:' %}<br>₴ {{ car.purchase_price }}</p>
 					</div>
 				</div>
 			</div>
 		{% endfor %}
 		<div class="info-driver">
-			<h2>{% trans 'Топ Водіїв' %}</h2>
+			<h2>{% trans 'Рейтинг водіїв' %}</h2>
 
 			<form method="post">
 				{% csrf_token %}
@@ -240,8 +240,8 @@
 			<table>
 				<tr>
 					<th>{% trans 'Водій' %}</th>
-					<th>{% trans 'Всього каса' %}</th>
-					<th>{% trans 'Всього замовлень' %}</th>
+					<th>{% trans 'Загальна каса' %}</th>
+					<th>{% trans 'Кількість замовлень' %}</th>
 					<th>{% trans 'Відсоток прийнятих замовлень' %}</th>
 					<th>{% trans 'Середній чек, грн' %}</th>
 					<th>{% trans 'Пробіг, км' %}</th>

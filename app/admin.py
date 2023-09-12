@@ -719,7 +719,6 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
             obj.user = user
             obj.partner = Partner.objects.get(user=request.user)
-            obj.role = Role.DRIVER_MANAGER
         if change and not obj.user.is_active:
             obj.partner = None
             user = AuthUser.objects.get(username=obj.login)

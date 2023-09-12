@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-11 15:35+0300\n"
+"POT-Creation-Date: 2023-09-12 11:04+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -139,13 +139,25 @@ msgstr "Read less <"
 msgid "Читати далі >"
 msgstr "Read more >"
 
-#: static/dashboard/js/scripts-partner.js:577
+#: static/dashboard/js/scripts-partner.js:116
+msgid "Дохід (грн.)"
+msgstr "Income (UAH)"
+
+#: static/dashboard/js/scripts-partner.js:303
+msgid "по"
+msgstr "to"
+
+#: static/dashboard/js/scripts-partner.js:304
+#: static/dashboard/js/scripts-partner.js:305
+msgid "грн"
+msgstr "UAH"
+
+#: static/dashboard/js/scripts-partner.js:581
 msgid "База даних оновлено"
 msgstr "Database updated"
 
-#: static/dashboard/js/scripts-partner.js:585
+#: static/dashboard/js/scripts-partner.js:589
 msgid ""
 "Помилка оновлення бази даних. Спробуйте пізніше або зверніться до "
 "адміністратора"
-msgstr ""
-"Error updating database. Try again later or contact the administrator"
+msgstr "Error updating database. Try again later or contact the administrator"

@@ -100,8 +100,8 @@ msgstr "The password does not match"
 #: taxi_service/templates/dashboard/dashboard-investor.html:58
 #: taxi_service/templates/dashboard/dashboard-manager.html:60
 #: taxi_service/templates/dashboard/dashboard-partner.html:63
-msgid "Підтвердити новий пароль:"
-msgstr "Confirm new password:"
+msgid "Підтвердіть:"
+msgstr "Confirm:"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:61
 #: taxi_service/templates/dashboard/dashboard-manager.html:64
@@ -134,8 +134,8 @@ msgid "грн."
 msgstr "UAH"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:111
-msgid "Загальний кілометраж авто"
-msgstr "Total mileage of the car"
+msgid "Загальний пробіг, км"
+msgstr "Total mileage, km"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:118
 msgid "Загальні витрати на авто"
@@ -199,8 +199,8 @@ msgstr "Expenses:"
 #: taxi_service/templates/dashboard/dashboard-investor.html:192
 #: taxi_service/templates/dashboard/dashboard-manager.html:220
 #: taxi_service/templates/dashboard/dashboard-partner.html:266
-msgid "Повна сума авто:"
-msgstr "Full amount of the car:"
+msgid "Загальна сума:"
+msgstr "Total amount:"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:92
 #: taxi_service/templates/dashboard/dashboard-partner.html:94
@@ -227,7 +227,7 @@ msgstr "Total rent for the period"
 #: taxi_service/templates/dashboard/dashboard-partner.html:185
 #: taxi_service/templates/dashboard/dashboard-partner.html:194
 msgid "по"
-msgstr "by"
+msgstr "to"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:124
 #: taxi_service/templates/dashboard/dashboard-partner.html:186
@@ -268,8 +268,8 @@ msgstr "Car efficiency"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:226
 #: taxi_service/templates/dashboard/dashboard-partner.html:272
-msgid "Топ Водіїв"
-msgstr "Top Drivers"
+msgid "Рейтинг водіїв"
+msgstr "Driver rating"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:230
 msgid "Виберіть період:"
@@ -302,12 +302,12 @@ msgstr "Driver"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:243
 #: taxi_service/templates/dashboard/dashboard-partner.html:289
-msgid "Всього каса"
+msgid "Загальна каса"
 msgstr "Total cash register"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:244
 #: taxi_service/templates/dashboard/dashboard-partner.html:290
-msgid "Всього замовлень"
+msgid "Кількість замовлень"
 msgstr "Total orders"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:245
