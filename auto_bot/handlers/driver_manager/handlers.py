@@ -313,7 +313,7 @@ def get_partner_vehicles(update, context):
         else:
             callback = 'Spending_vehicle'
         query.edit_message_text(partner_vehicles)
-        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback, 'Spending_car'))
+        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback, 'Setup_vehicles'))
     else:
         query.edit_message_text(no_manager_vehicles)
 
