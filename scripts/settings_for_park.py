@@ -30,6 +30,9 @@ settings = {
     'DEVELOPER_CHAT_ID': ('-900290422', 'Чат для розробників'),
     'PRIVACY_POLICE': ('url', 'Політика конфіденційності'),
     'CONTRACT_OFFER': ('url', 'Договір оферти'),
+    'SHIPPING_CHILDS': ('url', 'Перевезення дітей'),
+    'USER_DUTY': ('100', 'Ліміт боргу для користувача'),
+    'CANCEL_ORDER': ('50', 'Ціна за відмінення замовлення')
 }
 
 settings_for_partner = {

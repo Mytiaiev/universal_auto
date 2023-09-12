@@ -72,12 +72,11 @@ def add_partner_permissions(sender, instance, created, **kwargs):
             assign_model_permissions(user)
 
 
-def filter_queryset_by_group(*groups):
+def filter_queryset_by_group(*groups, field_to_filter=None):
     def decorator(model_admin_class):
         class FilteredModelAdmin(model_admin_class):
             def get_queryset(self, request):
                 queryset = super().get_queryset(request)
-
                 if request.user.groups.filter(name='Investor').exists():
 
                     investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
@@ -88,7 +87,10 @@ def filter_queryset_by_group(*groups):
                 if request.user.groups.filter(name='Manager').exists():
                     queryset = queryset.filter(manager__user=request.user)
                 if request.user.groups.filter(name='Partner').exists():
-                    queryset = queryset.filter(partner__user=request.user)
+                    if field_to_filter is not None:
+                        queryset = queryset.filter(partner__user=request.user, **{field_to_filter: True})
+                    else:
+                        queryset = queryset.filter(partner__user=request.user)
 
                 return queryset
 
@@ -755,7 +757,7 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(Driver)
 @add_partner_on_save_model(Driver)
-class DriverAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(admin.ModelAdmin)):
     search_fields = ('name', 'second_name')
     ordering = ('name', 'second_name')
     list_per_page = 25

@@ -19,6 +19,7 @@ from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, f
     update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, send_driver_efficiency
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
+from auto_bot.handlers.main.keyboards import back_to_main_menu
 
 
 @task_postrun.connect
@@ -53,7 +54,7 @@ def choose_spending_category(update, context):
     query = update.callback_query
     redis_instance().hset(str(update.effective_chat.id), 'vehicle', query.data.split()[1])
     query.edit_message_text(choose_category_text)
-    query.edit_message_reply_markup(vehicle_spending_kb())
+    query.edit_message_reply_markup(vehicle_spending_kb('Spending_car'))
 
 
 def ask_spending_sum(update, context):
@@ -109,19 +110,19 @@ def get_drivers_from_fleets(update, context):
 def get_earning_report(update, context):
     query = update.callback_query
     query.edit_message_text(choose_period_text)
-    query.edit_message_reply_markup(inline_earning_report_kb())
+    query.edit_message_reply_markup(inline_earning_report_kb('Get_statistic'))
 
 
 def get_efficiency_report(update, context):
     query = update.callback_query
     query.edit_message_text(choose_period_text)
-    query.edit_message_reply_markup(inline_efficiency_report_kb())
+    query.edit_message_reply_markup(inline_efficiency_report_kb('Get_statistic'))
 
 
 def get_drivers_statistics(update, context):
     query = update.callback_query
     query.edit_message_text(choose_period_text)
-    query.edit_message_reply_markup(inline_driver_eff_kb())
+    query.edit_message_reply_markup(inline_driver_eff_kb('Get_statistic'))
 
 
 def get_efficiency_for_drivers(update, context):
@@ -312,7 +313,7 @@ def get_partner_vehicles(update, context):
         else:
             callback = 'Spending_vehicle'
         query.edit_message_text(partner_vehicles)
-        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback))
+        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback, 'Setup_vehicles'))
     else:
         query.edit_message_text(no_manager_vehicles)
 
@@ -324,7 +325,8 @@ def get_partner_drivers(update, context):
     drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
     if drivers:
         query.edit_message_text(partner_drivers)
-        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(pin_vehicle_callback, drivers, pk_vehicle))
+        query.edit_message_reply_markup(reply_markup=inline_partner_drivers(pin_vehicle_callback, drivers,
+                                                                            'Pin_vehicle_to_driver', pk_vehicle,))
     else:
         query.edit_message_text(no_drivers_text)
 
@@ -338,6 +340,7 @@ def pin_partner_vehicle_to_driver(update, context):
     driver_obj.vehicle = vehicle_obj
     driver_obj.save()
     query.edit_message_text(pin_vehicle_to_driver(driver_obj, vehicle_obj))
+    query.edit_message_reply_markup(back_to_main_menu())
 
 
 # Add users and vehicle to db and others

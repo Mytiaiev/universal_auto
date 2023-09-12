@@ -261,7 +261,7 @@ class Investor(models.Model):
         verbose_name_plural = 'Інвестори'
 
     def __str__(self) -> str:
-       return f'{self.user.username}'
+        return f'{self.user.username}'
 
 
 class Vehicle(models.Model):
@@ -398,6 +398,7 @@ class Driver(User):
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
+    worked = models.BooleanField(default=True, verbose_name='Працює')
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
     schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
     plan = models.IntegerField(default=12000, verbose_name='План водія')
@@ -900,22 +901,6 @@ class Comment(models.Model):
         ordering = ['-created_at']
 
 
-class ReportTelegramPayments(models.Model):
-    provider_payment_charge_id = models.CharField(max_length=50,
-                                                  verbose_name='Унікальний індитифікатор оплати в провайдері')
-    telegram_payment_charge_id = models.CharField(max_length=50,
-                                                  verbose_name='Унікальний індитифікатор оплати в телеграмі')
-    currency = models.CharField(max_length=24, verbose_name='Валюта')
-    total_amount = models.PositiveIntegerField(verbose_name='Сума оплати')
-
-    class Meta:
-        verbose_name = 'Звіт про оплату в телеграмі'
-        verbose_name_plural = 'Звіти про оплату в телеграмі'
-
-    def __str__(self):
-        return self.provider_payment_charge_id
-
-
 class Order(models.Model):
     WAITING = 'Очікується'
     IN_PROGRESS = 'Виконується'
@@ -951,8 +936,6 @@ class Order(models.Model):
     comment = models.OneToOneField(Comment, null=True, on_delete=models.SET_NULL, verbose_name='Відгук')
     checked = models.BooleanField(default=False, verbose_name='Перевірено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-    report_tg = models.OneToOneField(ReportTelegramPayments, null=True, blank=True, on_delete=models.CASCADE,
-                                     verbose_name='Звіти про оплату в телеграмі')
 
     class Meta:
         verbose_name = 'Замовлення'
@@ -960,6 +943,24 @@ class Order(models.Model):
 
     def __str__(self):
         return f'Замовлення №{self.pk}'
+
+
+class ReportTelegramPayments(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Замовлення')
+
+    provider_payment_charge_id = models.CharField(max_length=50,
+                                                  verbose_name='Унікальний індитифікатор оплати в провайдері')
+    telegram_payment_charge_id = models.CharField(max_length=50,
+                                                  verbose_name='Унікальний індитифікатор оплати в телеграмі')
+    currency = models.CharField(max_length=24, verbose_name='Валюта')
+    total_amount = models.PositiveIntegerField(verbose_name='Сума оплати')
+
+    class Meta:
+        verbose_name = 'Звіт про оплату в телеграмі'
+        verbose_name_plural = 'Звіти про оплату в телеграмі'
+
+    def __str__(self):
+        return self.provider_payment_charge_id
 
 
 class FleetOrder(models.Model):
@@ -1313,3 +1314,28 @@ class UberPaymentsOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     vendor_name = 'Uber'
+
+
+class UserBank(models.Model):
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
+    duty = models.IntegerField(default=0, verbose_name='Борг>')
+
+    class Meta:
+        verbose_name = 'Банк боргів'
+        verbose_name_plural = 'Банк боргів'
+
+    @staticmethod
+    def get_or_create(chat_id):
+        try:
+            UserBank.objects.get(chat_id=chat_id)
+        except ObjectDoesNotExist:
+            UserBank.objects.create(chat_id=chat_id)
+
+    @staticmethod
+    def get_duty(chat_id):
+        try:
+            ubank = UserBank.objects.filter(chat_id=chat_id).first()
+        except TypeError:
+            pass
+        return ubank
+

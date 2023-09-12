@@ -113,7 +113,8 @@ class UberRequest(Synchronizer):
                             'licence_plate': licence_plate,
                             'pay_cash': True,
                             'vehicle_name': vehicle_name,
-                            'vin_code': vin_code})
+                            'vin_code': vin_code,
+                            'worked': True})
         return drivers
 
     def save_report(self, day):

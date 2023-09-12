@@ -121,7 +121,6 @@ class BoltRequest(Synchronizer):
             driver_params = self.param.copy()
             driver_params['id'] = driver['id']
             driver_info = self.get_target_url(f'{self.base_url}getDriver', driver_params)
-
             if driver_info['message'] == 'OK':
                 driver_list.append({
                     'fleet_name': self.fleet,
@@ -134,6 +133,7 @@ class BoltRequest(Synchronizer):
                     'licence_plate': '',
                     'vehicle_name': '',
                     'vin_code': '',
+                    'worked': True,
                 })
             time.sleep(0.5)
         return driver_list

@@ -8,7 +8,7 @@ from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 from auto.tasks import health_check
-from app.models import User, Client, ParkSettings, Manager
+from app.models import User, Client, ParkSettings, Manager, UserBank
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
     inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_about_us
 import logging
@@ -28,6 +28,7 @@ def start(update, context):
     redis_instance().delete(str(chat_id))
     redis_instance().expire(str(chat_id), 3600)
     menu(update, context)
+    UserBank.get_or_create(chat_id)
     clients = list(User.objects.filter(chat_id=chat_id))
     managers = list(Manager.objects.filter(chat_id=chat_id))
     users = clients + managers
@@ -58,8 +59,10 @@ def start(update, context):
 
 def start_query(update, context):
     query = update.callback_query
-    clients = list(User.objects.filter(chat_id=update.effective_chat.id))
-    managers = list(Manager.objects.filter(chat_id=update.effective_chat.id))
+    chat_id = str(update.effective_chat.id)
+    redis_instance().delete(str(chat_id))
+    clients = list(User.objects.filter(chat_id=chat_id))
+    managers = list(Manager.objects.filter(chat_id=chat_id))
     users = clients + managers
     if len(users) == 1:
         user = users[0]
@@ -169,10 +172,9 @@ def error(update, context):
                              text=message, parse_mode=ParseMode.HTML)
 
 
-
 def menu(update, context):
     # chat_id = update.effective_chat.id
-    # driver_manager = DriverManager.get_by_chat_id(chat_id)
+    # driver_manager = Manager.get_by_chat_id(chat_id)
     # driver = Driver.get_by_chat_id(chat_id)
     # manager = ServiceStationManager.get_by_chat_id(chat_id)
     # owner = Owner.get_by_chat_id(chat_id)

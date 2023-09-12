@@ -16,9 +16,9 @@ choose_from_address_text = "Оберіть, будь ласка, Вашу адр
 choose_to_address_text = "Оберіть, будь ласка, адресу призначення."
 wrong_address_request = "Нам не вдалось обробити Вашу адресу, спробуйте ще раз"
 no_location_text = 'Нам не вдалось обробити Ваше місце знаходження'
-info_address_text = "Ви можете скористатись кнопкою або ввести адресу вручну"
+info_address_text = "У Вас є опція вибору: використати кнопку або ввести адресу вручну"
 ask_spot_text = 'Чи вірна ця адреса?'
-from_address_text = 'Введіть, будь ласка, адресу місця посадки:'
+from_address_text = 'Введіть, будь ласка, адресу Вашого місцезнаходження:'
 arrival_text = 'Введіть, будь ласка, адресу місця призначення:'
 payment_text = 'Виберіть, будь ласка, спосіб оплати:'
 order_customer_text = "Коли водій буде на місці, ви отримаєте повідомлення." \
@@ -34,7 +34,7 @@ order_complete = "Ваше замовлення прийняте, очікуйт
 route_trip_text = "Поїздка була згідно маршруту?"
 calc_price_text = 'Проводимо розрахунок вартості...'
 wrong_time_format = 'Невірний формат.Вкажіть, будь ласка, час у форматі HH:MM(напр. 18:45)'
-ask_time_text = 'Вкажіть, будь ласка, час для подачі таксі(напр. 18:45)'
+ask_time_text = 'Вкажіть, будь ласка, бажану годину для прибуття таксі(напр. 18:45)'
 already_accepted = "Це замовлення вже виконано або виконується."
 decline_order = "Ви не прийняли замовлення, ваш рейтинг понизився на 1"
 client_decline = "Ви відмовились від замовлення"
@@ -55,6 +55,19 @@ update_text = "Оновлюємо інформацію"
 add_info_text = "Бажаєте додати коментар до замовлення?"
 ask_info_text = "Напишіть, будь ласка, Ваш коментар"
 too_long_text = "Занадто великий коментар, вкажіть тільки найважливіше"
+order_not_payment = 'У Вас вже є неоплачене замовлення. ' \
+                    'Ви зможете використовувати наш сервіс після закриття попереднього замовлення'
+end_trip = 'Поїздка була оплачена заздалегіть.'
+second_payment_info = 'Виставляємо рахунок клієнту, дочекайтесь оплати'
+duty_of_user = 'За вами накопичений борг. ' \
+               'Щоб продовжити сплатіть його'
+success_duty = 'Ваш борг погашено'
+return_money = 'Повернення коштів'
+have_duty = 'Ми утримали ваші кошти, так як ви мали заборгованість перед нашим таксі'
+return_money_from_system = 'Ваші кошти повернуться протягом доби.\n'
+get_money = 'Ми утримали кошти за скасоване замовлення в розмірі'
+get_money_cash = 'Та за попередні несплачені замовлення в розмірі'
+put_on_bank = 'Та помістили їх на ваш рахунок. Вони будуть враховані при наступному замовлені'
 choose_action = "Оберіть необхідну дію"
 personal_order_text = "Основна ідея послуги <Персональний водій> полягає в наданні клієнту професійного водія," \
                        " який буде керувати автомобілем за його замовленням та вимогами." \
@@ -90,7 +103,8 @@ order_inline_buttons = (
     "\u2705 Залишити відгук",
     "\U0001F4DD Додати коментар",
     "\u274c Ні, дякую",
-    '\u2705 Змінити тип оплати',
+    "\u2705 Змінити тип оплати",
+    "\u2705 Сплатити борг",
 )
 personal_order_buttons = (
     "\u2139 Інформація про послугу",
@@ -186,7 +200,7 @@ def client_order_info(order):
                f"Загальна вартість: {order.sum} грн\n" \
                f"Довжина маршруту: {order.distance_google} км\n"
     if order.info:
-        message += f"Коментар: {order.info}"
+        message += f"Коментар: {order.info}\n"
     if order.order_time:
         time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
         message += f"Час подачі:{time}\n"
@@ -213,6 +227,12 @@ def driver_complete_text(price):
     return message
 
 
+def driver_duty(price, client=True):
+    message_to = "Водій Вам винен: " if client else "Ви винні клієнту: "
+    message = f"Поїздку завершено\n{message_to}{price}грн"
+    return message
+
+
 def time_order_accepted(address, time):
     return f"Ви прийняли замовлення, за адресою {address} на {time}.\n" \
            f"Ми повідомимо вам, коли буде наближатись час до виконання."
@@ -228,19 +248,19 @@ def client_order_text(driver, vehicle, plate, phone, price):
     return message
 
 
-def manager_change_payments_info(order):
-    message = f"Замовлення: {order.pk}\n" \
-              f"Водій: {order.driver}\n" \
-              f"Автомобіль: {order.driver.vehicle}\n" \
-              f"Сума замовлення: {order.sum}\n" \
-              f"Змінив спосіб оплати на: {order.payment_method}\n"
-    return message
-
-
 def small_time_delta(time, delta):
     format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
     message = f'Вкажіть, будь ласка, більш пізній час.\n' \
               f'Мінімальний час для передзамовлення: {format_time}'
+    return message
+
+
+def accept_order(sum, cancel=None):
+    message = 'Сплатіть замовлення, щоб розпочати пошук водія:\n' \
+              f'Cума замовлення {sum}грн\n'
+    if cancel:
+        message += 'Або скасуйте замовлення'
+
     return message
 
 

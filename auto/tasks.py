@@ -14,23 +14,24 @@ from telegram import ParseMode
 from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, \
-    ParkSettings, \
+    ParkSettings, DriverEfficiency, FleetOrder, \
     UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, \
-    DriverEfficiency, FleetOrder, \
-    TransactionsConversantion, VehicleSpendings
+    TransactionsConversantion, VehicleSpendings, ReportTelegramPayments
 from django.db.models import Sum, IntegerField, FloatField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
     get_driver_efficiency_report
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
-    inline_spot_keyboard, inline_reject_order, personal_order_end_kb, personal_driver_end_kb
+    inline_spot_keyboard, inline_second_payment_kb, inline_reject_order, personal_order_end_kb, \
+    personal_driver_end_kb
+
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
-    search_driver_2, no_driver_in_radius, driver_arrived, complete_order_text, driver_complete_text, \
+    search_driver_2, no_driver_in_radius, driver_arrived, driver_complete_text, \
     client_order_text, order_customer_text, search_driver, personal_time_route_end, personal_order_info, \
-    pd_order_not_accepted, driver_text_personal_end, client_text_personal_end
+    pd_order_not_accepted, driver_text_personal_end, client_text_personal_end, payment_text
 from auto_bot.handlers.order.utils import text_to_client
 from auto_bot.main import bot
-from scripts.conversion import convertion, haversine, get_location_from_db, get_route_price
+from scripts.conversion import convertion, haversine, get_location_from_db
 from auto.celery import app
 from scripts.redis_conn import redis_instance
 from selenium_ninja.bolt_sync import BoltRequest
@@ -281,9 +282,11 @@ def update_driver_status(self, partner_pk):
 @app.task(bind=True, queue='bot_tasks')
 def update_driver_data(self, partner_pk, manager_id=None):
     try:
+        drivers = Driver.objects.filter(partner=partner_pk)
+        drivers.update(worked=False)
         BoltRequest(partner_pk).synchronize()
-        UklonRequest(partner_pk).synchronize()
         UberRequest(partner_pk).synchronize()
+        UklonRequest(partner_pk).synchronize()
         UaGpsSynchronizer(partner_pk).get_vehicle_id()
         success = True
     except Exception as e:
@@ -516,6 +519,11 @@ def send_time_order(self):
                                           reply_markup=reply_markup,
                                           parse_mode=ParseMode.HTML)
             driver = order.driver
+            report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
+                                                  driver.phone_number, order.sum)
+            message_info = redis_instance().hget(str(order.chat_id_client), 'client_msg')
+            client_msg = text_to_client(order, report_for_client, delete_id=message_info)
+            redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
             order.save()
@@ -527,15 +535,13 @@ def send_time_order(self):
 
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
-def order_create_task(self, order_data):
+def order_create_task(self, order_data, report=None):
     try:
-        distance_price = get_route_price(order_data['latitude'], order_data['longitude'],
-                                         order_data['to_latitude'], order_data['to_longitude'],
-                                         ParkSettings.get_value('GOOGLE_API_KEY'))
-
-        order_data['sum'] = distance_price[0]
-        order_data['distance_google'] = round(distance_price[1], 2)
-        Order.objects.create(**order_data)
+        order = Order.objects.create(**order_data)
+        if report is not None:
+            response = ReportTelegramPayments.objects.filter(pk=report).first()
+            response.order = order
+            response.save()
     except Exception as e:
         if self.request.retries <= self.max_retries:
             self.retry(exc=e, countdown=5)
@@ -546,9 +552,9 @@ def order_create_task(self, order_data):
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
 def search_driver_for_order(self, order_pk):
-
     try:
         order = Order.objects.get(id=order_pk)
+        client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
         if order.status_order == Order.CANCELED:
             return
         if order.status_order == Order.ON_TIME:
@@ -558,26 +564,24 @@ def search_driver_for_order(self, order_pk):
             if order.chat_id_client:
                 bot.send_message(chat_id=order.chat_id_client,
                                  text=no_driver_in_radius,
-                                 reply_markup=inline_search_kb())
+                                 reply_markup=inline_search_kb(order.pk))
+                text_to_client(order, delete_id=client_msg)
+
             return
-        client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
         if self.request.retries == self.max_retries:
             if order.chat_id_client:
                 bot.edit_message_text(chat_id=order.chat_id_client,
                                       text=no_driver_in_radius,
-                                      reply_markup=inline_search_kb(),
+                                      reply_markup=inline_search_kb(order.pk),
                                       message_id=client_msg)
             return
         if self.request.retries == 0:
-            bot.edit_message_text(chat_id=order.chat_id_client, text=client_order_info(order), message_id=client_msg)
-            last_msg = text_to_client(order, search_driver, button=inline_reject_order(order.pk))
+            last_msg = text_to_client(order, search_driver, message_id=client_msg)
             redis_instance().hset(order.chat_id_client, 'client_msg', last_msg)
         elif self.request.retries == 1:
-            text_to_client(order, search_driver_1, message_id=client_msg,
-                           button=inline_reject_order(order.pk))
+            text_to_client(order, search_driver_1, message_id=client_msg)
         else:
-            text_to_client(order, search_driver_2, message_id=client_msg,
-                           button=inline_reject_order(order.pk))
+            text_to_client(order, search_driver_2, message_id=client_msg)
         drivers = Driver.objects.filter(chat_id__isnull=False, vehicle__isnull=False)
         for driver in drivers:
             if driver.driver_status == Driver.ACTIVE:
@@ -608,7 +612,7 @@ def search_driver_for_order(self, order_pk):
             else:
                 continue
         self.retry(args=[order_pk], countdown=30)
-    except ObjectDoesNotExist as e:
+    except (ObjectDoesNotExist, BadRequest) as e:
         logger.error(e)
 
 
@@ -624,9 +628,8 @@ def send_map_to_client(self, order_pk, licence, message, chat):
                 return
             elif distance < float(ParkSettings.get_value('SEND_DISPATCH_MESSAGE')):
                 bot.stopMessageLiveLocation(chat, message)
-                client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
                 driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
-                text_to_client(order, driver_arrived, delete_id=client_msg)
+                text_to_client(order, driver_arrived)
                 redis_instance().hset(str(order.driver.chat_id), 'start_route', int(timezone.localtime().timestamp()))
                 reply_markup = inline_client_spot(order_pk, message) if \
                     order.type_order == Order.STANDARD_TYPE else None
@@ -651,6 +654,15 @@ def send_map_to_client(self, order_pk, licence, message, chat):
         return message
 
 
+def fleet_order(instance, state=FleetOrder.COMPLETED):
+    FleetOrder.objects.create(order_id=instance.pk, driver=instance.driver,
+                              from_address=instance.from_address, destination=instance.to_the_address,
+                              accepted_time=instance.accepted_time, finish_time=timezone.localtime(),
+                              state=state,
+                              partner=instance.driver.partner,
+                              fleet='Ninja')
+
+
 @app.task(bind=True, queue='bot_tasks')
 def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
     start = datetime.fromtimestamp(start_trip_with_client)
@@ -670,9 +682,9 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         else:
             instance.sum = int(price_per_minute) + int(instance.car_delivery_price)
         instance.save()
-        text_to_client(order=instance, text=f'Сума до cплати: {instance.sum} грн\n {complete_order_text}')
-        message = driver_complete_text(instance.sum)
-        bot.edit_message_text(chat_id=instance.driver.chat_id, message_id=query, text=message)
+        bot.send_message(chat_id=instance.chat_id_client,
+                         text=payment_text,
+                         reply_markup=inline_second_payment_kb(instance.pk))
     except Exception as e:
         logger.info(e)
 
