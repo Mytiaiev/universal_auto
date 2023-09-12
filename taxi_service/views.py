@@ -16,7 +16,7 @@ from django.utils.decorators import method_decorator
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import weekly_rent, average_effective_vehicle, \
-    car_piggy_bank, get_driver_info, manager_car_piggy_bank
+    car_piggy_bank, get_driver_info, manager_car_piggy_bank, partner_car_piggy_bank
 from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
 from auto_bot.main import bot
 
@@ -79,7 +79,8 @@ class PostRequestView(View):
             'logout_invest': handler.handler_logout_investor,
             'change_password': handler.handler_change_password,
             'send_reset_code': handler.handler_change_password,
-            'update_password': handler.handler_change_password
+            'update_password': handler.handler_change_password,
+            'upd_database': handler.handler_update_database,
         }
 
         if action in method:
@@ -98,9 +99,12 @@ class GetRequestView(View):
             'order_confirm': handler.handle_order_confirm,
             'get_cash_investor': handler.handle_get_investor_cash,
             'get_cash_manager': handler.handle_get_manager_cash,
+            'get_cash_partner': handler.handle_get_partner_cash,
             'get_drivers_manager': handler.handle_get_drivers_manager,
+            'get_drivers_partner': handler.handle_get_drivers_partner,
             'investor': handler.handle_effective_vehicle,
             'manager': handler.handle_effective_vehicle,
+            'partner': handler.handle_effective_vehicle,
             'is_logged_in': handler.handle_is_logged_in,
             'get_role': handler.handle_get_role
         }
@@ -171,6 +175,7 @@ class DashboardPartnerView(TemplateView):
         context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
         context['average_effective_vehicle'] = average_effective_vehicle()
+        context['car_piggy_bank'] = partner_car_piggy_bank(self.request)
 
         return context
 

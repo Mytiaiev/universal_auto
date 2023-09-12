@@ -217,9 +217,11 @@ class User(models.Model):
 
 
 class Manager(models.Model):
-    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
-    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
-    email = models.EmailField(max_length=254, blank=True, null=True, verbose_name='Електрона пошта')
+    login = models.CharField(max_length=255, verbose_name='Логін')
+    password = models.CharField(max_length=255, verbose_name='Пароль')
+    first_name = models.CharField(max_length=255, verbose_name="Ім'я")
+    last_name = models.CharField(max_length=255, verbose_name='Прізвище')
+    email = models.EmailField(max_length=254, verbose_name='Електрона пошта')
     phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
     chat_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індетифікатор чата')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')

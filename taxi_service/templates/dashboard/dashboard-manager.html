@@ -31,37 +31,37 @@
 		<div class="menu-icon" onclick="openSidebar()">
 			<span class="material-icons-outlined">menu</span>
 		</div>
-		<div class="header-left">
-			<span class="material-icons-outlined">search</span>
-		</div>
+{#		<div class="header-left">#}
+{#			<span class="material-icons-outlined">search</span>#}
+{#		</div>#}
 		<div class="header-right">
 			<span id="account_circle"></span>
 		</div>
 		<div class="burger-menu">
 			<div class="burger-content">
-				<button id="changePassword" type="button">Змінити пароль</button>
-				<button id="logout-dashboard" type="button">Вийти</button>
+				<button id="changePassword" type="button">{% trans 'Змінити пароль' %}</button>
+				<button id="logout-dashboard" type="button">{% trans 'Вийти' %}</button>
 			</div>
 			<div class="burger-icon"></div>
 		</div>
 		<div id="passwordChangeForm" style="display: none;">
 			<span class="close-btn">&times;</span>
-			<h2>Після зміни пароля потрібно перезайти.</h2>
+			<h2>{% trans 'Після зміни пароля потрібно перезайти.' %}</h2>
 			<form id="passwordForm">
 				{% csrf_token %}
-				<h4>Старий пароль:</h4>
+				<h4>{% trans 'Старий пароль:' %}</h4>
 				<input type="password" id="oldPassword" name="oldPassword" required>
 				<p class="error-message" id="oldPasswordMessage"
-					 style="display:none; color: red">Вказано неправильний пароль</p>
-				<h4>Новий пароль:</h4>
+					 style="display:none; color: red">{% trans 'Вказано неправильний пароль' %}</p>
+				<h4>{% trans 'Новий пароль:' %}</h4>
 				<input type="password" id="newPassword" name="newPassword" required>
 				<p class="error-message" id="ChangeErrorMessage"
-					 style="display:none; color: red">Пароль не співпадає</p>
-				<h4>Підтвердити новий пароль:</h4>
+					 style="display:none; color: red">{% trans 'Пароль не співпадає' %}</p>
+				<h4>{% trans 'Підтвердіть новий пароль:' %}</h4>
 				<input type="password" id="confirmPassword" name="confirmPassword"
 							 required>
 
-				<button id="submitPassword" type="button">Змінити</button>
+				<button id="submitPassword" type="button">{% trans 'Змінити' %}</button>
 			</form>
 		</div>
 
@@ -79,24 +79,24 @@
 		<ul class="sidebar-list">
 			<li class="sidebar-list-item">
 				<a href="{% url 'dashboard_manager' %}">
-					<span class="material-icons-outlined"></span> Dashboard
+					<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
 				</a>
 			</li>
 			<li class="sidebar-list-item">
 				<span id="managerVehicleBtn" class="clickable">
-					<span class="material-icons-outlined"></span> Автомобілі
+					<span class="material-icons-outlined"></span>{% trans 'Автомобілі' %}
 				</span>
 			</li>
 			<li class="sidebar-list-item">
 				<span id="managerDriverBtn" class="clickable">
-					<span class="material-icons-outlined"></span> Водії
+					<span class="material-icons-outlined"></span>{% trans 'Водії' %}
 				</span>
 			</li>
-			<li class="sidebar-list-item">
-				<a href="#" target="_blank">
-					<span class="material-icons-outlined"></span> Повідомлення
-				</a>
-			</li>
+{#			<li class="sidebar-list-item">#}
+{#				<a href="#" target="_blank">#}
+{#					<span class="material-icons-outlined"></span> Повідомлення#}
+{#				</a>#}
+{#			</li>#}
 		</ul>
 	</aside>
 	<!-- End Sidebar -->
@@ -104,12 +104,12 @@
 	<!-- Main Manager-->
 	<main class="main-container">
 		<div class="main-title">
-			<h2>Інформаційна панель Менеджера</h2>
+			<h2>{% trans 'Інформаційна панель Менеджера' %}</h2>
 		</div>
 		<div class="main-cards">
 			<div class="card">
 				<div class="card-inner">
-					<h2>Дохід за період</h2>
+					<h2>{% trans 'Дохід за період' %}</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
 				<h3 id="weekly-income-dates"></h3>
@@ -117,57 +117,57 @@
 			</div>
 			<div class="card">
 				<div class="card-inner">
-					<h2>Загальна оренда за період</h2>
+					<h2>{% trans 'Загальна оренда за період' %}</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
-				<h3>{{ total_distance_rent.1 }} по {{ total_distance_rent.2 }}</h3>
-				<h3>Усього: {{ total_distance_rent.0 }} км</h3>
+				<h3>{{ total_distance_rent.1 }} {% trans 'по' %} {{ total_distance_rent.2 }}</h3>
+				<h3>{% trans 'Усього:' %} {{ total_distance_rent.0 }} {% trans 'км' %}</h3>
 			</div>
 			<div class="card">
 				<div class="card-inner">
-					<h2>Загальна ефективність авто за період</h2>
+					<h2>{% trans 'Загальна ефективність авто за період' %}</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
 				<h3>{{ average_effective_vehicle.1 }}
-					по {{ average_effective_vehicle.2 }}</h3>
-				<h3>{{ average_effective_vehicle.0 }} грн/км</h3>
+					{% trans 'по' %} {{ average_effective_vehicle.2 }}</h3>
+				<h3>{{ average_effective_vehicle.0 }} {% trans 'грн/км' %}</h3>
 			</div>
-			<div class="card">
-				<div class="card-inner">
-					<h2>Сповіщення</h2>
-					<span class="material-icons-outlined"></span>
-				</div>
-				<h3>56</h3>
-			</div>
+{#			<div class="card">#}
+{#				<div class="card-inner">#}
+{#					<h2>Сповіщення</h2>#}
+{#					<span class="material-icons-outlined"></span>#}
+{#				</div>#}
+{#				<h3>56</h3>#}
+{#			</div>#}
 		</div>
 		<div class="charts">
 
 			<div class="charts-card">
-				<h2 class="chart-title">Каса</h2>
+				<h2 class="chart-title">{% trans 'Каса' %}</h2>
 				<div id="bar-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
 						<input id="radio-1" type="radio" name="effective-amount" value="d"
 									 checked>
-						<label for="radio-1">день</label>
+						<label for="radio-1">{% trans 'день' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-2" type="radio" name="effective-amount" value="w">
-						<label for="radio-2">тиждень</label>
+						<label for="radio-2">{% trans 'тиждень' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-3" type="radio" name="effective-amount" value="m">
-						<label for="radio-3">місяць</label>
+						<label for="radio-3">{% trans 'місяць' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-4" type="radio" name="effective-amount" value="q">
-						<label for="radio-4">квартал</label>
+						<label for="radio-4">{% trans 'квартал' %}</label>
 					</div>
 				</div>
 			</div>
 
 			<div class="charts-card">
-				<h2 class="chart-title">Ефективність автомобіля</h2>
+				<h2 class="chart-title">{% trans 'Ефективність автомобіля' %}</h2>
 {#				<div class="car-select">#}
 {#					<select id="vehicle-select">#}
 {#						{% for vehicle in get_all_vehicle %}#}
@@ -187,15 +187,15 @@
 					<div class="radio_btn">
 						<input id="radio-5" type="radio" name="effective-period" value="w"
 									 checked>
-						<label for="radio-5">тиждень</label>
+						<label for="radio-5">{% trans 'тиждень' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-6" type="radio" name="effective-period" value="m">
-						<label for="radio-6">місяць</label>
+						<label for="radio-6">{% trans 'місяць' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-7" type="radio" name="effective-period" value="q">
-						<label for="radio-7">квартал</label>
+						<label for="radio-7">{% trans 'квартал' %}</label>
 					</div>
 				</div>
 			</div>
@@ -208,45 +208,45 @@
 								 alt="Зображення авто">
 					</div>
 					<div class="car-details">
-						<p>Номер авто:<br>{{ car.licence_plate }}</p>
-						<p>Заробіток:<br>₴ {{ car.total_kasa }}</p>
-						<p>Витрати:<br>₴ {{ car.total_spent }}</p>
+						<p>{% trans 'Номер авто:' %}<br>{{ car.licence_plate }}</p>
+						<p>{% trans 'Заробіток:' %}<br>₴ {{ car.total_kasa }}</p>
+						<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
 						<div class="progress-bar">
 							<div class="progress"
 									 style="width: {{ car.progress_percentage }}%; max-width: 100%">
 								<div class="progress-label">{{ car.progress_percentage }}%</div>
 							</div>
 						</div>
-						<p>Повна сума авто:<br>₴ {{ car.purchase_price }}</p>
+						<p>{% trans 'Загальна сума:' %}<br>₴ {{ car.purchase_price }}</p>
 					</div>
 				</div>
 			</div>
 		{% endfor %}
 		<div class="info-driver">
-			<h2>Топ Водіїв</h2>
+			<h2>{% trans 'Рейтинг водіїв' %}</h2>
 
 			<form method="post">
 				{% csrf_token %}
-				<label for="period">Виберіть період:</label>
+				<label for="period">{% trans 'Виберіть період:' %}</label>
 				<select id="period" name="period">
-					<option value="day">День</option>
-					<option value="week">Тиждень</option>
-					<option value="month">Місяць</option>
-					<option value="quarter">Квартал</option>
+					<option value="day">{% trans 'День' %}</option>
+					<option value="week">{% trans 'Тиждень' %}</option>
+					<option value="month">{% trans 'Місяць' %}</option>
+					<option value="quarter">{% trans 'Квартал' %}</option>
 				</select>
 				<input type="button" value="Показати">
 			</form>
 
 			<table>
 				<tr>
-					<th>Водій Авто</th>
-					<th>Всього Каса</th>
-					<th>Всього Замовлень</th>
-					<th>Відсоток Прийнятих Замовлень</th>
-					<th>Середній чек, грн</th>
-					<th>Пробіг, км</th>
-					<th>Ефективність, грн/км</th>
-					<th>Час в Дорозі</th>
+					<th>{% trans 'Водій' %}</th>
+					<th>{% trans 'Загальна каса' %}</th>
+					<th>{% trans 'Кількість замовлень' %}</th>
+					<th>{% trans 'Відсоток прийнятих замовлень' %}</th>
+					<th>{% trans 'Середній чек, грн' %}</th>
+					<th>{% trans 'Пробіг, км' %}</th>
+					<th>{% trans 'Ефективність, грн/км' %}</th>
+					<th>{% trans 'Час в дорозі' %}</th>
 				</tr>
 				<tr>
 					<td></td>

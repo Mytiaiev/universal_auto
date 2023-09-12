@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-06-21 11:40+0300\n"
+"POT-Creation-Date: 2023-09-12 11:04+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,8 +30,7 @@ msgstr "Cash"
 msgid "Картка"
 msgstr "Card"
 
-#: static/app/js/custom.js:206 static/app/js/custom.js:530
-#: static/app/js/custom.js:806
+#: static/app/js/custom.js:206 static/app/js/custom.js:806
 msgid "Відмовитись"
 msgstr "Reject"
 
@@ -75,18 +74,6 @@ msgstr "Please leave a review"
 #: static/app/js/custom.js:467
 msgid "Ваша заявка прийнята. Очікуйте на автомобіль!"
 msgstr "Your application has been accepted. Wait for the car!"
-
-#: static/app/js/custom.js:527
-msgid "Зараз спостерігається підвищений попит бажаєте збільшити ціну для прискорення пошуку?"
-msgstr "Now there is an increased demand, want to increase the price to speed up the search?"
-
-#: static/app/js/custom.js:528
-msgid "Підвищити"
-msgstr "Increase"
-
-#: static/app/js/custom.js:529
-msgid "Шукати далі"
-msgstr "Search further"
 
 #: static/app/js/custom.js:581
 msgid "Приблизний час пошуку: "
@@ -151,3 +138,26 @@ msgstr "Read less <"
 #: static/app/js/custom.js:986
 msgid "Читати далі >"
 msgstr "Read more >"
+
+#: static/dashboard/js/scripts-partner.js:116
+msgid "Дохід (грн.)"
+msgstr "Income (UAH)"
+
+#: static/dashboard/js/scripts-partner.js:303
+msgid "по"
+msgstr "to"
+
+#: static/dashboard/js/scripts-partner.js:304
+#: static/dashboard/js/scripts-partner.js:305
+msgid "грн"
+msgstr "UAH"
+
+#: static/dashboard/js/scripts-partner.js:581
+msgid "База даних оновлено"
+msgstr "Database updated"
+
+#: static/dashboard/js/scripts-partner.js:589
+msgid ""
+"Помилка оновлення бази даних. Спробуйте пізніше або зверніться до "
+"адміністратора"
+msgstr "Error updating database. Try again later or contact the administrator"

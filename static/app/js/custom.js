@@ -1071,7 +1071,7 @@ $(document).ready(function () {
 		success: function (data) {
 			if (data.is_logged_in === true) {
 				$("#loginBtn").hide();
-				$("#loggedInUser").text('Кабінет Інвестора').show();
+				$("#loggedInUser").text('Особистий кабінет').show();
 			} else {
 				$("#loginBtn").show();
 				$("#loggedInUser").hide();
@@ -1138,7 +1138,7 @@ $(document).ready(function () {
 				if (response.data['success'] === true) {
 					if (response.data['role'] === 'Investor') {
 						$("#loginBtn").hide();
-						$("#loggedInUser").text('Кабінет Інвестора').show();
+						$("#loggedInUser").text('Особистий кабінет').show();
 						$("#loginForm").fadeOut();
 						window.location.href = "/dashboard-investor/";
 					}
