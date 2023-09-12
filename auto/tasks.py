@@ -285,9 +285,11 @@ def update_driver_data(self, partner_pk, manager_id=None):
         UklonRequest(partner_pk).synchronize()
         UberRequest(partner_pk).synchronize()
         UaGpsSynchronizer(partner_pk).get_vehicle_id()
+        success = True
     except Exception as e:
         logger.error(e)
-    return manager_id
+        success = False
+    return manager_id, success
 
 
 @app.task(bind=True, queue='bot_tasks')

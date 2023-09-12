@@ -1,5 +1,6 @@
 import json
 
+from celery.result import AsyncResult
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.models import User
@@ -13,7 +14,9 @@ from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 change_password_investor, send_reset_code,
                                 active_vehicles_gps, order_confirm,
                                 collect_total_earnings, effective_vehicle,
-                                investor_cash_car, get_driver_info)
+                                investor_cash_car, get_driver_info, partner_total_earnings)
+
+from auto.tasks import update_driver_data
 
 
 class PostRequestHandler:
@@ -81,7 +84,6 @@ class PostRequestHandler:
 
         return JsonResponse({}, status=200)
 
-
     def handler_success_login_investor(self, request):
         login = request.POST.get('login')
         password = request.POST.get('password')
@@ -133,6 +135,14 @@ class PostRequestHandler:
                 response = HttpResponse(json.dumps({'success': False}), content_type='application/json')
                 return response
 
+    def handler_update_database(self, request):
+        partner = Partner.objects.get(user=request.user.pk)
+        upd = update_driver_data.apply_async(args=(partner.pk,))
+        result = upd.get()
+        json_data = JsonResponse({'data': result[1]}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
 
@@ -182,20 +192,29 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_get_drivers_manager(self, request):
+    def handle_get_partner_cash(self, request):
         period = request.GET.get('period')
 
-        driver_info = get_driver_info(request, period)
+        get_cash = partner_total_earnings(period, request.user.pk)
+        json_data = JsonResponse({'data': get_cash}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
+    def handle_get_drivers_manager(self, request):
+        action = request.GET.get('action')
+        period = request.GET.get('period')
+
+        driver_info = get_driver_info(request, period, request.user.pk, action)
         json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_effective_vehicle(self, request):
+    def handle_get_drivers_partner(self, request):
+        action = request.GET.get('action')
         period = request.GET.get('period')
-        vehicle1 = request.GET.get('vehicle_id1')
-        vehicle2 = request.GET.get('vehicle_id2')
-        get_efficiency_vehicle = effective_vehicle(period, vehicle1, vehicle2)
-        json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
+
+        driver_info = get_driver_info(request, period, request.user.pk, action)
+        json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
@@ -208,15 +227,6 @@ class GetRequestHandler:
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
-
-    # def handle_manager_effective_vehicle(self, request):
-    #     period = request.GET.get('period')
-    #     vehicle_id1 = request.GET.get('vehicle_id1')
-    #     vehicle_id2 = request.GET.get('vehicle_id2')
-    #     get_efficiency_vehicle = effective_vehicle(period, vehicle_id1, vehicle_id2)
-    #     json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
-    #     response = HttpResponse(json_data, content_type='application/json')
-    #     return response
 
     def handle_is_logged_in(self, request):
         if request.user.is_authenticated:

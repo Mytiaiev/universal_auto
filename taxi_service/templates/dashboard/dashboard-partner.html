@@ -7,12 +7,15 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1.0">
 	<title>Admin Dashboard</title>
 	<!-- Montserrat Font -->
-	<link
-			href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
-			rel="stylesheet">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=Open+Sans&display=swap"
+				rel="stylesheet">
 	<!-- Material Icons -->
 	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
 				rel="stylesheet">
+	<link rel="stylesheet" type="text/css"
+				href="{% static 'app/css/bootstrap.css' %}"/>
 	<!-- Custom CSS -->
 	<link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
 	<link
@@ -22,44 +25,46 @@
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script
 			src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+	<script src="{% url 'javascript-catalog' %}"></script>
 </head>
 <body>
 <div class="grid-container">
 
 	<!-- Header -->
 	<header class="header">
-		<div class="menu-icon" onclick="openSidebar()">
+		<div class="menu-icon" onclick="toggleSidebar()">
 			<span class="material-icons-outlined">menu</span>
 		</div>
-		<div class="header-left">
-			<span class="material-icons-outlined">search</span>
-		</div>
+		{#		<div class="header-left">#}
+		{#			<span class="material-icons-outlined">search</span>#}
+		{#		</div>#}
 		<div class="header-right">
 			<span id="account_circle"></span>
 		</div>
 		<div class="burger-menu">
 			<div class="burger-content">
-				<button id="changePassword" type="button">Змінити пароль</button>
-				<button id="logout-dashboard" type="button">Вийти</button>
+				<button id="changePassword" type="button">{% trans 'Змінити пароль' %}</button>
+				<button id="logout-dashboard" type="button">{% trans 'Вийти' %}</button>
 			</div>
 			<div class="burger-icon"></div>
 		</div>
 		<div id="passwordChangeForm" style="display: none;">
 			<span class="close-btn">&times;</span>
-			<h2>Після зміни пароля потрібно перезайти.</h2>
+			<h2>{% trans 'Після зміни пароля потрібно перезайти.' %}</h2>
 			<form id="passwordForm">
 				{% csrf_token %}
-				<h4>Старий пароль:</h4>
+				<h4>{% trans 'Старий пароль:' %}</h4>
 				<input type="password" id="oldPassword" name="oldPassword" required>
-				<p class="error-message" id="oldPasswordMessage" style="display:none; color: red">Вказано неправильний
-					пароль</p>
-				<h4>Новий пароль:</h4>
+				<p class="error-message" id="oldPasswordMessage"
+					 style="display:none; color: red">{% trans 'Вказано неправильний пароль' %}</p>
+				<h4>{% trans 'Новий пароль:' %}</h4>
 				<input type="password" id="newPassword" name="newPassword" required>
-				<p class="error-message" id="ChangeErrorMessage" style="display:none; color: red">Пароль не співпадає</p>
-				<h4>Підтвердити новий пароль:</h4>
+				<p class="error-message" id="ChangeErrorMessage"
+					 style="display:none; color: red">{% trans 'Пароль не співпадає' %}</p>
+				<h4>{% trans 'Підтвердити новий пароль:' %}</h4>
 				<input type="password" id="confirmPassword" name="confirmPassword" required>
 
-				<button id="submitPassword" type="button">Змінити</button>
+				<button id="submitPassword" type="button">{% trans 'Змінити' %}</button>
 			</form>
 		</div>
 
@@ -76,33 +81,51 @@
 		</div>
 		<ul class="sidebar-list">
 			<li class="sidebar-list-item">
-				<a href="{% url 'dashboard' %}">
-					<span class="material-icons-outlined"></span> Dashboard
+				<a href="{% url 'dashboard_partner' %}">
+					<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
 				</a>
 			</li>
 			<li class="sidebar-list-item">
-				<a href="#" target="_blank">
-					<span class="material-icons-outlined"></span> Автомобілі
+				<span id="partnerVehicleBtn" class="clickable">
+					<span class="material-icons-outlined"></span>{% trans 'Автомобілі' %}
+				</span>
+			</li>
+			<li class="sidebar-list-item">
+				<span id="partnerDriverBtn" class="clickable">
+					<span class="material-icons-outlined"></span>{% trans 'Водії' %}
+				</span>
+			</li>
+			<li class="sidebar-list-item">
+				<span id="settingBtn" class="clickable">
+					<span class="material-icons-outlined"></span>{% trans 'Підключення агрегаторів' %}
+				</span>
+			</li>
+			<li class="sidebar-list-item">
+				<a href="{% url 'admin:index' %}" target="_blank">
+					<span class="material-icons-outlined"></span>{% trans 'Адміністративна панель' %}
 				</a>
 			</li>
 			<li class="sidebar-list-item">
-				<a href="#" target="_blank">
-					<span class="material-icons-outlined"></span> Повідомлення
-				</a>
+				<span id="updateDatabase" class="clickable">
+					<span class="material-icons-outlined"></span>{% trans 'Оновлення бази даних' %}
+				</span>
 			</li>
-			<li class="sidebar-list-item">
-					<span id="settingBtn" class="clickable">
-						<span class="material-icons-outlined"></span> Налаштування
-					</span>
-			</li>
+			<!-- Модальне вікно -->
+			<div id="loadingModal" class="modal">
+				<div class="modal-content">
+					<p id="loadingMessage">{% trans 'Зачекайте, будь ласка, поки оновлюється база даних...' %}</p>
+					<div id="loader" class="loader"></div>
+					<div id="checkmark" class="checkmark"></div>
+				</div>
+			</div>
 			<div id="settingsWindow" class="settings-window">
 				<div class="settings-content">
 					<span class="close-btn">&times;</span>
-					<h2>Компанії партнерів</h2>
+					<h2>{% trans 'Компанії агрегаторів' %}</h2>
 
 					<form id="partnerForm">
 						{% csrf_token %}
-						<h3>Виберіть партнера:</h3>
+						<h3>{% trans 'Виберіть агрегатор:' %}</h3>
 						<div class="partner-options">
 							<input type="radio" id="uberOption" name="partner" value="uber" checked>
 							<label for="uberOption">Uber</label>
@@ -112,9 +135,12 @@
 
 							<input type="radio" id="uklonOption" name="partner" value="uklon">
 							<label for="uklonOption">Uklon</label>
+
+							<input type="radio" id="gpsOption" name="partner" value="gps">
+							<label for="gpsOption">Gps</label>
 						</div>
-						<p class="error-message" id="loginErrorMessage" style="display:none; color: red">Вказано неправильний логін
-							або пароль</p>
+						<p class="error-message" id="loginErrorMessage"
+							 style="display:none; color: red">{% trans 'Вказано неправильний логін або пароль' %}</p>
 						<input type="text" id="partnerLogin" name="partnerLogin" placeholder="Логін" required>
 						<input class="showPassword partnerPassword" type="password" id="partnerPassword" name="partnerPassword"
 									 placeholder="Пароль" required>
@@ -123,12 +149,12 @@
 
 					<p class="opt-partnerForm">
 						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordPartner">
-						<label for="showPasswordPartner">Показати пароль</label>
-						<button type="button" class="login-btn">Увійти</button>
+						<label for="showPasswordPartner">{% trans 'Показати пароль' %}</label>
+						<button type="button" class="login-btn">{% trans 'Увійти' %}</button>
 					</p>
 					<div class="login-ok">
-						<span class='successful-message'>Вхід Успішний!</span>
-						<button class='logout-btn' data-form='logout'>Вийти</button>
+						<span class='successful-message'>{% trans 'Вхід Успішний!' %}</span>
+						<button class='logout-btn' data-form='logout'>{% trans 'Вийти' %}</button>
 					</div>
 				</div>
 			</div>
@@ -136,119 +162,153 @@
 	</aside>
 	<!-- End Sidebar -->
 
-	<!-- Main -->
+	<!-- Main Manager-->
 	<main class="main-container">
 		<div class="main-title">
-			<h2>Інформаційна панель Інвестора</h2>
+			<h2>{% trans 'Інформаційна панель Партнера' %}</h2>
 		</div>
-		<div class="main-cards-partner">
-			<div class="card-partner">
-				<div class="card-inner-partner">
-					<h2>Загальний дохід авто</h2>
-					<span class="material-icons-outlined">&#8372;</span><br>
+		<div class="main-cards">
+			<div class="card">
+				<div class="card-inner">
+					<h2>{% trans 'Загальний дохід за період' %}</h2>
+					<span class="material-icons-outlined"></span>
 				</div>
-				<h3 id="income-amount">грн.</h3>
+				<br><br>
+				<h3 id="weekly-income-dates"></h3>
+				<h3 id="weekly-income-amount"></h3>
 			</div>
-			<div class="card-partner">
-				<div class="card-inner-partner">
-					<h2>Загальний кілометраж авто</h2>
-					<span class="material-icons-outlined">alt_route</span><br>
+			<div class="card">
+				<div class="card-inner">
+					<h2>{% trans 'Загальна оренда за період' %}</h2>
+					<span class="material-icons-outlined"></span>
 				</div>
-				<h3 id="income-km"></h3>
+				<br><br>
+				<h3>{{ total_distance_rent.1 }} {% trans 'по' %} {{ total_distance_rent.2 }}</h3>
+				<h3>{% trans 'Усього:' %} {{ total_distance_rent.0 }} {% trans 'км' %}</h3>
 			</div>
-			<div class="card-partner">
-				<div class="card-inner-partner">
-					<h2>Загальні витрати на авто</h2>
-					<span class="material-icons-outlined">money_off</span><br>
+			<div class="card">
+				<div class="card-inner">
+					<h2>{% trans 'Загальна ефективність авто за період' %}</h2>
+					<span class="material-icons-outlined"></span>
 				</div>
-				<h3>0 грн.</h3>
+				<h3>{{ average_effective_vehicle.1 }}
+					{% trans 'по' %} {{ average_effective_vehicle.2 }}</h3>
+				<h3>{{ average_effective_vehicle.0 }} {% trans 'грн/км' %}</h3>
 			</div>
-			<div class="card-partner">
-				<div class="card-inner-partner">
-					<h2>Сповіщення</h2>
-					<span class="material-icons-outlined">email</span>
-				</div>
-				<h3>56</h3>
-			</div>
+			{#			<div class="card">#}
+			{#				<div class="card-inner">#}
+			{#					<h2>Сповіщення</h2>#}
+			{#					<span class="material-icons-outlined"></span>#}
+			{#				</div>#}
+			{#				<h3>56</h3>#}
+			{#			</div>#}
 		</div>
-
 		<div class="charts">
+
 			<div class="charts-card">
-				<h2 class="chart-title">Дохід</h2>
+				<h2 class="chart-title">{% trans 'Каса' %}</h2>
 				<div id="bar-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
 						<input id="radio-1" type="radio" name="effective-amount" value="d"
 									 checked>
-						<label for="radio-1">день</label>
+						<label for="radio-1">{% trans 'день' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-2" type="radio" name="effective-amount" value="w">
-						<label for="radio-2">тиждень</label>
+						<label for="radio-2">{% trans 'тиждень' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-3" type="radio" name="effective-amount" value="m">
-						<label for="radio-3">місяць</label>
+						<label for="radio-3">{% trans 'місяць' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-4" type="radio" name="effective-amount" value="q">
-						<label for="radio-4">поточний квартал</label>
+						<label for="radio-4">{% trans 'квартал' %}</label>
 					</div>
 				</div>
 			</div>
 
 			<div class="charts-card">
-				<h2 class="chart-title">Ефективність автомобіля</h2>
-				<div class="car-select">
-					<select id="vehicle-select">
-						{% for vehicle in get_all_vehicle %}
-							<option>{{ vehicle.licence_plate }}</option>
-						{% endfor %}
-					</select>
-				</div>
-				<div class="car-select-2">
-					<select id="vehicle-select-2">
-						{% for vehicle in get_all_vehicle %}
-							<option>{{ vehicle.licence_plate }}</option>
-						{% endfor %}
-					</select>
-				</div>
+				<h2 class="chart-title">{% trans 'Ефективність автомобіля' %}</h2>
 				<div id="area-chart"></div>
 				<div class="chart-btns">
 					<div class="radio_btn">
 						<input id="radio-5" type="radio" name="effective-period" value="w"
 									 checked>
-						<label for="radio-5">тиждень</label>
+						<label for="radio-5">{% trans 'тиждень' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-6" type="radio" name="effective-period" value="m">
-						<label for="radio-6">місяць</label>
+						<label for="radio-6">{% trans 'місяць' %}</label>
 					</div>
 					<div class="radio_btn">
 						<input id="radio-7" type="radio" name="effective-period" value="q">
-						<label for="radio-7">поточний квартал</label>
+						<label for="radio-7">{% trans 'квартал' %}</label>
 					</div>
 				</div>
 			</div>
-
+		</div>
+		{% for car in car_piggy_bank %}
 			<div class="payback-car">
 				<div class="car-item">
 					<div class="car-image">
 						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
 					</div>
 					<div class="car-details">
-						<p>Номер авто: AB1234</p>
-						<p>Заробіток: $5000</p>
-						<p>Витрати: $2500</p>
+						<p>{% trans 'Номер авто:' %}<br>{{ car.licence_plate }}</p>
+						<p>{% trans 'Заробіток:' %}<br>₴ {{ car.total_kasa }}</p>
+						<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
 						<div class="progress-bar">
-							<div class="progress" style="width: 70%;"></div>
+							<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
+								<div class="progress-label">{{ car.progress_percentage }}%</div>
+							</div>
 						</div>
-						<p>Повна сума авто: $20000</p>
+						<p>{% trans 'Повна сума авто:' %}<br>₴ {{ car.purchase_price }}</p>
 					</div>
 				</div>
 			</div>
+		{% endfor %}
+		<div class="info-driver">
+			<h2>{% trans 'Топ Водіїв' %}</h2>
+
+			<form method="post">
+				{% csrf_token %}
+				<label for="period">{% trans 'Виберіть період' %}:</label>
+				<select id="period" name="period">
+					<option value="day">{% trans 'День' %}</option>
+					<option value="week">{% trans 'Тиждень' %}</option>
+					<option value="month">{% trans 'Місяць' %}</option>
+					<option value="quarter">{% trans 'Квартал' %}</option>
+				</select>
+				<input type="button" value="Показати">
+			</form>
+
+			<table>
+				<tr>
+					<th>{% trans 'Водій' %}</th>
+					<th>{% trans 'Всього каса' %}</th>
+					<th>{% trans 'Всього замовлень' %}</th>
+					<th>{% trans 'Відсоток прийнятих замовлень' %}</th>
+					<th>{% trans 'Середній чек, грн' %}</th>
+					<th>{% trans 'Пробіг, км' %}</th>
+					<th>{% trans 'Ефективність, грн/км' %}</th>
+					<th>{% trans 'Час в дорозі' %}</th>
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+				</tr>
+			</table>
 		</div>
 	</main>
+	<!-- End Main Manager-->
 </div>
 
 <!-- Scripts -->
@@ -257,10 +317,11 @@
 	let ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 <!-- ApexCharts -->
-<script
-		src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js"></script>
-<script
-		src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
-<script src="{% static 'dashboard/js/scripts.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+				integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"
+				defer></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" defer></script>
+<script src="{% static 'dashboard/js/scripts-partner.js' %}" defer></script>
 </body>
 </html>
