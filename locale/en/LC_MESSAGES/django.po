@@ -100,8 +100,8 @@ msgstr "The password does not match"
 #: taxi_service/templates/dashboard/dashboard-investor.html:58
 #: taxi_service/templates/dashboard/dashboard-manager.html:60
 #: taxi_service/templates/dashboard/dashboard-partner.html:63
-msgid "Підтвердіть:"
-msgstr "Confirm:"
+msgid "Підтвердіть новий пароль:"
+msgstr "Confirm new password:"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:61
 #: taxi_service/templates/dashboard/dashboard-manager.html:64
