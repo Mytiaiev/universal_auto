@@ -59,8 +59,10 @@ def start(update, context):
 
 def start_query(update, context):
     query = update.callback_query
-    clients = list(User.objects.filter(chat_id=update.effective_chat.id))
-    managers = list(Manager.objects.filter(chat_id=update.effective_chat.id))
+    chat_id = str(update.effective_chat.id)
+    redis_instance().delete(str(chat_id))
+    clients = list(User.objects.filter(chat_id=chat_id))
+    managers = list(Manager.objects.filter(chat_id=chat_id))
     users = clients + managers
     if len(users) == 1:
         user = users[0]
