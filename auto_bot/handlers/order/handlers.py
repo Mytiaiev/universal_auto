@@ -139,6 +139,7 @@ def get_location(update, context):
         address = get_address(latitude, longitude,
                               ParkSettings.get_value('GOOGLE_API_KEY'))
         if address is not None:
+            redis_instance().hdel(str(chat_id), 'location_button')
             redis_instance().hset(chat_id, 'location_address', address)
             update.message.reply_text(text=f'Ваша адреса: {address}', reply_markup=ReplyKeyboardRemove())
             update.message.reply_text(text=ask_spot_text, reply_markup=inline_location_kb())
