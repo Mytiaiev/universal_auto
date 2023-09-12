@@ -200,7 +200,7 @@ def client_order_info(order):
                f"Загальна вартість: {order.sum} грн\n" \
                f"Довжина маршруту: {order.distance_google} км\n"
     if order.info:
-        message += f"Коментар: {order.info}"
+        message += f"Коментар: {order.info}\n"
     if order.order_time:
         time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
         message += f"Час подачі:{time}\n"
@@ -248,15 +248,6 @@ def client_order_text(driver, vehicle, plate, phone, price):
     return message
 
 
-def manager_change_payments_info(order):
-    message = f"Замовлення: {order.pk}\n" \
-              f"Водій: {order.driver}\n" \
-              f"Автомобіль: {order.driver.vehicle}\n" \
-              f"Сума замовлення: {order.sum}\n" \
-              f"Змінив спосіб оплати на: {order.payment_method}\n"
-    return message
-
-
 def small_time_delta(time, delta):
     format_time = (time + timedelta(minutes=delta)).time().strftime('%H:%M')
     message = f'Вкажіть, будь ласка, більш пізній час.\n' \
@@ -272,13 +263,6 @@ def accept_order(sum, cancel=None):
 
     return message
 
-
-def add_payments_money(sum):
-    return f'Ви повині сплатити за поїздку ще {sum}грн\nЗачекайте поки водій надішле форму для оплати'
-
-
-def second_payment(sum):
-    return f'Клієнт винний {sum}грн'
 
 def complete_personal_order(price):
     return f'Замовлення сформоване, сума до сплати {price}грн.'

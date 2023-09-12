@@ -24,7 +24,6 @@ from scripts.redis_conn import redis_instance, get_logger
 from app.portmone.portmone import Portmone
 
 
-
 def personal_driver_info(update, context):
     query = update.callback_query
     query.edit_message_text(choose_action)
@@ -65,12 +64,7 @@ def finish_personal_driver(update, context):
     context.bot.edit_message_text(chat_id=order.driver.chat_id,
                                   message_id=driver_msg, text=driver_complete_text(order.sum))
     text_to_client(order, complete_order_text, delete_id=client_msg, button=inline_comment_for_client())
-    FleetOrder.objects.create(order_id=order.pk, driver=order.driver,
-                              from_address=order.from_address,
-                              accepted_time=order.accepted_time, finish_time=timezone.localtime(),
-                              state=FleetOrder.COMPLETED,
-                              partner=order.driver.partner,
-                              fleet='Ninja')
+    fleet_order(order)
     redis_instance().delete(str(order.chat_id_client))
     redis_instance().delete(str(order.driver.chat_id))
 
@@ -93,7 +87,6 @@ def update_personal_order(update, context):
 
 def payment_personal_order(update, context):
     query = update.callback_query
-
     chat_id = update.effective_chat.id
     data = query.data.split()
     hours, pk = int(data[2]), data[0]
@@ -103,9 +96,10 @@ def payment_personal_order(update, context):
     edit_text = complete_personal_order(price) if pk == "None" else add_hours_text(price)
     query.edit_message_text(edit_text)
     payload = f"{chat_id} {query.message.message_id} {price}"
-    payment_request(update, context, chat_id, os.environ["PAYMENT_TOKEN"],
-                    os.environ["BOT_URL_IMAGE_TAXI"], price, payload)
-
+    payment_request(chat_id,
+                    chat_id,
+                    payload,
+                    price)
 
 def back_step_to_finish_personal(update, context):
     query = update.callback_query
@@ -283,7 +277,7 @@ def first_address_check(update, context):
         from_address(update, context)
 
 
-def payment_request(chat_id_client, provider_token, url, start_parameter, payload, price: int):
+def payment_request(chat_id_client, start_parameter, payload, price: int):
     prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
 
     # Sending a request for payment
@@ -291,11 +285,11 @@ def payment_request(chat_id_client, provider_token, url, start_parameter, payloa
                      title=payment_title,
                      description=payment_description,
                      payload=payload,
-                     provider_token=provider_token,
+                     provider_token=os.environ["PAYMENT_TOKEN"],
                      currency=payment_currency,
                      start_parameter=start_parameter,
                      prices=prices,
-                     photo_url=url,
+                     photo_url=os.environ["BOT_URL_IMAGE_TAXI"],
                      need_shipping_address=False,
                      photo_width=615,
                      photo_height=512,
@@ -352,8 +346,6 @@ def order_create(update, context):
         del order_data['order_time']
         redis_instance().hmset(f"{order_data['chat_id_client']}_", order_data)
         payment_request(order_data['chat_id_client'],
-                        os.environ["PAYMENT_TOKEN"],
-                        os.environ["BOT_URL_IMAGE_TAXI"],
                         order_data['chat_id_client'],
                         order_data['chat_id_client'],
                         order_data['sum'])
@@ -381,10 +373,6 @@ def increase_order_price(update, context):
     chat_id = query.from_user.id
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order=Order.WAITING).last()
-    client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
-    bot.edit_message_reply_markup(chat_id=order.chat_id_client,
-                                  message_id=client_msg,
-                                  reply_markup=inline_reject_order(order.pk))
     if query.data != "Continue_search":
         order.car_delivery_price += int(query.data)
         order.sum += int(query.data)
@@ -670,8 +658,6 @@ def handle_order(update, context):
             total = order.sum - total_amount
             if total > 0:
                 payment_request(order.chat_id_client,
-                                os.environ["PAYMENT_TOKEN"],
-                                os.environ["BOT_URL_IMAGE_TAXI"],
                                 order.pk,
                                 f'{order.pk} {query.message.message_id}',
                                 total)
@@ -688,8 +674,6 @@ def handle_order(update, context):
 
         else:                                       # first cash second card
             payment_request(order.chat_id_client,
-                            os.environ["PAYMENT_TOKEN"],
-                            os.environ["BOT_URL_IMAGE_TAXI"],
                             order.pk,
                             f'{order.pk} {query.message.message_id}',
                             order.sum)
@@ -699,8 +683,6 @@ def payment_duty(update, context):
     chat_id = str(update.effective_chat.id)
     duty = UserBank.get_duty(chat_id)
     payment_request(chat_id,
-                    os.environ["PAYMENT_TOKEN"],
-                    os.environ["BOT_URL_IMAGE_TAXI"],
                     chat_id,
                     chat_id,
                     duty.duty)
@@ -710,17 +692,8 @@ def payment_duty(update, context):
 def precheckout_callback(update, context):
     query = update.pre_checkout_query
     chat_id = query.from_user.id
-    order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.IN_PROGRESS).last()
-    if order:
-        data = query.invoice_payload.split()
-        redis_instance().hset(chat_id, 'payload_data', query.invoice_payload)
-        redis_instance().hset(chat_id, 'message_data', data[1])
-        if data[0] == f'{order.pk}':
-            query.answer(ok=True)
-        else:
-            query.answer(ok=False, error_message=error_payment)
-    else:
-        query.answer(ok=True)
+    redis_instance().hset(chat_id, 'payload_data', query.invoice_payload)
+    query.answer(ok=True)
 
 
 def create_report_payment(successful_payment, order=None):
@@ -750,7 +723,9 @@ def successful_payment(update, context):
         bank.duty = 0
         bank.save()
         context.bot.send_message(chat_id=chat_id, text=success_duty, reply_markup=back_to_main_menu())
-        create_report_payment(successful_payment)
+        order = Order.objects.filter(chat_id_client=chat_id, status_order=Order.CANCELED,
+                                     payment_method=price_inline_buttons[4].split()[1]).last()
+        create_report_payment(successful_payment, order)
     elif order.type_order == Order.STANDARD_TYPE:
         fleet_order(order)
         context.bot.send_message(chat_id=order.driver.chat_id, text=trip_paymented)
@@ -773,6 +748,7 @@ def successful_payment(update, context):
         driver_msg = context.bot.send_message(chat_id=order.first().driver.chat_id,
                                               text=update_hours_driver_text(update_hours))
         redis_instance().hset(str(order.first().driver.chat_id), "driver_msg", driver_msg.message_id)
+        create_report_payment(successful_payment, order)
     elif personal_order:
         save_location_to_redis(chat_id)
         user_data = redis_instance().hgetall(chat_id)
@@ -797,6 +773,7 @@ def successful_payment(update, context):
                                    text=client_personal_info(order),
                                    reply_markup=inline_reject_order(order.pk))
         redis_instance().hset(chat_id, 'client_msg', message.message_id)
+        create_report_payment(successful_payment, order)
     else:
         order_data = redis_instance().hgetall(f'{chat_id}_')
         order_data['sum'] = int(order_data['sum'])

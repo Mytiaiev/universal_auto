@@ -550,7 +550,6 @@ def order_create_task(self, order_data, report=None):
 
 @app.task(bind=True, max_retries=3, queue='bot_tasks')
 def search_driver_for_order(self, order_pk):
-
     try:
         order = Order.objects.get(id=order_pk)
         client_msg = redis_instance().hget(str(order.chat_id_client), 'client_msg')
@@ -565,6 +564,7 @@ def search_driver_for_order(self, order_pk):
                                  text=no_driver_in_radius,
                                  reply_markup=inline_search_kb(order.pk))
                 text_to_client(order, delete_id=client_msg)
+
             return
         if self.request.retries == self.max_retries:
             if order.chat_id_client:
@@ -572,14 +572,9 @@ def search_driver_for_order(self, order_pk):
                                       text=no_driver_in_radius,
                                       reply_markup=inline_search_kb(order.pk),
                                       message_id=client_msg)
-                text_to_client(order, delete_id=client_msg)
             return
         if self.request.retries == 0:
-            bot.edit_message_text(chat_id=order.chat_id_client,
-                                  text=client_order_info(order),
-                                  message_id=client_msg,
-                                  reply_markup=inline_reject_order(order.pk))
-            last_msg = text_to_client(order, search_driver)
+            last_msg = text_to_client(order, search_driver, message_id=client_msg)
             redis_instance().hset(order.chat_id_client, 'client_msg', last_msg)
         elif self.request.retries == 1:
             text_to_client(order, search_driver_1, message_id=client_msg)
@@ -615,7 +610,7 @@ def search_driver_for_order(self, order_pk):
             else:
                 continue
         self.retry(args=[order_pk], countdown=30)
-    except ObjectDoesNotExist as e:
+    except (ObjectDoesNotExist, BadRequest) as e:
         logger.error(e)
 
 
