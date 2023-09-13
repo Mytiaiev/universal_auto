@@ -421,6 +421,7 @@ def login_in(action, login_name, password, user_id):
                 description='Ідентифікатор клієнта Uklon', check_value=False)
     elif action == 'uber':
         success_login = selenium_tools.uber_login(
+            session=True,
             login=login_name,
             password=password)
         if success_login:
