@@ -117,7 +117,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(from_address, pattern="Now_order|Wrong_place"))
     dp.add_handler(CallbackQueryHandler(to_the_address, pattern="Right_place"))
     dp.add_handler(CallbackQueryHandler(first_address_check, pattern="^From_address [0-9]+$"))
-    dp.add_handler(CallbackQueryHandler(second_address_check, pattern="^To_the_address [0-9]+$"))
+    dp.add_handler(CallbackQueryHandler(second_address_check, pattern="^(To_the_address [0-9]+)|Return_info$"))
     dp.add_handler(CallbackQueryHandler(add_info_to_order, pattern="Add_information"))
     dp.add_handler(CallbackQueryHandler(get_additional_info, pattern="Choose_payment"))
     dp.add_handler(CallbackQueryHandler(order_create, pattern="Cash_payment|Card_payment"))

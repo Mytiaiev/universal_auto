@@ -1,9 +1,11 @@
 import json
 
 import requests
+from django.db.models import Q
+from django.utils import timezone
 from telegram.error import BadRequest
 
-from app.models import ParkSettings
+from app.models import ParkSettings, DriverReshuffle
 from auto_bot.main import bot
 from scripts.conversion import get_addresses_by_radius
 from scripts.redis_conn import redis_instance
@@ -12,6 +14,13 @@ from scripts.redis_conn import redis_instance
 def validate_text(text):
     if len(text) < 200:
         return True
+
+
+def check_reshuffle(driver, date=timezone.localtime().date()):
+    reshuffle = DriverReshuffle.objects.filter(Q(swap_time__date=date) &
+                                               (Q(driver_start=driver) | Q(driver_finish=driver))).first()
+    vehicle = reshuffle.swap_vehicle if reshuffle else driver.vehicle
+    return vehicle, reshuffle
 
 
 def buttons_addresses(address):

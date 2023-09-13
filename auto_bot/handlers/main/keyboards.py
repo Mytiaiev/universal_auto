@@ -20,6 +20,7 @@ def inline_more_func_kb():
     keyboard = [
         [InlineKeyboardButton(main_buttons[1], callback_data="Comment client")],
         [InlineKeyboardButton(main_buttons[2], callback_data="Job_application")],
+        [InlineKeyboardButton(main_buttons[8], url=ParkSettings.get_value('SHIPPING_CHILDS'))],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -42,17 +43,17 @@ def inline_user_kb():
         # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
         [InlineKeyboardButton(main_buttons[9], callback_data="Personal_driver")],
-        [InlineKeyboardButton(main_buttons[8], url=ParkSettings.get_value('SHIPPING_CHILDS'))],
-        [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")],
         [InlineKeyboardButton(main_buttons[7], callback_data="About_us")],
+        [InlineKeyboardButton(main_buttons[6], callback_data="Other_user")]
+
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_about_us(url1, url2):
+def inline_about_us():
     keyboard = [
-        [InlineKeyboardButton(about_us[0], url=url1)],
-        [InlineKeyboardButton(about_us[1], url=url2)],
+        [InlineKeyboardButton(about_us[0], url=ParkSettings.get_value('PRIVACY_POLICE'))],
+        [InlineKeyboardButton(about_us[1], url=ParkSettings.get_value('CONTRACT_OFFER'))],
         [InlineKeyboardButton(main_buttons[10], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -139,4 +140,4 @@ main = [InlineKeyboardButton(main_buttons[10], callback_data="Back_to_main")]
 
 
 def back_to_main_menu():
-    return InlineKeyboardMarkup([main])
+    return InlineKeyboardMarkup([[InlineKeyboardButton(main_buttons[10], callback_data="Back_to_main")]])

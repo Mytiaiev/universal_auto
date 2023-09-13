@@ -15,7 +15,7 @@ def personal_order_start_kb():
         [InlineKeyboardButton(personal_order_buttons[0], callback_data="Personal_order_info")],
         [InlineKeyboardButton(personal_order_buttons[1], callback_data="Personal_order_terms")],
         [InlineKeyboardButton(personal_order_buttons[2], callback_data="Personal_order")],
-        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -33,7 +33,7 @@ def personal_order_time_kb(pk=None):
          InlineKeyboardButton(pd_time_buttons[1], callback_data=f"{pk} Hour 3")],
         [InlineKeyboardButton(pd_time_buttons[2], callback_data=f"{pk} Hour 4"),
          InlineKeyboardButton(pd_time_buttons[3], callback_data=f"{pk} Hour 5")],
-        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Return_info")],
     ]
     if pk:
         keyboard = [
@@ -67,7 +67,7 @@ def inline_payment_kb():
     keyboard = [
         [InlineKeyboardButton(price_inline_buttons[4], callback_data="Cash_payment 0")],
         [InlineKeyboardButton(price_inline_buttons[5], callback_data="Card_payment 1")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_payment")]
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Return_info")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -92,7 +92,7 @@ def inline_start_order_kb():
     keyboard = [
         # [InlineKeyboardButton(search_inline_buttons[4], callback_data="Now_order")],
         [InlineKeyboardButton(search_inline_buttons[3], callback_data="On_time_order")],
-        [InlineKeyboardButton(main_buttons[9], callback_data="Back_to_main")]
+        [InlineKeyboardButton(main_buttons[10], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -101,7 +101,7 @@ def inline_search_kb(pk):
     keyboard = [
         [InlineKeyboardButton(search_inline_buttons[0], callback_data=f"Increase_price {pk}")],
         [InlineKeyboardButton(search_inline_buttons[1], callback_data="Continue_search")],
-        # [InlineKeyboardButton(search_inline_buttons[3], callback_data="Tomorrow_order")],
+        [InlineKeyboardButton(search_inline_buttons[3], callback_data="No_driver_time_order")],
         [InlineKeyboardButton(search_inline_buttons[2], callback_data=f"Client_reject {pk}")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -186,19 +186,20 @@ def inline_time_order_kb(pk=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_choose_date_kb():
+def inline_choose_date_kb(back_step):
     keyboard = [
         [InlineKeyboardButton(date_inline_buttons[0], callback_data="Today_order")],
         [InlineKeyboardButton(date_inline_buttons[1], callback_data="Tomorrow_order")],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def inline_add_info_kb():
+def inline_add_info_kb(back_step):
     keyboard = [
         [InlineKeyboardButton(order_inline_buttons[10], callback_data="Add_information")],
-        [InlineKeyboardButton(order_inline_buttons[11], callback_data="Choose_payment")]
+        [InlineKeyboardButton(order_inline_buttons[11], callback_data="Choose_payment")],
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)]
     ]
     return InlineKeyboardMarkup(keyboard)
 
