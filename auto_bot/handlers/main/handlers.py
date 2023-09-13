@@ -28,7 +28,7 @@ def start(update, context):
     redis_instance().delete(str(chat_id))
     redis_instance().expire(str(chat_id), 3600)
     menu(update, context)
-    UserBank.get_or_create(chat_id)
+    UserBank.objects.get_or_create(chat_id)
     clients = list(User.objects.filter(chat_id=chat_id))
     managers = list(Manager.objects.filter(chat_id=chat_id))
     users = clients + managers
@@ -106,8 +106,7 @@ def update_phone_number(update, context):
 def get_about_us(update, context):
     query = update.callback_query
     query.edit_message_text(text=more_func_text)
-    query.edit_message_reply_markup(reply_markup=inline_about_us(url1=ParkSettings.get_value('PRIVACY_POLICE'),
-                                                                 url2=ParkSettings.get_value('CONTRACT_OFFER')))
+    query.edit_message_reply_markup(reply_markup=inline_about_us())
 
 
 def celery_test(update, context):

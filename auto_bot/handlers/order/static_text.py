@@ -158,7 +158,7 @@ def price_info(in_city, out_city):
 
 def order_info(order, time=None):
     if order.order_time and time:
-        time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+        time = timezone.localtime(order.order_time).strftime("%d.%m.%Y %H:%M")
         message = f"<u>Замовлення на певний час {order.pk}:</u>\n" \
                   f"<b>Час подачі:{time}</b>\n"
     else:
@@ -175,7 +175,7 @@ def order_info(order, time=None):
 
 
 def personal_order_info(order):
-    time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+    time = timezone.localtime(order.order_time).strftime("%d.%m.%Y %H:%M")
     message = f"<u>Замовлення персонального водія {order.pk}:</u>\n" \
               f"<b>Час подачі:{time}</b>\n" \
               f"Адреса посадки: {order.from_address}\n" \
@@ -204,13 +204,13 @@ def client_order_info(order, time_update=None):
     if order.info:
         message += f"Коментар: {order.info}\n"
     if order.order_time:
-        time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+        time = timezone.localtime(order.order_time).strftime("%d.%m.%Y %H:%M")
         message += f"Час подачі:{time}\n"
     return message
 
 
 def client_personal_info(order):
-    time = timezone.localtime(order.order_time).strftime("%Y-%m-%d %H:%M")
+    time = timezone.localtime(order.order_time).strftime("%d.%m.%Y %H:%M")
     message = f"Ваше замовлення {order.pk}:\n" \
               f"Час подачі:{time}\n" \
               f"Адреса посадки: {order.from_address}\n" \

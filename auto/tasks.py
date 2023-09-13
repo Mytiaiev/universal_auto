@@ -29,8 +29,8 @@ from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_searc
 from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, driver_complete_text, \
     client_order_text, order_customer_text, search_driver, personal_time_route_end, personal_order_info, \
-    pd_order_not_accepted, driver_text_personal_end, client_text_personal_end
-from auto_bot.handlers.order.utils import text_to_client, check_reshuffle, payment_text
+    pd_order_not_accepted, driver_text_personal_end, client_text_personal_end, payment_text
+from auto_bot.handlers.order.utils import text_to_client, check_reshuffle
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db
 from auto.celery import app

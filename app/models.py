@@ -558,7 +558,7 @@ class NinjaFleet(Fleet):
 
 
 class StatusChange(models.Model):
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+    driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL)
     vehicle = models.ForeignKey(Vehicle, null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=255, verbose_name='Назва статусу')
     start_time = models.DateTimeField(auto_now_add=True)
@@ -568,7 +568,7 @@ class StatusChange(models.Model):
 
 class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
+    driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
@@ -1127,7 +1127,7 @@ class CarEfficiency(models.Model):
 
 class DriverEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
-    driver = models.ForeignKey(Driver, null=True, on_delete=models.CASCADE, verbose_name='Водій авто')
+    driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій авто')
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
     total_orders = models.IntegerField(default=0, verbose_name="Всього замовлень")
     accept_percent = models.IntegerField(default=0, verbose_name="Відсоток прийнятих замовлень")
@@ -1318,24 +1318,15 @@ class UberPaymentsOrder(models.Model):
 
 class UserBank(models.Model):
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
-    duty = models.IntegerField(default=0, verbose_name='Борг>')
+    duty = models.IntegerField(default=0, verbose_name='Борг')
 
     class Meta:
         verbose_name = 'Банк боргів'
         verbose_name_plural = 'Банк боргів'
 
-    @staticmethod
-    def get_or_create(chat_id):
-        try:
-            UserBank.objects.get(chat_id=chat_id)
-        except ObjectDoesNotExist:
-            UserBank.objects.create(chat_id=chat_id)
 
     @staticmethod
     def get_duty(chat_id):
-        try:
-            ubank = UserBank.objects.filter(chat_id=chat_id).first()
-        except TypeError:
-            pass
-        return ubank
+        return UserBank.objects.filter(chat_id=chat_id).first()
+
 
