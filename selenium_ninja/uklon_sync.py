@@ -36,7 +36,6 @@ class UklonRequest(Synchronizer):
             redis_instance().set(f"{self.partner_id}_park_id", response['fleets'][0]['id'])
         return redis_instance().get(f"{self.partner_id}_park_id")
 
-
     def create_session(self):
         response = requests.post(f"{Service.get_value('UKLON_SESSION')}auth", json=self.park_payload()).json()
         self.redis.set(f"{self.partner_id}token", response["access_token"])
@@ -172,7 +171,7 @@ class UklonRequest(Synchronizer):
         return self.download_report(day)
 
     def get_driver_status(self):
-        first_key, second_key = 'width_client', 'wait'
+        first_key, second_key = 'with_client', 'wait'
         drivers = {
                 first_key: [],
                 second_key: [],

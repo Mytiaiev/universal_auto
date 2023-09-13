@@ -285,7 +285,7 @@ class VehicleGPSAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('name', 'second_name', 'email', 'phone_number', 'role', 'created_at')
+    list_display = ('name', 'second_name', 'email', 'chat_id', 'phone_number', 'role', 'created_at')
     list_display_links = ('name', 'second_name')
     list_filter = ['created_at', 'role']
     search_fields = ('name', 'second_name')
@@ -293,13 +293,13 @@ class UserAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['name', 'second_name', 'email', 'role', 'phone_number']}),
+        (None, {'fields': ['name', 'second_name', 'email', 'chat_id', 'role', 'phone_number']}),
     ]
 
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'second_name', 'email', 'phone_number', 'created_at')
+    list_display = ('name', 'second_name', 'email', 'chat_id', 'phone_number', 'created_at')
     list_display_links = ('name', 'second_name')
     list_filter = ['created_at']
     search_fields = ('name', 'second_name')

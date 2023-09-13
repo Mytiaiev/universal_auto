@@ -115,7 +115,6 @@ def auto_send_task_bot(self):
 def get_uber_session(self, partner_pk):
     chrome = SeleniumTools(partner_pk)
     chrome.uber_login(session=True)
-    chrome.quit()
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -249,26 +248,16 @@ def get_driver_efficiency(self, partner_pk, day=None):
 @app.task(bind=True, queue='beat_tasks')
 def update_driver_status(self, partner_pk):
     try:
-        bolt_status = BoltRequest(partner_pk).get_drivers_status()
-        logger.info(f'Bolt {bolt_status}')
-
-        uklon_status = UklonRequest(partner_pk).get_driver_status()
-        logger.info(f'Uklon {uklon_status}')
-
-        uber_status = UberRequest(partner_pk).get_drivers_status()
-        logger.info(f'Uber {uber_status}')
-
         status_online = set()
         status_with_client = set()
-        if bolt_status is not None:
-            status_online = status_online.union(set(bolt_status['wait']))
-            status_with_client = status_with_client.union(set(bolt_status['with_client']))
-        if uklon_status is not None:
-            status_online = status_online.union(set(uklon_status['wait']))
-            status_with_client = status_with_client.union(set(uklon_status['width_client']))
-        if uber_status is not None:
-            status_online = status_online.union(set(uber_status['wait']))
-            status_with_client = status_with_client.union(set(uber_status['with_client']))
+        settings = check_available_fleets(partner_pk)
+        for setting in settings:
+            update_class = fleets.get(setting.key)
+            if update_class:
+                statuses = update_class(partner_pk).get_drivers_status()
+                logger.info(f"{update_class.__name__} {statuses}")
+                status_online.union(set(statuses['wait']))
+                status_with_client.union(set(statuses['with_client']))
         drivers = Driver.objects.filter(deleted_at=None, partner=partner_pk)
         for driver in drivers:
             active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
@@ -311,6 +300,7 @@ def update_driver_data(self, partner_pk, manager_id=None):
             synchronization_class = synchronize_classes.get(setting.key)
             if synchronization_class:
                 synchronization_class(partner_pk).synchronize()
+        success = True
     except Exception as e:
         logger.error(e)
         success = False
@@ -543,7 +533,8 @@ def send_time_order(self):
                                           reply_markup=reply_markup,
                                           parse_mode=ParseMode.HTML)
             driver = order.driver
-            report_for_client = client_order_text(driver, driver.vehicle.name, driver.vehicle.licence_plate,
+            vehicle = check_reshuffle(driver)[0]
+            report_for_client = client_order_text(driver, vehicle.name, vehicle.licence_plate,
                                                   driver.phone_number, order.sum)
             message_info = redis_instance().hget(str(order.chat_id_client), 'client_msg')
             client_msg = text_to_client(order, report_for_client, delete_id=message_info)
@@ -600,7 +591,6 @@ def search_driver_for_order(self, order_pk):
                                       message_id=client_msg)
             return
         if self.request.retries == 0:
-            bot.edit_message_text(chat_id=order.chat_id_client, text=client_order_info(order), message_id=client_msg)
             last_msg = text_to_client(order, search_driver, button=inline_reject_order(order.pk))
             redis_instance().hset(order.chat_id_client, 'client_msg', last_msg)
         elif self.request.retries == 1:

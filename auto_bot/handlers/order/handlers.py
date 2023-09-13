@@ -97,6 +97,7 @@ def payment_personal_order(update, context):
     query.edit_message_text(edit_text)
     payload = f"{chat_id} {query.message.message_id} {price}"
     payment_request(chat_id,
+                    chat_id,
                     payload,
                     price)
 
@@ -112,7 +113,8 @@ def continue_order(update, context):
     query = update.callback_query
     chat_id = update.effective_chat.id
     order = Order.objects.filter(chat_id_client=chat_id,
-                                 status_order__in=[Order.ON_TIME, Order.WAITING])
+                                 status_order__in=[Order.ON_TIME, Order.WAITING],
+                                 type_order=Order.STANDARD_TYPE)
     if order:
         query.edit_message_text(already_ordered)
     else:
@@ -280,7 +282,7 @@ def first_address_check(update, context):
         from_address(update, context)
 
 
-def payment_request(chat_id_client, payload, price: int):
+def payment_request(chat_id_client, start_parameter, payload, price: int):
     prices = [LabeledPrice(label=payment_price, amount=int(price) * 100)]
 
     # Sending a request for payment
@@ -288,6 +290,7 @@ def payment_request(chat_id_client, payload, price: int):
                      title=payment_title,
                      description=payment_description,
                      payload=payload,
+                     start_parameter=start_parameter,
                      provider_token=os.environ["PAYMENT_TOKEN"],
                      currency=payment_currency,
                      prices=prices,
@@ -301,34 +304,34 @@ def payment_request(chat_id_client, payload, price: int):
 
 def order_create(update, context):
     query = update.callback_query
-    chat_id = str(update.effective_chat.id)
-    data = int(query.data.split(' ')[1])
+
+    data = int(query.data.split()[1])
     button_text = query.message.reply_markup.inline_keyboard[data][0].text
-    payment = button_text.split(' ')[1]
+    payment = button_text.split()[1]
     user = Client.get_by_chat_id(update.effective_chat.id)
     query.edit_message_text(creating_order_text)
-    redis_instance().hset(chat_id, 'client_msg', query.message.message_id)
-    save_location_to_redis(chat_id)
-    destination_lat, destination_long = get_geocoding_address(chat_id, 'addresses_second', 'to_the_address')
+    redis_instance().hset(user.chat_id, 'client_msg', query.message.message_id)
+    save_location_to_redis(user.chat_id)
+    destination_lat, destination_long = get_geocoding_address(user.chat_id, 'addresses_second', 'to_the_address')
 
     order_data = {
-        'from_address': redis_instance().hget(chat_id, 'from_address'),
-        'latitude': redis_instance().hget(chat_id, 'latitude'),
-        'longitude': redis_instance().hget(chat_id, 'longitude'),
-        'to_the_address': redis_instance().hget(chat_id, 'to_the_address'),
+        'from_address': redis_instance().hget(user.chat_id, 'from_address'),
+        'latitude': redis_instance().hget(user.chat_id, 'latitude'),
+        'longitude': redis_instance().hget(user.chat_id, 'longitude'),
+        'to_the_address': redis_instance().hget(user.chat_id, 'to_the_address'),
         'to_latitude': destination_lat,
         'to_longitude': destination_long,
         'phone_number': user.phone_number,
         'chat_id_client': user.chat_id,
         'payment_method': payment,
     }
-    if redis_instance().hexists(chat_id, 'info'):
-        order_data.update({'info': redis_instance().hget(chat_id, 'info')}),
-    if not redis_instance().hexists(chat_id, 'time_order'):
+    if redis_instance().hexists(user.chat_id, 'info'):
+        order_data.update({'info': redis_instance().hget(user.chat_id, 'info')}),
+    if not redis_instance().hexists(user.chat_id, 'time_order'):
         order_data['status_order'] = Order.WAITING
     else:
         order_data['status_order'] = Order.ON_TIME
-        order_time = redis_instance().hget(chat_id, 'time_order')
+        order_time = redis_instance().hget(user.chat_id, 'time_order')
         order_data['order_time'] = datetime.fromisoformat(order_time)
 
     distance_price = get_route_price(order_data['latitude'], order_data['longitude'],
@@ -337,17 +340,17 @@ def order_create(update, context):
 
     order_data['sum'] = distance_price[0]
     order_data['distance_google'] = round(distance_price[1], 2)
-    duty = UserBank.get_duty(chat_id)
-    if duty:
+    duty = UserBank.get_duty(user.chat_id)
+    if duty and duty.duty:
         order_data['sum'] += duty.duty
         order_data['car_delivery_price'] = duty.duty
-        redis_instance().hset(chat_id, 'delivary_price_duty', 1)
+        redis_instance().hset(user.chat_id, 'delivary_price_duty', 1)
     if order_data['payment_method'] == price_inline_buttons[5].split()[1]:
-        bot.send_message(chat_id=order_data['chat_id_client'],
-                         text=accept_order(order_data['sum']))
+        query.edit_message_text(accept_order(order_data['sum']))
         del order_data['order_time']
         redis_instance().hmset(f"{order_data['chat_id_client']}_", order_data)
         payment_request(order_data['chat_id_client'],
+                        order_data['chat_id_client'],
                         order_data['chat_id_client'],
                         order_data['sum'])
     else:
@@ -370,11 +373,12 @@ def ask_client_action(update, context):
 
 def increase_order_price(update, context):
     query = update.callback_query
-    query.edit_message_text(update_text)
     chat_id = query.from_user.id
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order=Order.WAITING).last()
     if query.data != "Continue_search":
+        query.edit_message_text(update_text)
+        redis_instance().hset(str(chat_id), 'client_msg', query.message.message_id)
         order.car_delivery_price += int(query.data)
         order.sum += int(query.data)
     order.checked = False
@@ -394,7 +398,8 @@ def choose_date_order(update, context):
         query.edit_message_reply_markup(user_duty())
     else:
         order = Order.objects.filter(chat_id_client=chat_id,
-                                     status_order__in=[Order.ON_TIME, Order.WAITING]).count()
+                                     status_order__in=[Order.ON_TIME, Order.WAITING],
+                                     type_order=Order.STANDARD_TYPE).count()
         if order >= 1:
             query.edit_message_text(order_not_payment)
         else:
@@ -584,7 +589,7 @@ def cash_order(update, query, order, sum, default=True):
 
 def handle_order(update, context):
     query = update.callback_query
-    data = query.data.split(' ')
+    data = query.data.split()
     chat_id = str(update.effective_chat.id)
     driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
     order = Order.objects.filter(pk=int(data[1])).first()
@@ -663,10 +668,11 @@ def handle_order(update, context):
             bank.save()
         if order.payment_method == price_inline_buttons[5].split()[1]:   # first card second card
             first_payment = ReportTelegramPayments.objects.get(order=order.pk)
-            total_amount = first_payment.total_amount - (first_payment.total_amount * 0.02)
+            total_amount = first_payment.total_amount * 0.98
             total = order.sum - total_amount
             if total > 0:
                 payment_request(order.chat_id_client,
+                                order.chat_id_client,
                                 f'{order.pk} {query.message.message_id}',
                                 total)
             else:
@@ -682,6 +688,7 @@ def handle_order(update, context):
 
         else:                                       # first cash second card
             payment_request(order.chat_id_client,
+                            order.chat_id_client,
                             f'{order.pk} {query.message.message_id}',
                             order.sum)
 
@@ -690,6 +697,7 @@ def payment_duty(update, context):
     chat_id = str(update.effective_chat.id)
     duty = UserBank.get_duty(chat_id)
     payment_request(chat_id,
+                    chat_id,
                     chat_id,
                     duty.duty)
     redis_instance().hset(chat_id, 'duty', 1)
@@ -738,13 +746,11 @@ def successful_payment(update, context):
             context.bot.send_message(chat_id=order.driver.chat_id, text=trip_paymented)
             text_to_client(order, complete_order_text, button=inline_comment_for_client())
         elif order.type_order == Order.PERSONAL_TYPE:
-            create_report_payment(successful_payment, order)
             update_hours = int(redis_instance().hget(chat_id, 'hours'))
             order.update(
                 payment_hours=F('payment_hours') + update_hours,
                 sum=F('sum') + int(list_payload[2])
             )
-            context.bot.delete_message(chat_id=chat_id, message_id=redis_instance().hget(chat_id, 'invoice'))
             context.bot.send_message(chat_id=chat_id,
                                      text=update_hours_text(update_hours))
             try:
@@ -774,7 +780,6 @@ def successful_payment(update, context):
         if user_data.get('info'):
             data['info'] = user_data['info']
         order = Order.objects.create(**data)
-        # context.bot.delete_message(chat_id=chat_id, message_id=redis_instance().hget(chat_id, 'invoice'))
         message = bot.send_message(chat_id=chat_id,
                                    text=client_personal_info(order),
                                    reply_markup=inline_reject_order(order.pk))
