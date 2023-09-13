@@ -170,7 +170,7 @@ class UklonRequest(Synchronizer):
 
         return self.download_report(day)
 
-    def get_driver_status(self):
+    def get_drivers_status(self):
         first_key, second_key = 'with_client', 'wait'
         drivers = {
                 first_key: [],
