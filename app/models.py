@@ -394,7 +394,7 @@ class Driver(User):
         BUYER = 'BUYER', 'Схема під викуп'
         CUSTOM = 'CUSTOM', 'Індивідуальна схема'
 
-    fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
+    # fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
@@ -569,7 +569,6 @@ class StatusChange(models.Model):
 class Fleets_drivers_vehicles_rate(models.Model):
     fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name='Водій')
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True, verbose_name='Автомобіль')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
@@ -976,6 +975,7 @@ class FleetOrder(models.Model):
     destination = models.CharField(max_length=255, blank=True, null=True, verbose_name='Місце висадки')
     accepted_time = models.DateTimeField(blank=True, null=True, verbose_name='Час прийняття замовленя')
     finish_time = models.DateTimeField(blank=True, null=True, verbose_name='Час завершення замовлення')
+    distance = models.DecimalField(null=True, decimal_places=2, max_digits=6, verbose_name="Відстань за маршрутом")
     state = models.CharField(max_length=255, blank=True, null=True, verbose_name='Статус замовлення')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')

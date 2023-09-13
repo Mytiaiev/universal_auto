@@ -413,6 +413,7 @@ def login_in(action, login_name, password, user_id):
         if success_login:
             update_park_set(partner, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon')
             update_park_set(partner, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon')
+            update_park_set(partner, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
             hex_length = 16
             random_hex = secrets.token_hex(hex_length)
             update_park_set(
@@ -429,6 +430,8 @@ def login_in(action, login_name, password, user_id):
         success_login = selenium_tools.gps_login(login=login_name, password=password)
         if success_login:
             update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
+            update_park_set(partner, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
+            update_park_set(partner, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
             success_login = True
     return success_login
 

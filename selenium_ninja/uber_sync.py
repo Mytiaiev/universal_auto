@@ -1,7 +1,8 @@
 
 import requests
 
-from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner
+from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder
+from selenium_ninja.driver import SeleniumTools
 
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -260,4 +261,11 @@ class UberRequest(Synchronizer):
                     'vehicle_name': f'{vehicle["make"]} {vehicle["model"]}',
                     'vin_code': vehicle['vin']})
             return vehicles_list
+
+    def get_fleet_orders(self, day, pk):
+        if not FleetOrder.objects.filter(fleet="Uber", accepted_time__date=day):
+            uber_driver = SeleniumTools(self.partner_id)
+            uber_driver.download_payments_order("Uber", day)
+            uber_driver.save_trips_report("Uber", day)
+            uber_driver.quit()
 

@@ -1,4 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.db.models import Q
+
 from scripts.redis_conn import redis_instance, get_logger
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner
 import datetime
@@ -22,140 +24,106 @@ class Synchronizer:
         drivers = self.get_drivers_table()
         vehicles = self.get_vehicles()
         print(f'Received {self.__class__.__name__} vehicles: {len(vehicles)}')
-        print(vehicles)
         print(f'Received {self.__class__.__name__} drivers: {len(drivers)}')
-        for driver in drivers:
-            self.create_driver(**driver)
         for vehicle in vehicles:
             self.get_or_create_vehicle(**vehicle)
+        for driver in drivers:
+            self.create_driver(**driver)
 
     def create_driver(self, **kwargs):
         try:
             fleet = Fleet.objects.get(name=kwargs['fleet_name'])
         except ObjectDoesNotExist:
             return
-        drivers = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
-                                                              driver_external_id=kwargs['driver_external_id'],
-                                                              partner=self.partner_id)
-        if not drivers:
-            fleets_drivers_vehicles_rate = Fleets_drivers_vehicles_rate.objects.create(
+        drivers, created = Fleets_drivers_vehicles_rate.objects.get_or_create(
                 fleet=fleet,
-                driver=self.get_or_create_driver(**kwargs),
-                vehicle=self.get_or_create_vehicle(**kwargs),
                 driver_external_id=kwargs['driver_external_id'],
-                pay_cash=kwargs['pay_cash'],
-                partner=Partner.get_partner(self.partner_id),
-            )
-            fleets_drivers_vehicles_rate.save()
-            self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
-            self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
-        else:
-            for fleets_drivers_vehicles_rate in drivers:
-                if fleets_drivers_vehicles_rate.pay_cash != kwargs['pay_cash']:
-                    fleets_drivers_vehicles_rate.pay_cash = kwargs['pay_cash']
-                    fleets_drivers_vehicles_rate.save(update_fields=['pay_cash'])
-                self.update_driver_fields(fleets_drivers_vehicles_rate.driver, **kwargs)
-                self.update_vehicle_fields(fleets_drivers_vehicles_rate.vehicle, **kwargs)
+                partner=self.partner_id,
+                defaults={
+                        "fleet": fleet,
+                        "driver_external_id": kwargs['driver_external_id'],
+                        "driver": self.get_or_create_driver(**kwargs),
+                        "pay_cash": kwargs['pay_cash'],
+                        "partner": Partner.get_partner(self.partner_id)})
 
-    @staticmethod
-    def get_driver_by_name(name, second_name, partner):
-        try:
-            return Driver.objects.get(name=name, second_name=second_name, partner=partner)
-        except MultipleObjectsReturned:
-            return Driver.objects.filter(name=name, second_name=second_name, partner=partner)[0]
-
-    @staticmethod
-    def get_driver_by_phone_or_email(phone_number, email, partner):
-        try:
-            if phone_number:
-                return Driver.objects.get(phone_number__icontains=phone_number[-10::], partner=partner)
-            else:
-                raise ObjectDoesNotExist
-        except (MultipleObjectsReturned, ObjectDoesNotExist):
-            try:
-                return Driver.objects.get(email__icontains=email, partner=partner)
-            except MultipleObjectsReturned:
-                raise ObjectDoesNotExist
+        if not created and drivers.pay_cash != kwargs["pay_cash"]:
+            drivers.pay_cash = kwargs["pay_cash"]
+            drivers.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
-        try:
-            driver = self.get_driver_by_name(kwargs['name'],
-                                             kwargs['second_name'],
-                                             partner=self.partner_id)
-        except ObjectDoesNotExist:
+        driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
+                                        Q(name=kwargs['second_name'], second_name=kwargs['name']) |
+                                        Q(phone_number__icontains=kwargs['phone_number'][-10:])) &
+                                       Q(partner=self.partner_id)).first()
+        if not driver:
+            driver = Driver.objects.create(name=kwargs['name'],
+                                           second_name=kwargs['second_name'],
+                                           phone_number=kwargs['phone_number'],
+                                           email=kwargs['email'],
+                                           vehicle=self.get_or_create_vehicle(**kwargs),
+                                           role=Role.DRIVER,
+                                           partner=Partner.get_partner(self.partner_id))
             try:
-                driver = self.get_driver_by_name(kwargs['second_name'],
-                                                 kwargs['name'],
-                                                 partner=self.partner_id)
+                client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
+                driver.chat_id = client.chat_id
+                driver.save()
+                fleet = Fleet.objects.get(name='Ninja')
+                Fleets_drivers_vehicles_rate.objects.get_or_create(fleet=fleet,
+                                                                   driver_external_id=driver.chat_id,
+                                                                   driver=driver,
+                                                                   partner=Partner.get_partner(self.partner_id))
             except ObjectDoesNotExist:
-                try:
-                    driver = self.get_driver_by_phone_or_email(kwargs['phone_number'],
-                                                               kwargs['email'],
-                                                               partner=self.partner_id)
-                except ObjectDoesNotExist:
-                    driver = Driver.objects.create(name=kwargs['name'],
-                                                   second_name=kwargs['second_name'],
-                                                   phone_number=kwargs['phone_number'],
-                                                   email=kwargs['email'],
-                                                   role=Role.DRIVER,
-                                                   partner=Partner.get_partner(self.partner_id))
-                    try:
-                        client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
-                        driver.chat_id = client.chat_id
-                        driver.save()
-                        fleet = Fleet.objects.get(name='Ninja')
-                        Fleets_drivers_vehicles_rate.objects.get_or_create(fleet=fleet,
-                                                                           driver_external_id=driver.chat_id,
-                                                                           driver=driver,
-                                                                           partner=driver.partner,
-                                                                           vehicle=driver.vehicle)
-                    except ObjectDoesNotExist:
-                        pass
+                pass
+        else:
+            self.update_driver_fields(driver, **kwargs)
         return driver
 
     def get_or_create_vehicle(self, **kwargs):
         licence_plate, v_name, vin = kwargs['licence_plate'], kwargs['vehicle_name'], kwargs['vin_code']
-        if not licence_plate:
-            licence_plate = 'Unknown car'
-        try:
-            vehicle = Vehicle.objects.get(licence_plate=licence_plate, partner=self.partner_id)
-        except ObjectDoesNotExist:
-            vehicle = Vehicle.objects.create(
-                name=v_name.upper(),
-                licence_plate=licence_plate,
-                vin_code=vin,
-                partner=Partner.get_partner(self.partner_id)
-            )
-        return vehicle
+
+        if licence_plate:
+            vehicle, created = Vehicle.objects.get_or_create(licence_plate=licence_plate,
+                                                             partner=self.partner_id,
+                                                             defaults={
+                                                                  "name": v_name.upper(),
+                                                                  "licence_plate": licence_plate,
+                                                                  "vin_code": vin,
+                                                                  "partner": Partner.get_partner(self.partner_id)
+                                                             })
+            if not created:
+                self.update_vehicle_fields(vehicle, **kwargs)
+            return vehicle
 
     @staticmethod
     def update_vehicle_fields(vehicle, **kwargs):
-        update_fields, vehicle_name, vin_code = [], kwargs['vehicle_name'], kwargs['vin_code']
+        vehicle_name = kwargs.get('vehicle_name')
+        vin_code = kwargs.get('vin_code')
 
-        if vehicle.name != vehicle_name and vehicle_name:
+        if vehicle_name and vehicle.name != vehicle_name:
             vehicle.name = vehicle_name
-            update_fields.append('name')
-        if vehicle.vin_code != vin_code and vin_code:
+
+        if vin_code and vehicle.vin_code != vin_code:
             vehicle.vin_code = vin_code
-            update_fields.append('vin_code')
-        if update_fields:
-            vehicle.save(update_fields=update_fields)
 
-    @staticmethod
-    def update_driver_fields(driver, **kwargs):
-        key_phone, key_email, worked = 'phone_number', 'email', 'worked'
-        update_fields, phone_number, email, status = [], kwargs[key_phone], kwargs[key_email], kwargs[worked]
-        driver.worked = status
-        update_fields.append(worked)
+        if vehicle_name or vin_code:
+            vehicle.save()
 
-        if not driver.phone_number and phone_number:
+    def update_driver_fields(self, driver, **kwargs):
+
+        phone_number = kwargs.get('phone_number')
+        email = kwargs.get('email')
+        worked = kwargs.get('worked')
+        vehicle = self.get_or_create_vehicle(**kwargs)
+        if vehicle and driver.vehicle != vehicle:
+            driver.vehicle = vehicle
+        if phone_number and not driver.phone_number:
             driver.phone_number = phone_number
-            update_fields.append(key_phone)
-        if driver.email != email and email:
+
+        if email and driver.email != email:
             driver.email = email
-            update_fields.append(key_email)
-        if update_fields:
-            driver.save(update_fields=update_fields)
+
+        driver.worked = worked
+        driver.save()
 
     @staticmethod
     def start_report_interval(day):
