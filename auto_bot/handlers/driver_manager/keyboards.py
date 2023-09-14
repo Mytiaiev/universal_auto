@@ -55,19 +55,19 @@ def inline_earning_report_kb(back_step):
 
 def inline_partner_vehicles(vehicles, callback, back_step):
     keyboard = [
-        [[InlineKeyboardButton(f"{vehicle}", callback_data=f"{callback} {vehicle.id}")] for vehicle in vehicles],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)],
-        main]
+        [InlineKeyboardButton(f"{vehicle}", callback_data=f"{callback} {vehicle.id}")] for vehicle in vehicles]
+    keyboard.append([InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)])
+    keyboard.append(main)
 
     return InlineKeyboardMarkup(keyboard)
 
 
 def inline_partner_drivers(callback, drivers, back_step, pk_vehicle=None):
     keyboard = [
-        [[InlineKeyboardButton(f"{str(driver).split()[0][0]}.{str(driver).split()[1]}",
-                               callback_data=f"{callback} {driver.id} {pk_vehicle}")] for driver in drivers],
-        [InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)],
-        main]
+        [InlineKeyboardButton(f"{str(driver).split()[0][0]}.{str(driver).split()[1]}",
+                              callback_data=f"{callback} {driver.id} {pk_vehicle}")] for driver in drivers]
+    keyboard.append([InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)])
+    keyboard.append(main)
     return InlineKeyboardMarkup(keyboard)
 
 
