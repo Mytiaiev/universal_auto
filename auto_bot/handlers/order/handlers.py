@@ -377,8 +377,6 @@ def increase_order_price(update, context):
     order = Order.objects.filter(chat_id_client=chat_id,
                                  status_order=Order.WAITING).last()
     if query.data != "Continue_search":
-        query.edit_message_text(update_text)
-        redis_instance().hset(str(chat_id), 'client_msg', query.message.message_id)
         order.car_delivery_price += int(query.data)
         order.sum += int(query.data)
     order.checked = False

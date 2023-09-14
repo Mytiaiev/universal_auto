@@ -37,7 +37,7 @@ def inline_statistic_kb():
         [InlineKeyboardButton(manager_buttons[2], callback_data="Get_report")],
         [InlineKeyboardButton(manager_buttons[3], callback_data="Get_efficiency_report")],
         [InlineKeyboardButton(manager_buttons[4], callback_data="Get_driver_efficiency")],
-        [InlineKeyboardButton(main_buttons[10], callback_data="Back_to_main")]
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

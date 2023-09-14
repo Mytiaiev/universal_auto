@@ -182,6 +182,7 @@ def get_weekly_report(update, context):
     messages = generate_message_weekly(manager.partner.pk)
     owner_message = messages.get(str(query.from_user.id)) or no_drivers_text
     query.edit_message_text(owner_message)
+    query.edit_message_reply_markup(back_to_main_menu())
 
 
 def get_report(update, context):
@@ -310,10 +311,12 @@ def get_partner_vehicles(update, context):
     if vehicles:
         if query.data == "Pin_vehicle_to_driver":
             callback = 'select_vehicle'
+            back_step = "Setup_drivers"
         else:
             callback = 'Spending_vehicle'
+            back_step = 'Setup_vehicles'
         query.edit_message_text(partner_vehicles)
-        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback, 'Setup_vehicles'))
+        query.edit_message_reply_markup(reply_markup=inline_partner_vehicles(vehicles, callback, back_step))
     else:
         query.edit_message_text(no_manager_vehicles)
 

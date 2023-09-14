@@ -131,7 +131,7 @@ def get_orders_from_fleets(self, partner_pk, day=None):
 
 @app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
-
+    day = get_day_for_task(day)
     settings = check_available_fleets(partner_pk)
     for setting in settings:
         request_class = fleets.get(setting.key)
@@ -577,11 +577,11 @@ def search_driver_for_order(self, order_pk):
             order.order_time = None
             order.save()
             if order.chat_id_client:
-                bot.send_message(chat_id=order.chat_id_client,
-                                 text=no_driver_in_radius,
-                                 reply_markup=inline_search_kb(order.pk))
-                text_to_client(order, delete_id=client_msg)
-
+                msg = text_to_client(order,
+                                     text=no_driver_in_radius,
+                                     button=inline_search_kb(order.pk),
+                                     delete_id=client_msg)
+                redis_instance().hset(str(order.chat_id_client), 'client_msg', msg.message_id)
             return
         if self.request.retries == self.max_retries:
             if order.chat_id_client:
@@ -591,18 +591,17 @@ def search_driver_for_order(self, order_pk):
                                       message_id=client_msg)
             return
         if self.request.retries == 0:
-            last_msg = text_to_client(order, search_driver, button=inline_reject_order(order.pk))
-            redis_instance().hset(order.chat_id_client, 'client_msg', last_msg)
+            text_to_client(order, search_driver, message_id=client_msg, button=inline_reject_order(order.pk))
         elif self.request.retries == 1:
             text_to_client(order, search_driver_1, message_id=client_msg,
                            button=inline_reject_order(order.pk))
         else:
             text_to_client(order, search_driver_2, message_id=client_msg,
                            button=inline_reject_order(order.pk))
-        drivers = Driver.objects.filter(chat_id__isnull=False, vehicle__isnull=False)
+        drivers = Driver.objects.filter(chat_id__isnull=False)
         for driver in drivers:
-            if driver.driver_status == Driver.ACTIVE:
-                vehicle = check_reshuffle(driver)[0]
+            vehicle = check_reshuffle(driver)[0]
+            if driver.driver_status == Driver.ACTIVE and vehicle:
                 driver_lat, driver_long = get_location_from_db(vehicle.licence_plate)
                 distance = haversine(float(driver_lat), float(driver_long),
                                      float(order.latitude), float(order.longitude))

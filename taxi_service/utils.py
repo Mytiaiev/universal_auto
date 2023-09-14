@@ -442,8 +442,8 @@ def partner_logout(action, user_pk):
     action_dict = {
         'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),
         'bolt_logout': ('BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK'),
-        'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID'),
-        'gps_logout': ('UAGPS_TOKEN',)
+        'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID', 'WITHDRAW_UKLON'),
+        'gps_logout': ('UAGPS_TOKEN', 'FREE_RENT', 'RENT_PRICE')
     }
     choose_action = action_dict.get(action)
     if choose_action:

@@ -56,8 +56,8 @@ class Synchronizer:
                                         Q(phone_number__icontains=kwargs['phone_number'][-10:])) &
                                        Q(partner=self.partner_id)).first()
         if not driver:
-            driver = Driver.objects.create(name=kwargs['name'],
-                                           second_name=kwargs['second_name'],
+            driver = Driver.objects.create(name=self.r_dup(kwargs['name']),
+                                           second_name=self.r_dup(kwargs['second_name']),
                                            phone_number=kwargs['phone_number'],
                                            email=kwargs['email'],
                                            vehicle=self.get_or_create_vehicle(**kwargs),

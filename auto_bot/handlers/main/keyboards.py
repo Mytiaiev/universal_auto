@@ -73,7 +73,7 @@ def inline_more_manager_kb():
     keyboard = [
         # [InlineKeyboardButton(main_buttons[0], callback_data="Call_taxi")],
         [InlineKeyboardButton(main_buttons[0], callback_data="On_time_order")],
-        [InlineKeyboardButton(main_buttons[10], callback_data="Back_to_main")]
+        [InlineKeyboardButton(order_inline_buttons[6], callback_data="Back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
