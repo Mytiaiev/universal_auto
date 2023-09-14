@@ -342,11 +342,6 @@ def order_create(update, context):
         distance_price[0] > int(ParkSettings.get_value('MINIMUM_PRICE_FOR_ORDER')) else \
         int(ParkSettings.get_value('MINIMUM_PRICE_FOR_ORDER'))
     order_data['distance_google'] = round(distance_price[1], 2)
-    duty = UserBank.get_duty(user.chat_id)
-    if duty and duty.duty:
-        order_data['sum'] += duty.duty
-        order_data['car_delivery_price'] = duty.duty
-        redis_instance().hset(user.chat_id, 'delivary_price_duty', 1)
     if order_data['payment_method'] == price_inline_buttons[5].split()[1]:
         query.edit_message_text(accept_order(order_data['sum']))
         del order_data['order_time']
