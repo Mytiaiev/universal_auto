@@ -33,9 +33,7 @@ class Partner(models.Model):
         return cls.objects.get(id=pk)
 
     def __str__(self):
-        if self.user:
-            return str(self.user.username)
-        return ''
+        return str(self.user.username) if self.user else ''
 
 
 class Payments(models.Model):
@@ -261,7 +259,7 @@ class Investor(models.Model):
         verbose_name_plural = 'Інвестори'
 
     def __str__(self) -> str:
-        return f'{self.user.username}'
+        return str(self.user.username) if self.user else ''
 
 
 class Vehicle(models.Model):

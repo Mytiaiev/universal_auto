@@ -79,8 +79,8 @@ class PostRequestHandler:
 
     def handler_handler_logout(self, request):
         action = request.POST.get('action')
-        partner_pk = request.user.pk
-        partner_logout(action, partner_pk)
+        partner = Partner.objects.get(user=request.user.pk)
+        partner_logout(action, partner.pk)
 
         return JsonResponse({}, status=200)
 
@@ -137,11 +137,13 @@ class PostRequestHandler:
 
     def handler_update_database(self, request):
         partner = Partner.objects.get(user=request.user.pk)
-        upd = update_driver_data.apply_async(args=(partner.pk,))
-        result = upd.get()
-        json_data = JsonResponse({'data': result[1]}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
+        upd = update_driver_data.delay(partner.pk)
+        while True:
+            if upd.ready():
+                result = upd.get()
+                json_data = JsonResponse({'data': result[1]}, safe=False)
+                response = HttpResponse(json_data, content_type='application/json')
+                return response
 
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
@@ -165,12 +167,12 @@ class GetRequestHandler:
         period = request.GET.get('period')
         user = request.user
         if user.is_active and Manager.objects.filter(user=user).exists():
-            get_drivers_cash = collect_total_earnings(period)
+            get_drivers_cash = collect_total_earnings(period, user.pk)
             json_data = JsonResponse({'data': get_drivers_cash}, safe=False)
             response = HttpResponse(json_data, content_type='application/json')
             return response
         elif user.is_active and Partner.objects.filter(user=user).exists():
-            get_cash = investor_cash_car(period)
+            get_cash = investor_cash_car(period, user.pk)
             json_data = JsonResponse({'data': get_cash}, safe=False)
             response = HttpResponse(json_data, content_type='application/json')
             return response
