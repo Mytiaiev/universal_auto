@@ -58,7 +58,8 @@ class Synchronizer:
         if not driver:
             driver = Driver.objects.create(name=self.r_dup(kwargs['name']),
                                            second_name=self.r_dup(kwargs['second_name']),
-                                           phone_number=kwargs['phone_number'],
+                                           phone_number=kwargs['phone_number']
+                                           if len(kwargs['phone_number']) <= 13 else None,
                                            email=kwargs['email'],
                                            vehicle=self.get_or_create_vehicle(**kwargs),
                                            role=Role.DRIVER,

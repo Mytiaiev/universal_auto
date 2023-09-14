@@ -581,7 +581,7 @@ def search_driver_for_order(self, order_pk):
                                      text=no_driver_in_radius,
                                      button=inline_search_kb(order.pk),
                                      delete_id=client_msg)
-                redis_instance().hset(str(order.chat_id_client), 'client_msg', msg.message_id)
+                redis_instance().hset(str(order.chat_id_client), 'client_msg', msg)
             return
         if self.request.retries == self.max_retries:
             if order.chat_id_client:
