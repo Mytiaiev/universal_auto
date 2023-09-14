@@ -827,7 +827,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                                                         driver_external_id=chat_id,
                                                         driver=obj,
                                                         partner=obj.partner,
-                                                        vehicle=obj.vehicle)
+                                                        )
 
         super().save_model(request, obj, form, change)
 
@@ -975,7 +975,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['fleet', 'driver', 'vehicle',
+            return ['fleet', 'driver',
                     'driver_external_id',
                     'created_at', 'pay_cash',
                     ]
@@ -984,14 +984,14 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
         if request.user.is_superuser:
             fieldsets = [
                 ('Деталі',                      {'fields': ['fleet', 'driver',
-                                                            'vehicle', 'driver_external_id',
+                                                            'driver_external_id',
                                                             'pay_cash', 'partner',
                                                             ]}),
             ]
         else:
             fieldsets = [
                 ('Деталі',                      {'fields': ['fleet', 'driver',
-                                                            'vehicle', 'driver_external_id',
+                                                            'driver_external_id',
                                                             'pay_cash',
                                                             ]}),
 
@@ -1000,11 +1000,8 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if not request.user.is_superuser:
-            if db_field.name == "vehicle":
-                kwargs["queryset"] = Vehicle.objects.filter(partner__user=request.user)
-            elif db_field.name == "driver":
-                kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
+        if not request.user.is_superuser and db_field.name == "driver":
+            kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
