@@ -131,7 +131,7 @@ def get_orders_from_fleets(self, partner_pk, day=None):
 
 @app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
-
+    day = get_day_for_task(day)
     settings = check_available_fleets(partner_pk)
     for setting in settings:
         request_class = fleets.get(setting.key)
