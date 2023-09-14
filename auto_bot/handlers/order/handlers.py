@@ -471,6 +471,7 @@ def client_reject_order(update, context):
             duty.duty += cancel
             report_for_client = f'{get_money} {cancel}UAH. {put_on_bank}'
         else:
+            '''
             portmone = Portmone()
             total_amount = report.total_amount
             total_sum = total_amount * 0.98
@@ -485,6 +486,7 @@ def client_reject_order(update, context):
             else:
                 duty.duty += cancel - total_sum
                 report_for_client = have_duty
+                '''
         duty.save()
         text_to_client(order=order,
                        text=report_for_client)

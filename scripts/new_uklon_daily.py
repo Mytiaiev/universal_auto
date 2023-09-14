@@ -1,4 +1,5 @@
-from auto.tasks import get_driver_reshuffles
+from auto.tasks import get_driver_reshuffles, check_available_fleets
+
 
 def run(*args):
-    get_driver_reshuffles.delay()
+    print(check_available_fleets(4))

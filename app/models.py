@@ -143,7 +143,7 @@ class User(models.Model):
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
     email = models.EmailField(blank=True, max_length=254, verbose_name='Електрона пошта')
     role = models.CharField(max_length=25, default=Role.CLIENT, choices=Role.choices)
-    phone_number = models.CharField(blank=True, max_length=13, verbose_name='Номер телефона')
+    phone_number = models.CharField(blank=True, null=True, max_length=13, verbose_name='Номер телефона')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
