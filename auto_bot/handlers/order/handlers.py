@@ -463,6 +463,7 @@ def client_reject_order(update, context):
             chat_id=order.driver.chat_id,
             text=f'Вибачте, замовлення за адресою {order.from_address} відхилено клієнтом.'
         )
+        '''
         duty = UserBank.get_duty(order.chat_id_client)
         cancel = int(ParkSettings.get_value('CANCEL_ORDER'))
         report = ReportTelegramPayments.objects.filter(order=order.pk).first()
@@ -471,7 +472,7 @@ def client_reject_order(update, context):
             duty.duty += cancel
             report_for_client = f'{get_money} {cancel}UAH. {put_on_bank}'
         else:
-            '''
+            
             portmone = Portmone()
             total_amount = report.total_amount
             total_sum = total_amount * 0.98
@@ -486,10 +487,11 @@ def client_reject_order(update, context):
             else:
                 duty.duty += cancel - total_sum
                 report_for_client = have_duty
-                '''
+                
         duty.save()
         text_to_client(order=order,
                        text=report_for_client)
+                       '''
         driver_msg = redis_instance().hget(str(order.driver.chat_id), 'driver_msg')
         bot.delete_message(chat_id=order.driver.chat_id, message_id=driver_msg)
     else:
