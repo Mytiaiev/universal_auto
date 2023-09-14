@@ -137,11 +137,13 @@ class PostRequestHandler:
 
     def handler_update_database(self, request):
         partner = Partner.objects.get(user=request.user.pk)
-        upd = update_driver_data.apply_async(args=(partner.pk,))
-        result = upd.get()
-        json_data = JsonResponse({'data': result[1]}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
+        upd = update_driver_data.delay(partner.pk)
+        while True:
+            if upd.ready():
+                result = upd.get()
+                json_data = JsonResponse({'data': result[1]}, safe=False)
+                response = HttpResponse(json_data, content_type='application/json')
+                return response
 
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
