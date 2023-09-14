@@ -51,13 +51,16 @@ class Synchronizer:
             drivers.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
-        driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
-                                        Q(name=kwargs['second_name'], second_name=kwargs['name']) |
-                                        Q(phone_number__icontains=kwargs['phone_number'][-10:])) &
+        name = self.r_dup(kwargs['name'])
+        second_name = self.r_dup(kwargs['second_name'])
+        driver = Driver.objects.filter((Q(name=name, second_name=second_name) |
+                                        Q(name=second_name, second_name=name) |
+                                        Q(phone_number__icontains=kwargs['phone_number'][-10:],
+                                          email__icontains=kwargs['email'])) &
                                        Q(partner=self.partner_id)).first()
         if not driver:
-            driver = Driver.objects.create(name=self.r_dup(kwargs['name']),
-                                           second_name=self.r_dup(kwargs['second_name']),
+            driver = Driver.objects.create(name=name,
+                                           second_name=second_name,
                                            phone_number=kwargs['phone_number']
                                            if len(kwargs['phone_number']) <= 13 else None,
                                            email=kwargs['email'],

@@ -272,9 +272,9 @@ class Vehicle(models.Model):
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
     registration = models.CharField(null=True, max_length=12, unique=True, verbose_name='Номер документа')
-    vin_code = models.CharField(max_length=17)
+    vin_code = models.CharField(max_length=17, blank=True)
     gps_id = models.IntegerField(default=0)
-    gps_imei = models.CharField(max_length=100, default='')
+    gps_imei = models.CharField(max_length=100, blank=True, default='')
     coord_time = models.DateTimeField(null=True, verbose_name="Час отримання координат")
     lat = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Широта")
     lon = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Довгота")
@@ -390,9 +390,8 @@ class Driver(User):
         RENT = 'RENT', 'Схема оренди'
         HALF = 'HALF', 'Схема 50/50'
         BUYER = 'BUYER', 'Схема під викуп'
-        CUSTOM = 'CUSTOM', 'Індивідуальна схема'
+        CUSTOM = 'CUSTOM', 'Індивідуальний відсоток'
 
-    # fleet = models.OneToOneField('Fleet', blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Автопарк')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
@@ -484,9 +483,6 @@ class Fleet(PolymorphicModel):
 
 
 class Client(User):
-    # support_manager_id: ManyToManyField already exists in SupportManager
-    # we have to delete this
-    support_manager_id = models.ManyToManyField('SupportManager', blank=True)
 
     class Meta:
         verbose_name = 'Клієнт'
@@ -565,10 +561,10 @@ class StatusChange(models.Model):
 
 
 class Fleets_drivers_vehicles_rate(models.Model):
-    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
+    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Агрегатор')
     driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій')
-    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
@@ -578,8 +574,8 @@ class Fleets_drivers_vehicles_rate(models.Model):
         return ''
 
     class Meta:
-        verbose_name = 'Рейтинг водія в автопарку'
-        verbose_name_plural = 'Рейтинг водіїв в автопарках'
+        verbose_name = 'Водій в агрегаторах'
+        verbose_name_plural = 'Водії в агрегаторах'
 
 
 class DriverRateLevels(models.Model):
@@ -1109,8 +1105,8 @@ def admin_image_preview(image, default_image=None):
 class CarEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
     licence_plate = models.CharField(null=True, max_length=25, verbose_name='Номер автомобіля')
-    total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
-    total_spendings = models.DecimalField(null=True, decimal_places=2, max_digits=10, default=0, verbose_name='Всього витрат')
+    total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Каса')
+    total_spendings = models.DecimalField(null=True, decimal_places=2, max_digits=10, default=0, verbose_name='Витрати')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
     partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнер')
@@ -1125,9 +1121,9 @@ class CarEfficiency(models.Model):
 
 class DriverEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
-    driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій авто')
-    total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Всього каса')
-    total_orders = models.IntegerField(default=0, verbose_name="Всього замовлень")
+    driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій')
+    total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Каса')
+    total_orders = models.IntegerField(default=0, verbose_name="Замовлень за день")
     accept_percent = models.IntegerField(default=0, verbose_name="Відсоток прийнятих замовлень")
     average_price = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Середній чек, грн')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')

@@ -132,6 +132,7 @@ def get_efficiency_for_drivers(update, context):
         query.edit_message_text(start_report_text)
         redis_instance().hset(str(update.effective_chat.id), 'state', START_DRIVER_EFF)
     else:
+        query.edit_message_text(generate_text)
         result = get_driver_efficiency_report(manager_id=query.from_user.id)
         if result:
             for k, v in result.items():
@@ -163,6 +164,7 @@ def create_driver_eff(update, context):
         end = datetime.strptime(data, '%d.%m.%Y')
         if start > end:
             start, end = end, start
+        msg = update.message.reply_text(generate_text)
         result = get_driver_efficiency_report(update.message.chat_id, start, end)
         message = ''
         if result:
@@ -170,7 +172,8 @@ def create_driver_eff(update, context):
                 message += f"{k}\n" + "".join(v)
         else:
             message += no_drivers_text
-        update.message.reply_text(message, reply_markup=inline_manager_kb())
+        bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
+                              message_id=msg.message_id, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_DRIVER_EFF)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
@@ -179,8 +182,9 @@ def create_driver_eff(update, context):
 def get_weekly_report(update, context):
     query = update.callback_query
     manager = Manager.get_by_chat_id(query.from_user.id)
+    query.edit_message_text(generate_text)
     messages = generate_message_weekly(manager.partner.pk)
-    owner_message = messages.get(str(query.from_user.id)) or no_drivers_text
+    owner_message = messages.get(str(query.from_user.id))
     query.edit_message_text(owner_message)
     query.edit_message_reply_markup(back_to_main_menu())
 
@@ -192,8 +196,9 @@ def get_report(update, context):
         query.edit_message_text(start_report_text)
         redis_instance().hset(str(update.effective_chat.id), 'state', START_EARNINGS)
     else:
+        query.edit_message_text(generate_text)
         result = get_daily_report(manager_id=query.from_user.id)
-        if result:
+        if result[0]:
             for key in result[0]:
                 if result[0][key]:
                     message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
@@ -226,11 +231,19 @@ def create_period_report(update, context):
         end = datetime.strptime(date, '%d.%m.%Y')
         if start > end:
             start, end = end, start
-        report = get_daily_report(update.message.chat_id, start, end)[0]
-        message = ''
-        for key, value in report.items():
-            message += "{} {:.2f}\n".format(key, value)
-        update.message.reply_text(message, reply_markup=inline_manager_kb())
+        msg = update.message.reply_text(generate_text)
+        report = get_daily_report(update.message.chat_id, start, end)
+        if report[0]:
+            message = ''
+            for key, value in report.items():
+                if report[0][key]:
+                    message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
+                        key, report[0][key], report[1].get(key, 0), report[2].get(key, 0), report[3].get(key, 0))
+            bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
+                                  message_id=msg.message_id, reply_markup=inline_manager_kb())
+        else:
+            bot.edit_message_text(chat_id=update.effective_chat.id, text=no_drivers_text,
+                                  message_id=msg.message_id, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_EARNINGS)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
@@ -243,6 +256,7 @@ def get_efficiency_auto(update, context):
         query.edit_message_text(start_report_text)
         redis_instance().hset(str(update.effective_chat.id), 'state', START_EFFICIENCY)
     else:
+        query.edit_message_text(generate_text)
         result = get_efficiency(manager_id=query.from_user.id)
         if result:
             for k, v in result.items():
@@ -274,6 +288,7 @@ def create_period_efficiency(update, context):
         end = datetime.strptime(data, '%d.%m.%Y')
         if start > end:
             start, end = end, start
+        msg = update.message.reply_text(generate_text)
         result = get_efficiency(update.message.chat_id, start, end)
         message = ''
         if result:
@@ -281,7 +296,8 @@ def create_period_efficiency(update, context):
                 message += f"{k}\n" + "".join(v)
         else:
             message = no_vehicles_text
-        update.message.reply_text(message, reply_markup=inline_manager_kb())
+        context.bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
+                                      message_id=msg.message_id, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
@@ -292,7 +308,7 @@ def send_into_group(sender=None, **kwargs):
     if sender in (send_daily_report, send_efficiency_report, send_driver_efficiency):
         messages = kwargs.get('retval')
         for partner, message in messages.items():
-            if message:
+            if message and ParkSettings.get_value('DRIVERS_CHAT', partner=partner):
                 bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
 
 

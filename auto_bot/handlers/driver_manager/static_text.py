@@ -31,6 +31,7 @@ choose_category_text = "Оберіть категорію витрат"
 ask_spend_sum_text = "Вкажіть суму витрат"
 wrong_sum_type = "Не вірна сума витрат. Введіть суму(число) ще раз"
 spending_saved_text = "Витрати успішно записано."
+generate_text = "Генеруємо звіт"
 pin_vehicle_callback = "pin_vehicle"
 
 manager_buttons = (
