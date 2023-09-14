@@ -220,14 +220,15 @@ class UberRequest(Synchronizer):
             drivers = response.json()['data']['getDriverEvents']['driverEvents']
             if drivers:
                 for rider in drivers:
-                    driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=rider['driverUUID']).driver
-                    name, second_name = driver.name, driver.second_name
-                    if rider["driverStatus"] == "online":
-                        wait.append((name, second_name))
-                        wait.append((second_name, name))
-                    elif rider["driverStatus"] in ("accepted", "in_progress"):
-                        with_client.append((name, second_name))
-                        with_client.append((second_name, name))
+                    rate = Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=rider['driverUUID']).first()
+                    if rate:
+                        name, second_name = rate.driver.name, rate.driver.second_name
+                        if rider["driverStatus"] == "online":
+                            wait.append((name, second_name))
+                            wait.append((second_name, name))
+                        elif rider["driverStatus"] in ("accepted", "in_progress"):
+                            with_client.append((name, second_name))
+                            with_client.append((second_name, name))
         return {'wait': wait,
                 'with_client': with_client}
 

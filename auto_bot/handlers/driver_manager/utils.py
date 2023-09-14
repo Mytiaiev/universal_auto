@@ -32,12 +32,12 @@ def validate_sum(sum_str):
 def calculate_rent(start, end, driver):
     end_time = datetime.combine(end, datetime.max.time())
     rent_report = RentInformation.objects.filter(
-        rent_distance__gt=int(ParkSettings.get_value("FREE_RENT", partner=driver.partner.pk)),
+        rent_distance__gt=int(ParkSettings.get_value("FREE_RENT", 15, partner=driver.partner.pk)),
         report_from__range=(start, end_time),
         driver=driver)
     if rent_report:
         overall_rent = ExpressionWrapper(F('rent_distance')
-                                         - int(ParkSettings.get_value("FREE_RENT", partner=driver.partner.pk)),
+                                         - int(ParkSettings.get_value("FREE_RENT", 15, partner=driver.partner.pk)),
                                          output_field=DecimalField())
         total_rent = rent_report.aggregate(distance=Sum(overall_rent))['distance']
     else:
@@ -58,7 +58,7 @@ def calculate_reports(start, end, driver):
         cash = driver_report.aggregate(
             cash=Coalesce(Sum('total_amount_cash'), 0, output_field=DecimalField()))['cash']
         rent = calculate_rent(start, end, driver)
-        rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', partner=driver.partner.pk))
+        rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', 15, partner=driver.partner.pk))
         if kasa:
             if driver.schema in ("HALF", "CUSTOM"):
                 if kasa < driver.plan:
@@ -107,7 +107,7 @@ def generate_message_weekly(partner_pk):
     start = end - timedelta(days=6)
     drivers_dict = {}
     balance = 0
-    rent = int(ParkSettings.get_value('RENT_PRICE', partner=partner_pk))
+    rent = int(ParkSettings.get_value('RENT_PRICE', 15, partner=partner_pk))
     for manager in Manager.objects.filter(partner=partner_pk):
         message = ''
         drivers = Driver.objects.filter(manager=manager)
@@ -136,8 +136,9 @@ def generate_message_weekly(partner_pk):
                 if driver.chat_id:
                     drivers_dict[driver.chat_id] = driver_message
                 message += driver_message
-                message += "*" * 39 + '\n'
-            manager_message = f'Ваш тижневий баланс:%.2f\n' % balance
+                if driver_message:
+                    message += "*" * 39 + '\n'
+            manager_message = f'Ваш баланс за минулий тиждень:%.2f\n' % balance
             manager_message += message
             drivers_dict[manager.chat_id] = manager_message
     return drivers_dict

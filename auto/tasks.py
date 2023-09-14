@@ -533,11 +533,8 @@ def send_time_order(self):
                                           reply_markup=reply_markup,
                                           parse_mode=ParseMode.HTML)
             driver = order.driver
-            vehicle = check_reshuffle(driver)[0]
-            report_for_client = client_order_text(driver, vehicle.name, vehicle.licence_plate,
-                                                  driver.phone_number, order.sum)
             message_info = redis_instance().hget(str(order.chat_id_client), 'client_msg')
-            client_msg = text_to_client(order, report_for_client, delete_id=message_info)
+            client_msg = text_to_client(order, order_customer_text, delete_id=message_info)
             redis_instance().hset(str(order.chat_id_client), 'client_msg', client_msg)
             redis_instance().hset(str(order.driver.chat_id), 'driver_msg', driver_msg.message_id)
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
@@ -545,7 +542,6 @@ def send_time_order(self):
             if order.chat_id_client:
                 vehicle = check_reshuffle(driver)[0]
                 lat, long = get_location_from_db(vehicle.licence_plate)
-                bot.send_message(chat_id=order.chat_id_client, text=order_customer_text)
                 message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
                 send_map_to_client.delay(order.id, vehicle.licence_plate, message.message_id, message.chat_id)
 
@@ -799,6 +795,7 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="2"), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
@@ -813,8 +810,8 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
                              send_weekly_report.s(partner_id))
-    sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
-                             manager_paid_weekly.s(partner_id))
+    # sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
+                             # manager_paid_weekly.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="9", day_of_week="1"),
                              get_uber_session.s(partner_id))
 
