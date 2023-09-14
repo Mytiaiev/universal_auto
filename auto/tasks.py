@@ -707,9 +707,12 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         price_per_minute = price_per_minute * minutes
         price_per_distance = round(int(ParkSettings.get_value('COST_PER_KM')) * result[0])
         if price_per_distance > price_per_minute:
-            instance.sum = int(price_per_distance) + int(instance.car_delivery_price)
+            total_sum = int(price_per_distance) + int(instance.car_delivery_price)
         else:
-            instance.sum = int(price_per_minute) + int(instance.car_delivery_price)
+            total_sum = int(price_per_minute) + int(instance.car_delivery_price)
+
+        instance.sum = total_sum if total_sum > int(ParkSettings.get_value('MINIMUM_PRICE_FOR_ORDER')) else \
+            int(ParkSettings.get_value('MINIMUM_PRICE_FOR_ORDER'))
         instance.save()
         bot.send_message(chat_id=instance.chat_id_client,
                          text=payment_text,

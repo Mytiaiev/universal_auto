@@ -145,7 +145,7 @@ class Portmone():
         response = self.response(payload)
         return response.json()
 
-    def return_amount(self, amount, order, message):
+    def return_amount(self, amount: int, order: str, message: str):
         payload = {
                     "method": "return",
                     "params":
