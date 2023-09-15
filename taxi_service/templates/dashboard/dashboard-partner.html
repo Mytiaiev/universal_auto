@@ -167,6 +167,28 @@
 		<div class="main-title">
 			<h2>{% trans 'Інформаційна панель Партнера' %}</h2>
 		</div>
+		<div>
+			<label for="period">Виберіть період:</label>
+			<select id="period" name="period">
+				<option value="today">Сьогодні</option>
+				<option value="yesterday">Вчора</option>
+				<option value="current_week">Поточний тиждень</option>
+				<option value="last_week">Минулий тиждень</option>
+				<option value="current_month">Поточний місяць</option>
+				<option value="last_month">Минулий місяць</option>
+				<option value="current_quarter">Поточний квартал</option>
+				<option value="last_quarter">Минулий квартал</option>
+				<option value="custom">Вибрати період ></option>
+			</select>
+			<input type="button" value="Показати" onclick="showDatePicker()">
+		</div>
+		<div id="datePicker" style="display: none;">
+			<label for="start_date">Початкова дата:</label>
+			<input type="date" id="start_date" name="start_date">
+			<label for="end_date">Кінцева дата:</label>
+			<input type="date" id="end_date" name="end_date">
+			<input type="button" value="Фільтрувати" onclick="applyCustomDateRange()">
+		</div>
 		<div class="main-cards">
 			<div class="card">
 				<div class="card-inner">

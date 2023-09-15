@@ -527,7 +527,7 @@ $(document).ready(function () {
 				if (response.data === true) {
 					localStorage.setItem(partner, 'success');
 					$("#partnerLogin").hide()
-					$("#partnerPassword").hide()
+					$("#partnerPassword").hide().clear()
 					$(".opt-partnerForm").hide()
 					$(".login-ok").show()
 					$("#loginErrorMessage").hide()
@@ -737,3 +737,23 @@ $(document).ready(function () {
 		});
 	});
 });
+
+function showDatePicker() {
+	var periodSelect = document.getElementById("period");
+	var datePicker = document.getElementById("datePicker");
+
+	if (periodSelect.value === "custom") {
+		datePicker.style.display = "block";
+	} else {
+		datePicker.style.display = "none";
+	}
+}
+
+function applyCustomDateRange() {
+	var startDate = document.getElementById("start_date").value;
+	var endDate = document.getElementById("end_date").value;
+
+	console.log(startDate, endDate);
+
+	// Тут можна робити що завгодно з обраними датами, наприклад, відправляти їх на сервер для обробки
+}
