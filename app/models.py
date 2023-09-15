@@ -27,10 +27,18 @@ class Role(models.TextChoices):
 class Partner(models.Model):
     role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
+    chat_id = models.CharField(blank=True, null=True, max_length=10, verbose_name='Індетифікатор чата')
 
     @classmethod
     def get_partner(cls, pk):
         return cls.objects.get(id=pk)
+
+    @staticmethod
+    def get_by_chat_id(chat_id):
+        try:
+            return Partner.objects.get(chat_id=chat_id)
+        except ObjectDoesNotExist:
+            return None
 
     def __str__(self):
         return str(self.user.username) if self.user else ''
@@ -141,7 +149,7 @@ class User(models.Model):
 
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
-    email = models.EmailField(blank=True, max_length=254, verbose_name='Електрона пошта')
+    email = models.EmailField(blank=True, null=True, max_length=254, verbose_name='Електрона пошта')
     role = models.CharField(max_length=25, default=Role.CLIENT, choices=Role.choices)
     phone_number = models.CharField(blank=True, null=True, max_length=13, verbose_name='Номер телефона')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
@@ -280,7 +288,7 @@ class Vehicle(models.Model):
     lon = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Довгота")
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
-    purchase_price = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Ціна покупки")
+    purchase_price = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Вартість автомобіля")
     сurrency = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
                                 verbose_name='Валюта покупки')
     currency_rate = models.DecimalField(decimal_places=2, max_digits=10, default=0,
@@ -292,7 +300,7 @@ class Vehicle(models.Model):
     investor_percentage = models.DecimalField(decimal_places=2, max_digits=10, default=0.35,
                                               verbose_name="Відсоток інвестора")
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
+    created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Додано автомобіль')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
@@ -389,7 +397,7 @@ class Driver(User):
     class Schema(models.TextChoices):
         RENT = 'RENT', 'Схема оренди'
         HALF = 'HALF', 'Схема 50/50'
-        BUYER = 'BUYER', 'Схема під викуп'
+        # BUYER = 'BUYER', 'Схема під викуп'
         CUSTOM = 'CUSTOM', 'Індивідуальний відсоток'
 
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')

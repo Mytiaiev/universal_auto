@@ -216,7 +216,7 @@ class UklonRequest(Synchronizer):
                 'fleet_name': self.fleet,
                 'name': driver['first_name'],
                 'second_name': driver['last_name'],
-                'email': email.get('email', ''),
+                'email': email.get('email'),
                 'phone_number': f"+{driver['phone']}",
                 'driver_external_id': driver['id'],
                 'pay_cash': pay_cash,

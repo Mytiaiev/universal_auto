@@ -107,7 +107,7 @@ def setup_dispatcher(dp):
     # Ordering taxi
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("test_celery", celery_test))
-    dp.add_handler(CallbackQueryHandler(more_function, pattern="Other_user|Other_manager|More_driver"))
+    dp.add_handler(CallbackQueryHandler(more_function, pattern="Other_user|Other_manager|More_driver|Other_owner"))
     # incomplete auth
     dp.add_handler(MessageHandler(Filters.contact, update_phone_number))
     # ordering taxi

@@ -40,14 +40,13 @@ class BoltRequest(Synchronizer):
             while True:
                 access_payload = {
                     "refresh_token": token,
-                    "company": {"company_id": "58225",
+                    "company": {"company_id": ParkSettings.get_value("BOLT_URL_ID_PARK", partner=self.partner_id),
                                 "company_type": "fleet_company"}
                 }
 
                 response = requests.post(url=f'{self.base_url}getAccessToken',
                                          params=self.param,
                                          json=access_payload)
-
                 if not response.json()['code']:
                     return response.json()["data"]["access_token"]
                 else:

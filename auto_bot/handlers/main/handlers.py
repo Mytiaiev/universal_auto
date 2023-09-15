@@ -8,7 +8,7 @@ from django.utils import timezone
 from telegram import BotCommand, Update, ParseMode, ReplyKeyboardRemove
 from telegram.ext import ConversationHandler
 from auto.tasks import health_check
-from app.models import User, Client, ParkSettings, Manager, UserBank
+from app.models import User, Client, ParkSettings, Manager, UserBank, Partner
 from auto_bot.handlers.main.keyboards import markup_keyboard, inline_user_kb, contact_keyboard, get_start_kb, \
     inline_owner_kb, inline_manager_kb, get_more_func_kb, inline_about_us
 import logging
@@ -28,10 +28,11 @@ def start(update, context):
     redis_instance().delete(str(chat_id))
     redis_instance().expire(str(chat_id), 3600)
     menu(update, context)
-    UserBank.objects.get_or_create(chat_id)
+    UserBank.objects.get_or_create(chat_id=chat_id)
     clients = list(User.objects.filter(chat_id=chat_id))
     managers = list(Manager.objects.filter(chat_id=chat_id))
-    users = clients + managers
+    partners = list(Partner.objects.filter(chat_id=chat_id))
+    users = clients + managers + partners
     if not users:
         Client.objects.create(chat_id=chat_id, name=update.message.from_user.first_name,
                               second_name=update.message.from_user.last_name)
@@ -63,7 +64,8 @@ def start_query(update, context):
     redis_instance().delete(str(chat_id))
     clients = list(User.objects.filter(chat_id=chat_id))
     managers = list(Manager.objects.filter(chat_id=chat_id))
-    users = clients + managers
+    partners = list(Partner.objects.filter(chat_id=chat_id))
+    users = clients + managers + partners
     if len(users) == 1:
         user = users[0]
         reply_markup = get_start_kb(user)

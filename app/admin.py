@@ -668,11 +668,11 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
-    list_display = ('role',)
+    list_display = ('user', 'chat_id')
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['user', 'role']}),
+        (None, {'fields': ['user', 'chat_id']}),
     ]
 
 
@@ -836,7 +836,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         else:
             return ['licence_plate', 'name',
                     'vin_code',
-                    'gps_imei', 'purchase_price',
+                    'purchase_price',
                     'manager', 'created_at'
                     ]
 

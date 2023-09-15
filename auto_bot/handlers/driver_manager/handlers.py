@@ -4,7 +4,7 @@ from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
 from app.models import Manager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
-    Payments, ParkSettings, VehicleSpendings
+    Payments, ParkSettings, VehicleSpendings, Partner
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
@@ -102,7 +102,8 @@ def remove_cash_by_manager(update, context):
 
 def get_drivers_from_fleets(update, context):
     query = update.callback_query
-    partner = Manager.get_by_chat_id(query.from_user.id).partner
+    manager = Manager.get_by_chat_id(query.from_user.id)
+    partner = manager.partner if manager else Partner.get_by_chat_id(query.from_user.id)
     update_driver_data.delay(partner.id, query.from_user.id)
     query.edit_message_text(get_drivers_text)
 
@@ -187,9 +188,8 @@ def create_driver_eff(update, context):
 
 def get_weekly_report(update, context):
     query = update.callback_query
-    manager = Manager.get_by_chat_id(query.from_user.id)
     query.edit_message_text(generate_text)
-    messages = generate_message_weekly(manager.partner.pk)
+    messages = generate_message_weekly(query.from_user.id)
     owner_message = messages.get(str(query.from_user.id))
     query.edit_message_text(owner_message)
     query.edit_message_reply_markup(back_to_main_menu())
@@ -321,15 +321,17 @@ def send_into_group(sender=None, **kwargs):
 @task_postrun.connect
 def send_week_report(sender=None, **kwargs):
     if sender == send_weekly_report:
-        messages = kwargs.get('retval')
-        for user, message in messages.items():
-            bot.send_message(chat_id=user, text=message)
+        result = kwargs.get('retval')
+        for messages in result:
+            for user, message in messages.items():
+                bot.send_message(chat_id=user, text=message)
 
 
 def get_partner_vehicles(update, context):
     query = update.callback_query
     manager = Manager.get_by_chat_id(query.from_user.id)
-    vehicles = Vehicle.objects.filter(partner=manager.partner, manager=manager)
+    partner = Partner.get_by_chat_id(query.from_user.id)
+    vehicles = Vehicle.objects.filter(manager=manager) if manager else Vehicle.objects.filter(partner=partner)
     if vehicles:
         if query.data == "Pin_vehicle_to_driver":
             callback = 'select_vehicle'
@@ -347,7 +349,8 @@ def get_partner_drivers(update, context):
     query = update.callback_query
     pk_vehicle = query.data.split()[1]
     manager = Manager.get_by_chat_id(query.from_user.id)
-    drivers = Driver.objects.filter(partner=manager.partner, manager=manager)
+    partner = Partner.get_by_chat_id(query.from_user.id)
+    drivers = Driver.objects.filter(manager=manager) if manager else Driver.objects.filter(partner=partner)
     if drivers:
         query.edit_message_text(partner_drivers)
         query.edit_message_reply_markup(reply_markup=inline_partner_drivers(pin_vehicle_callback, drivers,

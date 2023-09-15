@@ -172,12 +172,16 @@ def get_car_efficiency(self, partner_pk, day=None):
                 vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
             result = - Decimal(total_spendings)
             if total_km:
-                for driver in Driver.objects.filter(vehicle=vehicle):
+                reshuffle = DriverReshuffle.objects.filter(swap_time__date=day, swap_vehicle=vehicle).first()
+                drivers = [reshuffle.driver_start, reshuffle.driver_finish] if reshuffle \
+                    else list(Driver.objects.filter(vehicle=vehicle).first())
+
+                for driver in drivers:
                     report = SummaryReport.objects.filter(report_from=day,
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
-
+                print(total_kasa, total_km)
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spendings), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,
@@ -363,22 +367,31 @@ def manager_paid_weekly(self, partner_pk):
 
 @app.task(bind=True, queue='beat_tasks')
 def send_weekly_report(self, partner_pk):
-    return generate_message_weekly(partner_pk)
+    result = []
+    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    managers.append(Partner.objects.get(pk=partner_pk).chat_id)
+    for chat_id in managers:
+        result.append(generate_message_weekly(chat_id))
+    return result
 
 
 @app.task(bind=True, queue='beat_tasks')
 def send_daily_report(self, partner_pk):
     message = ''
     dict_msg = {}
-    for manager in Manager.objects.filter(chat_id__isnull=False, partner=partner_pk):
-        result = get_daily_report(manager_id=manager.chat_id)
+    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    for manager in managers:
+        result = get_daily_report(manager_id=manager)
         if result:
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
                     num = "\U0001f3c6" if num == 1 else f"{num}."
                     message += "{}{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
                         num, key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
-            dict_msg[partner_pk] = message
+            if partner_pk in dict_msg:
+                dict_msg[partner_pk] += message
+            else:
+                dict_msg[partner_pk] = message
     return dict_msg
 
 
@@ -386,12 +399,16 @@ def send_daily_report(self, partner_pk):
 def send_efficiency_report(self, partner_pk):
     message = ''
     dict_msg = {}
-    for manager in Manager.objects.filter(chat_id__isnull=False, partner=partner_pk):
-        result = get_efficiency(manager_id=manager.chat_id)
+    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    for manager in managers:
+        result = get_efficiency(manager_id=manager)
         if result:
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
-            dict_msg[partner_pk] = message
+            if partner_pk in dict_msg:
+                dict_msg[partner_pk] += message
+            else:
+                dict_msg[partner_pk] = message
     return dict_msg
 
 
@@ -399,12 +416,16 @@ def send_efficiency_report(self, partner_pk):
 def send_driver_efficiency(self, partner_pk):
     message = ''
     dict_msg = {}
-    for manager in Manager.objects.filter(chat_id__isnull=False, partner=partner_pk):
-        result = get_driver_efficiency_report(manager_id=manager.chat_id)
+    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    for manager in managers:
+        result = get_driver_efficiency_report(manager_id=manager)
         if result:
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v) + "\n"
-            dict_msg[partner_pk] = message
+            if partner_pk in dict_msg:
+                dict_msg[partner_pk] += message
+            else:
+                dict_msg[partner_pk] = message
     return dict_msg
 
 
@@ -786,7 +807,7 @@ def run_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute='*/15'), auto_send_task_bot.s())
     sender.add_periodic_task(crontab(minute="*/2"), order_not_accepted.s())
     sender.add_periodic_task(crontab(minute="*/4"), check_personal_orders.s())
-    for partner in Partner.objects.exclude(user__is_superuser=True):
+    for partner in Partner.objects.all():
         setup_periodic_tasks(partner, sender)
 
 
