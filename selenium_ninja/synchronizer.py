@@ -55,8 +55,8 @@ class Synchronizer:
         second_name = self.r_dup(kwargs['second_name'])
         driver = Driver.objects.filter((Q(name=name, second_name=second_name) |
                                         Q(name=second_name, second_name=name) |
-                                        Q(phone_number__icontains=kwargs['phone_number'][-10:],
-                                          email__icontains=kwargs['email'])) &
+                                        Q(phone_number__icontains=kwargs['phone_number']) |
+                                        Q(email__icontains=kwargs['email'])) &
                                        Q(partner=self.partner_id)).first()
         if not driver:
             driver = Driver.objects.create(name=name,

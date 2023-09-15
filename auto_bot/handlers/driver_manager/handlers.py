@@ -109,8 +109,14 @@ def get_drivers_from_fleets(update, context):
 
 def get_earning_report(update, context):
     query = update.callback_query
-    query.edit_message_text(choose_period_text)
-    query.edit_message_reply_markup(inline_earning_report_kb('Get_statistic'))
+    manager = Manager.get_by_chat_id(update.message.chat_id)
+    drivers = Driver.objects.filter(manager=manager)
+    if drivers:
+        query.edit_message_text(choose_period_text)
+        query.edit_message_reply_markup(inline_earning_report_kb('Get_statistic'))
+    else:
+        query.edit_message_text(no_manager_drivers)
+        query.edit_message_reply_markup(back_to_main_menu())
 
 
 def get_efficiency_report(update, context):
@@ -235,7 +241,7 @@ def create_period_report(update, context):
         report = get_daily_report(update.message.chat_id, start, end)
         if report[0]:
             message = ''
-            for key, value in report.items():
+            for key, value in report[0].items():
                 if report[0][key]:
                     message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
                         key, report[0][key], report[1].get(key, 0), report[2].get(key, 0), report[3].get(key, 0))
