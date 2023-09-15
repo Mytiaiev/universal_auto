@@ -527,7 +527,7 @@ $(document).ready(function () {
 				if (response.data === true) {
 					localStorage.setItem(partner, 'success');
 					$("#partnerLogin").hide()
-					$("#partnerPassword").hide()
+					$("#partnerPassword").hide().val('')
 					$(".opt-partnerForm").hide()
 					$(".login-ok").show()
 					$("#loginErrorMessage").hide()
