@@ -441,9 +441,18 @@ $(document).ready(function () {
 		$("#loginErrorMessage").hide()
 	}
 
-	$("#settingBtn").click(function () {
+	$("#settingBtnContainer").click(function () {
 		sessionStorage.setItem('settings', 'true');
 		$("#settingsWindow").fadeIn();
+	});
+
+	$(".sidebar-list-item.admin").on("click", function () {
+
+		var adminPanelURL = $(this).data("url");
+
+		if (adminPanelURL) {
+			window.open(adminPanelURL, "_blank");
+		}
 	});
 
 	$(".close-btn").click(function () {
@@ -564,7 +573,7 @@ $(document).ready(function () {
 		});
 	}
 
-	$("#updateDatabase").click(function () {
+	$("#updateDatabaseContainer").click(function () {
 
 		$("#loadingModal").css("display", "block")
 
@@ -576,7 +585,6 @@ $(document).ready(function () {
 				action: "upd_database",
 			},
 			success: function (response) {
-				console.log(response.data)
 				if (response.data === true) {
 					$("#loadingMessage").text(gettext("База даних оновлено"));
 					$("#loader").css("display", "none");
@@ -584,12 +592,14 @@ $(document).ready(function () {
 
 					setTimeout(function () {
 						$("#loadingModal").css("display", "none");
+						window.location.reload();
 					}, 3000);
 				} else {
 					$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора"));
 
 					setTimeout(function () {
 						$("#loadingModal").css("display", "none");
+						window.location.reload();
 					}, 3000);
 				}
 			}
@@ -670,7 +680,7 @@ $(document).ready(function () {
 		$('.burger-menu').toggleClass('open');
 	});
 
-	$('#partnerVehicleBtn').click(function () {
+	$('#partnerVehicleBtnContainer').click(function () {
 		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
@@ -678,7 +688,7 @@ $(document).ready(function () {
 		$('.info-driver').hide();
 	});
 
-	$('#partnerDriverBtn').click(function () {
+	$('#partnerDriverBtnContainer').click(function () {
 		$('.info-driver').show();
 		$('.payback-car').hide();
 		$('.charts').hide();
