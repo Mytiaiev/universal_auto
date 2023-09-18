@@ -694,7 +694,7 @@ $(document).ready(function () {
 
 $(document).ready(function () {
 	const periodSelect = $('#period');
-	const showButton = $('input[type="button"]');
+	const showButton = $('#show-button');
 	const partnerDriverBtn = $('#partnerDriverBtn');
 
 	periodSelect.val("day");
@@ -733,6 +733,28 @@ $(document).ready(function () {
 
 					table.append(row);
 				});
+			}
+		});
+	});
+
+	const commonPeriodSelect = $('#period-common');
+	const showCommonButton = $('#common-show-button');
+
+	showCommonButton.on('click', function (event) {
+		event.preventDefault();
+
+		const selectedPeriod = commonPeriodSelect.val();
+		console.log(selectedPeriod);
+
+		$.ajax({
+			type: "GET",
+			url: ajaxGetUrl,
+			data: {
+				action: 'get_common_partner',
+				period: selectedPeriod
+			},
+			success: function (response) {
+
 			}
 		});
 	});

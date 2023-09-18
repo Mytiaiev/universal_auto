@@ -168,9 +168,9 @@
 			<h2>{% trans 'Інформаційна панель Партнера' %}</h2>
 		</div>
 		<div>
-			<label for="period">Виберіть період:</label>
-			<select id="period" name="period">
-				<option value="today">Сьогодні</option>
+			<label for="period-common">Виберіть період:</label>
+			<select id="period-common" name="period-common">
+{#				<option value="today">Сьогодні</option>#}
 				<option value="yesterday">Вчора</option>
 				<option value="current_week">Поточний тиждень</option>
 				<option value="last_week">Минулий тиждень</option>
@@ -180,7 +180,7 @@
 				<option value="last_quarter">Минулий квартал</option>
 				<option value="custom">Вибрати період ></option>
 			</select>
-			<input type="button" value="Показати" onclick="showDatePicker()">
+			<input type="button" value="Показати" id="common-show-button" onclick="showDatePicker()">
 		</div>
 		<div id="datePicker" style="display: none;">
 			<label for="start_date">Початкова дата:</label>
@@ -303,7 +303,7 @@
 					<option value="month">{% trans 'Місяць' %}</option>
 					<option value="quarter">{% trans 'Квартал' %}</option>
 				</select>
-				<input type="button" value="Показати">
+				<input type="button" value="Показати" id="show-button">
 			</form>
 
 			<table>
