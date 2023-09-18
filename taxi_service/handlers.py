@@ -194,7 +194,7 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_get_partner_cash(self, request):
+    def handle_get_partner_cash(self, request):   # TODO: remove
         period = request.GET.get('period')
 
         get_cash = partner_total_earnings(period, request.user.pk)
@@ -220,7 +220,7 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_effective_vehicle(self, request):
+    def handle_effective_vehicle(self, request):   # TODO: remove
         period = request.GET.get('period')
         action = request.GET.get('action')
         user_id = request.user.pk
@@ -246,6 +246,17 @@ class GetRequestHandler:
         else:
             response_data = {'role': None}
         return JsonResponse(response_data, safe=False)
+
+    def handle_get_common_partner(self, request):
+        period = request.GET.get('period')
+        action = request.GET.get('action')
+
+        get_cash = partner_total_earnings(period, request.user.pk)
+        get_efficiency_vehicle = effective_vehicle(period, request.user.pk, action)
+
+        json_data = JsonResponse({'data': {'cash': get_cash, 'efficiency': get_efficiency_vehicle}}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)

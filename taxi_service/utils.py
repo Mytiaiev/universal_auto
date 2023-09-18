@@ -70,62 +70,85 @@ def restart_order(id_order, car_delivery_price, action):
         order.save()
 
 
-# Робота з dashboard.html #################
+# Робота з dashboard.html
 
 
 def get_dates(period=None):
     current_date = timezone.now().date()
-    if period == 'day':
-        previous_date = current_date - timedelta(days=1)
 
+    if period == 'yesterday':
+        previous_date = current_date - timedelta(days=1)
         start_date = previous_date
         end_date = current_date
 
-    elif period == 'week':
+    elif period == 'current_week':
         weekday = current_date.weekday()
-
         if weekday == 0:
             start_date = current_date - timedelta(days=7)
-            end_date = start_date + timedelta(days=6)
         else:
             start_date = current_date - timedelta(days=weekday)
-            end_date = start_date + timedelta(days=6)
+        end_date = current_date
 
-    elif period == 'month':
-        current_date = timezone.now().date()
+    elif period == 'current_month':
         start_date = current_date.replace(day=1)
         next_month = current_date.replace(day=28) + timedelta(days=4)
         end_date = next_month - timedelta(days=next_month.day)
 
-    elif period == 'quarter':
+    elif period == 'current_quarter':
         current_month = current_date.month
         current_quarter = (current_month - 1) // 3 + 1
 
         if current_quarter == 1:
             start_date = date(current_date.year, 1, 1)
             end_date = date(current_date.year, 3, 31)
-
         elif current_quarter == 2:
             start_date = date(current_date.year, 4, 1)
             end_date = date(current_date.year, 6, 30)
-
         elif current_quarter == 3:
             start_date = date(current_date.year, 7, 1)
             end_date = date(current_date.year, 9, 30)
+        else:
+            start_date = date(current_date.year, 10, 1)
+            end_date = date(current_date.year, 12, 31)
 
+    elif period == 'last_week':
+        end_date = current_date - timedelta(days=1)
+        weekday = end_date.weekday()
+        if weekday == 0:
+            start_date = end_date - timedelta(days=6)
+        else:
+            start_date = end_date - timedelta(days=weekday)
+
+    elif period == 'last_month':
+        last_month = current_date.replace(day=1) - timedelta(days=1)
+        start_date = last_month.replace(day=1)
+        end_date = last_month
+
+    elif period == 'last_quarter':
+        current_month = current_date.month
+        current_quarter = (current_month - 4) // 3 + 1
+
+        if current_quarter == 1:
+            start_date = date(current_date.year, 1, 1)
+            end_date = date(current_date.year, 3, 31)
+        elif current_quarter == 2:
+            start_date = date(current_date.year, 4, 1)
+            end_date = date(current_date.year, 6, 30)
+        elif current_quarter == 3:
+            start_date = date(current_date.year, 7, 1)
+            end_date = date(current_date.year, 9, 30)
         else:
             start_date = date(current_date.year, 10, 1)
             end_date = date(current_date.year, 12, 31)
 
     else:
         weekday = current_date.weekday()
-
         if weekday == 0:
             start_date = current_date - timedelta(days=7)
-            end_date = start_date + timedelta(days=6)
         else:
             start_date = current_date - timedelta(days=weekday)
-            end_date = start_date + timedelta(days=6)
+        end_date = current_date
+
     return start_date, end_date
 
 
@@ -296,18 +319,21 @@ def average_effective_vehicle():
 
 
 def effective_vehicle(period, user_id, action):
-    start_date, end_date = get_dates(period=period)
+    start_date, end_date = get_dates(period)
     licence_plates = []
 
     if action == 'investor':
         investor = Investor.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(investor_car=investor).values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(
+            investor_car=investor).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
     elif action == 'manager':
         manager = Manager.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(
+            manager=manager).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
     elif action == 'partner':
         partner = Partner.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(partner=partner).values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(
+            partner=partner).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
 
     effective_objects = CarEfficiency.objects.filter(
         licence_plate__in=licence_plates,
@@ -341,56 +367,56 @@ def update_park_set(partner, key, value, description=None, check_value=True):
 
 
 def get_driver_info(request, period, user_id, action):
-    start_date, end_date = get_dates(period=period)
+    start_date, end_date = get_dates(period)
+    driver_info_list = []
+    drivers = []
 
     if action == 'get_drivers_manager':
         manager = Manager.objects.filter(user_id=user_id).first()
         drivers = Driver.objects.filter(manager=manager)
-        driver_info_list = []
     elif action == 'get_drivers_partner':
         partner = Partner.objects.filter(user=user_id).first()
         drivers = Driver.objects.filter(partner=partner)
-        driver_info_list = []
 
-        for driver in drivers:
-            driver_efficiency = DriverEfficiency.objects.filter(
-                driver=driver,
-                report_from__gte=start_date,
-                report_from__lte=end_date
-            ).aggregate(
-                total_kasa=Sum('total_kasa'),
-                total_orders=Sum('total_orders'),
-                accept_percent=Avg('accept_percent'),
-                mileage=Sum('mileage'),
-                road_time=Sum('road_time')
-            )
+    for driver in drivers:
+        driver_efficiency = DriverEfficiency.objects.filter(
+            driver=driver,
+            report_from__gte=start_date,
+            report_from__lte=end_date
+        ).aggregate(
+            total_kasa=Sum('total_kasa'),
+            total_orders=Sum('total_orders'),
+            accept_percent=Avg('accept_percent'),
+            mileage=Sum('mileage'),
+            road_time=Sum('road_time')
+        )
 
-            driver_name = driver.__str__()
+        driver_name = driver.__str__()
 
-            total_orders = driver_efficiency['total_orders'] or 0
-            total_kasa = driver_efficiency['total_kasa'] or 0
+        total_orders = driver_efficiency['total_orders'] or 0
+        total_kasa = driver_efficiency['total_kasa'] or 0
 
-            average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
-            efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
-            accept_percent = round(driver_efficiency['accept_percent'], 2) if driver_efficiency['accept_percent'] is not None else 0.0
-            mileage = round(driver_efficiency['mileage'], 2) if driver_efficiency['mileage'] is not None else 0.0
-            road_time = str(driver_efficiency['road_time']) if driver_efficiency['road_time'] is not None else '00:00:00'
+        average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
+        efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
+        accept_percent = round(driver_efficiency['accept_percent'], 2) if driver_efficiency['accept_percent'] is not None else 0.0
+        mileage = round(driver_efficiency['mileage'], 2) if driver_efficiency['mileage'] is not None else 0.0
+        road_time = str(driver_efficiency['road_time']) if driver_efficiency['road_time'] is not None else '00:00:00'
 
-            driver_info = {
-                'driver': driver_name,
-                'total_kasa': driver_efficiency['total_kasa'] or 0,
-                'total_orders': driver_efficiency['total_orders'] or 0,
-                'accept_percent': accept_percent,
-                'average_price': average_price,
-                'mileage': mileage,
-                'efficiency': efficiency,
-                'road_time': road_time
-            }
-            driver_info_list.append(driver_info)
+        driver_info = {
+            'driver': driver_name,
+            'total_kasa': driver_efficiency['total_kasa'] or 0,
+            'total_orders': driver_efficiency['total_orders'] or 0,
+            'accept_percent': accept_percent,
+            'average_price': average_price,
+            'mileage': mileage,
+            'efficiency': efficiency,
+            'road_time': road_time
+        }
+        driver_info_list.append(driver_info)
 
-        driver_info_list.sort(key=lambda x: x['total_kasa'], reverse=True)
+    driver_info_list.sort(key=lambda x: x['total_kasa'], reverse=True)
 
-        return driver_info_list
+    return driver_info_list
 
 
 def login_in(action, login_name, password, user_id):

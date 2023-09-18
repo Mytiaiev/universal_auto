@@ -353,47 +353,19 @@ $(document).ready(function () {
 		});
 	}
 
+	const commonPeriodSelect = $('#period-common');
+	const showCommonButton = $('#common-show-button');
 
-	function updateEffectiveChart(vehicleId1, vehicleId2, period) {
-		loadEffectiveChart(period);
-	}
+	showCommonButton.on('click', function (event) {
+		event.preventDefault();
 
-	loadDefaultKasa('day');
-	loadEffectiveChart('week', $('#vehicle-select').val());
-
-	$('input[name="effective-amount"]').change(function () {
-		const selectedKasa = $(this).val();
-		const period = getPeriod(selectedKasa);
-
-		loadDefaultKasa(period);
+		const selectedPeriod = commonPeriodSelect.val();
+		loadDefaultKasa(selectedPeriod);
+		loadEffectiveChart(selectedPeriod);
 	});
 
-	$('input[name="effective-period"]').change(function () {
-		const selectedEffective = $(this).val();
-		const vehicleId1 = $('#vehicle-select').val();
-		const vehicleId2 = $('#vehicle-select-2').val();
-		const period = getPeriod(selectedEffective);
-
-		updateEffectiveChart(vehicleId1, vehicleId2, period);
-	});
-
-	$('#vehicle-select, #vehicle-select-2').change(function () {
-		const selectedEffective = $('input[name="effective-period"]:checked').val();
-		const period = getPeriod(selectedEffective);
-
-		const vehicleId1 = $('#vehicle-select').val();
-		const vehicleId2 = $('#vehicle-select-2').val();
-		updateEffectiveChart(vehicleId1, vehicleId2, period);
-	});
-
-	function getPeriod(val) {
-		return {
-			d: 'day',
-			w: 'week',
-			m: 'month',
-			q: 'quarter'
-		}[val];
-	}
+	loadDefaultKasa('yesterday');
+	loadEffectiveChart('current_week');
 });
 
 $(document).ready(function () {
@@ -676,6 +648,7 @@ $(document).ready(function () {
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.info-driver').hide();
+		$('.common-period').hide();
 	});
 
 	$('#partnerDriverBtn').click(function () {
@@ -683,6 +656,8 @@ $(document).ready(function () {
 		$('.payback-car').hide();
 		$('.charts').hide();
 		$('.main-cards').hide();
+		$('.common-period').hide();
+
 	});
 
 	$(".close-btn").click(function () {
@@ -736,28 +711,6 @@ $(document).ready(function () {
 			}
 		});
 	});
-
-	const commonPeriodSelect = $('#period-common');
-	const showCommonButton = $('#common-show-button');
-
-	showCommonButton.on('click', function (event) {
-		event.preventDefault();
-
-		const selectedPeriod = commonPeriodSelect.val();
-		console.log(selectedPeriod);
-
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'get_common_partner',
-				period: selectedPeriod
-			},
-			success: function (response) {
-
-			}
-		});
-	});
 });
 
 function showDatePicker() {
@@ -774,8 +727,4 @@ function showDatePicker() {
 function applyCustomDateRange() {
 	var startDate = document.getElementById("start_date").value;
 	var endDate = document.getElementById("end_date").value;
-
-	console.log(startDate, endDate);
-
-	// Тут можна робити що завгодно з обраними датами, наприклад, відправляти їх на сервер для обробки
 }
