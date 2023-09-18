@@ -53,7 +53,7 @@ class GoogleCalendar:
                 driver2,
             ],
         }
-        print(event)
+
         event = self.service.events().insert(calendarId=calendar_id, body=event).execute()
         return f"Подія '{event}' була успішно зареєстрована."
 

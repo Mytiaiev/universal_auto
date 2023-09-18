@@ -110,8 +110,9 @@ def get_drivers_from_fleets(update, context):
 
 def get_earning_report(update, context):
     query = update.callback_query
-    manager = Manager.get_by_chat_id(update.message.chat_id)
-    drivers = Driver.objects.filter(manager=manager)
+    manager = Manager.get_by_chat_id(update.effective_chat.id)
+    partner = Partner.get_by_chat_id(update.effective_chat.id)
+    drivers = Driver.objects.filter(manager=manager) if manager else Driver.objects.filter(partner=partner)
     if drivers:
         query.edit_message_text(choose_period_text)
         query.edit_message_reply_markup(inline_earning_report_kb('Get_statistic'))
