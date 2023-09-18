@@ -759,7 +759,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
             return [f.name for f in self.model._meta.fields]
         else:
             return ['name', 'second_name',
-                    'vehicle', 'manager', 'chat_id', 'phone_number',
+                    'vehicle', 'manager', 'chat_id',
                     'schema', 'plan', 'rental',
                     'driver_status',
                     'created_at',
@@ -877,7 +877,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 
 @admin.register(Order)
-class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class OrderAdmin(admin.ModelAdmin):
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
@@ -922,7 +922,7 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 
 @admin.register(FleetOrder)
-class FleetOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class FleetOrderAdmin(admin.ModelAdmin):
     list_filter = ('fleet', 'driver')
 
     def get_list_display(self, request):
@@ -987,7 +987,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
 
 
 @admin.register(Comment)
-class CommentAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class CommentAdmin(admin.ModelAdmin):
 
     def get_list_display(self, request):
         if request.user.is_superuser:

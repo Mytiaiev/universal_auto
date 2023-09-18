@@ -10,7 +10,6 @@ class GoogleCalendar:
     SCOPES = ['https://www.googleapis.com/auth/calendar']
     FILE_PATH = "credentials.json"
 
-
     def __init__(self):
         credentials = service_account.Credentials.from_service_account_file(
                                 os.path.join(BASE_DIR, self.FILE_PATH), scopes=self.SCOPES)

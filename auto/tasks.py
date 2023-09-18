@@ -174,14 +174,14 @@ def get_car_efficiency(self, partner_pk, day=None):
             if total_km:
                 reshuffle = DriverReshuffle.objects.filter(swap_time__date=day, swap_vehicle=vehicle).first()
                 drivers = [reshuffle.driver_start, reshuffle.driver_finish] if reshuffle \
-                    else list(Driver.objects.filter(vehicle=vehicle).first())
+                    else Driver.objects.filter(vehicle=vehicle)
 
                 for driver in drivers:
                     report = SummaryReport.objects.filter(report_from=day,
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
-                print(total_kasa, total_km)
+
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spendings), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,

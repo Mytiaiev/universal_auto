@@ -287,7 +287,7 @@ class Vehicle(models.Model):
     lat = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Широта")
     lon = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Довгота")
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
-    manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, verbose_name='Менеджер авто')
+    manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер авто')
     purchase_price = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Вартість автомобіля")
     сurrency = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
                                 verbose_name='Валюта покупки')
