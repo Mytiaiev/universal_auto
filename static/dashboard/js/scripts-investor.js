@@ -139,11 +139,11 @@ barChart.render();
 // AREA CHART
 let areaChartOptions = {
 	series: [{
-		name: "Вася",
-		data: ['Вася'],
+		name: "",
+		data: [''],
 	}, {
-		name: "Петя",
-		data: ['Петя'],
+		name: "",
+		data: [''],
 	}],
 	chart: {
 		type: "area",
