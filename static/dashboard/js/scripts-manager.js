@@ -140,10 +140,10 @@ barChart.render();
 let areaChartOptions = {
 	series: [{
 		name: "",
-		data: ['Вася'],
+		data: [''],
 	}, {
 		name: "",
-		data: ['Петя'],
+		data: [''],
 	}],
 	chart: {
 		type: "area",
