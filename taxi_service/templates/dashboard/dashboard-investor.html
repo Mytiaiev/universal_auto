@@ -74,16 +74,16 @@
 			</a>
 		</div>
 		<ul class="sidebar-list">
-			<li class="sidebar-list-item">
-				<a href="{% url 'dashboard_investor' %}" class="dashboardHome">
+			<li class="sidebar-list-item" onclick="window.location='{% url 'dashboard_investor' %}'">
 					<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
-				</a>
 			</li>
-			<li class="sidebar-list-item">
-				<span id="investorVehicleBtn" class="clickable">
-					<span class="material-icons-outlined"></span>{% trans 'Автомобілі' %}
-				</span>
-			</li>
+			<div id="investorVehicleBtnContainer">
+				<li class="sidebar-list-item">
+					<span id="investorVehicleBtn" class="clickable">
+						<span class="material-icons-outlined"></span>{% trans 'Автомобілі' %}
+					</span>
+				</li>
+			</div>
 {#			<li class="sidebar-list-item">#}
 {#				<a href="#" target="_blank">#}
 {#					<span class="material-icons-outlined"></span> Повідомлення#}

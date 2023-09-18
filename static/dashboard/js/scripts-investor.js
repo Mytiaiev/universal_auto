@@ -462,7 +462,7 @@ $(document).ready(function () {
 		$('.burger-menu').toggleClass('open');
 	});
 
-	$('#investorVehicleBtn').click(function () {
+	$('#investorVehicleBtnContainer').click(function () {
 		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();

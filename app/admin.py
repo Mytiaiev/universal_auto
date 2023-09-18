@@ -750,10 +750,6 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     list_display_links = ('name', 'second_name')
     list_per_page = 25
 
-
-    def has_add_permission(self, request):
-        return False
-
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]

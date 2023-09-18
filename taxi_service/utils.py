@@ -14,6 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
                         SummaryReport, CarEfficiency, Partner, ParkSettings,
                         Manager, Investor, Vehicle, VehicleSpendings, DriverEfficiency, )
+from scripts.google_calendar import GoogleCalendar
 from selenium_ninja.driver import SeleniumTools
 from scripts.redis_conn import get_logger
 
@@ -129,17 +130,7 @@ def get_dates(period=None):
     return start_date, end_date
 
 
-def weekly_rent():
-    week_start, week_end = get_dates('week')
 
-    start_date_formatted = week_start.strftime('%d.%m.%Y')
-    end_date_formatted = week_end.strftime('%d.%m.%Y')
-
-    total_distance = RentInformation.objects.filter(
-        created_at__date__range=(week_start, week_end)).aggregate(
-        total_distance=Sum('rent_distance'))['total_distance'] or 0
-
-    return total_distance, start_date_formatted, end_date_formatted
 
 
 def collect_total_earnings(period, user_id):
@@ -171,15 +162,25 @@ def partner_total_earnings(period, user_id):
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
     partner = Partner.objects.filter(user_id=user_id).first()
-
     reports = SummaryReport.objects.filter(report_from__range=(start_period, end_period))
+    total_distance = RentInformation.objects.filter(
+        report_from__range=(start_period, end_period), partner=partner).aggregate(
+        total_distance=Sum('rent_distance'))['total_distance'] or 0
     for driver in Driver.objects.filter(partner=partner):
         total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
             clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]
 
-    return total, total_amount, start_date_formatted, end_date_formatted
+    vehicle = CarEfficiency.objects.filter(report_from__range=(start_period, end_period), partner=partner)
+    effective = 0
+    if vehicle:
+        mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum']
+        total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
+        effective = total_kasa / mileage
+        effective = float('{:.2f}'.format(effective))
+
+    return total, total_amount, total_distance, start_date_formatted, end_date_formatted, effective
 
 
 def investor_cash_car(period, investor_pk):
@@ -237,20 +238,22 @@ def get_car_data(cars, investor=None):
 
         car_efficiencies = CarEfficiency.objects.filter(
             licence_plate=licence_plate)
+        clean_kasa = round(sum(efficiency.clean_kasa for efficiency in car_efficiencies), 2)
         total_kasa = round(sum(efficiency.total_kasa for efficiency in car_efficiencies), 2)
 
         percentage = car.investor_percentage if investor and hasattr(car, 'investor_percentage') else None
         if percentage is not None:
-            total_kasa *= percentage
-
-        progress_percentage = round(((total_kasa - total_spent) / purchase_price) * 100) \
-            if purchase_price > 0 else 0
+            clean_kasa = total_kasa * percentage
+            progress_percentage = round((clean_kasa / purchase_price) * 100) if purchase_price > 0 else 0
+        else:
+            progress_percentage = round(((clean_kasa - total_spent) / purchase_price) * 100) \
+                if purchase_price > 0 else 0
 
         cars_data.append({
             'licence_plate': licence_plate,
             'purchase_price': purchase_price,
             'total_spent': total_spent,
-            'total_kasa': round(total_kasa, 2),
+            'total_kasa': round(clean_kasa, 2),
             'progress_percentage': progress_percentage
         })
 
@@ -342,51 +345,51 @@ def update_park_set(partner, key, value, description=None, check_value=True):
 
 def get_driver_info(request, period, user_id, action):
     start_date, end_date = get_dates(period=period)
+    driver_info_list = []
+    drivers = []
 
     if action == 'get_drivers_manager':
         manager = Manager.objects.filter(user_id=user_id).first()
         drivers = Driver.objects.filter(manager=manager)
-        driver_info_list = []
     elif action == 'get_drivers_partner':
         partner = Partner.objects.filter(user=user_id).first()
         drivers = Driver.objects.filter(partner=partner)
-        driver_info_list = []
 
-        for driver in drivers:
-            driver_efficiency = DriverEfficiency.objects.filter(
-                driver=driver,
-                report_from__gte=start_date,
-                report_from__lte=end_date
-            ).aggregate(
-                total_kasa=Sum('total_kasa'),
-                total_orders=Sum('total_orders'),
-                accept_percent=Avg('accept_percent'),
-                mileage=Sum('mileage'),
-                road_time=Sum('road_time')
-            )
+    for driver in drivers:
+        driver_efficiency = DriverEfficiency.objects.filter(
+            driver=driver,
+            report_from__gte=start_date,
+            report_from__lte=end_date
+        ).aggregate(
+            total_kasa=Sum('total_kasa'),
+            total_orders=Sum('total_orders'),
+            accept_percent=Avg('accept_percent'),
+            mileage=Sum('mileage'),
+            road_time=Sum('road_time')
+        )
 
-            driver_name = driver.__str__()
+        driver_name = driver.__str__()
 
-            total_orders = driver_efficiency['total_orders'] or 0
-            total_kasa = driver_efficiency['total_kasa'] or 0
+        total_orders = driver_efficiency['total_orders'] or 0
+        total_kasa = driver_efficiency['total_kasa'] or 0
 
-            average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
-            efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
-            accept_percent = round(driver_efficiency['accept_percent'], 2) if driver_efficiency['accept_percent'] is not None else 0.0
-            mileage = round(driver_efficiency['mileage'], 2) if driver_efficiency['mileage'] is not None else 0.0
-            road_time = str(driver_efficiency['road_time']) if driver_efficiency['road_time'] is not None else '00:00:00'
+        average_price = round((total_kasa / total_orders), 2) if total_orders > 0 else 0.0
+        efficiency = round((total_kasa / (driver_efficiency['mileage'] or 1)), 2) if total_orders > 0 else 0.0
+        accept_percent = round(driver_efficiency['accept_percent'], 2) if driver_efficiency['accept_percent'] is not None else 0.0
+        mileage = round(driver_efficiency['mileage'], 2) if driver_efficiency['mileage'] is not None else 0.0
+        road_time = str(driver_efficiency['road_time']) if driver_efficiency['road_time'] is not None else '00:00:00'
 
-            driver_info = {
-                'driver': driver_name,
-                'total_kasa': driver_efficiency['total_kasa'] or 0,
-                'total_orders': driver_efficiency['total_orders'] or 0,
-                'accept_percent': accept_percent,
-                'average_price': average_price,
-                'mileage': mileage,
-                'efficiency': efficiency,
-                'road_time': road_time
-            }
-            driver_info_list.append(driver_info)
+        driver_info = {
+            'driver': driver_name,
+            'total_kasa': driver_efficiency['total_kasa'] or 0,
+            'total_orders': driver_efficiency['total_orders'] or 0,
+            'accept_percent': accept_percent,
+            'average_price': average_price,
+            'mileage': mileage,
+            'efficiency': efficiency,
+            'road_time': road_time
+        }
+        driver_info_list.append(driver_info)
 
         driver_info_list.sort(key=lambda x: x['total_kasa'], reverse=True)
 
@@ -433,6 +436,11 @@ def login_in(action, login_name, password, user_id):
             update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
             update_park_set(partner, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
             update_park_set(partner, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
+            gc = GoogleCalendar()
+            cal_id = gc.create_calendar()
+            update_park_set(partner, "GOOGLE_ID_CALENDAR", cal_id, 'ID календаря змін водіїв')
+            permissions = gc.add_permission(partner.user.email)
+            gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
             success_login = True
     return success_login
 
