@@ -178,8 +178,8 @@
 					<span class="material-icons-outlined"></span>
 				</div>
 				<br><br>
-				<h3 id="weekly-income-dates"></h3>
-				<h3 id="weekly-income-amount"></h3>
+				<h3 class="weekly-income-dates"></h3>
+				<h3 class="weekly-income-amount"></h3>
 			</div>
 			<div class="card">
 				<div class="card-inner">
@@ -187,17 +187,16 @@
 					<span class="material-icons-outlined"></span>
 				</div>
 				<br><br>
-				<h3>{{ total_distance_rent.1 }} {% trans 'по' %} {{ total_distance_rent.2 }}</h3>
-				<h3>{% trans 'Усього:' %} {{ total_distance_rent.0 }} {% trans 'км' %}</h3>
+				<h3 class="weekly-income-dates"></h3>
+				<h3 class="weekly-income-rent"></h3>
 			</div>
 			<div class="card">
 				<div class="card-inner">
 					<h2>{% trans 'Загальна ефективність авто за період' %}</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
-				<h3>{{ average_effective_vehicle.1 }}
-					{% trans 'по' %} {{ average_effective_vehicle.2 }}</h3>
-				<h3>{{ average_effective_vehicle.0 }} {% trans 'грн/км' %}</h3>
+				<h3 class="weekly-income-dates"></h3>
+				<h3 class="income-efficiency"></h3>
 			</div>
 			{#			<div class="card">#}
 			{#				<div class="card-inner">#}

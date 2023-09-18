@@ -278,8 +278,10 @@ $(document).ready(function () {
 			success: function (response) {
 				let data = response.data[0];
 				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let startDate = response.data[2];
-				let endDate = response.data[3];
+				let totalDistance = parseFloat(response.data[2]).toFixed(2);
+				let startDate = response.data[3];
+				let endDate = response.data[4];
+				let efficiency = parseFloat(response.data[5]).toFixed(2);
 				let formattedData = {};
 
 				Object.keys(data).forEach(function (key) {
@@ -300,9 +302,10 @@ $(document).ready(function () {
 				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 				barChart.updateOptions(barChartOptions);
 
-				$('#weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
-				$('#weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-				$('#income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('.weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
+				$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
 
 			}
 		});
@@ -318,7 +321,6 @@ $(document).ready(function () {
 			},
 			success: function (response) {
 				let dataObject = response.data;
-
 				let carData = {};
 
 				// Проходимося по кожному ідентифікатору автомобіля
@@ -326,7 +328,7 @@ $(document).ready(function () {
 					carData[carNumber] = dataObject[carNumber].map(function (item) {
 						return {
 							date: new Date(item.date_effective),
-							mileage: parseFloat(item.mileage)
+							efficiency: parseFloat(item.efficiency)
 						};
 					});
 				});
@@ -335,7 +337,7 @@ $(document).ready(function () {
 					return {
 						name: carNumber,
 						data: carData[carNumber].map(function (entry) {
-							return entry.mileage;
+							return entry.efficiency;
 						})
 					};
 				});

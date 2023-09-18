@@ -166,6 +166,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                   licence_plate=vehicle.licence_plate)
         if not efficiency:
             total_kasa = 0
+            clean_kasa = 0
             total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
 
             total_spendings = VehicleSpendings.objects.filter(
@@ -181,12 +182,14 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
+                        clean_kasa += report.total_amount_without_fee * 1 - driver.rate if driver.schema in ("HALF", "CUSTOM") else driver.rental / 7
 
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spendings), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,
                                          licence_plate=vehicle.licence_plate,
                                          total_kasa=total_kasa,
+                                         clean_kasa=clean_kasa,
                                          total_spendings=total_spendings,
                                          mileage=total_km,
                                          efficiency=result,
@@ -260,9 +263,9 @@ def update_driver_status(self, partner_pk):
             if update_class:
                 statuses = update_class(partner_pk).get_drivers_status()
                 logger.info(f"{update_class.__name__} {statuses}")
-                status_online.union(set(statuses['wait']))
-                status_with_client.union(set(statuses['with_client']))
-        drivers = Driver.objects.filter(deleted_at=None, partner=partner_pk)
+                status_online = status_online.union(set(statuses['wait']))
+                status_with_client = status_with_client.union(set(statuses['with_client']))
+        drivers = Driver.objects.filter(partner=partner_pk)
         for driver in drivers:
             active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
             work_ninja = UseOfCars.objects.filter(user_vehicle=driver, partner=partner_pk,

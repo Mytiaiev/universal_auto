@@ -1114,6 +1114,7 @@ class CarEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
     licence_plate = models.CharField(null=True, max_length=25, verbose_name='Номер автомобіля')
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Каса')
+    clean_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Чистий дохід')
     total_spendings = models.DecimalField(null=True, decimal_places=2, max_digits=10, default=0, verbose_name='Витрати')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
