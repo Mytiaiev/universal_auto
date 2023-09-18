@@ -728,11 +728,11 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def get_driver_reshuffles(self, delta=0):
+def get_driver_reshuffles(self, partner, delta=0):
     day = timezone.localtime() - timedelta(days=delta)
     start = timezone.make_aware(datetime.combine(day, time.min))
     end = timezone.make_aware(datetime.combine(day, time.max))
-    events = GoogleCalendar().get_list_events(ParkSettings.get_value("GOOGLE_ID_ORDER_CALENDAR"), start, end)
+    events = GoogleCalendar().get_list_events(ParkSettings.get_value("GOOGLE_ID_CALENDAR", partner=partner), start, end)
     for event in events['items']:
         calendar_event_id = event['id']
         event_summary = event['summary'].split(',')
@@ -820,8 +820,8 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
-    sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(delta=1))
-    sender.add_periodic_task(crontab(minute="30", hour='3'), get_driver_reshuffles.s())
+    sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))
+    sender.add_periodic_task(crontab(minute="30", hour='3'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))

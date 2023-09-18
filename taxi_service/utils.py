@@ -14,6 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
                         SummaryReport, CarEfficiency, Partner, ParkSettings,
                         Manager, Investor, Vehicle, VehicleSpendings, DriverEfficiency, )
+from scripts.google_calendar import GoogleCalendar
 from selenium_ninja.driver import SeleniumTools
 from scripts.redis_conn import get_logger
 
@@ -433,6 +434,11 @@ def login_in(action, login_name, password, user_id):
             update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
             update_park_set(partner, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
             update_park_set(partner, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
+            gc = GoogleCalendar()
+            cal_id = gc.create_calendar()
+            update_park_set(partner, "GOOGLE_ID_CALENDAR", cal_id, 'ID календаря змін водіїв')
+            permissions = gc.add_permission(partner.user.email)
+            gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
             success_login = True
     return success_login
 
