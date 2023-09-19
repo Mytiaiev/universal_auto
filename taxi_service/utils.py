@@ -1,7 +1,7 @@
 import json
 import random
 import secrets
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 
 from django.db.models import Sum, Q, Avg
 from django.utils import timezone
@@ -173,11 +173,16 @@ def collect_total_earnings(period, user_id):
     return total, total_amount, start_date_formatted, end_date_formatted
 
 
-def partner_total_earnings(period, user_id):
+def partner_total_earnings(period, user_id, start_date=None, end_date=None):
     total = {}
     total_amount = 0
 
-    start_period, end_period = get_dates(period)
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
@@ -318,8 +323,13 @@ def average_effective_vehicle():
     return effective, start_date_formatted, end_date_formatted
 
 
-def effective_vehicle(period, user_id, action):
-    start_date, end_date = get_dates(period)
+def effective_vehicle(period, user_id, action, start_date=None, end_date=None):
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     licence_plates = []
 
     if action == 'investor':
@@ -337,7 +347,7 @@ def effective_vehicle(period, user_id, action):
 
     effective_objects = CarEfficiency.objects.filter(
         licence_plate__in=licence_plates,
-        report_from__range=(start_date, end_date)
+        report_from__range=(start_period, end_period)
     ).order_by('licence_plate', 'report_from')
 
     result = {}

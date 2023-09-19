@@ -264,111 +264,133 @@ let areaChartOptions = {
 let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
 
-$(document).ready(function () {
+// Обробка графіків
+function loadDefaultKasa(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'get_cash_partner',
+			period: period,
+			start_date: startDate,
+			end_date: endDate,
+		},
+		success: function (response) {
+			let data = response.data[0];
+			let totalAmount = parseFloat(response.data[1]).toFixed(2);
+			let totalDistance = parseFloat(response.data[2]).toFixed(2);
+			let startDate = response.data[3];
+			let endDate = response.data[4];
+			let efficiency = parseFloat(response.data[5]).toFixed(2);
+			let formattedData = {};
 
-	// Обробка графіків
-	function loadDefaultKasa(period) {
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'get_cash_partner',
-				period: period
-			},
-			success: function (response) {
-				let data = response.data[0];
-				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let totalDistance = parseFloat(response.data[2]).toFixed(2);
-				let startDate = response.data[3];
-				let endDate = response.data[4];
-				let efficiency = parseFloat(response.data[5]).toFixed(2);
-				let formattedData = {};
+			Object.keys(data).forEach(function (key) {
+				let value = parseFloat(data[key]).toFixed(2);
+				if (value > 0) {
+					let formattedKey = key;
+					formattedData[formattedKey] = value;
+				}
+			});
 
-				Object.keys(data).forEach(function (key) {
-					let value = parseFloat(data[key]).toFixed(2);
-					if (value > 0) {
-						let formattedKey = key;
-						formattedData[formattedKey] = value;
-					}
-				});
+			let sortedKeys = Object.keys(formattedData).sort();
+			let sortedFormattedData = {};
+			sortedKeys.forEach(function (key) {
+				sortedFormattedData[key] = formattedData[key];
+			});
 
-				let sortedKeys = Object.keys(formattedData).sort();
-				let sortedFormattedData = {};
-				sortedKeys.forEach(function (key) {
-					sortedFormattedData[key] = formattedData[key];
-				});
+			barChartOptions.series[0].data = Object.values(sortedFormattedData);
+			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
+			barChart.updateOptions(barChartOptions);
 
-				barChartOptions.series[0].data = Object.values(sortedFormattedData);
-				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-				barChart.updateOptions(barChartOptions);
+			$('.weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
+			$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+			$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
 
-				$('.weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
-				$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+		}
+	});
+}
 
-			}
-		});
-	}
+function loadEffectiveChart(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'partner',
+			period: period,
+			start_date: startDate,
+			end_date: endDate,
+		},
+		success: function (response) {
+			let dataObject = response.data;
+			let carData = {};
 
-	function loadEffectiveChart(period) {
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'partner',
-				period: period,
-			},
-			success: function (response) {
-				let dataObject = response.data;
-				let carData = {};
-
-				// Проходимося по кожному ідентифікатору автомобіля
-				Object.keys(dataObject).forEach(function (carNumber) {
-					carData[carNumber] = dataObject[carNumber].map(function (item) {
-						return {
-							date: new Date(item.date_effective),
-							efficiency: parseFloat(item.efficiency)
-						};
-					});
-				});
-
-				let mileageSeries = Object.keys(carData).map(function (carNumber) {
+			// Проходимося по кожному ідентифікатору автомобіля
+			Object.keys(dataObject).forEach(function (carNumber) {
+				carData[carNumber] = dataObject[carNumber].map(function (item) {
 					return {
-						name: carNumber,
-						data: carData[carNumber].map(function (entry) {
-							return entry.efficiency;
-						})
+						date: new Date(item.date_effective),
+						efficiency: parseFloat(item.efficiency)
 					};
 				});
+			});
 
-				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-				});
+			let mileageSeries = Object.keys(carData).map(function (carNumber) {
+				return {
+					name: carNumber,
+					data: carData[carNumber].map(function (entry) {
+						return entry.efficiency;
+					})
+				};
+			});
 
-				// Оновити опції графіка з новими даними
-				areaChartOptions.series = mileageSeries;
-				areaChartOptions.labels = dates;
+			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+			});
 
-				areaChart.updateOptions(areaChartOptions);
-			}
-		});
-	}
+			// Оновити опції графіка з новими даними
+			areaChartOptions.series = mileageSeries;
+			areaChartOptions.labels = dates;
 
-	const commonPeriodSelect = $('#period-common');
-	const showCommonButton = $('#common-show-button');
-
-	showCommonButton.on('click', function (event) {
-		event.preventDefault();
-
-		const selectedPeriod = commonPeriodSelect.val();
-		loadDefaultKasa(selectedPeriod);
-		loadEffectiveChart(selectedPeriod);
+			areaChart.updateOptions(areaChartOptions);
+		}
 	});
+}
 
-	loadDefaultKasa('yesterday');
-	loadEffectiveChart('current_week');
+const commonPeriodSelect = $('#period-common');
+const showCommonButton = $('#common-show-button');
+
+showCommonButton.on('click', function (event) {
+	event.preventDefault();
+
+	const selectedPeriod = commonPeriodSelect.val();
+	loadDefaultKasa(selectedPeriod);
+	loadEffectiveChart(selectedPeriod);
 });
+
+loadDefaultKasa('yesterday');
+loadEffectiveChart('current_week');
+
+function showDatePicker() {
+	let periodSelect = $("#period-common");
+	let datePicker = $("#datePicker");
+
+	if (periodSelect.val() === "custom") {
+		datePicker.css("display", "block");
+	} else {
+		datePicker.css("display", "none");
+	}
+}
+
+function applyCustomDateRange() {
+	let startDate = $("#start_date").val();
+	let endDate = $("#end_date").val();
+
+	const selectedPeriod = commonPeriodSelect.val();
+	loadDefaultKasa(selectedPeriod, startDate, endDate);
+	loadEffectiveChart(selectedPeriod, startDate, endDate);
+}
+
 
 $(document).ready(function () {
 
@@ -376,9 +398,9 @@ $(document).ready(function () {
 	const partnerLoginField = $("#partnerLogin");
 	const partnerRadioButtons = $("input[name='partner']");
 
-	var uklonStatus = localStorage.getItem('uklon');
-	var boltStatus = localStorage.getItem('bolt');
-	var uberStatus = localStorage.getItem('uber');
+	let uklonStatus = localStorage.getItem('uklon');
+	let boltStatus = localStorage.getItem('bolt');
+	let uberStatus = localStorage.getItem('uber');
 
 	// Перевірка умови, коли показувати або ховати елемент
 	if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
@@ -422,7 +444,7 @@ $(document).ready(function () {
 
 	$(".sidebar-list-item.admin").on("click", function () {
 
-		var adminPanelURL = $(this).data("url");
+		let adminPanelURL = $(this).data("url");
 
 		if (adminPanelURL) {
 			window.open(adminPanelURL, "_blank");
@@ -723,19 +745,3 @@ $(document).ready(function () {
 		});
 	});
 });
-
-function showDatePicker() {
-	var periodSelect = document.getElementById("period");
-	var datePicker = document.getElementById("datePicker");
-
-	if (periodSelect.value === "custom") {
-		datePicker.style.display = "block";
-	} else {
-		datePicker.style.display = "none";
-	}
-}
-
-function applyCustomDateRange() {
-	var startDate = document.getElementById("start_date").value;
-	var endDate = document.getElementById("end_date").value;
-}

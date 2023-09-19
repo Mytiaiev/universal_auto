@@ -99,15 +99,14 @@ class GetRequestView(View):
             'order_confirm': handler.handle_order_confirm,
             'get_cash_investor': handler.handle_get_investor_cash,
             'get_cash_manager': handler.handle_get_manager_cash,
-            'get_cash_partner': handler.handle_get_partner_cash,   # TODO: remove
+            'get_cash_partner': handler.handle_get_partner_cash,
             'get_drivers_manager': handler.handle_get_drivers_manager,
             'get_drivers_partner': handler.handle_get_drivers_partner,
             'investor': handler.handle_effective_vehicle,
             'manager': handler.handle_effective_vehicle,
-            'partner': handler.handle_effective_vehicle,   # TODO: remove
+            'partner': handler.handle_effective_vehicle,
             'is_logged_in': handler.handle_is_logged_in,
-            'get_role': handler.handle_get_role,
-            'get_common_partner': handler.handle_get_common_partner,
+            'get_role': handler.handle_get_role
         }
 
         if action in method:

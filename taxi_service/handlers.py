@@ -194,10 +194,12 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_get_partner_cash(self, request):   # TODO: remove
+    def handle_get_partner_cash(self, request):
         period = request.GET.get('period')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
 
-        get_cash = partner_total_earnings(period, request.user.pk)
+        get_cash = partner_total_earnings(period, request.user.pk, start_date, end_date)
         json_data = JsonResponse({'data': get_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
@@ -220,12 +222,14 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_effective_vehicle(self, request):   # TODO: remove
+    def handle_effective_vehicle(self, request):
         period = request.GET.get('period')
         action = request.GET.get('action')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
         user_id = request.user.pk
 
-        get_efficiency_vehicle = effective_vehicle(period, user_id, action)
+        get_efficiency_vehicle = effective_vehicle(period, user_id, action, start_date, end_date)
         json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
@@ -246,17 +250,6 @@ class GetRequestHandler:
         else:
             response_data = {'role': None}
         return JsonResponse(response_data, safe=False)
-
-    def handle_get_common_partner(self, request):
-        period = request.GET.get('period')
-        action = request.GET.get('action')
-
-        get_cash = partner_total_earnings(period, request.user.pk)
-        get_efficiency_vehicle = effective_vehicle(period, request.user.pk, action)
-
-        json_data = JsonResponse({'data': {'cash': get_cash, 'efficiency': get_efficiency_vehicle}}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)
