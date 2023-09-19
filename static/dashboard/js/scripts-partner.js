@@ -369,7 +369,6 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 		},
 		success: function (response) {
-			console.log(response);
 			let table = $('.info-driver table');
 			let startDate = response.data[1];
 			let endDate = response.data[2];

@@ -14,8 +14,6 @@
 	<!-- Material Icons -->
 	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
 				rel="stylesheet">
-	<link rel="stylesheet" type="text/css"
-				href="{% static 'app/css/bootstrap.css' %}"/>
 	<!-- Custom CSS -->
 	<link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
 	<link
@@ -196,30 +194,22 @@
 		</div>
 		<div class="main-cards">
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальний дохід за період' %}</h2>
-					<span class="material-icons-outlined"></span>
-				</div>
-				<br><br>
-				<h3 class="weekly-income-dates"></h3>
-				<h3 class="weekly-income-amount"></h3>
+				<h2>{% trans 'ЗАГАЛЬНИЙ ДОХІД' %}</h2>
+				<span class="weekly-income-amount"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальна оренда за період' %}</h2>
-					<span class="material-icons-outlined"></span>
-				</div>
-				<br><br>
-				<h3 class="weekly-income-dates"></h3>
-				<h3 class="weekly-income-rent"></h3>
+				<h2>{% trans 'ЗАГАЛЬНА ОРЕНДА' %}</h2>
+				<span class="weekly-income-rent"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальна ефективність авто за період' %}</h2>
-					<span class="material-icons-outlined"></span>
-				</div>
-				<h3 class="weekly-income-dates"></h3>
-				<h3 class="income-efficiency"></h3>
+				<h2>{% trans 'ЗАГАЛЬНА ЕФЕКТИВНІСТЬ АВТО' %}</h2>
+				<span class="income-efficiency"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			{#			<div class="card">#}
 			{#				<div class="card-inner">#}
@@ -321,9 +311,6 @@
 	let ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 <!-- ApexCharts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
-				integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"
-				defer></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" defer></script>
 <script src="{% static 'dashboard/js/scripts-partner.js' %}" defer></script>

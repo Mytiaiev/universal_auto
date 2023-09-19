@@ -377,9 +377,7 @@ def update_park_set(partner, key, value, description=None, check_value=True):
 
 
 def get_driver_info(request, period, user_id, action, start_date=None, end_date=None):
-    print("#" * 100)
-    print(start_date, end_date)
-    print("#" * 100)
+
     if start_date and end_date:
         start_period = datetime.strptime(start_date, '%Y-%m-%d')
         end_period = datetime.strptime(end_date, '%Y-%m-%d')

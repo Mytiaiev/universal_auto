@@ -137,10 +137,10 @@ p, span, div {
   border-radius: 5px;
 }
 
-.main-cards .card h3,
+.main-cards .card span,
 .main-cards-partner .card-partner h3 {
-  font-size: 15px;
-  margin: 5px;
+  font-size: 26px;
+  opacity: 0.77;
 }
 
 .card:first-child,
@@ -397,7 +397,7 @@ p, span, div {
   padding: 30px;
   border-radius: 25px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  max-width: 500px;
+  max-width: 400px;
   width: 90%;
   z-index: 897;
 }
@@ -513,7 +513,7 @@ p, span, div {
 .successful-message {
   position: absolute;
   bottom: 0;
-  left: 20%;
+  left: 25%;
   transform: translateX(-50%);
   color: #3e8f3e;
   margin-bottom: 35px;
@@ -633,7 +633,7 @@ td {
 }
 
 h2, table {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 th, td {
@@ -745,7 +745,7 @@ select:focus {
 
 
 .common-period {
-  margin-bottom: 20px;
+  margin: 20px 0 20px;
 }
 
 .common-period label {
