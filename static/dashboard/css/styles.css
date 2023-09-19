@@ -173,11 +173,6 @@ p, span, div {
   margin-bottom: -5px;
 }
 
-.card-inner > .material-icons-outlined,
-.card-inner-partner > .material-icons-outlined {
-  /*font-size: 20px;*/
-}
-
 .charts {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
@@ -744,4 +739,47 @@ select:focus {
   100% {
     transform: rotate(360deg);
   }
+}
+
+/*стилі для періода*/
+
+
+.common-period {
+  margin-bottom: 20px;
+}
+
+.common-period label {
+  font-weight: bold;
+}
+
+#period-common {
+  margin-right: 10px;
+  padding: 5px;
+  font-size: 16px;
+}
+
+#datePicker,
+#datePickerDriver {
+  display: none;
+  margin-top: 20px;
+}
+
+#datePicker label,
+#datePickerDriver label {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+#start_date,
+#end_date {
+  padding: 5px;
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+.title-driver {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }

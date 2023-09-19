@@ -357,9 +357,48 @@ function loadEffectiveChart(period, startDate, endDate) {
 	});
 }
 
+function loadDefaultDriver(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'get_drivers_partner',
+			period: period,
+			start_date: startDate,
+			end_date: endDate,
+
+		},
+		success: function (response) {
+			console.log(response);
+			let table = $('.info-driver table');
+			let startDate = response.data[1];
+			let endDate = response.data[2];
+			table.find('tr:gt(0)').remove();
+
+			response.data[0].forEach(function (item) {
+				let row = $('<tr></tr>');
+
+				row.append('<td>' + item.driver + '</td>');
+				row.append('<td>' + item.total_kasa + '</td>');
+				row.append('<td>' + item.total_orders + '</td>');
+				row.append('<td>' + item.accept_percent + " %" + '</td>');
+				row.append('<td>' + item.average_price + '</td>');
+				row.append('<td>' + item.mileage + '</td>');
+				row.append('<td>' + item.efficiency + '</td>');
+				row.append('<td>' + item.road_time + '</td>');
+
+				table.append(row);
+
+				$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+			});
+		}
+	});
+}
+
 const commonPeriodSelect = $('#period-common');
 const showCommonButton = $('#common-show-button');
-
+const periodSelect = $('#period');
+const showButton = $('#show-button');
 showCommonButton.on('click', function (event) {
 	event.preventDefault();
 
@@ -368,18 +407,34 @@ showCommonButton.on('click', function (event) {
 	loadEffectiveChart(selectedPeriod);
 });
 
+showButton.on('click', function (event) {
+	event.preventDefault();
+
+	const selectedPeriod = periodSelect.val();
+	loadDefaultDriver(selectedPeriod);
+});
+
 loadDefaultKasa('yesterday');
 loadEffectiveChart('current_week');
+loadDefaultDriver('yesterday');
 
-function showDatePicker() {
-	let periodSelect = $("#period-common");
-	let datePicker = $("#datePicker");
+function showDatePicker(periodSelectId, datePickerId) {
+	let periodSelect = $("#" + periodSelectId);
+	let datePicker = $("#" + datePickerId);
 
 	if (periodSelect.val() === "custom") {
 		datePicker.css("display", "block");
 	} else {
 		datePicker.css("display", "none");
 	}
+}
+
+function customDateRange() {
+	let startDate = $("#datePickerDriver #start_date").val();
+    let endDate = $("#datePickerDriver #end_date").val();
+
+	const selectedPeriod = periodSelect.val();
+	loadDefaultDriver(selectedPeriod, startDate, endDate);
 }
 
 function applyCustomDateRange() {
@@ -683,6 +738,7 @@ $(document).ready(function () {
 		$('.main-cards').hide();
 		$('.info-driver').hide();
 		$('.common-period').hide();
+		$('#datePicker').hide()
 	});
 
 	$('#partnerDriverBtnContainer').click(function () {
@@ -691,57 +747,12 @@ $(document).ready(function () {
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.common-period').hide();
+		$('#datePicker').hide()
 	});
 
 	$(".close-btn").click(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
-	});
-});
-
-$(document).ready(function () {
-	const periodSelect = $('#period');
-	const showButton = $('#show-button');
-	const partnerDriverBtn = $('#partnerDriverBtn');
-
-	periodSelect.val("day");
-
-	partnerDriverBtn.on('click', function (event) {
-		showButton.click();
-	});
-
-	showButton.on('click', function (event) {
-		event.preventDefault();
-
-		const selectedPeriod = periodSelect.val();
-
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'get_drivers_partner',
-				period: selectedPeriod
-			},
-			success: function (response) {
-				let table = $('.info-driver table');
-				table.find('tr:gt(0)').remove();
-
-				response.data.forEach(function (item) {
-					let row = $('<tr></tr>');
-
-					row.append('<td>' + item.driver + '</td>');
-					row.append('<td>' + item.total_kasa + '</td>');
-					row.append('<td>' + item.total_orders + '</td>');
-					row.append('<td>' + item.accept_percent + " %" + '</td>');
-					row.append('<td>' + item.average_price + '</td>');
-					row.append('<td>' + item.mileage + '</td>');
-					row.append('<td>' + item.efficiency + '</td>');
-					row.append('<td>' + item.road_time + '</td>');
-
-					table.append(row);
-				});
-			}
-		});
 	});
 });

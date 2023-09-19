@@ -216,8 +216,12 @@ class GetRequestHandler:
     def handle_get_drivers_partner(self, request):
         action = request.GET.get('action')
         period = request.GET.get('period')
-
-        driver_info = get_driver_info(request, period, request.user.pk, action)
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        print("#" * 100)
+        print(start_date, end_date)
+        print("#" * 100)
+        driver_info = get_driver_info(request, period, request.user.pk, action, start_date, end_date)
         json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response

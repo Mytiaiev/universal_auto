@@ -81,7 +81,7 @@
 		</div>
 		<ul class="sidebar-list">
 			<li class="sidebar-list-item" onclick="window.location='{% url 'dashboard_partner' %}'">
-					<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
+				<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
 			</li>
 			<div id="partnerVehicleBtnContainer">
 				<li class="sidebar-list-item">
@@ -105,7 +105,7 @@
 				</li>
 			</div>
 			<li class="sidebar-list-item admin" data-url="{% url 'admin:index' %}">
-					<span class="material-icons-outlined"></span>{% trans 'Адміністративна панель' %}
+				<span class="material-icons-outlined"></span>{% trans 'Адміністративна панель' %}
 			</li>
 			<div id="updateDatabaseContainer">
 				<li class="sidebar-list-item">
@@ -174,7 +174,7 @@
 		<div class="common-period">
 			<label for="period-common">Виберіть період:</label>
 			<select id="period-common" name="period-common">
-{#				<option value="today">Сьогодні</option>#}
+				{#				<option value="today">Сьогодні</option>#}
 				<option value="yesterday">Вчора</option>
 				<option value="current_week">Поточний тиждень</option>
 				<option value="last_week">Минулий тиждень</option>
@@ -184,7 +184,8 @@
 				<option value="last_quarter">Минулий квартал</option>
 				<option value="custom">Вибрати період ></option>
 			</select>
-			<input type="button" value="Показати" id="common-show-button" onclick="showDatePicker()">
+			<input type="button" value="Показати" id="common-show-button"
+						 onclick="showDatePicker('period-common', 'datePicker')">
 		</div>
 		<div id="datePicker" style="display: none;">
 			<label for="start_date">Початкова дата:</label>
@@ -252,20 +253,23 @@
 						<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
 						<div class="progress-bar">
 							<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
-								<div class="progress-label">{{ car.progress_percentage }}%</div>
+								<div class="progress-label" style="color: #0a0a0a">{{ car.progress_percentage }}%</div>
 							</div>
 						</div>
-						<p>{% trans 'Повна сума авто:' %}<br>₴ {{ car.purchase_price }}</p>
+						<p>{% trans 'Вартість авто:' %}<br>₴ {{ car.purchase_price }}</p>
 					</div>
 				</div>
 			</div>
 		{% endfor %}
 		<div class="info-driver">
-			<h2>{% trans 'Топ Водіїв' %}</h2>
+			<div class="title-driver">
+				<h2>{% trans 'Рейтинг Водіїв' %}</h2>
+				<h3 class="income-drivers-date"></h3>
+			</div>
 			<div>
 				<label for="period">Виберіть період:</label>
 				<select id="period" name="period">
-	{#				<option value="today">Сьогодні</option>#}
+					{#				<option value="today">Сьогодні</option>#}
 					<option value="yesterday">Вчора</option>
 					<option value="current_week">Поточний тиждень</option>
 					<option value="last_week">Минулий тиждень</option>
@@ -275,14 +279,20 @@
 					<option value="last_quarter">Минулий квартал</option>
 					<option value="custom">Вибрати період ></option>
 				</select>
-				<input type="button" value="Показати" id="show-button" onclick="showDatePicker()">
+				<input type="button" value="Показати" id="show-button" onclick="showDatePicker('period', 'datePickerDriver')">
 			</div>
-
+			<div id="datePickerDriver" style="display: none;">
+				<label for="start_date">Початкова дата:</label>
+				<input type="date" id="start_date" name="start_date">
+				<label for="end_date">Кінцева дата:</label>
+				<input type="date" id="end_date" name="end_date">
+				<input type="button" value="Фільтрувати" onclick="customDateRange()">
+			</div>
 			<table>
 				<tr>
 					<th>{% trans 'Водій' %}</th>
-					<th>{% trans 'Всього каса' %}</th>
-					<th>{% trans 'Всього замовлень' %}</th>
+					<th>{% trans 'Каса' %}</th>
+					<th>{% trans 'Кількість замовлень' %}</th>
 					<th>{% trans 'Відсоток прийнятих замовлень' %}</th>
 					<th>{% trans 'Середній чек, грн' %}</th>
 					<th>{% trans 'Пробіг, км' %}</th>

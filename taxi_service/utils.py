@@ -376,8 +376,19 @@ def update_park_set(partner, key, value, description=None, check_value=True):
         ParkSettings.objects.create(key=key, value=value, description=description, partner=partner)
 
 
-def get_driver_info(request, period, user_id, action):
-    start_date, end_date = get_dates(period)
+def get_driver_info(request, period, user_id, action, start_date=None, end_date=None):
+    print("#" * 100)
+    print(start_date, end_date)
+    print("#" * 100)
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
+    start_date_formatted = start_period.strftime('%d.%m.%Y')
+    end_date_formatted = end_period.strftime('%d.%m.%Y')
+
     driver_info_list = []
     drivers = []
 
@@ -391,8 +402,8 @@ def get_driver_info(request, period, user_id, action):
     for driver in drivers:
         driver_efficiency = DriverEfficiency.objects.filter(
             driver=driver,
-            report_from__gte=start_date,
-            report_from__lte=end_date
+            report_from__gte=start_period,
+            report_from__lte=end_period
         ).aggregate(
             total_kasa=Sum('total_kasa'),
             total_orders=Sum('total_orders'),
@@ -426,7 +437,7 @@ def get_driver_info(request, period, user_id, action):
 
         driver_info_list.sort(key=lambda x: x['total_kasa'], reverse=True)
 
-    return driver_info_list
+    return driver_info_list, start_date_formatted, end_date_formatted
 
 
 def login_in(action, login_name, password, user_id):
