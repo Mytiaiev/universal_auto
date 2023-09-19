@@ -80,36 +80,40 @@
 			</a>
 		</div>
 		<ul class="sidebar-list">
-			<li class="sidebar-list-item">
-				<a href="{% url 'dashboard_partner' %}">
+			<li class="sidebar-list-item" onclick="window.location='{% url 'dashboard_partner' %}'">
 					<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
-				</a>
 			</li>
-			<li class="sidebar-list-item">
-				<span id="partnerVehicleBtn" class="clickable">
-					<span class="material-icons-outlined"></span>{% trans 'Автомобілі' %}
-				</span>
-			</li>
-			<li class="sidebar-list-item">
-				<span id="partnerDriverBtn" class="clickable">
-					<span class="material-icons-outlined"></span>{% trans 'Водії' %}
-				</span>
-			</li>
-			<li class="sidebar-list-item">
-				<span id="settingBtn" class="clickable">
-					<span class="material-icons-outlined"></span>{% trans 'Підключення агрегаторів' %}
-				</span>
-			</li>
-			<li class="sidebar-list-item">
-				<a href="{% url 'admin:index' %}" target="_blank">
+			<div id="partnerVehicleBtnContainer">
+				<li class="sidebar-list-item">
+					<span id="partnerVehicleBtn" class="clickable">
+						<span class="material-icons-outlined"></span>{% trans 'Автомобілі' %}
+					</span>
+				</li>
+			</div>
+			<div id="partnerDriverBtnContainer">
+				<li class="sidebar-list-item">
+					<span id="partnerDriverBtn" class="clickable">
+						<span class="material-icons-outlined"></span>{% trans 'Водії' %}
+					</span>
+				</li>
+			</div>
+			<div id="settingBtnContainer">
+				<li class="sidebar-list-item">
+					<span id="settingBtn" class="clickable">
+						<span class="material-icons-outlined"></span>{% trans 'Підключення агрегаторів' %}
+					</span>
+				</li>
+			</div>
+			<li class="sidebar-list-item admin" data-url="{% url 'admin:index' %}">
 					<span class="material-icons-outlined"></span>{% trans 'Адміністративна панель' %}
-				</a>
 			</li>
-			<li class="sidebar-list-item">
-				<span id="updateDatabase" class="clickable">
-					<span class="material-icons-outlined"></span>{% trans 'Оновлення бази даних' %}
-				</span>
-			</li>
+			<div id="updateDatabaseContainer">
+				<li class="sidebar-list-item">
+					<span id="updateDatabase" class="clickable">
+						<span class="material-icons-outlined"></span>{% trans 'Оновлення бази даних' %}
+					</span>
+				</li>
+			</div>
 			<!-- Модальне вікно -->
 			<div id="loadingModal" class="modal">
 				<div class="modal-content">
@@ -153,8 +157,8 @@
 						<button type="button" class="login-btn">{% trans 'Увійти' %}</button>
 					</p>
 					<div class="login-ok">
-						<span class='successful-message'>{% trans 'Вхід Успішний!' %}</span>
-						<button class='logout-btn' data-form='logout'>{% trans 'Вийти' %}</button>
+						<span class='successful-message'>{% trans "Зв'язок встановлено!" %}</span>
+						<button class='logout-btn' data-form='logout'>{% trans "Розірвати зв'язок" %}</button>
 					</div>
 				</div>
 			</div>
@@ -196,8 +200,8 @@
 					<span class="material-icons-outlined"></span>
 				</div>
 				<br><br>
-				<h3 id="weekly-income-dates"></h3>
-				<h3 id="weekly-income-amount"></h3>
+				<h3 class="weekly-income-dates"></h3>
+				<h3 class="weekly-income-amount"></h3>
 			</div>
 			<div class="card">
 				<div class="card-inner">
@@ -205,17 +209,16 @@
 					<span class="material-icons-outlined"></span>
 				</div>
 				<br><br>
-				<h3>{{ total_distance_rent.1 }} {% trans 'по' %} {{ total_distance_rent.2 }}</h3>
-				<h3>{% trans 'Усього:' %} {{ total_distance_rent.0 }} {% trans 'км' %}</h3>
+				<h3 class="weekly-income-dates"></h3>
+				<h3 class="weekly-income-rent"></h3>
 			</div>
 			<div class="card">
 				<div class="card-inner">
 					<h2>{% trans 'Загальна ефективність авто за період' %}</h2>
 					<span class="material-icons-outlined"></span>
 				</div>
-				<h3>{{ average_effective_vehicle.1 }}
-					{% trans 'по' %} {{ average_effective_vehicle.2 }}</h3>
-				<h3>{{ average_effective_vehicle.0 }} {% trans 'грн/км' %}</h3>
+				<h3 class="weekly-income-dates"></h3>
+				<h3 class="income-efficiency"></h3>
 			</div>
 			{#			<div class="card">#}
 			{#				<div class="card-inner">#}

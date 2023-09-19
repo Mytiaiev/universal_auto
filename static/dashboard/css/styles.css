@@ -436,12 +436,22 @@ p, span, div {
 }
 
 .settings-content .login-btn,
-#passwordForm #submitPassword,
-.logout-btn {
+#passwordForm #submitPassword {
   padding: 8px 15px;
   border-radius: 5px;
   border: none;
   background-color: #3e8f3e;
+  color: #fff;
+  cursor: pointer;
+  margin-left: auto;
+  display: block;
+}
+
+.logout-btn {
+  padding: 8px 15px;
+  border-radius: 5px;
+  border: none;
+  background-color: #e96f24;
   color: #fff;
   cursor: pointer;
   margin-left: auto;

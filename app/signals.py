@@ -13,7 +13,7 @@ from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import datetime_with_timezone
-
+from scripts.settings_for_park import settings_for_partner
 
 # @receiver(post_save, sender=AuUser)
 # def create_partner(sender, instance, created, **kwargs):
@@ -21,11 +21,12 @@ from scripts.google_calendar import datetime_with_timezone
 #         Partner.objects.create(user=instance)
 
 
-# @receiver(post_save, sender=Partner)
-# def create_park_settings(sender, instance, created, **kwargs):
-#     if created and not instance.user.is_superuser:
-#         setup_periodic_tasks(instance)
-
+@receiver(post_save, sender=Partner)
+def create_park_settings(sender, instance, created, **kwargs):
+    if created:
+        setup_periodic_tasks(instance)
+        for key, value in settings_for_partner.items():
+            ParkSettings.objects.create(key=key, value=value[0], description=value[1], partner=instance)
 
 # @receiver(post_delete, sender=AuUser)
 # def delete_park_settings(sender, instance, **kwargs):

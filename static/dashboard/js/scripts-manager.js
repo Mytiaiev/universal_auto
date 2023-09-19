@@ -140,10 +140,10 @@ barChart.render();
 let areaChartOptions = {
 	series: [{
 		name: "",
-		data: ['Вася'],
+		data: [''],
 	}, {
 		name: "",
-		data: ['Петя'],
+		data: [''],
 	}],
 	chart: {
 		type: "area",
@@ -616,7 +616,7 @@ $(document).ready(function () {
 		$('.burger-menu').toggleClass('open');
 	});
 
-	$('#managerVehicleBtn').click(function () {
+	$('#managerVehicleBtnContainer').click(function () {
 		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
@@ -624,7 +624,7 @@ $(document).ready(function () {
 		$('.info-driver').hide();
 	});
 
-	$('#managerDriverBtn').click(function () {
+	$('#managerDriverBtnContainer').click(function () {
 		$('.info-driver').show();
 		$('.payback-car').hide();
 		$('.charts').hide();

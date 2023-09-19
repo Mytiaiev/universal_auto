@@ -38,3 +38,8 @@ settings = {
     'NINJA_ADDRESS': ('///', 'Адреса офіса Ninja автопарку'),
 }
 
+settings_for_partner = {
+    "TOTAL_KM_PER_WEEK": ('2000', 'Ліміт на тиждень (км)'),
+    "OVERALL_KM_PRICE": ('6', 'Вартість км понад лімітом (грн)'),
+    'GOOGLE_ID_CALENDAR': ('Введіть ID календаря для замовлень', 'ID календаря змін водіїв'),
+}

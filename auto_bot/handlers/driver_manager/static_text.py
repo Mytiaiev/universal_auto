@@ -20,6 +20,7 @@ no_drivers_text = "У Вас немає звітів по водіях за це
 no_reports_text = "У Вас немає заробітків за цей період"
 no_vehicles_text = "У Вас немає звітів по автомобілях за цей період"
 no_manager_vehicles = "У Вас немає автомобілів"
+no_manager_drivers = "У Вас немає водіїв"
 choose_period_text = "Оберіть період звіту"
 start_report_text = "Введіть з якої дати отримати звіт (ДД.MM.РРРР)"
 end_report_text = "Введіть по яку дату отримати звіт (ДД.MM.РРРР)"

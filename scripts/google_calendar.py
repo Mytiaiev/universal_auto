@@ -18,6 +18,26 @@ class GoogleCalendar:
     def get_calendar_list(self):
         return self.service.calendarList().list().execute()
 
+    @staticmethod
+    def add_permission(email):
+        permission = {
+            'role': 'writer',  # Adjust the role as needed (e.g., 'reader', 'owner')
+            'scope': {
+                'type': 'user',
+                'value': email,
+            },
+        }
+        return permission
+
+    def create_calendar(self, calendar_name="Розклад водіїв"):
+        calendar = {
+            'summary': calendar_name,
+            'timeZone': 'Europe/Kiev',
+        }
+
+        created_calendar = self.service.calendars().insert(body=calendar).execute()
+        return created_calendar['id']
+
     def add_calendar(self, calendar_id):
         calendar_list = {
             "id": calendar_id
@@ -53,7 +73,6 @@ class GoogleCalendar:
                 driver2,
             ],
         }
-        print(event)
         event = self.service.events().insert(calendarId=calendar_id, body=event).execute()
         return f"Подія '{event}' була успішно зареєстрована."
 

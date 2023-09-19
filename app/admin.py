@@ -14,11 +14,11 @@ models = {
     'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
     'Payments':                     {'view': True, 'add': False, 'change': False, 'delete': False},
     'SummaryReport':                {'view': True, 'add': False, 'change': False, 'delete': False},
-    'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
-    'Driver':                       {'view': True, 'add': True, 'change': True, 'delete': True},
-    'Vehicle':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    # 'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Driver':                       {'view': True, 'add': False, 'change': True, 'delete': False},
+    'Vehicle':                      {'view': True, 'add': False, 'change': True, 'delete': True},
     'Manager':                      {'view': True, 'add': True, 'change': True, 'delete': True},
-    'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
+    # 'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
     'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
     'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
@@ -28,7 +28,6 @@ investor_permissions = {
     'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
     'VehicleSpendings':             {'view': True, 'add': False, 'change': False, 'delete': False},
-    'Dashboard':                    {'view': True, 'add': False, 'change': False, 'delete': False},
 }
 
 
@@ -576,7 +575,7 @@ class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['report_from', 'vendor_name', 'full_name'
+            return ['report_from', 'vendor_name', 'full_name',
                     'total_amount_without_fee', 'total_amount_cash', 'total_amount_on_card',
                     'total_distance', 'total_rides',
                     ]
@@ -669,11 +668,11 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
-    list_display = ('role',)
+    list_display = ('user', 'chat_id')
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['user', 'role']}),
+        (None, {'fields': ['user', 'chat_id']}),
     ]
 
 
@@ -751,18 +750,14 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     list_display_links = ('name', 'second_name')
     list_per_page = 25
 
-
-    def has_add_permission(self, request):
-        return False
-
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
             return ['name', 'second_name',
-                    'vehicle', 'phone_number', 'chat_id',
+                    'vehicle', 'manager', 'chat_id',
                     'schema', 'plan', 'rental',
-                    'driver_status', 'manager',
+                    'driver_status',
                     'created_at',
                     ]
 
@@ -837,7 +832,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         else:
             return ['licence_plate', 'name',
                     'vin_code',
-                    'gps_imei', 'purchase_price',
+                    'purchase_price',
                     'manager', 'created_at'
                     ]
 
@@ -878,7 +873,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 
 @admin.register(Order)
-class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class OrderAdmin(admin.ModelAdmin):
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
@@ -923,7 +918,7 @@ class OrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 
 @admin.register(FleetOrder)
-class FleetOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class FleetOrderAdmin(admin.ModelAdmin):
     list_filter = ('fleet', 'driver')
 
     def get_list_display(self, request):
@@ -988,7 +983,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
 
 
 @admin.register(Comment)
-class CommentAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class CommentAdmin(admin.ModelAdmin):
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -1047,23 +1042,3 @@ class ParkSettingsAdmin(admin.ModelAdmin):
 
         return fieldsets
 
-
-@admin.register(Dashboard)
-class DashboardAdmin(admin.ModelAdmin):
-    def changelist_view(self, request, extra_context=None):
-        if request.method == "GET":
-            user = request.user
-
-            if user.groups.filter(name='Investor').exists():
-                dashboard_url = reverse('dashboard_investor')
-            elif user.groups.filter(name='Partner').exists():
-                dashboard_url = reverse('dashboard_partner')
-            elif user.groups.filter(name='Manager').exists():
-                dashboard_url = reverse('dashboard')
-            else:
-                # Default dashboard for other users
-                dashboard_url = reverse('dashboard')
-
-            return redirect(dashboard_url)
-
-        return super().changelist_view(request, extra_context)

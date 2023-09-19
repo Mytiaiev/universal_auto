@@ -278,8 +278,10 @@ $(document).ready(function () {
 			success: function (response) {
 				let data = response.data[0];
 				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let startDate = response.data[2];
-				let endDate = response.data[3];
+				let totalDistance = parseFloat(response.data[2]).toFixed(2);
+				let startDate = response.data[3];
+				let endDate = response.data[4];
+				let efficiency = parseFloat(response.data[5]).toFixed(2);
 				let formattedData = {};
 
 				Object.keys(data).forEach(function (key) {
@@ -300,9 +302,10 @@ $(document).ready(function () {
 				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 				barChart.updateOptions(barChartOptions);
 
-				$('#weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
-				$('#weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-				$('#income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('.weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
+				$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
 
 			}
 		});
@@ -318,7 +321,6 @@ $(document).ready(function () {
 			},
 			success: function (response) {
 				let dataObject = response.data;
-
 				let carData = {};
 
 				// Проходимося по кожному ідентифікатору автомобіля
@@ -326,7 +328,7 @@ $(document).ready(function () {
 					carData[carNumber] = dataObject[carNumber].map(function (item) {
 						return {
 							date: new Date(item.date_effective),
-							mileage: parseFloat(item.mileage)
+							efficiency: parseFloat(item.efficiency)
 						};
 					});
 				});
@@ -335,7 +337,7 @@ $(document).ready(function () {
 					return {
 						name: carNumber,
 						data: carData[carNumber].map(function (entry) {
-							return entry.mileage;
+							return entry.efficiency;
 						})
 					};
 				});
@@ -413,9 +415,18 @@ $(document).ready(function () {
 		$("#loginErrorMessage").hide()
 	}
 
-	$("#settingBtn").click(function () {
+	$("#settingBtnContainer").click(function () {
 		sessionStorage.setItem('settings', 'true');
 		$("#settingsWindow").fadeIn();
+	});
+
+	$(".sidebar-list-item.admin").on("click", function () {
+
+		var adminPanelURL = $(this).data("url");
+
+		if (adminPanelURL) {
+			window.open(adminPanelURL, "_blank");
+		}
 	});
 
 	$(".close-btn").click(function () {
@@ -499,7 +510,7 @@ $(document).ready(function () {
 				if (response.data === true) {
 					localStorage.setItem(partner, 'success');
 					$("#partnerLogin").hide()
-					$("#partnerPassword").hide().clear()
+					$("#partnerPassword").hide().val('')
 					$(".opt-partnerForm").hide()
 					$(".login-ok").show()
 					$("#loginErrorMessage").hide()
@@ -536,7 +547,7 @@ $(document).ready(function () {
 		});
 	}
 
-	$("#updateDatabase").click(function () {
+	$("#updateDatabaseContainer").click(function () {
 
 		$("#loadingModal").css("display", "block")
 
@@ -548,7 +559,6 @@ $(document).ready(function () {
 				action: "upd_database",
 			},
 			success: function (response) {
-				console.log(response.data)
 				if (response.data === true) {
 					$("#loadingMessage").text(gettext("База даних оновлено"));
 					$("#loader").css("display", "none");
@@ -556,12 +566,14 @@ $(document).ready(function () {
 
 					setTimeout(function () {
 						$("#loadingModal").css("display", "none");
+						window.location.reload();
 					}, 3000);
 				} else {
 					$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора"));
 
 					setTimeout(function () {
 						$("#loadingModal").css("display", "none");
+						window.location.reload();
 					}, 3000);
 				}
 			}
@@ -642,7 +654,7 @@ $(document).ready(function () {
 		$('.burger-menu').toggleClass('open');
 	});
 
-	$('#partnerVehicleBtn').click(function () {
+	$('#partnerVehicleBtnContainer').click(function () {
 		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
@@ -651,13 +663,12 @@ $(document).ready(function () {
 		$('.common-period').hide();
 	});
 
-	$('#partnerDriverBtn').click(function () {
+	$('#partnerDriverBtnContainer').click(function () {
 		$('.info-driver').show();
 		$('.payback-car').hide();
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.common-period').hide();
-
 	});
 
 	$(".close-btn").click(function () {

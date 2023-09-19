@@ -1,4 +1,4 @@
-app = "workers-prod"
+app = "workers"
 kill_signal = "SIGINT"
 primary_region = "otp"
 kill_timeout = 5
@@ -7,6 +7,6 @@ kill_timeout = 5
 [experimental]
   auto_rollback = true
 [processes]
-  worker = "celery -A auto worker -l WARNING -Q beat_tasks"
-  bot_worker = "celery -A auto worker -l WARNING -Q bot_tasks"
-  beat = "celery -A auto beat -l WARNING"
+  worker = "celery -A auto worker -l INFO -Q beat_tasks"
+  bot_worker = "celery -A auto worker -l INFO -Q bot_tasks"
+  beat = "celery -A auto beat -l INFO"

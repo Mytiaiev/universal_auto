@@ -15,7 +15,7 @@ from django.utils.decorators import method_decorator
 
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-from taxi_service.utils import weekly_rent, average_effective_vehicle, \
+from taxi_service.utils import average_effective_vehicle, \
     car_piggy_bank, get_driver_info, manager_car_piggy_bank, partner_car_piggy_bank
 from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
 from auto_bot.main import bot
@@ -136,20 +136,6 @@ class DriversView(TemplateView):
         return context
 
 
-class DashboardView(TemplateView):
-    template_name = 'dashboard/dashboard.html'
-
-    def get_context_data(self, **kwargs):
-
-        context = super().get_context_data(**kwargs)
-
-        context['total_distance_rent'] = weekly_rent()
-        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
-        context['average_effective_vehicle'] = average_effective_vehicle()
-
-        return context
-
-
 class DashboardInvestorView(TemplateView):
     template_name = 'dashboard/dashboard-investor.html'
 
@@ -173,7 +159,6 @@ class DashboardPartnerView(TemplateView):
 
         context = super().get_context_data(**kwargs)
 
-        context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
         context['average_effective_vehicle'] = average_effective_vehicle()
         context['car_piggy_bank'] = partner_car_piggy_bank(self.request)
@@ -187,7 +172,6 @@ class DashboardManagerView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['total_distance_rent'] = weekly_rent()
         context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
         context['average_effective_vehicle'] = average_effective_vehicle()
         context['car_piggy_bank'] = manager_car_piggy_bank(self.request)
