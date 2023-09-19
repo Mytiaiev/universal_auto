@@ -31,9 +31,9 @@
 		<div class="menu-icon" onclick="openSidebar()">
 			<span class="material-icons-outlined">menu</span>
 		</div>
-{#		<div class="header-left">#}
-{#			<span class="material-icons-outlined">search</span>#}
-{#		</div>#}
+		{#		<div class="header-left">#}
+		{#			<span class="material-icons-outlined">search</span>#}
+		{#		</div>#}
 		<div class="header-right">
 			<span id="account_circle"></span>
 		</div>
@@ -51,10 +51,12 @@
 				{% csrf_token %}
 				<h4>{% trans 'Старий пароль:' %}</h4>
 				<input type="password" id="oldPassword" name="oldPassword" required>
-				<p class="error-message" id="oldPasswordMessage" style="display:none; color: red">{% trans 'Вказано неправильний пароль' %}</p>
+				<p class="error-message" id="oldPasswordMessage"
+					 style="display:none; color: red">{% trans 'Вказано неправильний пароль' %}</p>
 				<h4>{% trans 'Новий пароль:' %}</h4>
 				<input type="password" id="newPassword" name="newPassword" required>
-				<p class="error-message" id="ChangeErrorMessage" style="display:none; color: red">{% trans 'Пароль не співпадає' %}</p>
+				<p class="error-message" id="ChangeErrorMessage"
+					 style="display:none; color: red">{% trans 'Пароль не співпадає' %}</p>
 				<h4>{% trans 'Підтвердити новий пароль:' %}</h4>
 				<input type="password" id="confirmPassword" name="confirmPassword" required>
 
@@ -75,7 +77,7 @@
 		</div>
 		<ul class="sidebar-list">
 			<li class="sidebar-list-item" onclick="window.location='{% url 'dashboard_investor' %}'">
-					<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
+				<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
 			</li>
 			<div id="investorVehicleBtnContainer">
 				<li class="sidebar-list-item">
@@ -84,11 +86,11 @@
 					</span>
 				</li>
 			</div>
-{#			<li class="sidebar-list-item">#}
-{#				<a href="#" target="_blank">#}
-{#					<span class="material-icons-outlined"></span> Повідомлення#}
-{#				</a>#}
-{#			</li>#}
+			{#			<li class="sidebar-list-item">#}
+			{#				<a href="#" target="_blank">#}
+			{#					<span class="material-icons-outlined"></span> Повідомлення#}
+			{#				</a>#}
+			{#			</li>#}
 		</ul>
 	</aside>
 	<!-- End Sidebar -->
@@ -98,100 +100,86 @@
 		<div class="main-title">
 			<h2>{% trans 'Інформаційна панель Інвестора' %}</h2>
 		</div>
+		<div class="common-period">
+			<label for="period-common">Виберіть період:</label>
+			<select id="period-common" name="period-common">
+				{#				<option value="today">Сьогодні</option>#}
+				<option value="yesterday">Вчора</option>
+				<option value="current_week">Поточний тиждень</option>
+				<option value="last_week">Минулий тиждень</option>
+				<option value="current_month">Поточний місяць</option>
+				<option value="last_month">Минулий місяць</option>
+				<option value="current_quarter">Поточний квартал</option>
+				<option value="last_quarter">Минулий квартал</option>
+				<option value="custom">Вибрати період ></option>
+			</select>
+			<input type="button" value="Показати" id="common-show-button"
+						 onclick="showDatePicker('period-common', 'datePicker')">
+		</div>
+		<div id="datePicker" style="display: none;">
+			<label for="start_date">Початкова дата:</label>
+			<input type="date" id="start_date" name="start_date">
+			<label for="end_date">Кінцева дата:</label>
+			<input type="date" id="end_date" name="end_date">
+			<input type="button" value="Фільтрувати" onclick="applyCustomDate()">
+		</div>
 		<div class="main-cards">
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальний дохід авто' %}</h2>
-					<span class="material-icons-outlined">&#8372;</span><br>
-				</div>
-				<h3 id="income-amount">{% trans 'грн.' %}</h3>
+				<h2>{% trans 'ЗАГАЛЬНИЙ ДОХІД' %}</h2>
+				<span class="weekly-income-amount"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальний пробіг, км' %}</h2>
-					<span class="material-icons-outlined">alt_route</span><br>
-				</div>
-				<h3 id="income-km"></h3>
+				<h2>{% trans 'ЗАГАЛЬНИЙ ПРОБІГ' %}</h2>
+				<span class="income-km"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальні витрати на авто' %}</h2>
-					<span class="material-icons-outlined">money_off</span><br>
-				</div>
-				<h3 id="spending-all"></h3>
+				<h2>{% trans 'ЗАГАЛЬНІ ВИТРАТИ НА АВТО' %}</h2>
+				<span class="spending-all"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
-{#			<div class="card">#}
-{#				<div class="card-inner">#}
-{#					<h2>Сповіщення</h2>#}
-{#					<span class="material-icons-outlined">email</span>#}
-{#				</div>#}
-{#				<h3>56</h3>#}
-{#			</div>#}
+			{#			<div class="card">#}
+			{#				<div class="card-inner">#}
+			{#					<h2>Сповіщення</h2>#}
+			{#					<span class="material-icons-outlined">email</span>#}
+			{#				</div>#}
+			{#				<h3>56</h3>#}
+			{#			</div>#}
 		</div>
 
 		<div class="charts">
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Дохід' %}</h2>
 				<div id="bar-chart"></div>
-				<div class="chart-btns">
-					<div class="radio_btn">
-						<input id="radio-1" type="radio" name="effective-amount" value="d"
-									 checked>
-						<label for="radio-1">{% trans 'день' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-2" type="radio" name="effective-amount" value="w">
-						<label for="radio-2">{% trans 'тиждень' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-3" type="radio" name="effective-amount" value="m">
-						<label for="radio-3">{% trans 'місяць' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-4" type="radio" name="effective-amount" value="q">
-						<label for="radio-4">{% trans 'поточний квартал' %}</label>
-					</div>
-				</div>
 			</div>
 
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Пробіг автомобіля' %}</h2>
 				<div id="area-chart"></div>
-				<div class="chart-btns">
-					<div class="radio_btn">
-						<input id="radio-5" type="radio" name="effective-period" value="w"
-									 checked>
-						<label for="radio-5">{% trans 'тиждень' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-6" type="radio" name="effective-period" value="m">
-						<label for="radio-6">{% trans 'місяць' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-7" type="radio" name="effective-period" value="q">
-						<label for="radio-7">{% trans 'поточний квартал' %}</label>
-					</div>
-				</div>
 			</div>
 		</div>
 		{% for car in car_piggy_bank %}
-		<div class="payback-car">
-			<div class="car-item">
-				<div class="car-image">
-					<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
-				</div>
-				<div class="car-details">
-					<p>{% trans 'Номер авто:' %}<br>{{ car.licence_plate }}</p>
-					<p>{% trans 'Заробіток:' %}<br>₴ {{ car.total_kasa }}</p>
-					<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
-					<div class="progress-bar">
-						<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
-							<div class="progress-label">{{ car.progress_percentage }}%</div>
-						</div>
+			<div class="payback-car">
+				<div class="car-item">
+					<div class="car-image">
+						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
 					</div>
-					<p>{% trans 'Повна сума авто:' %}<br>₴ {{ car.purchase_price }}</p>
+					<div class="car-details">
+						<p>{% trans 'Номер авто:' %}<br>{{ car.licence_plate }}</p>
+						<p>{% trans 'Заробіток:' %}<br>₴ {{ car.total_kasa }}</p>
+						<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
+						<div class="progress-bar">
+							<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
+								<div class="progress-label" style="color: #0a0a0a">{{ car.progress_percentage }}%</div>
+							</div>
+						</div>
+						<p>{% trans 'Вартість авто:' %}<br>₴ {{ car.purchase_price }}</p>
+					</div>
 				</div>
-			</div>
 			</div>
 		{% endfor %}
 	</main>

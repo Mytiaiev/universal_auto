@@ -208,7 +208,7 @@ def partner_total_earnings(period, user_id, start_date=None, end_date=None):
     return total, total_amount, total_distance, start_date_formatted, end_date_formatted, effective
 
 
-def investor_cash_car(period, investor_pk):
+def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
     vehicles = {}
     total_amount = 0
     total_km = 0
@@ -217,7 +217,12 @@ def investor_cash_car(period, investor_pk):
     investor_cars = Vehicle.objects.filter(investor_car=investor)
     licence_plates = [car.licence_plate for car in investor_cars]
 
-    start_period, end_period = get_dates(period)
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 

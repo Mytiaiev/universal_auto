@@ -254,140 +254,135 @@ let areaChartOptions = {
 let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
 
-$(document).ready(function () {
+// Обробка графіків
+function loadDefaultKasa(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'get_cash_investor',
+			period: period,
+			start_date: startDate,
+			end_date: endDate,
+		},
+		success: function (response) {
+			let data = response.data[0];
+			let totalAmount = parseFloat(response.data[1]).toFixed(2);
+			let totalKm = parseFloat(response.data[2]).toFixed(2);
+			let spending = response.data[3];
+			let startDate = response.data[4];
+			let endDate = response.data[5];
+			let formattedData = {};
 
-	// Обробка графіків
-	function loadDefaultKasa(period) {
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'get_cash_investor',
-				period: period
-			},
-			success: function (response) {
-				let data = response.data[0];
-				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let totalKm = parseFloat(response.data[2]).toFixed(2);
-				let spending = response.data[3];
-				let startDate = response.data[4];
-				let endDate = response.data[5];
-				let formattedData = {};
+			Object.keys(data).forEach(function (key) {
+				let value = parseFloat(data[key]).toFixed(2);
+				if (value !== 0) {
+					let formattedKey = key;
+					formattedData[formattedKey] = value;
+				}
+			});
 
-				Object.keys(data).forEach(function (key) {
-					let value = parseFloat(data[key]).toFixed(2);
-					if (value !== 0) {
-						let formattedKey = key;
-						formattedData[formattedKey] = value;
-					}
-				});
+			let sortedKeys = Object.keys(formattedData).sort();
+			let sortedFormattedData = {};
+			sortedKeys.forEach(function (key) {
+				sortedFormattedData[key] = formattedData[key];
+			});
 
-				let sortedKeys = Object.keys(formattedData).sort();
-				let sortedFormattedData = {};
-				sortedKeys.forEach(function (key) {
-					sortedFormattedData[key] = formattedData[key];
-				});
+			barChartOptions.series[0].data = Object.values(sortedFormattedData);
+			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
+			barChart.updateOptions(barChartOptions);
 
-				barChartOptions.series[0].data = Object.values(sortedFormattedData);
-				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-				barChart.updateOptions(barChartOptions);
+			$('.weekly-income-dates').text(startDate + ' по ' + endDate);
+			$('.weekly-income-amount').text(totalAmount + ' грн');
+			$('.spending-all').text(spending + ' грн');
+			$('.income-km').text(totalKm + ' км');
+		}
+	});
+}
 
-				$('#weekly-income-dates').text(startDate + ' по ' + endDate);
-				$('#weekly-income-amount').text(totalAmount + ' грн');
-				$('#income-amount').text(totalAmount + ' грн');
-				$('#spending-all').text(spending + ' грн');
-				$('#income-km').text(totalKm + ' км');
-			}
-		});
-	}
+function loadEffectiveChart(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'investor',
+			period: period,
+			startDate: startDate,
+			endDate: endDate,
+		},
+		success: function (response) {
+			let dataObject = response.data;
 
-	function loadEffectiveChart(period) {
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'investor',
-				period: period,
-			},
-			success: function (response) {
-				let dataObject = response.data;
+			let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
 
-				let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
-
-				// Проходимося по кожному ідентифікатору автомобіля
-				Object.keys(dataObject).forEach(function (carNumber) {
-					carData[carNumber] = dataObject[carNumber].map(function (item) {
-						return {
-							date: new Date(item.date_effective),
-							mileage: parseFloat(item.mileage)
-						};
-					});
-				});
-
-				let mileageSeries = Object.keys(carData).map(function (carNumber) {
+			// Проходимося по кожному ідентифікатору автомобіля
+			Object.keys(dataObject).forEach(function (carNumber) {
+				carData[carNumber] = dataObject[carNumber].map(function (item) {
 					return {
-						name: carNumber,
-						data: carData[carNumber].map(function (entry) {
-							return entry.mileage;
-						})
+						date: new Date(item.date_effective),
+						mileage: parseFloat(item.mileage)
 					};
 				});
+			});
 
-				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-				});
+			let mileageSeries = Object.keys(carData).map(function (carNumber) {
+				return {
+					name: carNumber,
+					data: carData[carNumber].map(function (entry) {
+						return entry.mileage;
+					})
+				};
+			});
 
-				// Оновити опції графіка з новими даними
-				areaChartOptions.series = mileageSeries;
-				areaChartOptions.labels = dates;
+			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+			});
 
-				areaChart.updateOptions(areaChartOptions);
-			}
-		});
-	}
+			// Оновити опції графіка з новими даними
+			areaChartOptions.series = mileageSeries;
+			areaChartOptions.labels = dates;
 
-
-	function updateEffectiveChart(vehicleId1, vehicleId2, period) {
-		loadEffectiveChart(period);
-	}
-
-	loadDefaultKasa('day');
-	loadEffectiveChart('week', $('#vehicle-select').val());
-
-	$('input[name="effective-amount"]').change(function () {
-		const selectedKasa = $(this).val();
-		const period = getPeriod(selectedKasa);
-
-		loadDefaultKasa(period);
+			areaChart.updateOptions(areaChartOptions);
+		}
 	});
+}
 
-	$('input[name="effective-period"]').change(function () {
-		const selectedEffective = $(this).val();
-		const vehicleId1 = $('#vehicle-select').val();
-		const vehicleId2 = $('#vehicle-select-2').val();
-		const period = getPeriod(selectedEffective);
 
-		updateEffectiveChart(vehicleId1, vehicleId2, period);
-	});
+const commonPeriodSelect = $('#period-common');
+const showCommonButton = $('#common-show-button');
 
-	$('#vehicle-select, #vehicle-select-2').change(function () {
-		const selectedEffective = $('input[name="effective-period"]:checked').val();
-		const period = getPeriod(selectedEffective);
+showCommonButton.on('click', function (event) {
+	event.preventDefault();
 
-		const vehicleId1 = $('#vehicle-select').val();
-		const vehicleId2 = $('#vehicle-select-2').val();
-		updateEffectiveChart(vehicleId1, vehicleId2, period);
-	});
-
-	function getPeriod(val) {
-		return {
-			d: 'day',
-			w: 'week',
-			m: 'month',
-			q: 'quarter'
-		}[val];
-	}
+	const selectedPeriod = commonPeriodSelect.val();
+	loadDefaultKasa(selectedPeriod);
+	loadEffectiveChart(selectedPeriod);
 });
+
+loadDefaultKasa('yesterday');
+loadEffectiveChart('current_week');
+
+function showDatePicker(periodSelectId, datePickerId) {
+	let periodSelect = $("#" + periodSelectId);
+	let datePicker = $("#" + datePickerId);
+
+	if (periodSelect.val() === "custom") {
+		datePicker.css("display", "block");
+	} else {
+		datePicker.css("display", "none");
+	}
+}
+
+function applyCustomDate() {
+	let startDate = $("#datePicker #start_date").val();
+	let endDate = $("#datePicker #end_date").val();
+
+	console.log(startDate, endDate);
+
+	const selectedPeriod = commonPeriodSelect.val();
+	loadDefaultKasa(selectedPeriod, startDate, endDate);
+	loadEffectiveChart(selectedPeriod, startDate, endDate);
+}
 
 $(document).ready(function () {
 
@@ -467,6 +462,8 @@ $(document).ready(function () {
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
+		$('.common-period').hide();
+		$('#datePicker').hide();
 	});
 
 	$(".close-btn").click(function () {

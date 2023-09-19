@@ -179,9 +179,11 @@ class GetRequestHandler:
 
     def handle_get_investor_cash(self, request):
         period = request.GET.get('period')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
         investor_id = request.user.pk
 
-        get_cash = investor_cash_car(period, investor_id)
+        get_cash = investor_cash_car(period, investor_id, start_date, end_date)
         json_data = JsonResponse({'data': get_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
