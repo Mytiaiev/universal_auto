@@ -171,7 +171,6 @@ class DashboardManagerView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
         context['average_effective_vehicle'] = average_effective_vehicle()
         context['car_piggy_bank'] = manager_car_piggy_bank(self.request)
 

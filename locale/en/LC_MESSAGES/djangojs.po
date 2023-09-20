@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-12 11:04+0300\n"
+"POT-Creation-Date: 2023-09-20 11:32+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -139,24 +139,83 @@ msgstr "Read less <"
 msgid "Читати далі >"
 msgstr "Read more >"
 
+#: static/dashboard/js/scripts-investor.js:27
+#: static/dashboard/js/scripts-partner.js:29
+msgid "Дохід: "
+msgstr "Income: "
+
+#: static/dashboard/js/scripts-investor.js:114
 #: static/dashboard/js/scripts-partner.js:116
 msgid "Дохід (грн.)"
 msgstr "Income (UAH)"
 
-#: static/dashboard/js/scripts-partner.js:303
+#: static/dashboard/js/scripts-investor.js:221
+#: static/dashboard/js/scripts-investor.js:235
+#: static/dashboard/js/scripts-partner.js:231
+#: static/dashboard/js/scripts-partner.js:245
+msgid "пробіг км"
+msgstr "mileage km"
+
+#: static/dashboard/js/scripts-investor.js:295
+#: static/dashboard/js/scripts-manager.js:295
+#: static/dashboard/js/scripts-manager.js:381
+#: static/dashboard/js/scripts-partner.js:305
+msgid "З "
+msgstr "From "
+
+#: static/dashboard/js/scripts-investor.js:295
+#: static/dashboard/js/scripts-manager.js:295
+msgid " по "
+msgstr " to "
+
+#: static/dashboard/js/scripts-investor.js:296
+#: static/dashboard/js/scripts-investor.js:297
+#: static/dashboard/js/scripts-manager.js:296
+msgid " грн"
+msgstr " UAH"
+
+#: static/dashboard/js/scripts-investor.js:298
+#: static/dashboard/js/scripts-manager.js:297
+msgid " км"
+msgstr " km"
+
+#: static/dashboard/js/scripts-manager.js:27
+msgid "Заробіток: "
+msgstr "Earnings: "
+
+#: static/dashboard/js/scripts-manager.js:114
+msgid "Каса"
+msgstr "Cash"
+
+#: static/dashboard/js/scripts-manager.js:221
+#: static/dashboard/js/scripts-manager.js:235
+msgid "Дохід грн/км"
+msgstr "Income UAH/km"
+
+#: static/dashboard/js/scripts-manager.js:298
+#: static/dashboard/js/scripts-partner.js:308
+msgid "грн/км"
+msgstr "UAH/km"
+
+#: static/dashboard/js/scripts-manager.js:381
+#: static/dashboard/js/scripts-partner.js:305
+#: static/dashboard/js/scripts-partner.js:391
 msgid "по"
 msgstr "to"
 
-#: static/dashboard/js/scripts-partner.js:304
-#: static/dashboard/js/scripts-partner.js:305
+#: static/dashboard/js/scripts-partner.js:306
+msgid "км"
+msgstr "km"
+
+#: static/dashboard/js/scripts-partner.js:307
 msgid "грн"
 msgstr "UAH"
 
-#: static/dashboard/js/scripts-partner.js:581
+#: static/dashboard/js/scripts-partner.js:639
 msgid "База даних оновлено"
 msgstr "Database updated"
 
-#: static/dashboard/js/scripts-partner.js:589
+#: static/dashboard/js/scripts-partner.js:648
 msgid ""
 "Помилка оновлення бази даних. Спробуйте пізніше або зверніться до "
 "адміністратора"

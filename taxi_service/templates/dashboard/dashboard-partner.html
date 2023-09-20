@@ -14,8 +14,6 @@
 	<!-- Material Icons -->
 	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
 				rel="stylesheet">
-	<link rel="stylesheet" type="text/css"
-				href="{% static 'app/css/bootstrap.css' %}"/>
 	<!-- Custom CSS -->
 	<link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
 	<link
@@ -81,7 +79,7 @@
 		</div>
 		<ul class="sidebar-list">
 			<li class="sidebar-list-item" onclick="window.location='{% url 'dashboard_partner' %}'">
-					<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
+				<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
 			</li>
 			<div id="partnerVehicleBtnContainer">
 				<li class="sidebar-list-item">
@@ -105,7 +103,7 @@
 				</li>
 			</div>
 			<li class="sidebar-list-item admin" data-url="{% url 'admin:index' %}">
-					<span class="material-icons-outlined"></span>{% trans 'Адміністративна панель' %}
+				<span class="material-icons-outlined"></span>{% trans 'Адміністративна панель' %}
 			</li>
 			<div id="updateDatabaseContainer">
 				<li class="sidebar-list-item">
@@ -145,9 +143,9 @@
 						</div>
 						<p class="error-message" id="loginErrorMessage"
 							 style="display:none; color: red">{% trans 'Вказано неправильний логін або пароль' %}</p>
-						<input type="text" id="partnerLogin" name="partnerLogin" placeholder="Логін" required>
+						<input type="text" id="partnerLogin" name="partnerLogin" placeholder={% trans 'Логін' %} required>
 						<input class="showPassword partnerPassword" type="password" id="partnerPassword" name="partnerPassword"
-									 placeholder="Пароль" required>
+									 placeholder={% trans 'Пароль' %} required>
 						<div class="loader-login"></div>
 					</form>
 
@@ -171,32 +169,47 @@
 		<div class="main-title">
 			<h2>{% trans 'Інформаційна панель Партнера' %}</h2>
 		</div>
+		<div class="common-period">
+			<label for="period-common">{% trans 'Виберіть період:' %}</label>
+			<select id="period-common" name="period-common">
+				{#				<option value="today">Сьогодні</option>#}
+				<option value="yesterday">{% trans 'Вчора' %}</option>
+				<option value="current_week">{% trans 'Поточний тиждень' %}</option>
+				<option value="last_week">{% trans 'Минулий тиждень' %}</option>
+				<option value="current_month">{% trans 'Поточний місяць' %}</option>
+				<option value="last_month">{% trans 'Минулий місяць' %}</option>
+				<option value="current_quarter">{% trans 'Поточний квартал' %}</option>
+				<option value="last_quarter">{% trans 'Минулий квартал' %}</option>
+				<option value="custom">{% trans 'Вибрати період >' %}</option>
+			</select>
+			<input type="button" value={% trans 'Показати' %} id="common-show-button"
+						 onclick="showDatePicker('period-common', 'datePicker')">
+		</div>
+		<div id="datePicker" style="display: none;">
+			<label for="start_date">{% trans 'Початкова дата:' %}</label>
+			<input type="date" id="start_date" name="start_date">
+			<label for="end_date">{% trans 'Кінцева дата:' %}</label>
+			<input type="date" id="end_date" name="end_date">
+			<input type="button" value={% trans 'Фільтрувати' %} onclick="applyCustomDateRange()">
+		</div>
 		<div class="main-cards">
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальний дохід за період' %}</h2>
-					<span class="material-icons-outlined"></span>
-				</div>
-				<br><br>
-				<h3 class="weekly-income-dates"></h3>
-				<h3 class="weekly-income-amount"></h3>
+				<h2>{% trans 'ЗАГАЛЬНИЙ ДОХІД' %}</h2>
+				<span class="weekly-income-amount"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальна оренда за період' %}</h2>
-					<span class="material-icons-outlined"></span>
-				</div>
-				<br><br>
-				<h3 class="weekly-income-dates"></h3>
-				<h3 class="weekly-income-rent"></h3>
+				<h2>{% trans 'ЗАГАЛЬНА ОРЕНДА' %}</h2>
+				<span class="weekly-income-rent"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<div class="card-inner">
-					<h2>{% trans 'Загальна ефективність авто за період' %}</h2>
-					<span class="material-icons-outlined"></span>
-				</div>
-				<h3 class="weekly-income-dates"></h3>
-				<h3 class="income-efficiency"></h3>
+				<h2>{% trans 'ЗАГАЛЬНА ЕФЕКТИВНІСТЬ АВТО' %}</h2>
+				<span class="income-efficiency"></span>
+				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<span class="weekly-income-dates"></span>
 			</div>
 			{#			<div class="card">#}
 			{#				<div class="card-inner">#}
@@ -211,45 +224,11 @@
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Каса' %}</h2>
 				<div id="bar-chart"></div>
-				<div class="chart-btns">
-					<div class="radio_btn">
-						<input id="radio-1" type="radio" name="effective-amount" value="d"
-									 checked>
-						<label for="radio-1">{% trans 'день' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-2" type="radio" name="effective-amount" value="w">
-						<label for="radio-2">{% trans 'тиждень' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-3" type="radio" name="effective-amount" value="m">
-						<label for="radio-3">{% trans 'місяць' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-4" type="radio" name="effective-amount" value="q">
-						<label for="radio-4">{% trans 'квартал' %}</label>
-					</div>
-				</div>
 			</div>
 
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Ефективність автомобіля' %}</h2>
 				<div id="area-chart"></div>
-				<div class="chart-btns">
-					<div class="radio_btn">
-						<input id="radio-5" type="radio" name="effective-period" value="w"
-									 checked>
-						<label for="radio-5">{% trans 'тиждень' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-6" type="radio" name="effective-period" value="m">
-						<label for="radio-6">{% trans 'місяць' %}</label>
-					</div>
-					<div class="radio_btn">
-						<input id="radio-7" type="radio" name="effective-period" value="q">
-						<label for="radio-7">{% trans 'квартал' %}</label>
-					</div>
-				</div>
 			</div>
 		</div>
 		{% for car in car_piggy_bank %}
@@ -264,34 +243,46 @@
 						<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
 						<div class="progress-bar">
 							<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
-								<div class="progress-label">{{ car.progress_percentage }}%</div>
+								<div class="progress-label" style="color: #0a0a0a">{{ car.progress_percentage }}%</div>
 							</div>
 						</div>
-						<p>{% trans 'Повна сума авто:' %}<br>₴ {{ car.purchase_price }}</p>
+						<p>{% trans 'Вартість авто:' %}<br>₴ {{ car.purchase_price }}</p>
 					</div>
 				</div>
 			</div>
 		{% endfor %}
 		<div class="info-driver">
-			<h2>{% trans 'Топ Водіїв' %}</h2>
-
-			<form method="post">
-				{% csrf_token %}
-				<label for="period">{% trans 'Виберіть період' %}:</label>
+			<div class="title-driver">
+				<h2>{% trans 'Рейтинг Водіїв' %}</h2>
+				<h3 class="income-drivers-date"></h3>
+			</div>
+			<div>
+				<label for="period">{% trans 'Виберіть період:' %}</label>
 				<select id="period" name="period">
-					<option value="day">{% trans 'День' %}</option>
-					<option value="week">{% trans 'Тиждень' %}</option>
-					<option value="month">{% trans 'Місяць' %}</option>
-					<option value="quarter">{% trans 'Квартал' %}</option>
+					{#				<option value="today">Сьогодні</option>#}
+					<option value="yesterday">{% trans 'Вчора' %}</option>
+					<option value="current_week">{% trans 'Поточний тиждень' %}</option>
+					<option value="last_week">{% trans 'Минулий тиждень' %}</option>
+					<option value="current_month">{% trans 'Поточний місяць' %}</option>
+					<option value="last_month">{% trans 'Минулий місяць' %}</option>
+					<option value="current_quarter">{% trans 'Поточний квартал' %}</option>
+					<option value="last_quarter">{% trans 'Минулий квартал' %}</option>
+					<option value="custom">{% trans 'Вибрати період >' %}</option>
 				</select>
-				<input type="button" value="Показати">
-			</form>
-
+				<input type="button" value={% trans 'Показати' %} id="show-button" onclick="showDatePicker('period', 'datePickerDriver')">
+			</div>
+			<div id="datePickerDriver" style="display: none;">
+				<label for="start_date">{% trans 'Початкова дата:' %}</label>
+				<input type="date" id="start_date" name="start_date">
+				<label for="end_date">{% trans 'Кінцева дата:' %}</label>
+				<input type="date" id="end_date" name="end_date">
+				<input type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
+			</div>
 			<table>
 				<tr>
 					<th>{% trans 'Водій' %}</th>
-					<th>{% trans 'Всього каса' %}</th>
-					<th>{% trans 'Всього замовлень' %}</th>
+					<th>{% trans 'Каса' %}</th>
+					<th>{% trans 'Кількість замовлень' %}</th>
 					<th>{% trans 'Відсоток прийнятих замовлень' %}</th>
 					<th>{% trans 'Середній чек, грн' %}</th>
 					<th>{% trans 'Пробіг, км' %}</th>
@@ -320,9 +311,6 @@
 	let ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 <!-- ApexCharts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
-				integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"
-				defer></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" defer></script>
 <script src="{% static 'dashboard/js/scripts-partner.js' %}" defer></script>

@@ -24,7 +24,7 @@ function closeSidebar() {
 let barChartOptions = {
 	series: [{
 		data: [],
-		name: "Заробіток: ",
+		name: gettext("Заробіток: "),
 	}],
 	chart: {
 		type: "bar",
@@ -111,7 +111,7 @@ let barChartOptions = {
 	},
 	yaxis: {
 		title: {
-			text: "Каса",
+			text: gettext("Каса"),
 			style: {
 				color: "#f5f7ff",
 			},
@@ -218,7 +218,7 @@ let areaChartOptions = {
 		[
 			{
 				title: {
-					text: "Дохід грн/км",
+					text: gettext("Дохід грн/км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -232,7 +232,7 @@ let areaChartOptions = {
 			{
 				opposite: true,
 				title: {
-					text: "Дохід грн/км",
+					text: gettext("Дохід грн/км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -254,135 +254,186 @@ let areaChartOptions = {
 let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
 
-$(document).ready(function () {
 
-	// Обробка графіків
-	function loadDefaultKasa(period) {
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'get_cash_manager',
-				period: period
-			},
-			success: function (response) {
-				let data = response.data[0];
-				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let startDate = response.data[2];
-				let endDate = response.data[3];
-				let formattedData = {};
+// Обробка графіків
+function loadDefaultKasa(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'get_cash_manager',
+			period: period,
+			start_date: startDate,
+			end_date: endDate
+		},
+		success: function (response) {
+			let data = response.data[0];
+			let totalAmount = parseFloat(response.data[1]).toFixed(2);
+			let totalRent = parseFloat(response.data[2]).toFixed(2);
+			let startDate = response.data[3];
+			let endDate = response.data[4];
+			let efficiency = parseFloat(response.data[5]).toFixed(2);
+			let formattedData = {};
 
-				Object.keys(data).forEach(function (key) {
-					let value = parseFloat(data[key]).toFixed(2);
-					if (value > 0) {
-						formattedData[key] = value;
-					}
-				});
+			Object.keys(data).forEach(function (key) {
+				let value = parseFloat(data[key]).toFixed(2);
+				if (value > 0) {
+					formattedData[key] = value;
+				}
+			});
 
-				let sortedKeys = Object.keys(formattedData).sort();
-				let sortedFormattedData = {};
-				sortedKeys.forEach(function (key) {
-					sortedFormattedData[key] = formattedData[key];
-				});
+			let sortedKeys = Object.keys(formattedData).sort();
+			let sortedFormattedData = {};
+			sortedKeys.forEach(function (key) {
+				sortedFormattedData[key] = formattedData[key];
+			});
 
-				barChartOptions.series[0].data = Object.values(formattedData);
-				barChartOptions.xaxis.categories = Object.keys(formattedData);
-				barChart.updateOptions(barChartOptions);
+			barChartOptions.series[0].data = Object.values(formattedData);
+			barChartOptions.xaxis.categories = Object.keys(formattedData);
+			barChart.updateOptions(barChartOptions);
 
-				$('#weekly-income-dates').text(startDate + ' по ' + endDate);
-				$('#weekly-income-amount').text(totalAmount + ' грн');
-				$('#income-amount').text(totalAmount + ' грн');
-			}
-		});
-	}
+			$('.weekly-income-dates').text(gettext('З ') + startDate + gettext(' по ') + endDate);
+			$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
+			$('.weekly-income-rent').text(totalRent + gettext(' км'));
+			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+		}
+	});
+}
 
-	function loadEffectiveChart(period) {
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'manager',
-				period: period,
-			},
-			success: function (response) {
-				let dataObject = response.data;
+function loadEffectiveChart(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'manager',
+			period: period,
+			start_date: startDate,
+			end_date: endDate
+		},
+		success: function (response) {
+			let dataObject = response.data;
 
-				let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
+			let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
 
-				// Проходимося по кожному ідентифікатору автомобіля
-				Object.keys(dataObject).forEach(function (carNumber) {
-					carData[carNumber] = dataObject[carNumber].map(function (item) {
-						return {
-							date: new Date(item.date_effective),
-							efficiency: parseFloat(item.efficiency)
-						};
-					});
-				});
-
-				let efficiencySeries = Object.keys(carData).map(function (carNumber) {
+			// Проходимося по кожному ідентифікатору автомобіля
+			Object.keys(dataObject).forEach(function (carNumber) {
+				carData[carNumber] = dataObject[carNumber].map(function (item) {
 					return {
-						name: carNumber,
-						data: carData[carNumber].map(function (entry) {
-							return entry.efficiency;
-						})
+						date: new Date(item.date_effective),
+						efficiency: parseFloat(item.efficiency)
 					};
 				});
+			});
 
-				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-				});
+			let efficiencySeries = Object.keys(carData).map(function (carNumber) {
+				return {
+					name: carNumber,
+					data: carData[carNumber].map(function (entry) {
+						return entry.efficiency;
+					})
+				};
+			});
 
-				// Оновити опції графіка з новими даними
-				areaChartOptions.series = efficiencySeries;
-				areaChartOptions.labels = dates;
+			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+			});
 
-				areaChart.updateOptions(areaChartOptions);
-			}
-		});
-	}
+			// Оновити опції графіка з новими даними
+			areaChartOptions.series = efficiencySeries;
+			areaChartOptions.labels = dates;
 
-
-	function updateEffectiveChart(vehicleId1, vehicleId2, period) {
-		loadEffectiveChart(period);
-	}
-
-	loadDefaultKasa('day');
-	loadEffectiveChart('week', $('#vehicle-select').val());
-
-	$('input[name="effective-amount"]').change(function () {
-		const selectedKasa = $(this).val();
-		const period = getPeriod(selectedKasa);
-
-		loadDefaultKasa(period);
+			areaChart.updateOptions(areaChartOptions);
+		}
 	});
+}
 
-	$('input[name="effective-period"]').change(function () {
-		const selectedEffective = $(this).val();
-		const vehicleId1 = $('#vehicle-select').val();
-		const vehicleId2 = $('#vehicle-select-2').val();
-		const period = getPeriod(selectedEffective);
+function loadDefaultDriver(period, startDate, endDate) {
+	$.ajax({
+		type: "GET",
+		url: ajaxGetUrl,
+		data: {
+			action: 'get_drivers_manager',
+			period: period,
+			start_date: startDate,
+			end_date: endDate,
 
-		updateEffectiveChart(vehicleId1, vehicleId2, period);
+		},
+		success: function (response) {
+			let table = $('.info-driver table');
+			let startDate = response.data[1];
+			let endDate = response.data[2];
+			table.find('tr:gt(0)').remove();
+
+			response.data[0].forEach(function (item) {
+				let row = $('<tr></tr>');
+
+				row.append('<td>' + item.driver + '</td>');
+				row.append('<td>' + item.total_kasa + '</td>');
+				row.append('<td>' + item.total_orders + '</td>');
+				row.append('<td>' + item.accept_percent + " %" + '</td>');
+				row.append('<td>' + item.average_price + '</td>');
+				row.append('<td>' + item.mileage + '</td>');
+				row.append('<td>' + item.efficiency + '</td>');
+				row.append('<td>' + item.road_time + '</td>');
+
+				table.append(row);
+
+				$('.income-drivers-date').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+			});
+		}
 	});
+}
 
-	$('#vehicle-select, #vehicle-select-2').change(function () {
-		const selectedEffective = $('input[name="effective-period"]:checked').val();
-		const period = getPeriod(selectedEffective);
+const commonPeriodSelect = $('#period-common');
+const showCommonButton = $('#common-show-button');
+const periodSelect = $('#period');
+const showButton = $('#show-button');
+showCommonButton.on('click', function (event) {
+	event.preventDefault();
 
-		const vehicleId1 = $('#vehicle-select').val();
-		const vehicleId2 = $('#vehicle-select-2').val();
-		updateEffectiveChart(vehicleId1, vehicleId2, period);
-	});
-
-	function getPeriod(val) {
-		return {
-			d: 'day',
-			w: 'week',
-			m: 'month',
-			q: 'quarter'
-		}[val];
-	}
+	const selectedPeriod = commonPeriodSelect.val();
+	loadDefaultKasa(selectedPeriod);
+	loadEffectiveChart(selectedPeriod);
 });
+
+showButton.on('click', function (event) {
+	event.preventDefault();
+
+	const selectedPeriod = periodSelect.val();
+	loadDefaultDriver(selectedPeriod);
+});
+
+loadDefaultKasa('yesterday');
+loadEffectiveChart('current_week');
+loadDefaultDriver('yesterday');
+
+function showDatePicker(periodSelectId, datePickerId) {
+	let periodSelect = $("#" + periodSelectId);
+	let datePicker = $("#" + datePickerId);
+
+	if (periodSelect.val() === "custom") {
+		datePicker.css("display", "block");
+	} else {
+		datePicker.css("display", "none");
+	}
+}
+
+function customDateRange() {
+	let startDate = $("#datePickerDriver #start_date").val();
+	let endDate = $("#datePickerDriver #end_date").val();
+
+	const selectedPeriod = periodSelect.val();
+	loadDefaultDriver(selectedPeriod, startDate, endDate);
+}
+
+function applyCustomDateRange() {
+	let startDate = $("#start_date").val();
+	let endDate = $("#end_date").val();
+
+	const selectedPeriod = commonPeriodSelect.val();
+	loadDefaultKasa(selectedPeriod, startDate, endDate);
+	loadEffectiveChart(selectedPeriod, startDate, endDate);
+}
 
 $(document).ready(function () {
 
@@ -622,6 +673,8 @@ $(document).ready(function () {
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.info-driver').hide();
+		$('.common-period').hide();
+		$('#datePicker').hide()
 	});
 
 	$('#managerDriverBtnContainer').click(function () {
@@ -629,58 +682,13 @@ $(document).ready(function () {
 		$('.payback-car').hide();
 		$('.charts').hide();
 		$('.main-cards').hide();
+		$('.common-period').hide();
+		$('#datePicker').hide()
 	});
 
 	$(".close-btn").click(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
-	});
-});
-
-$(document).ready(function () {
-	const periodSelect = $('#period');
-	const showButton = $('input[type="button"]');
-	const managerDriverBtn = $('#managerDriverBtn');
-
-	periodSelect.val("day");
-
-	managerDriverBtn.on('click', function (event) {
-		showButton.click();
-	});
-
-	showButton.on('click', function (event) {
-		event.preventDefault();
-
-		const selectedPeriod = periodSelect.val();
-
-		$.ajax({
-			type: "GET",
-			url: ajaxGetUrl,
-			data: {
-				action: 'get_drivers_manager',
-				period: selectedPeriod
-			},
-			success: function (response) {
-				console.log(response.data);
-				let table = $('.info-driver table');
-				table.find('tr:gt(0)').remove();
-
-				response.data.forEach(function (item) {
-					let row = $('<tr></tr>');
-
-					row.append('<td>' + item.driver + '</td>');
-					row.append('<td>' + item.total_kasa + '</td>');
-					row.append('<td>' + item.total_orders + '</td>');
-					row.append('<td>' + item.accept_percent + " %" +'</td>');
-					row.append('<td>' + item.average_price + '</td>');
-					row.append('<td>' + item.mileage + '</td>');
-					row.append('<td>' + item.efficiency + '</td>');
-					row.append('<td>' + item.road_time + '</td>');
-
-					table.append(row);
-				});
-			}
-		});
 	});
 });

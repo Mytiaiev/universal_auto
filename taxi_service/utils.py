@@ -1,7 +1,7 @@
 import json
 import random
 import secrets
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 
 from django.db.models import Sum, Q, Avg
 from django.utils import timezone
@@ -71,93 +71,138 @@ def restart_order(id_order, car_delivery_price, action):
         order.save()
 
 
-# Робота з dashboard.html #################
+# Робота з dashboard.html
 
 
 def get_dates(period=None):
     current_date = timezone.now().date()
-    if period == 'day':
-        previous_date = current_date - timedelta(days=1)
 
+    if period == 'yesterday':
+        previous_date = current_date - timedelta(days=1)
         start_date = previous_date
         end_date = current_date
 
-    elif period == 'week':
+    elif period == 'current_week':
         weekday = current_date.weekday()
-
         if weekday == 0:
             start_date = current_date - timedelta(days=7)
-            end_date = start_date + timedelta(days=6)
         else:
             start_date = current_date - timedelta(days=weekday)
-            end_date = start_date + timedelta(days=6)
+        end_date = current_date
 
-    elif period == 'month':
-        current_date = timezone.now().date()
+    elif period == 'current_month':
         start_date = current_date.replace(day=1)
         next_month = current_date.replace(day=28) + timedelta(days=4)
         end_date = next_month - timedelta(days=next_month.day)
 
-    elif period == 'quarter':
+    elif period == 'current_quarter':
         current_month = current_date.month
         current_quarter = (current_month - 1) // 3 + 1
 
         if current_quarter == 1:
             start_date = date(current_date.year, 1, 1)
             end_date = date(current_date.year, 3, 31)
-
         elif current_quarter == 2:
             start_date = date(current_date.year, 4, 1)
             end_date = date(current_date.year, 6, 30)
-
         elif current_quarter == 3:
             start_date = date(current_date.year, 7, 1)
             end_date = date(current_date.year, 9, 30)
+        else:
+            start_date = date(current_date.year, 10, 1)
+            end_date = date(current_date.year, 12, 31)
 
+    elif period == 'last_week':
+        end_date = current_date - timedelta(days=1)
+        weekday = end_date.weekday()
+        if weekday == 0:
+            start_date = end_date - timedelta(days=6)
+        else:
+            start_date = end_date - timedelta(days=weekday)
+
+    elif period == 'last_month':
+        last_month = current_date.replace(day=1) - timedelta(days=1)
+        start_date = last_month.replace(day=1)
+        end_date = last_month
+
+    elif period == 'last_quarter':
+        current_month = current_date.month
+        current_quarter = (current_month - 4) // 3 + 1
+
+        if current_quarter == 1:
+            start_date = date(current_date.year, 1, 1)
+            end_date = date(current_date.year, 3, 31)
+        elif current_quarter == 2:
+            start_date = date(current_date.year, 4, 1)
+            end_date = date(current_date.year, 6, 30)
+        elif current_quarter == 3:
+            start_date = date(current_date.year, 7, 1)
+            end_date = date(current_date.year, 9, 30)
         else:
             start_date = date(current_date.year, 10, 1)
             end_date = date(current_date.year, 12, 31)
 
     else:
         weekday = current_date.weekday()
-
         if weekday == 0:
             start_date = current_date - timedelta(days=7)
-            end_date = start_date + timedelta(days=6)
         else:
             start_date = current_date - timedelta(days=weekday)
-            end_date = start_date + timedelta(days=6)
+        end_date = current_date
+
     return start_date, end_date
 
 
-
-
-
-def collect_total_earnings(period, user_id):
+def manager_total_earnings(period, user_id, start_date=None, end_date=None):
     total = {}
     total_amount = 0
+    total_distance = 0
 
-    start_period, end_period = get_dates(period)
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
     manager = Manager.objects.filter(user_id=user_id).first()
 
+    if manager:
+        total_distance = RentInformation.objects.filter(
+            report_from__range=(start_period, end_period), driver__manager=manager).aggregate(total_distance=Sum('rent_distance'))['total_distance'] or 0
+
     reports = SummaryReport.objects.filter(report_from__range=(start_period, end_period))
+
     for driver in Driver.objects.filter(manager=manager):
         total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
             clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]
 
-    return total, total_amount, start_date_formatted, end_date_formatted
+    vehicle_license_plates = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
+    vehicle = CarEfficiency.objects.filter(report_from__range=(start_period, end_period), licence_plate__in=vehicle_license_plates)
+    effective = 0
+    if vehicle:
+        mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum']
+        total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
+        effective = total_kasa / mileage
+        effective = float('{:.2f}'.format(effective))
+
+    return total, total_amount, total_distance, start_date_formatted, end_date_formatted, effective
 
 
-def partner_total_earnings(period, user_id):
+def partner_total_earnings(period, user_id, start_date=None, end_date=None):
     total = {}
     total_amount = 0
 
-    start_period, end_period = get_dates(period)
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
@@ -183,7 +228,7 @@ def partner_total_earnings(period, user_id):
     return total, total_amount, total_distance, start_date_formatted, end_date_formatted, effective
 
 
-def investor_cash_car(period, investor_pk):
+def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
     vehicles = {}
     total_amount = 0
     total_km = 0
@@ -192,7 +237,12 @@ def investor_cash_car(period, investor_pk):
     investor_cars = Vehicle.objects.filter(investor_car=investor)
     licence_plates = [car.licence_plate for car in investor_cars]
 
-    start_period, end_period = get_dates(period)
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
@@ -298,23 +348,31 @@ def average_effective_vehicle():
     return effective, start_date_formatted, end_date_formatted
 
 
-def effective_vehicle(period, user_id, action):
-    start_date, end_date = get_dates(period=period)
+def effective_vehicle(period, user_id, action, start_date=None, end_date=None):
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     licence_plates = []
 
     if action == 'investor':
         investor = Investor.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(investor_car=investor).values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(
+            investor_car=investor).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
     elif action == 'manager':
         manager = Manager.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(
+            manager=manager).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
     elif action == 'partner':
         partner = Partner.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(partner=partner).values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(
+            partner=partner).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
 
     effective_objects = CarEfficiency.objects.filter(
         licence_plate__in=licence_plates,
-        report_from__range=(start_date, end_date)
+        report_from__range=(start_period, end_period)
     ).order_by('licence_plate', 'report_from')
 
     result = {}
@@ -343,8 +401,17 @@ def update_park_set(partner, key, value, description=None, check_value=True):
         ParkSettings.objects.create(key=key, value=value, description=description, partner=partner)
 
 
-def get_driver_info(request, period, user_id, action):
-    start_date, end_date = get_dates(period=period)
+def get_driver_info(request, period, user_id, action, start_date=None, end_date=None):
+
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
+    start_date_formatted = start_period.strftime('%d.%m.%Y')
+    end_date_formatted = end_period.strftime('%d.%m.%Y')
+
     driver_info_list = []
     drivers = []
 
@@ -358,8 +425,8 @@ def get_driver_info(request, period, user_id, action):
     for driver in drivers:
         driver_efficiency = DriverEfficiency.objects.filter(
             driver=driver,
-            report_from__gte=start_date,
-            report_from__lte=end_date
+            report_from__gte=start_period,
+            report_from__lte=end_period
         ).aggregate(
             total_kasa=Sum('total_kasa'),
             total_orders=Sum('total_orders'),
@@ -393,7 +460,7 @@ def get_driver_info(request, period, user_id, action):
 
         driver_info_list.sort(key=lambda x: x['total_kasa'], reverse=True)
 
-        return driver_info_list
+    return driver_info_list, start_date_formatted, end_date_formatted
 
 
 def login_in(action, login_name, password, user_id):

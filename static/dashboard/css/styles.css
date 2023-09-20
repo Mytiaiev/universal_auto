@@ -18,7 +18,7 @@ p, span, div {
 .material-icons-outlined {
   vertical-align: middle;
   line-height: 1px;
-  /*font-size: 10px;*/
+  color: #53785E;
 }
 
 .grid-container {
@@ -137,10 +137,10 @@ p, span, div {
   border-radius: 5px;
 }
 
-.main-cards .card h3,
+.main-cards .card span,
 .main-cards-partner .card-partner h3 {
-  font-size: 15px;
-  margin: 5px;
+  font-size: 26px;
+  opacity: 0.77;
 }
 
 .card:first-child,
@@ -173,13 +173,7 @@ p, span, div {
   margin-bottom: -5px;
 }
 
-.card-inner > .material-icons-outlined,
-.card-inner-partner > .material-icons-outlined {
-  /*font-size: 20px;*/
-}
-
 .charts {
-  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-top: 60px;
@@ -403,7 +397,7 @@ p, span, div {
   padding: 30px;
   border-radius: 25px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  max-width: 500px;
+  max-width: 400px;
   width: 90%;
   z-index: 897;
 }
@@ -519,7 +513,7 @@ p, span, div {
 .successful-message {
   position: absolute;
   bottom: 0;
-  left: 20%;
+  left: 25%;
   transform: translateX(-50%);
   color: #3e8f3e;
   margin-bottom: 35px;
@@ -639,7 +633,7 @@ td {
 }
 
 h2, table {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 th, td {
@@ -745,4 +739,47 @@ select:focus {
   100% {
     transform: rotate(360deg);
   }
+}
+
+/*стилі для періода*/
+
+
+.common-period {
+  margin: 20px 0 20px;
+}
+
+.common-period label {
+  font-weight: bold;
+}
+
+#period-common {
+  margin-right: 10px;
+  padding: 5px;
+  font-size: 16px;
+}
+
+#datePicker,
+#datePickerDriver {
+  display: none;
+  margin-top: 20px;
+}
+
+#datePicker label,
+#datePickerDriver label {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+#start_date,
+#end_date {
+  padding: 5px;
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+.title-driver {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
