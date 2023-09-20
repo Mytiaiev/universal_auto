@@ -26,7 +26,7 @@ function toggleSidebar() {
 let barChartOptions = {
 	series: [{
 		data: [],
-		name: "Дохід: ",
+		name: gettext("Дохід: "),
 	}],
 	chart: {
 		type: "bar",
@@ -228,7 +228,7 @@ let areaChartOptions = {
 		[
 			{
 				title: {
-					text: "пробіг км",
+					text: gettext("пробіг км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -242,7 +242,7 @@ let areaChartOptions = {
 			{
 				opposite: true,
 				title: {
-					text: "пробіг км",
+					text: gettext("пробіг км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -302,7 +302,7 @@ function loadDefaultKasa(period, startDate, endDate) {
 			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 			barChart.updateOptions(barChartOptions);
 
-			$('.weekly-income-dates').text(startDate + ' ' + gettext('по') + ' ' + endDate);
+			$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
 			$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
 			$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
 			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));

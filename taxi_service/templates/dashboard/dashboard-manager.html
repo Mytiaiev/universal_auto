@@ -22,6 +22,7 @@
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script
 			src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+	<script src="{% url 'javascript-catalog' %}"></script>
 </head>
 <body>
 <div class="grid-container">
@@ -109,27 +110,27 @@
 			<h2>{% trans 'Інформаційна панель Менеджера' %}</h2>
 		</div>
 		<div class="common-period">
-			<label for="period-common">Виберіть період:</label>
+			<label for="period-common">{% trans 'Виберіть період:' %}</label>
 			<select id="period-common" name="period-common">
 				{#				<option value="today">Сьогодні</option>#}
-				<option value="yesterday">Вчора</option>
-				<option value="current_week">Поточний тиждень</option>
-				<option value="last_week">Минулий тиждень</option>
-				<option value="current_month">Поточний місяць</option>
-				<option value="last_month">Минулий місяць</option>
-				<option value="current_quarter">Поточний квартал</option>
-				<option value="last_quarter">Минулий квартал</option>
-				<option value="custom">Вибрати період ></option>
+				<option value="yesterday">{% trans 'Вчора' %}</option>
+				<option value="current_week">{% trans 'Поточний тиждень' %}</option>
+				<option value="last_week">{% trans 'Минулий тиждень' %}</option>
+				<option value="current_month">{% trans 'Поточний місяць' %}</option>
+				<option value="last_month">{% trans 'Минулий місяць' %}</option>
+				<option value="current_quarter">{% trans 'Поточний квартал' %}</option>
+				<option value="last_quarter">{% trans 'Минулий квартал' %}</option>
+				<option value="custom">{% trans 'Вибрати період >' %}</option>
 			</select>
-			<input type="button" value="Показати" id="common-show-button"
+			<input type="button" value={% trans 'Показати' %} id="common-show-button"
 						 onclick="showDatePicker('period-common', 'datePicker')">
 		</div>
 		<div id="datePicker" style="display: none;">
-			<label for="start_date">Початкова дата:</label>
+			<label for="start_date">{% trans 'Початкова дата:' %}</label>
 			<input type="date" id="start_date" name="start_date">
-			<label for="end_date">Кінцева дата:</label>
+			<label for="end_date">{% trans 'Кінцева дата:' %}</label>
 			<input type="date" id="end_date" name="end_date">
-			<input type="button" value="Фільтрувати" onclick="applyCustomDateRange()">
+			<input type="button" value={% trans 'Фільтрувати' %} onclick="applyCustomDateRange()">
 		</div>
 		<div class="main-cards">
 			<div class="card">
@@ -212,26 +213,26 @@
 				<h3 class="income-drivers-date"></h3>
 			</div>
 			<div>
-				<label for="period">Виберіть період:</label>
+				<label for="period">{% trans 'Виберіть період:' %}</label>
 				<select id="period" name="period">
 					{#				<option value="today">Сьогодні</option>#}
-					<option value="yesterday">Вчора</option>
-					<option value="current_week">Поточний тиждень</option>
-					<option value="last_week">Минулий тиждень</option>
-					<option value="current_month">Поточний місяць</option>
-					<option value="last_month">Минулий місяць</option>
-					<option value="current_quarter">Поточний квартал</option>
-					<option value="last_quarter">Минулий квартал</option>
-					<option value="custom">Вибрати період ></option>
+					<option value="yesterday">{% trans 'Вчора' %}</option>
+					<option value="current_week">{% trans 'Поточний тиждень' %}</option>
+					<option value="last_week">{% trans 'Минулий тиждень' %}</option>
+					<option value="current_month">{% trans 'Поточний місяць' %}</option>
+					<option value="last_month">{% trans 'Минулий місяць' %}</option>
+					<option value="current_quarter">{% trans 'Поточний квартал' %}</option>
+					<option value="last_quarter">{% trans 'Минулий квартал' %}</option>
+					<option value="custom">{% trans 'Вибрати період >' %}</option>
 				</select>
-				<input type="button" value="Показати" id="show-button" onclick="showDatePicker('period', 'datePickerDriver')">
+				<input type="button" value={% trans 'Показати' %} id="show-button" onclick="showDatePicker('period', 'datePickerDriver')">
 			</div>
 			<div id="datePickerDriver" style="display: none;">
-				<label for="start_date">Початкова дата:</label>
+				<label for="start_date">{% trans 'Початкова дата:' %}</label>
 				<input type="date" id="start_date" name="start_date">
-				<label for="end_date">Кінцева дата:</label>
+				<label for="end_date">{% trans 'Кінцева дата:' %}</label>
 				<input type="date" id="end_date" name="end_date">
-				<input type="button" value="Фільтрувати" onclick="customDateRange()">
+				<input type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
 			</div>
 			<table>
 				<tr>

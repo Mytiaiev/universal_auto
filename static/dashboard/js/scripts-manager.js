@@ -24,7 +24,7 @@ function closeSidebar() {
 let barChartOptions = {
 	series: [{
 		data: [],
-		name: "Заробіток: ",
+		name: gettext("Заробіток: "),
 	}],
 	chart: {
 		type: "bar",
@@ -111,7 +111,7 @@ let barChartOptions = {
 	},
 	yaxis: {
 		title: {
-			text: "Каса",
+			text: gettext("Каса"),
 			style: {
 				color: "#f5f7ff",
 			},
@@ -218,7 +218,7 @@ let areaChartOptions = {
 		[
 			{
 				title: {
-					text: "Дохід грн/км",
+					text: gettext("Дохід грн/км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -232,7 +232,7 @@ let areaChartOptions = {
 			{
 				opposite: true,
 				title: {
-					text: "Дохід грн/км",
+					text: gettext("Дохід грн/км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -267,7 +267,6 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate
 		},
 		success: function (response) {
-			console.log(response);
 			let data = response.data[0];
 			let totalAmount = parseFloat(response.data[1]).toFixed(2);
 			let totalRent = parseFloat(response.data[2]).toFixed(2);
@@ -293,10 +292,10 @@ function loadDefaultKasa(period, startDate, endDate) {
 			barChartOptions.xaxis.categories = Object.keys(formattedData);
 			barChart.updateOptions(barChartOptions);
 
-			$('.weekly-income-dates').text(startDate + ' по ' + endDate);
-			$('.weekly-income-amount').text(totalAmount + ' грн');
-			$('.weekly-income-rent').text(totalRent + ' км');
-			$('.income-efficiency').text(efficiency + ' ' + 'грн/км');
+			$('.weekly-income-dates').text(gettext('З ') + startDate + gettext(' по ') + endDate);
+			$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
+			$('.weekly-income-rent').text(totalRent + gettext(' км'));
+			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
 		}
 	});
 }
@@ -379,7 +378,7 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 				table.append(row);
 
-				$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+				$('.income-drivers-date').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
 			});
 		}
 	});
@@ -421,7 +420,7 @@ function showDatePicker(periodSelectId, datePickerId) {
 
 function customDateRange() {
 	let startDate = $("#datePickerDriver #start_date").val();
-    let endDate = $("#datePickerDriver #end_date").val();
+	let endDate = $("#datePickerDriver #end_date").val();
 
 	const selectedPeriod = periodSelect.val();
 	loadDefaultDriver(selectedPeriod, startDate, endDate);

@@ -24,7 +24,7 @@ function closeSidebar() {
 let barChartOptions = {
 	series: [{
 		data: [],
-		name: "Дохід: ",
+		name: gettext("Дохід: "),
 	}],
 	chart: {
 		type: "bar",
@@ -111,7 +111,7 @@ let barChartOptions = {
 	},
 	yaxis: {
 		title: {
-			text: "Дохід (грн.)",
+			text: gettext("Дохід (грн.)"),
 			style: {
 				color: "#f5f7ff",
 			},
@@ -218,7 +218,7 @@ let areaChartOptions = {
 		[
 			{
 				title: {
-					text: "пробіг км",
+					text: gettext("пробіг км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -232,7 +232,7 @@ let areaChartOptions = {
 			{
 				opposite: true,
 				title: {
-					text: "пробіг км",
+					text: gettext("пробіг км"),
 					style: {
 						color: "#f5f7ff",
 					},
@@ -292,10 +292,10 @@ function loadDefaultKasa(period, startDate, endDate) {
 			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 			barChart.updateOptions(barChartOptions);
 
-			$('.weekly-income-dates').text(startDate + ' по ' + endDate);
-			$('.weekly-income-amount').text(totalAmount + ' грн');
-			$('.spending-all').text(spending + ' грн');
-			$('.income-km').text(totalKm + ' км');
+			$('.weekly-income-dates').text(gettext('З ') + startDate + gettext(' по ') + endDate);
+			$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
+			$('.spending-all').text(spending + gettext(' грн'));
+			$('.income-km').text(totalKm + gettext(' км'));
 		}
 	});
 }
