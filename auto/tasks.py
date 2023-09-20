@@ -182,7 +182,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
-                        clean_kasa += report.total_amount_without_fee * 1 - driver.rate if driver.schema in ("HALF", "CUSTOM") else driver.rental / 7
+                        clean_kasa += report.total_amount_without_fee * (1 - driver.rate) if driver.schema in ("HALF", "CUSTOM") else driver.rental / 7
 
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spendings), Decimal(0)) / Decimal(total_km) if total_km else 0

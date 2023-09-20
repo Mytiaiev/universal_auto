@@ -366,6 +366,24 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 			response.data[0].forEach(function (item) {
 				let row = $('<tr></tr>');
+				let time = item.road_time
+				let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+
+				if (!parts) {
+					time = time
+				} else {
+					let days = parseInt(parts[1]);
+					let hours = parseInt(parts[2]);
+					let minutes = parseInt(parts[3]);
+					let seconds = parseInt(parts[4]);
+
+					hours += days * 24;
+
+					// Форматувати рядок у вигляді HH:mm:ss
+					let formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+					time = formattedTime
+				}
 
 				row.append('<td>' + item.driver + '</td>');
 				row.append('<td>' + item.total_kasa + '</td>');
@@ -374,7 +392,7 @@ function loadDefaultDriver(period, startDate, endDate) {
 				row.append('<td>' + item.average_price + '</td>');
 				row.append('<td>' + item.mileage + '</td>');
 				row.append('<td>' + item.efficiency + '</td>');
-				row.append('<td>' + item.road_time + '</td>');
+				row.append('<td>' + time + '</td>');
 
 				table.append(row);
 
