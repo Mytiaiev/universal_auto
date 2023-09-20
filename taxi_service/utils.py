@@ -153,24 +153,44 @@ def get_dates(period=None):
     return start_date, end_date
 
 
-def collect_total_earnings(period, user_id):
+def manager_total_earnings(period, user_id, start_date=None, end_date=None):
     total = {}
     total_amount = 0
+    total_distance = 0
 
-    start_period, end_period = get_dates(period)
+    if start_date and end_date:
+        start_period = datetime.strptime(start_date, '%Y-%m-%d')
+        end_period = datetime.strptime(end_date, '%Y-%m-%d')
+    else:
+        start_period, end_period = get_dates(period)
+
     start_date_formatted = start_period.strftime('%d.%m.%Y')
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
     manager = Manager.objects.filter(user_id=user_id).first()
 
+    if manager:
+        total_distance = RentInformation.objects.filter(
+            report_from__range=(start_period, end_period), driver__manager=manager).aggregate(total_distance=Sum('rent_distance'))['total_distance'] or 0
+
     reports = SummaryReport.objects.filter(report_from__range=(start_period, end_period))
+
     for driver in Driver.objects.filter(manager=manager):
         total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
             clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]
 
-    return total, total_amount, start_date_formatted, end_date_formatted
+    vehicle_license_plates = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
+    vehicle = CarEfficiency.objects.filter(report_from__range=(start_period, end_period), licence_plate__in=vehicle_license_plates)
+    effective = 0
+    if vehicle:
+        mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum']
+        total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
+        effective = total_kasa / mileage
+        effective = float('{:.2f}'.format(effective))
+
+    return total, total_amount, total_distance, start_date_formatted, end_date_formatted, effective
 
 
 def partner_total_earnings(period, user_id, start_date=None, end_date=None):

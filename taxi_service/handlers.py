@@ -1,20 +1,19 @@
 import json
 
-from celery.result import AsyncResult
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.contrib.auth import logout
 
-from app.models import Manager, Partner, Investor
+from app.models import Manager, Partner
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 login_in, partner_logout, login_in_investor,
                                 change_password_investor, send_reset_code,
-                                active_vehicles_gps, order_confirm,
-                                collect_total_earnings, effective_vehicle,
-                                investor_cash_car, get_driver_info, partner_total_earnings)
+                                active_vehicles_gps, order_confirm, effective_vehicle,
+                                investor_cash_car, get_driver_info, partner_total_earnings,
+                                manager_total_earnings)
 
 from auto.tasks import update_driver_data
 
@@ -191,7 +190,10 @@ class GetRequestHandler:
     def handle_get_manager_cash(self, request):
         period = request.GET.get('period')
         user_id = request.user.pk
-        get_cash = collect_total_earnings(period, user_id)
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        get_cash = manager_total_earnings(period, user_id, start_date, end_date)
         json_data = JsonResponse({'data': get_cash}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
@@ -209,8 +211,10 @@ class GetRequestHandler:
     def handle_get_drivers_manager(self, request):
         action = request.GET.get('action')
         period = request.GET.get('period')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
 
-        driver_info = get_driver_info(request, period, request.user.pk, action)
+        driver_info = get_driver_info(request, period, request.user.pk, action, start_date, end_date)
         json_data = JsonResponse({'data': driver_info}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response

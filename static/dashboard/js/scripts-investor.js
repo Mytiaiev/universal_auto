@@ -377,8 +377,6 @@ function applyCustomDate() {
 	let startDate = $("#datePicker #start_date").val();
 	let endDate = $("#datePicker #end_date").val();
 
-	console.log(startDate, endDate);
-
 	const selectedPeriod = commonPeriodSelect.val();
 	loadDefaultKasa(selectedPeriod, startDate, endDate);
 	loadEffectiveChart(selectedPeriod, startDate, endDate);
