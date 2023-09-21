@@ -1,8 +1,10 @@
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from django.utils import timezone
 
 from scripts.redis_conn import redis_instance, get_logger
-from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner
+from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner, \
+    DriverReshuffle
 import datetime
 
 
@@ -38,7 +40,6 @@ class Synchronizer:
         drivers, created = Fleets_drivers_vehicles_rate.objects.get_or_create(
                 fleet=fleet,
                 driver_external_id=kwargs['driver_external_id'],
-                partner=self.partner_id,
                 defaults={
                         "fleet": fleet,
                         "driver_external_id": kwargs['driver_external_id'],
@@ -46,9 +47,10 @@ class Synchronizer:
                         "pay_cash": kwargs['pay_cash'],
                         "partner": Partner.get_partner(self.partner_id)})
 
-        if not created and drivers.pay_cash != kwargs["pay_cash"]:
+        if not created:
+            drivers.partner = Partner.get_partner(self.partner_id)
             drivers.pay_cash = kwargs["pay_cash"]
-            drivers.save(update_fields=['pay_cash'])
+            drivers.save(update_fields=['pay_cash', 'partner'])
 
     def get_or_create_driver(self, **kwargs):
         name = self.r_dup(kwargs['name'])
@@ -88,7 +90,6 @@ class Synchronizer:
 
         if licence_plate:
             vehicle, created = Vehicle.objects.get_or_create(licence_plate=licence_plate,
-                                                             partner=self.partner_id,
                                                              defaults={
                                                                   "name": v_name.upper(),
                                                                   "licence_plate": licence_plate,
@@ -99,8 +100,7 @@ class Synchronizer:
                 self.update_vehicle_fields(vehicle, **kwargs)
             return vehicle
 
-    @staticmethod
-    def update_vehicle_fields(vehicle, **kwargs):
+    def update_vehicle_fields(self, vehicle, **kwargs):
         vehicle_name = kwargs.get('vehicle_name')
         vin_code = kwargs.get('vin_code')
 
@@ -110,16 +110,18 @@ class Synchronizer:
         if vin_code and vehicle.vin_code != vin_code:
             vehicle.vin_code = vin_code
 
-        if vehicle_name or vin_code:
-            vehicle.save()
+        vehicle.partner = Partner.get_partner(self.partner_id)
+        vehicle.save()
 
     def update_driver_fields(self, driver, **kwargs):
-
+        yesterday = timezone.localtime() - datetime.timedelta(days=1)
         phone_number = kwargs.get('phone_number')
         email = kwargs.get('email')
         worked = kwargs.get('worked')
-        vehicle = self.get_or_create_vehicle(**kwargs)
-        if vehicle and driver.vehicle != vehicle:
+        reshuffle = DriverReshuffle.objects.filter(swap_vehicle=driver.vehicle,
+                                                   swap_time__date=yesterday.date())
+        vehicle = None if reshuffle else self.get_or_create_vehicle(**kwargs)
+        if reshuffle or driver.vehicle != vehicle:
             driver.vehicle = vehicle
         if phone_number and not driver.phone_number:
             driver.phone_number = phone_number

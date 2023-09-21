@@ -27,7 +27,8 @@ class Role(models.TextChoices):
 class Partner(models.Model):
     role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
-    chat_id = models.CharField(blank=True, null=True, max_length=10, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(blank=True, null=True, max_length=10, verbose_name='Ідентифікатор чата')
+    calendar = models.CharField(max_length=255, verbose_name='Календар змін водіїв')
 
     @classmethod
     def get_partner(cls, pk):
@@ -42,6 +43,10 @@ class Partner(models.Model):
 
     def __str__(self):
         return str(self.user.username) if self.user else ''
+
+    class Meta:
+        verbose_name = 'Власника'
+        verbose_name_plural = 'Власники'
 
 
 class Payments(models.Model):
@@ -152,13 +157,13 @@ class User(models.Model):
     email = models.EmailField(blank=True, null=True, max_length=254, verbose_name='Електрона пошта')
     role = models.CharField(max_length=25, default=Role.CLIENT, choices=Role.choices)
     phone_number = models.CharField(blank=True, null=True, max_length=13, verbose_name='Номер телефона')
-    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Ідентифікатор чата')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
     class Meta:
-        verbose_name = 'Користувач'
+        verbose_name = 'Користувача'
         verbose_name_plural = 'Користувачі'
 
     def __str__(self) -> str:
@@ -229,13 +234,14 @@ class Manager(models.Model):
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=254, verbose_name='Електрона пошта')
     phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
-    chat_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Ідентифікатор чата')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     user = models.OneToOneField(AuUser, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Користувач')
     role = models.CharField(max_length=25, default=Role.DRIVER_MANAGER, choices=Role.choices)
+    calendar = models.CharField(max_length=255, verbose_name='Календар змін водіїв')
 
     class Meta:
-        verbose_name = 'Менеджер'
+        verbose_name = 'Менеджера'
         verbose_name_plural = 'Менеджери'
 
     @classmethod
@@ -263,7 +269,7 @@ class Investor(models.Model):
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        verbose_name = 'Інвестор'
+        verbose_name = 'Інвестора'
         verbose_name_plural = 'Інвестори'
 
     def __str__(self) -> str:
@@ -356,14 +362,14 @@ class TransactionsConversantion(models.Model):
     sum_after_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума після транзакції")
 
     class Meta:
-        verbose_name = 'Транзакція'
+        verbose_name = 'Транзакцію'
         verbose_name_plural = 'Транзакції'
 
     def __str__(self) -> str:
         return f'{self.vehicle} {self.sum_before_transaction} {self.сurrency}'
 
 
-class VehicleSpendings(models.Model):
+class VehicleSpending(models.Model):
     class Category(models.TextChoices):
         FUEL = 'FUEL', 'Паливо'
         SERVICE = 'SERVICE', 'Сервісне обслуговування'
@@ -374,7 +380,7 @@ class VehicleSpendings(models.Model):
     amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Сума')
     category = models.CharField(max_length=255, choices=Category.choices, verbose_name='Категорія витрат')
     description = models.TextField(blank=True, null=True, verbose_name='Опис')
-    photo = models.ImageField(upload_to='spendings/', blank=True, null=True, verbose_name='Фото')
+    photo = models.ImageField(upload_to='spending/', blank=True, null=True, verbose_name='Фото')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
 
 
@@ -411,7 +417,7 @@ class Driver(User):
     rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
 
     class Meta:
-        verbose_name = 'Водій'
+        verbose_name = 'Водія'
         verbose_name_plural = 'Водії'
 
     def get_driver_external_id(self, vendor: str):
@@ -470,7 +476,7 @@ class RentInformation(models.Model):
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
 
     class Meta:
-        verbose_name = 'Інформація по оренді'
+        verbose_name = 'Інформацію по оренді'
         verbose_name_plural = 'Інформація по орендах'
 
 
@@ -493,7 +499,7 @@ class Fleet(PolymorphicModel):
 class Client(User):
 
     class Meta:
-        verbose_name = 'Клієнт'
+        verbose_name = 'Клієнта'
         verbose_name_plural = 'Клієнти'
 
 
@@ -503,7 +509,7 @@ class ServiceStationManager(User):
     service_station = models.OneToOneField('ServiceStation', on_delete=models.RESTRICT, verbose_name='Сервісний центр')
 
     class Meta:
-        verbose_name = 'Менеджер сервісного центра'
+        verbose_name = 'Менеджера сервісного центра'
         verbose_name_plural = 'Менеджери сервісних центрів'
 
     def __str__(self):
@@ -519,15 +525,8 @@ class SupportManager(User):
     driver_id = models.ManyToManyField(Driver, blank=True)
 
     class Meta:
-        verbose_name = 'Менеджер служби підтримки'
+        verbose_name = 'Менеджера служби підтримки'
         verbose_name_plural = 'Менеджери служби підтримки'
-
-
-class Owner(User):
-
-    class Meta:
-        verbose_name = 'Власник'
-        verbose_name_plural = 'Власники'
 
 
 class BoltFleet(Fleet):
@@ -582,7 +581,7 @@ class Fleets_drivers_vehicles_rate(models.Model):
         return ''
 
     class Meta:
-        verbose_name = 'Водій в агрегаторах'
+        verbose_name = 'Водія в агрегаторах'
         verbose_name_plural = 'Водії в агрегаторах'
 
 
@@ -1006,7 +1005,7 @@ class Event(models.Model):
     full_name_driver = models.CharField(max_length=255, verbose_name='Водій')
     event = models.CharField(max_length=20, verbose_name='Подія')
     event_date = models.DateTimeField(null=True, blank=True, verbose_name='Час події')
-    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Ідентифікатор чата')
     created_at = models.DateTimeField(auto_now_add=True, editable=False, verbose_name='Створено')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
@@ -1020,7 +1019,7 @@ class SubscribeUsers(models.Model):
     created_at = models.DateTimeField(editable=False, auto_now=True, verbose_name='Створено')
 
     class Meta:
-        verbose_name = 'Підписник'
+        verbose_name = 'Підписника'
         verbose_name_plural = 'Підписники'
 
     @staticmethod
@@ -1042,7 +1041,7 @@ class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
     email = models.EmailField(max_length=255, verbose_name='Електронна пошта')
-    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
+    chat_id = models.CharField(blank=True, max_length=10, verbose_name='Ідентифікатор чата')
     password = models.CharField(max_length=12, verbose_name='Пароль Uklon')
     phone_number = models.CharField(max_length=20, verbose_name='Телефон')
     license_expired = models.DateField(blank=True, verbose_name='Термін дії посвідчення')
@@ -1096,7 +1095,7 @@ class JobApplication(models.Model):
     admin_car_document.short_description = 'Car document'
 
     class Meta:
-        verbose_name = 'Заявка'
+        verbose_name = 'Заявку'
         verbose_name_plural = 'Заявки'
 
     def __str__(self):
@@ -1158,7 +1157,7 @@ class UseOfCars(models.Model):
     end_at = models.DateTimeField(null=True, blank=True, verbose_name='Кінець використання авто')
 
     class Meta:
-        verbose_name = 'Користувачі автомобіля'
+        verbose_name = 'Користувача автомобіля'
         verbose_name_plural = 'Користувачі автомобілів'
 
     def __str__(self):
@@ -1235,12 +1234,6 @@ class UberSession(models.Model):
     uber_uuid = models.UUIDField(verbose_name="Код автопарку Uber")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-
-
-class Dashboard(models.Model):
-    class Meta:
-        verbose_name = 'Інформаційна панель автопарку'
-        verbose_name_plural = 'Інформаційна панель автопарку'
 
 
 class NewUklonPaymentsOrder(models.Model):

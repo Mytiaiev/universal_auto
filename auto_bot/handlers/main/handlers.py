@@ -93,7 +93,11 @@ def more_function(update, context):
 
 def update_phone_number(update, context):
     chat_id = update.message.chat.id
-    user = Client.get_by_chat_id(chat_id)
+    user = (
+            Partner.objects.filter(chat_id=chat_id)
+            | Manager.objects.filter(chat_id=chat_id)
+            | Client.objects.filter(chat_id=chat_id)
+    ).first()
     phone_number = update.message.contact.phone_number
     if phone_number and user:
         if len(phone_number) == 12:
@@ -102,7 +106,7 @@ def update_phone_number(update, context):
         user.save()
         update.message.reply_text('Дякуємо ми отримали ваш номер телефону',
                                   reply_markup=ReplyKeyboardRemove())
-    context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=inline_user_kb())
+    context.bot.send_message(chat_id=chat_id, text=user_greetings_text, reply_markup=get_start_kb(user))
 
 
 def get_about_us(update, context):
