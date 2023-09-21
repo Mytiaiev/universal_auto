@@ -4,7 +4,7 @@ from celery.signals import task_postrun
 from telegram import ReplyKeyboardRemove
 
 from app.models import Manager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
-    Payments, ParkSettings, VehicleSpendings, Partner
+    Payments, ParkSettings, VehicleSpending, Partner
 from auto_bot.handlers.driver.static_text import BROKEN
 from auto_bot.handlers.driver_job.static_text import driver_job_name
 from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, role_keyboard, fleets_keyboard, \
@@ -76,7 +76,7 @@ def save_car_spending(update, context):
         data = {'category': user_data['category'],
                 'vehicle': vehicle,
                 'amount': round(int(spending), 2)}
-        VehicleSpendings.objects.create(**data)
+        VehicleSpending.objects.create(**data)
         redis_instance().delete(chat_id)
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=spending_saved_text,

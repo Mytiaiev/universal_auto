@@ -1,5 +1,6 @@
 from telegram import ReplyKeyboardRemove
-from app.models import Owner
+
+from app.models import Partner
 from app.portmone.portmone import Portmone
 from auto_bot.handlers.main.keyboards import markup_keyboard_onetime
 from auto_bot.handlers.owner.keyboards import payments_buttons, data_buttons, commission_buttons
@@ -11,10 +12,10 @@ from selenium_ninja.privat import Privat24
 # Transfer money
 def payments(update, context):
     chat_id = update.message.chat.id
-    owner = Owner.get_by_chat_id(chat_id)
-    if owner is not None:
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Оберіть опцію:',
-                                reply_markup=markup_keyboard_onetime([payments_buttons]))
+    owner = Partner.get_by_chat_id(chat_id)
+    if owner:
+        context.bot.send_message(chat_id=chat_id, text='Оберіть опцію:',
+                                 reply_markup=markup_keyboard_onetime([payments_buttons]))
     else:
         update.message.reply_text('Ця команда тільки для власника')
 

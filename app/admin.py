@@ -1,12 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.models import User as AuthUser
-from django.shortcuts import redirect
-from django.urls import reverse
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
+from scripts.google_calendar import GoogleCalendar
 from .models import *
 
 
@@ -21,17 +18,35 @@ models = {
     # 'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
     'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
-    'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False}
+    'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False},
+    'VehicleSpending':             {'view': True, 'add': True, 'change': False, 'delete': False},
 }
 
 investor_permissions = {
     'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpendings':             {'view': True, 'add': False, 'change': False, 'delete': False},
+    'VehicleSpending':             {'view': True, 'add': False, 'change': False, 'delete': False},
+}
+
+manager_permissions = {
+    'RentInformation':              {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Payments':                     {'view': True, 'add': False, 'change': False, 'delete': False},
+    'SummaryReport':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Driver':                       {'view': True, 'add': False, 'change': True, 'delete': False},
+    'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
+    'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
+    'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False},
+    'VehicleSpending':             {'view': True, 'add': True, 'change': False, 'delete': False},
+}
+
+group_permissions = {
+    'Partner': models,
+    'Investor': investor_permissions,
+    'Manager': manager_permissions
 }
 
 
-def assign_model_permissions(group, permissions):
+def assign_model_permissions(group, permissions=None):
     for model, permissions in permissions.items():
         content_type = ContentType.objects.get(app_label='app', model__iexact=model)
         model_permissions = Permission.objects.filter(content_type=content_type)
@@ -43,32 +58,13 @@ def assign_model_permissions(group, permissions):
             if value and permission_obj not in group.permissions.all():
                 group.permissions.add(permission_obj)
 
+
 try:
-    group1, created = Group.objects.get_or_create(name='Partner')
-    for user in group1.user_set.all():
-        for permission in group1.permissions.all():
-            user.user_permissions.add(permission)
-    assign_model_permissions(group1, models)
-
-    group2, created = Group.objects.get_or_create(name='Investor')
-    assign_model_permissions(group2, investor_permissions)
-
-    group3, created = Group.objects.get_or_create(name='Manager')
-    for user in group3.user_set.all():
-        for permission in group3.permissions.all():
-            user.user_permissions.add(permission)
-    assign_model_permissions(group3, models)
-
+    for group_name, model_permissions in group_permissions.items():
+        group, created = Group.objects.get_or_create(name=group_name)
+        assign_model_permissions(group, model_permissions)
 except (ProgrammingError, ObjectDoesNotExist):
     pass
-
-
-@receiver(post_save, sender=Group)
-def add_partner_permissions(sender, instance, created, **kwargs):
-    if created and instance.name == 'partner':
-        assign_model_permissions(instance)
-        for user in instance.user_set.all():
-            assign_model_permissions(user)
 
 
 def filter_queryset_by_group(*groups, field_to_filter=None):
@@ -86,36 +82,13 @@ def filter_queryset_by_group(*groups, field_to_filter=None):
                 if request.user.groups.filter(name='Manager').exists():
                     queryset = queryset.filter(manager__user=request.user)
                 if request.user.groups.filter(name='Partner').exists():
+                    queryset = queryset.filter(partner__user=request.user)
                     if field_to_filter is not None:
-                        queryset = queryset.filter(partner__user=request.user, **{field_to_filter: True})
-                    else:
-                        queryset = queryset.filter(partner__user=request.user)
+                        queryset = queryset.filter(**{field_to_filter: True})
 
                 return queryset
 
         return FilteredModelAdmin
-
-    return decorator
-
-
-def add_partner_on_save_model(*models):
-    def decorator(admin_class):
-        original_save_model = admin_class.save_model
-
-        def save_model(self, request, obj, form, change):
-            if not change and not obj.partner_id:
-                if request.user.is_superuser:
-                    pass
-                else:
-                    partner = Partner.objects.get(user=request.user)
-                    if partner:
-                        obj.partner_id = partner.pk
-            elif change and 'partner_id' not in form.changed_data:
-                obj.partner_id = obj.partner_id
-            original_save_model(self, request, obj, form, change)
-
-        admin_class.save_model = save_model
-        return admin_class
 
     return decorator
 
@@ -229,15 +202,12 @@ class Fleets_drivers_vehicles_rateInline(admin.TabularInline):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name in ('vehicle', 'driver'):
-            partner = self.get_parent_instance(request)
-
-            if partner:
+            try:
+                partner = Partner.objects.get(user=request.user.pk)
                 kwargs['queryset'] = db_field.related_model.objects.filter(partner=partner)
-
+            except ObjectDoesNotExist:
+                pass
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-    def get_parent_instance(self, request):
-        return Partner.objects.get(user=request.user.pk)
 
 
 @admin.register(Fleet)
@@ -390,20 +360,6 @@ class EventAdmin(admin.ModelAdmin):
     ]
 
 
-@admin.register(Owner)
-class OwnerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'second_name', 'email', 'phone_number', 'created_at')
-    list_display_links = ('name', 'second_name')
-    list_filter = ['created_at']
-    search_fields = ('name', 'second_name')
-    ordering = ('name', 'second_name')
-    list_per_page = 25
-
-    fieldsets = [
-        (None, {'fields': ['name', 'second_name', 'email', 'phone_number', 'chat_id']}),
-    ]
-
-
 @admin.register(UseOfCars)
 class UseofCarsAdmin(admin.ModelAdmin):
     list_display = [f.name for f in UseOfCars._meta.fields]
@@ -428,8 +384,8 @@ class JobApplicationAdmin(admin.ModelAdmin):
     ]
 
 
-@admin.register(VehicleSpendings)
-class VehicleSpendingsAdmin(admin.ModelAdmin):
+@admin.register(VehicleSpending)
+class VehicleSpendingAdmin(admin.ModelAdmin):
     list_display = ['id', 'vehicle', 'amount', 'category', 'description']
 
     fieldsets = [
@@ -447,7 +403,7 @@ class VehicleSpendingsAdmin(admin.ModelAdmin):
         return queryset
 
 
-VehicleSpendingsAdmin = filter_queryset_by_group('Investor')(VehicleSpendingsAdmin)
+VehicleSpendingAdmin = filter_queryset_by_group('Investor')(VehicleSpendingAdmin)
 
 
 @admin.register(TransactionsConversantion)
@@ -672,8 +628,17 @@ class PartnerAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['user', 'chat_id']}),
+        (None, {'fields': ['user', 'chat_id', 'calendar']}),
     ]
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            gc = GoogleCalendar()
+            cal_id = gc.create_calendar()
+            obj.calendar = cal_id
+            permissions = gc.add_permission(obj.user.email)
+            gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Investor)
@@ -692,7 +657,9 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_per_page = 25
 
     def save_model(self, request, obj, form, change):
-
+        gc = GoogleCalendar()
+        emails = [obj.email,
+                  obj.partner.user.email]
         if not change:
             user = AuthUser.objects.create_user(
                 username=obj.email,
@@ -708,11 +675,18 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
             obj.user = user
             obj.partner = Partner.objects.get(user=request.user)
+            cal_id = gc.create_calendar(f"Розклад водіїв {obj.first_name} {obj.last_name}")
+            obj.calendar = cal_id
+            for email in emails:
+                permissions = gc.add_permission(email)
+                gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
         if change and not obj.user.is_active:
             obj.partner = None
-            user = AuthUser.objects.get(username=obj.login)
-            user.delete()
-
+            existing_acl = gc.service.acl().list(calendarId=obj.calendar).execute()
+            for acl_rule in existing_acl.get('items', []):
+                if acl_rule['scope']['type'] == 'user' and acl_rule['scope']['value'] in emails:
+                    gc.service.acl().delete(calendarId=obj.calendar, ruleId=acl_rule['id']).execute()
+            AuthUser.objects.filter(username=obj.login).delete()
         super().save_model(request, obj, form, change)
 
     def get_list_display(self, request):
@@ -724,8 +698,11 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
             fieldsets = [
-                ('Додатково',
-                 {'fields': ['email', 'password', 'last_name', 'first_name', 'chat_id', 'phone_number', 'partner', 'user']}),
+                ('Інформація про менеджера',
+                 {'fields': ['email', 'password',
+                             'last_name', 'first_name',
+                             'chat_id', 'phone_number', 'partner',
+                             'calendar', 'user']}),
             ]
         else:
             fieldsets = [
@@ -743,7 +720,6 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 
 @admin.register(Driver)
-@add_partner_on_save_model(Driver)
 class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(admin.ModelAdmin)):
     search_fields = ('name', 'second_name')
     ordering = ('name', 'second_name')
@@ -798,7 +774,6 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
-        # Access the form fields using form.cleaned_data
         schema_field = form.cleaned_data.get('schema')
 
         if schema_field == 'HALF':
@@ -806,6 +781,8 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
             obj.rental = obj.plan * obj.rate
         elif schema_field == 'RENT':
             obj.rate = 1
+        else:
+            obj.rental = obj.plan * (1 - obj.rate)
         fleet = Fleet.objects.get(name='Ninja')
         chat_id = form.cleaned_data.get('chat_id')
         driver_fleet = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
@@ -821,7 +798,6 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
 
 
 @admin.register(Vehicle)
-@add_partner_on_save_model(Vehicle)
 class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('name', 'licence_plate', 'vin_code',)
     ordering = ('name',)
@@ -948,7 +924,6 @@ class FleetOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(Fleets_drivers_vehicles_rate)
-@add_partner_on_save_model(Fleets_drivers_vehicles_rate)
 class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = ('driver', 'fleet')
 

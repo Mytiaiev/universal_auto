@@ -13,8 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
                         SummaryReport, CarEfficiency, Partner, ParkSettings,
-                        Manager, Investor, Vehicle, VehicleSpendings, DriverEfficiency, )
-from scripts.google_calendar import GoogleCalendar
+                        Manager, Investor, Vehicle, VehicleSpending, DriverEfficiency, )
 from selenium_ninja.driver import SeleniumTools
 from scripts.redis_conn import get_logger
 
@@ -267,7 +266,7 @@ def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
 
     overall_spent = sum(
         spending.amount
-        for spending in VehicleSpendings.objects.filter(
+        for spending in VehicleSpending.objects.filter(
             vehicle__licence_plate__in=licence_plates,
             created_at__range=(start_period, end_period)
         )
@@ -283,8 +282,8 @@ def get_car_data(cars, investor=None):
         licence_plate = car.licence_plate
         purchase_price = car.purchase_price
 
-        spendings = VehicleSpendings.objects.filter(vehicle=car)
-        total_spent = sum(spending.amount for spending in spendings)
+        spending = VehicleSpending.objects.filter(vehicle=car)
+        total_spent = sum(spend.amount for spend in spending)
 
         car_efficiencies = CarEfficiency.objects.filter(
             licence_plate=licence_plate)
@@ -503,11 +502,6 @@ def login_in(action, login_name, password, user_id):
             update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
             update_park_set(partner, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
             update_park_set(partner, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
-            gc = GoogleCalendar()
-            cal_id = gc.create_calendar()
-            update_park_set(partner, "GOOGLE_ID_CALENDAR", cal_id, 'ID календаря змін водіїв')
-            permissions = gc.add_permission(partner.user.email)
-            gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
             success_login = True
     return success_login
 
