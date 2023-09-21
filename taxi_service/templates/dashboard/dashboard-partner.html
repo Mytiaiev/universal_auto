@@ -256,10 +256,9 @@
 				<h2>{% trans 'Рейтинг Водіїв' %}</h2>
 				<h3 class="income-drivers-date"></h3>
 			</div>
-			<div>
+			<div class="filter">
 				<label for="period">{% trans 'Виберіть період:' %}</label>
 				<select id="period" name="period">
-					{#				<option value="today">Сьогодні</option>#}
 					<option value="yesterday">{% trans 'Вчора' %}</option>
 					<option value="current_week">{% trans 'Поточний тиждень' %}</option>
 					<option value="last_week">{% trans 'Минулий тиждень' %}</option>
@@ -269,7 +268,8 @@
 					<option value="last_quarter">{% trans 'Минулий квартал' %}</option>
 					<option value="custom">{% trans 'Вибрати період >' %}</option>
 				</select>
-				<input type="button" value={% trans 'Показати' %} id="show-button" onclick="showDatePicker('period', 'datePickerDriver')">
+				<input type="button" value={% trans 'Показати' %} id="show-button"
+							 onclick="showDatePicker('period', 'datePickerDriver')">
 			</div>
 			<div id="datePickerDriver" style="display: none;">
 				<label for="start_date">{% trans 'Початкова дата:' %}</label>
@@ -278,7 +278,7 @@
 				<input type="date" id="end_date" name="end_date">
 				<input type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
 			</div>
-			<table>
+			<table class="driver-table">
 				<tr>
 					<th>{% trans 'Водій' %}</th>
 					<th>{% trans 'Каса' %}</th>
@@ -300,6 +300,23 @@
 					<td></td>
 				</tr>
 			</table>
+		</div>
+		<div class="driver-container">
+			<div class="driver-block">
+				<div class="driver-name">
+					<h3>Ім'я водія</h3>
+					<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>
+				</div>
+				<div class="driver-info">
+					<p>Каса: $XXXX</p>
+					<p>Кількість замовлень: XX</p>
+					<p>Відсоток прийнятих замовлень: XX%</p>
+					<p>Середній чек, грн: XXX</p>
+					<p>Пробіг, км: XXXX</p>
+					<p>Ефективність, грн/км: X.XX</p>
+					<p>Час в дорозі: XX год.</p>
+				</div>
+			</div>
 		</div>
 	</main>
 	<!-- End Main Manager-->

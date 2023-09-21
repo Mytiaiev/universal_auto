@@ -370,6 +370,7 @@ function loadDefaultDriver(period, startDate, endDate) {
 		},
 		success: function (response) {
 			let table = $('.info-driver table');
+			let driverBlock = $('.driver-block');
 			let startDate = response.data[1];
 			let endDate = response.data[2];
 			table.find('tr:gt(0)').remove();
@@ -407,6 +408,31 @@ function loadDefaultDriver(period, startDate, endDate) {
 				table.append(row);
 
 				$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+			});
+
+			$('.driver-container').empty();
+
+			response.data[0].forEach(function (driver) {
+				let driverBlock = $('<div class="driver-block"></div>');
+				let driverName = $('<div class="driver-name"></div>');
+				let driverInfo = $('<div class="driver-info"></div>');
+
+				driverName.append('<h3>' + driver.driver + '</h3>');
+				driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+
+				driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
+				driverInfo.append('<p>Кількість замовлень: ' + driver.total_orders + '</p>');
+				driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
+				driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
+				driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
+				driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
+				driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
+
+				driverBlock.append(driverName);
+				driverBlock.append(driverInfo);
+
+				// Додати блок водія до контейнера
+				$('.driver-container').append(driverBlock);
 			});
 		}
 	});
@@ -756,6 +782,7 @@ $(document).ready(function () {
 		$('.info-driver').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
 	$('#partnerDriverBtnContainer').click(function () {
@@ -765,6 +792,7 @@ $(document).ready(function () {
 		$('.main-cards').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
 	$(".close-btn").click(function () {
@@ -773,3 +801,27 @@ $(document).ready(function () {
 		location.reload();
 	});
 });
+
+
+function toggleDriverInfo(arrow) {
+	const driverBlock = $(arrow).closest('.driver-block');
+	driverBlock.toggleClass('active');
+}
+
+function formatTime(time) {
+	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+
+	if (!parts) {
+		return time;
+	} else {
+		let days = parseInt(parts[1]);
+		let hours = parseInt(parts[2]);
+		let minutes = parseInt(parts[3]);
+		let seconds = parseInt(parts[4]);
+
+		hours += days * 24;
+
+		// Форматувати рядок у вигляді HH:mm:ss
+		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+}
