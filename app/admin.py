@@ -749,6 +749,10 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     ordering = ('name', 'second_name')
     list_display_links = ('name', 'second_name')
     list_per_page = 25
+    readonly_fields = ('name', 'second_name', 'email', 'phone_number',)
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.readonly_fields if not request.user.is_superuser else tuple()
 
     def get_list_display(self, request):
         if request.user.is_superuser:

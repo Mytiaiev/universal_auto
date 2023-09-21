@@ -6,7 +6,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from app.models import CarEfficiency, Driver, SummaryReport, Manager, \
-    Vehicle, RentInformation, ParkSettings, DriverEfficiency, Partner
+    Vehicle, RentInformation, ParkSettings, DriverEfficiency, Partner, Role
 
 
 def validate_date(date_str):
@@ -29,6 +29,22 @@ def validate_sum(sum_str):
         return False
 
 
+def get_drivers_vehicles_list(chat_id, cls):
+    objects = []
+    rent = 0
+    user = Manager.get_by_chat_id(chat_id)
+    if not user:
+        user = Partner.get_by_chat_id(chat_id)
+    if user:
+        if user.role == Role.DRIVER_MANAGER:
+            objects = cls.objects.filter(manager=user.pk)
+            rent = int(ParkSettings.get_value('RENT_PRICE', 15, partner=user.partner.pk))
+        elif user.role == Role.OWNER:
+            objects = cls.objects.filter(partner=user.pk)
+            rent = int(ParkSettings.get_value('RENT_PRICE', 15, partner=user.pk))
+    return objects, rent, user
+
+
 def calculate_rent(start, end, driver):
     end_time = datetime.combine(end, datetime.max.time())
     rent_report = RentInformation.objects.filter(
@@ -42,11 +58,20 @@ def calculate_rent(start, end, driver):
         total_rent = rent_report.aggregate(distance=Sum(overall_rent))['distance']
     else:
         total_rent = 0
-
     return total_rent
 
 
-def calculate_reports(start, end, driver):
+def calculate_daily_reports(start, end, driver):
+    driver_report = SummaryReport.objects.filter(report_from__range=(start, end),
+                                                 full_name=driver)
+    if driver_report:
+        kasa = driver_report.aggregate(
+            kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
+        rent = calculate_rent(start, end, driver)
+        return kasa, rent
+
+
+def calculate_weekly_reports(start, end, driver):
     incomplete = 0
     driver_report = SummaryReport.objects.filter(report_from__range=(start, end),
                                                  full_name=driver)
@@ -92,16 +117,14 @@ def get_daily_report(manager_id=None, start=None, end=None):
     day_values = {}
     rent_daily = {}
     total_rent = {}
-    manager = Manager.get_by_chat_id(manager_id)
-    partner = Partner.get_by_chat_id(manager_id)
-    drivers = Driver.objects.filter(manager=manager) if manager else Driver.objects.filter(partner=partner)
+    drivers = get_drivers_vehicles_list(manager_id, Driver)[0]
     for driver in drivers:
-        daily_report = calculate_reports(yesterday, yesterday, driver)
+        daily_report = calculate_daily_reports(yesterday, yesterday, driver)
         if daily_report:
-            day_values[driver],  rent_daily[driver] = daily_report[1], daily_report[5]
-        total_report = calculate_reports(start, end, driver)
+            day_values[driver],  rent_daily[driver] = daily_report
+        total_report = calculate_daily_reports(start, end, driver)
         if total_report:
-            total_values[driver], total_rent[driver] = total_report[1], total_report[5]
+            total_values[driver], total_rent[driver] = total_report
     sort_report = dict(sorted(total_values.items(), key=lambda item: item[1], reverse=True))
     return sort_report, day_values, total_rent, rent_daily
 
@@ -112,18 +135,10 @@ def generate_message_weekly(chat_id):
     message = ''
     drivers_dict = {}
     balance = 0
-    manager = Manager.get_by_chat_id(chat_id)
-    partner = Partner.get_by_chat_id(chat_id)
-    if manager:
-        rent = int(ParkSettings.get_value('RENT_PRICE', 15, partner=manager.partner.pk))
-        drivers = Driver.objects.filter(manager=manager)
-    else:
-        rent = int(ParkSettings.get_value('RENT_PRICE', 15, partner=partner.pk))
-        drivers = Driver.objects.filter(partner=partner)
-
+    drivers, rent, user = get_drivers_vehicles_list(chat_id, Driver)
     for driver in drivers:
         driver_message = ''
-        result = calculate_reports(start, end, driver)
+        result = calculate_weekly_reports(start, end, driver)
         if result:
             balance += result[0]
             driver_message += f"{driver} каса: {result[1]}\n"
@@ -149,10 +164,8 @@ def generate_message_weekly(chat_id):
             message += "*" * 39 + '\n'
     manager_message = f'Ваш баланс за минулий тиждень:%.2f\n' % balance
     manager_message += message
-    if manager:
-        drivers_dict[manager.chat_id] = manager_message
-    else:
-        drivers_dict[partner.chat_id] = manager_message
+    if user:
+        drivers_dict[user.chat_id] = manager_message
     return drivers_dict
 
 
@@ -179,34 +192,31 @@ def get_efficiency(manager_id=None, start=None, end=None):
         end = yesterday
     effective_vehicle = {}
     report = {}
-    manager = Manager.get_by_chat_id(manager_id)
-    partner = Partner.get_by_chat_id(manager_id)
-    vehicles = Vehicle.objects.filter(manager=manager) if manager else Vehicle.objects.filter(partner=partner)
-    if vehicles:
-        for vehicle in vehicles:
-            effect = calculate_efficiency(vehicle.licence_plate, start, end)
-            if effect:
-                if end == yesterday:
-                    yesterday_efficiency = CarEfficiency.objects.filter(report_from=yesterday,
-                                                                        licence_plate=vehicle.licence_plate).first()
-                    efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 0
-                    distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 0
-                    effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
-                                                                'Ефективність(грн/км)': efficiency,
-                                                                'КМ всього': effect[1],
-                                                                'КМ учора': distance}
-                else:
-                    effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
-                                                                'КМ всього': effect[1]}
-        try:
-            sorted_effective_driver = dict(sorted(effective_vehicle.items(),
-                                           key=lambda x: x[1]['Середня ефективність(грн/км)'],
-                                           reverse=True))
-            for k, v in sorted_effective_driver.items():
-                report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
-            return report
-        except:
-            pass
+    vehicles = get_drivers_vehicles_list(manager_id, Vehicle)[0]
+    for vehicle in vehicles:
+        effect = calculate_efficiency(vehicle.licence_plate, start, end)
+        if effect:
+            if end == yesterday:
+                yesterday_efficiency = CarEfficiency.objects.filter(report_from=yesterday,
+                                                                    licence_plate=vehicle.licence_plate).first()
+                efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 0
+                distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 0
+                effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
+                                                            'Ефективність(грн/км)': efficiency,
+                                                            'КМ всього': effect[1],
+                                                            'КМ учора': distance}
+            else:
+                effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
+                                                            'КМ всього': effect[1]}
+    try:
+        sorted_effective_driver = dict(sorted(effective_vehicle.items(),
+                                       key=lambda x: x[1]['Середня ефективність(грн/км)'],
+                                       reverse=True))
+        for k, v in sorted_effective_driver.items():
+            report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
+        return report
+    except:
+        pass
 
 
 def calculate_efficiency_driver(driver, start, end):
@@ -238,9 +248,7 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
         end = yesterday
     effective_driver = {}
     report = {}
-    manager = Manager.get_by_chat_id(manager_id)
-    partner = Partner.get_by_chat_id(manager_id)
-    drivers = Driver.objects.filter(manager=manager) if manager else Driver.objects.filter(partner=partner)
+    drivers = get_drivers_vehicles_list(manager_id, Driver)[0]
     for driver in drivers:
         effect = calculate_efficiency_driver(driver, start, end)
         if effect:
