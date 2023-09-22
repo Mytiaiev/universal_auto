@@ -704,6 +704,15 @@ $(document).ready(function () {
 		$('#datePicker').hide()
 	});
 
+	$(".sidebar-list-item.admin").on("click", function () {
+
+		let adminPanelURL = $(this).data("url");
+
+		if (adminPanelURL) {
+			window.open(adminPanelURL, "_blank");
+		}
+	});
+
 	$(".close-btn").click(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');

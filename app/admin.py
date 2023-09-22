@@ -695,39 +695,38 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_per_page = 25
 
     def save_model(self, request, obj, form, change):
-        gc = GoogleCalendar()
-
-        if not change:
-            user = AuthUser.objects.create_user(
-                username=obj.email,
-                password=obj.password,
-                is_staff=True,
-                is_active=True,
-                is_superuser=False,
-                first_name=obj.first_name,
-                last_name=obj.last_name,
-                email=obj.email
-            )
-            user.groups.add(Group.objects.get(name='Manager'))
-
-            obj.user = user
-            obj.partner = Partner.objects.get(user=request.user)
+        if not request.user.is_superuser:
+            gc = GoogleCalendar()
+            partner = Partner.objects.get(user=request.user)
             emails = [obj.email,
-                      obj.partner.user.email]
-            cal_id = gc.create_calendar(f"Розклад водіїв {obj.first_name} {obj.last_name}")
-            obj.calendar = cal_id
-            for email in emails:
-                permissions = gc.add_permission(email)
-                gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
-        if change and not obj.user.is_active:
-            emails = [obj.email,
-                      obj.partner.user.email]
-            obj.partner = None
-            existing_acl = gc.service.acl().list(calendarId=obj.calendar).execute()
-            for acl_rule in existing_acl.get('items', []):
-                if acl_rule['scope']['type'] == 'user' and acl_rule['scope']['value'] in emails:
-                    gc.service.acl().delete(calendarId=obj.calendar, ruleId=acl_rule['id']).execute()
-            AuthUser.objects.filter(username=obj.login).delete()
+                      partner.user.email]
+            if not change:
+                user = AuthUser.objects.create_user(
+                    username=obj.email,
+                    password=obj.password,
+                    is_staff=True,
+                    is_active=True,
+                    is_superuser=False,
+                    first_name=obj.first_name,
+                    last_name=obj.last_name,
+                    email=obj.email
+                )
+                user.groups.add(Group.objects.get(name='Manager'))
+
+                obj.user = user
+                obj.partner = partner
+                cal_id = gc.create_calendar(f"Розклад водіїв {obj.first_name} {obj.last_name}")
+                obj.calendar = cal_id
+                for email in emails:
+                    permissions = gc.add_permission(email)
+                    gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
+            if change and not obj.user.is_active:
+                obj.partner = None
+                existing_acl = gc.service.acl().list(calendarId=obj.calendar).execute()
+                for acl_rule in existing_acl.get('items', []):
+                    if acl_rule['scope']['type'] == 'user' and acl_rule['scope']['value'] in emails:
+                        gc.service.acl().delete(calendarId=obj.calendar, ruleId=acl_rule['id']).execute()
+                AuthUser.objects.filter(username=obj.email).delete()
         super().save_model(request, obj, form, change)
 
     def get_list_display(self, request):

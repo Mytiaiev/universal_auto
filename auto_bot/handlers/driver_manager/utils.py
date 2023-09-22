@@ -95,7 +95,7 @@ def calculate_weekly_reports(start, end, driver):
                 rent = 0
                 efficiency_obj = DriverEfficiency.objects.filter(report_from__range=(start, end),
                                                                  driver=driver)
-                overall_distance = efficiency_obj.aggregate(distance=(Sum('mileage')))['distance']
+                overall_distance = efficiency_obj.aggregate(distance=Coalesce(Sum('mileage'), 0))['distance']
                 driver_overall = overall_distance - int(ParkSettings.get_value(
                     "TOTAL_KM_PER_WEEK", 2000, partner=driver.partner.pk))
                 rent_value = max(driver_overall * int(ParkSettings.get_value(
