@@ -276,7 +276,6 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate,
 		},
 		success: function (response) {
-			console.log(period);
 			let data = response.data[0];
 			let totalAmount = parseFloat(response.data[1]).toFixed(2);
 			let totalDistance = parseFloat(response.data[2]).toFixed(2);
@@ -502,6 +501,22 @@ function applyCustomDateRange() {
 
 
 $(document).ready(function () {
+	$.ajax({
+		url: ajaxGetUrl,
+		type: "GET",
+		data: {
+			action: "aggregators"
+		},
+		success: function (response) {
+			let aggregators = response.data;
+
+			for (let aggregator in aggregators) {
+				if (aggregators.hasOwnProperty(aggregator)) {
+					localStorage.setItem(aggregator, aggregators[aggregator] ? 'success' : 'false');
+				}
+			}
+		}
+	});
 
 	const partnerForm = $("#partnerForm");
 	const partnerLoginField = $("#partnerLogin");
@@ -804,8 +819,8 @@ $(document).ready(function () {
 		$('#datePicker').hide()
 		$('#sidebar').removeClass('sidebar-responsive');
 		if (window.innerWidth <= 900) {
-        $('.driver-container').css('display', 'block');
-    }
+			$('.driver-container').css('display', 'block');
+		}
 	});
 
 	$(".close-btn").click(function () {

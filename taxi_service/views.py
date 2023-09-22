@@ -106,7 +106,8 @@ class GetRequestView(View):
             'manager': handler.handle_effective_vehicle,
             'partner': handler.handle_effective_vehicle,
             'is_logged_in': handler.handle_is_logged_in,
-            'get_role': handler.handle_get_role
+            'get_role': handler.handle_get_role,
+            'aggregators': handler.handle_check_aggregators,
         }
 
         if action in method:

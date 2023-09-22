@@ -13,7 +13,7 @@ from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 change_password_investor, send_reset_code,
                                 active_vehicles_gps, order_confirm, effective_vehicle,
                                 investor_cash_car, get_driver_info, partner_total_earnings,
-                                manager_total_earnings)
+                                manager_total_earnings, check_aggregators)
 
 from auto.tasks import update_driver_data
 
@@ -258,6 +258,13 @@ class GetRequestHandler:
         else:
             response_data = {'role': None}
         return JsonResponse(response_data, safe=False)
+
+    def handle_check_aggregators(self, request):
+
+        aggregators = check_aggregators(request.user.pk)
+        json_data = JsonResponse({'data': aggregators}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)

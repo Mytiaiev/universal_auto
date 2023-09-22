@@ -577,3 +577,16 @@ def send_reset_code(email, user_login):
         return email, reset_code
     except Exception as error:
         get_logger().error(error)
+
+
+def check_aggregators(user_pk):
+    partner = Partner.objects.get(user_id=user_pk)
+
+    aggregator_results = {
+        'bolt': ParkSettings.objects.filter(partner=partner, key='BOLT_NAME').exists(),
+        'uklon': ParkSettings.objects.filter(partner=partner, key='UKLON_NAME').exists(),
+        'uber': ParkSettings.objects.filter(partner=partner, key='UBER_NAME').exists(),
+        'gps': ParkSettings.objects.filter(partner=partner, key='UAGPS_TOKEN').exists(),
+    }
+
+    return aggregator_results
