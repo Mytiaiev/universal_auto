@@ -133,14 +133,19 @@ p, span, div {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  padding: 25px;
+  padding: 20px;
   border-radius: 5px;
 }
 
 .main-cards .card span,
 .main-cards-partner .card-partner h3 {
-  font-size: 26px;
+  font-size: 22px;
   opacity: 0.77;
+}
+
+.main-cards .card h2 {
+  font-size: 24px;
+  margin: 0;
 }
 
 .card:first-child,
@@ -190,10 +195,15 @@ p, span, div {
   position: relative;
 }
 
+.charts-card h2 {
+  margin-bottom: 20px;
+}
+
 .chart-title {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 24px;
 }
 
 .car-select {
@@ -692,9 +702,6 @@ th, td {
 @media (max-width: 900px) {
   .driver-table {
     display: none;
-  }
-  .driver-container {
-    display: block;
   }
 }
 

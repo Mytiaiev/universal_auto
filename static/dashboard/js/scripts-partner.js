@@ -276,6 +276,7 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate,
 		},
 		success: function (response) {
+			console.log(period);
 			let data = response.data[0];
 			let totalAmount = parseFloat(response.data[1]).toFixed(2);
 			let totalDistance = parseFloat(response.data[2]).toFixed(2);
@@ -302,11 +303,17 @@ function loadDefaultKasa(period, startDate, endDate) {
 			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 			barChart.updateOptions(barChartOptions);
 
-			$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
-			$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-			$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
-
+			if (period === 'yesterday') {
+				$('.weekly-income-dates').text(startDate);
+				$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+			} else {
+				$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+				$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+			}
 		}
 	});
 }
@@ -407,7 +414,11 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 				table.append(row);
 
-				$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+				if (period === 'yesterday') {
+					$('.income-drivers-date').text(startDate);
+				} else {
+					$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+				}
 			});
 
 			$('.driver-container').empty();
@@ -503,10 +514,10 @@ $(document).ready(function () {
 	// Перевірка умови, коли показувати або ховати елемент
 	if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
 		// Показуємо елемент
-		$("#updateDatabase").show();
+		$("#updateDatabaseContainer").show();
 	} else {
 		// Ховаємо елемент
-		$("#updateDatabase").hide();
+		$("#updateDatabaseContainer").hide();
 	}
 
 	partnerRadioButtons.change(function () {
@@ -775,7 +786,6 @@ $(document).ready(function () {
 	});
 
 	$('#partnerVehicleBtnContainer').click(function () {
-		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
@@ -793,6 +803,9 @@ $(document).ready(function () {
 		$('.common-period').hide();
 		$('#datePicker').hide()
 		$('#sidebar').removeClass('sidebar-responsive');
+		if (window.innerWidth <= 900) {
+        $('.driver-container').css('display', 'block');
+    }
 	});
 
 	$(".close-btn").click(function () {
