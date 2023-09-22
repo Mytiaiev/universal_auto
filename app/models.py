@@ -287,6 +287,7 @@ class Vehicle(models.Model):
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
     registration = models.CharField(null=True, max_length=12, unique=True, verbose_name='Номер документа')
     vin_code = models.CharField(max_length=17, blank=True)
+    chat_id = models.CharField(max_length=15, blank=True, null=True, verbose_name="Група автомобіля")
     gps_id = models.IntegerField(default=0)
     gps_imei = models.CharField(max_length=100, blank=True, default='')
     coord_time = models.DateTimeField(null=True, verbose_name="Час отримання координат")

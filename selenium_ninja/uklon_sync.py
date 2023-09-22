@@ -127,7 +127,7 @@ class UklonRequest(Synchronizer):
                 order = Payments(
                     report_from=self.start_report_interval(day).date(),
                     vendor_name=self.fleet,
-                    full_name=f"{i['driver']['first_name'].split()} {i['driver']['last_name'].split()}",
+                    full_name=f"{i['driver']['first_name'].split()[0]} {i['driver']['last_name'].split()[0]}",
                     driver_id=str(i['driver']['id']),
                     total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
                     total_distance=float(

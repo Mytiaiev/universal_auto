@@ -371,7 +371,7 @@ def manager_paid_weekly(self, partner_pk):
 def send_weekly_report(self, partner_pk):
     result = []
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
-    managers.append(Partner.objects.get(pk=partner_pk).values('chat_id'))
+    managers.append(Partner.objects.filter(pk=partner_pk).values('chat_id').first())
     for manager in managers:
         result.append(generate_message_weekly(manager['chat_id']))
     return result
@@ -380,23 +380,25 @@ def send_weekly_report(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def send_daily_report(self, partner_pk):
     message = ''
+    driver_dict_msg = {}
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
     if not managers:
-        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
+        managers = list(Partner.objects.filter(pk=partner_pk).values('chat_id'))
     for manager in managers:
         result = get_daily_report(manager_id=manager['chat_id'])
         if result:
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
-                    num = "\U0001f3c6" if num == 1 else f"{num}."
-                    message += "{}{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
-                        num, key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
+                    driver_msg = "{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
+                        key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
+                    driver_dict_msg[key.pk] = driver_msg
+                    message += f"{num}.{driver_msg}"
             if partner_pk in dict_msg:
                 dict_msg[partner_pk] += message
             else:
                 dict_msg[partner_pk] = message
-    return dict_msg
+    return dict_msg, driver_dict_msg
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -405,12 +407,12 @@ def send_efficiency_report(self, partner_pk):
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
     if not managers:
-        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
+        managers = [Partner.objects.filter(pk=partner_pk).values('chat_id').first()]
     for manager in managers:
         result = get_efficiency(manager_id=manager['chat_id'])
         if result:
             for k, v in result.items():
-                message += f"{k}\n" + "".join(v)
+                message += f"{k}\n" + "".join(v) + "\n"
             if partner_pk in dict_msg:
                 dict_msg[partner_pk] += message
             else:
@@ -421,20 +423,23 @@ def send_efficiency_report(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def send_driver_efficiency(self, partner_pk):
     message = ''
+    driver_dict_msg = {}
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
     if not managers:
-        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
+        managers = [Partner.objects.filter(pk=partner_pk).values('chat_id').first()]
     for manager in managers:
         result = get_driver_efficiency_report(manager_id=manager['chat_id'])
         if result:
             for k, v in result.items():
-                message += f"{k}\n" + "".join(v) + "\n"
+                driver_msg = f"{k}\n" + "".join(v)
+                driver_dict_msg[k.pk] = driver_msg
+                message += driver_msg + "\n"
             if partner_pk in dict_msg:
                 dict_msg[partner_pk] += message
             else:
                 dict_msg[partner_pk] = message
-    return dict_msg
+    return dict_msg, driver_dict_msg
 
 
 @app.task(bind=True, queue='bot_tasks')
@@ -754,7 +759,8 @@ def get_driver_reshuffles(self, partner, delta=0):
                 if len(event_summary) == 2:
                     licence_plate, driver = event_summary
                     name, second_name = driver.split()
-                    driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
+                    driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
+                                                         Q(name=second_name, second_name=name)).first()
                     driver_finish = None
                     vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
                     swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))

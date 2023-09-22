@@ -93,11 +93,13 @@ def more_function(update, context):
 
 def update_phone_number(update, context):
     chat_id = update.message.chat.id
-    user = (
-            Partner.objects.filter(chat_id=chat_id)
-            | Manager.objects.filter(chat_id=chat_id)
-            | Client.objects.filter(chat_id=chat_id)
-    ).first()
+    user = Partner.objects.filter(chat_id=chat_id).first()
+
+    if user is None:
+        user = Manager.objects.filter(chat_id=chat_id).first()
+
+    if user is None:
+        user = Client.objects.filter(chat_id=chat_id).first()
     phone_number = update.message.contact.phone_number
     if phone_number and user:
         if len(phone_number) == 12:

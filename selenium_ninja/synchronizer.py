@@ -118,7 +118,8 @@ class Synchronizer:
         phone_number = kwargs.get('phone_number')
         email = kwargs.get('email')
         worked = kwargs.get('worked')
-        reshuffle = DriverReshuffle.objects.filter(swap_vehicle=driver.vehicle,
+        swap_vehicle = Vehicle.objects.filter(licence_plate=kwargs['licence_plate']).first()
+        reshuffle = DriverReshuffle.objects.filter(swap_vehicle=swap_vehicle,
                                                    swap_time__date=yesterday.date())
         vehicle = None if reshuffle else self.get_or_create_vehicle(**kwargs)
         if reshuffle or driver.vehicle != vehicle:
