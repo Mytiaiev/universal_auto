@@ -122,7 +122,7 @@ class Synchronizer:
         reshuffle = DriverReshuffle.objects.filter(swap_vehicle=swap_vehicle,
                                                    swap_time__date=yesterday.date())
         vehicle = None if reshuffle else self.get_or_create_vehicle(**kwargs)
-        if reshuffle or driver.vehicle != vehicle:
+        if reshuffle or (driver.vehicle != vehicle and vehicle is not None):
             driver.vehicle = vehicle
         if phone_number and not driver.phone_number:
             driver.phone_number = phone_number

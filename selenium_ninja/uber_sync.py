@@ -1,5 +1,3 @@
-from pprint import pprint
-
 import requests
 
 from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder
@@ -265,10 +263,9 @@ class UberRequest(Synchronizer):
                     'vin_code': vehicle['vin']})
             return vehicles_list
 
-    def get_fleet_orders(self, day, pk):
+    def get_fleet_orders(self, day):
         if not FleetOrder.objects.filter(fleet="Uber", accepted_time__date=day):
             uber_driver = SeleniumTools(self.partner_id)
             uber_driver.download_payments_order("Uber", day)
             uber_driver.save_trips_report("Uber", day)
             uber_driver.quit()
-

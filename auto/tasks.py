@@ -16,7 +16,7 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversantion, VehicleSpending, DriverReshuffle
+    TransactionsConversation, VehicleSpending, DriverReshuffle
 from django.db.models import Sum, IntegerField, FloatField, Q
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
@@ -124,8 +124,11 @@ def get_orders_from_fleets(self, partner_pk, day=None):
     for setting in settings:
         request_class = fleets.get(setting.key)
         if request_class:
-            for driver in drivers:
-                request_class(partner_pk).get_fleet_orders(day, driver.pk)
+            if isinstance(request_class(partner_pk), UberRequest):
+                request_class(partner_pk).get_fleet_orders(day)
+            else:
+                for driver in drivers:
+                    request_class(partner_pk).get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -501,29 +504,32 @@ def check_personal_orders(self):
 
 @app.task(bind=True, queue='beat_tasks')
 def add_money_to_vehicle(self, partner_pk):
-    yesterday = timezone.localtime() - timedelta(days=1)
-    car_efficiency_records = CarEfficiency.objects.filter(report_from=yesterday.date(), partner=partner_pk)
-    sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'))
+    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+    start = end - timedelta(days=6)
+    car_efficiency_records = CarEfficiency.objects.filter(report_from__range=(start, end), partner=partner_pk)
+    sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'),
+                                                                           clean_sum=Sum('clean_kasa'))
     for result in sum_by_plate:
-        vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'], partner=partner_pk).first()
+        vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'],
+                                         partner=partner_pk).first()
         if vehicle:
-            currency = vehicle.сurrency_back
-            total_kasa = result['total_sum']
+            currency = vehicle.currency_back
+            total_kasa = result['total_sum'] * vehicle.investor_percentage
             if currency != Vehicle.Currency.UAH:
-                result, rate = convert_to_currency(float(total_kasa), currency)
-                car_earnings = result * vehicle.investor_percentage
+                car_earnings, rate = convert_to_currency(float(total_kasa), currency)
             else:
-                car_earnings = total_kasa * vehicle.investor_percentage
+                car_earnings = total_kasa
                 rate = 0.00
-            vehicle.car_earnings += car_earnings
+            vehicle.car_earnings += result['clean_sum']
             vehicle.save()
-
-            TransactionsConversantion.objects.create(
-                vehicle=vehicle,
-                sum_before_transaction=total_kasa / 2,
-                сurrency=currency,
-                currency_rate=rate,
-                sum_after_transaction=car_earnings)
+            if vehicle.investor_car:
+                TransactionsConversation.objects.create(
+                    vehicle=vehicle,
+                    investor=vehicle.investor_car,
+                    sum_before_transaction=total_kasa,
+                    currency=currency,
+                    currency_rate=rate,
+                    sum_after_transaction=car_earnings)
 
 
 @app.task(bind=True, queue='beat_tasks')

@@ -3,7 +3,6 @@ from django.contrib.auth.models import User as AuthUser
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError
-from django.db.models import Q
 
 from scripts.google_calendar import GoogleCalendar
 from .models import *
@@ -409,15 +408,15 @@ class VehicleSpendingAdmin(admin.ModelAdmin):
         return queryset
 
 
-@admin.register(TransactionsConversantion)
-class TransactionsConversantionAdmin(admin.ModelAdmin):
+@admin.register(TransactionsConversation)
+class TransactionsConversationAdmin(admin.ModelAdmin):
     list_filter = ['vehicle']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['vehicle', 'sum_before_transaction', 'сurrency', 'currency_rate', 'sum_after_transaction']
+            return ['vehicle', 'sum_before_transaction', 'currency', 'currency_rate', 'sum_after_transaction']
 
 
 @admin.register(CarEfficiency)
@@ -882,8 +881,8 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'purchase_price',
-                                                            'сurrency', 'investor_car', 'investor_percentage',
-                                                            'currency_rate', 'сurrency_back',
+                                                            'currency', 'investor_car', 'investor_percentage',
+                                                            'currency_rate', 'currency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei', 'lat', 'lon',
                                                             'car_status', 'gps_id',

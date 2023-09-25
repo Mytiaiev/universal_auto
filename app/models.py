@@ -75,7 +75,7 @@ class Payments(models.Model):
                                   verbose_name='Повернення коштів')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
     class Meta:
         verbose_name = 'Звіт'
@@ -115,7 +115,7 @@ class SummaryReport(models.Model):
     refunds = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
     class Meta:
         verbose_name = 'Зведений звіт'
@@ -154,12 +154,12 @@ class User(models.Model):
 
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
-    email = models.EmailField(blank=True, null=True, max_length=254, verbose_name='Електрона пошта')
+    email = models.EmailField(blank=True, null=True, max_length=254, verbose_name='Електронна пошта')
     role = models.CharField(max_length=25, default=Role.CLIENT, choices=Role.choices)
     phone_number = models.CharField(blank=True, null=True, max_length=13, verbose_name='Номер телефона')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Ідентифікатор чата')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
     class Meta:
@@ -232,7 +232,7 @@ class Manager(models.Model):
     password = models.CharField(max_length=255, verbose_name='Пароль')
     first_name = models.CharField(max_length=255, verbose_name="Ім'я")
     last_name = models.CharField(max_length=255, verbose_name='Прізвище')
-    email = models.EmailField(max_length=254, verbose_name='Електрона пошта')
+    email = models.EmailField(max_length=254, verbose_name='Електронна пошта')
     phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
     chat_id = models.CharField(max_length=10, blank=True, null=True, verbose_name='Ідентифікатор чата')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -287,7 +287,7 @@ class Vehicle(models.Model):
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
     registration = models.CharField(null=True, max_length=12, unique=True, verbose_name='Номер документа')
     vin_code = models.CharField(max_length=17, blank=True)
-    chat_id = models.CharField(max_length=15, blank=True, null=True, verbose_name="Група автомобіля")
+    chat_id = models.CharField(max_length=15, blank=True, null=True, verbose_name="Група автомобіля телеграм")
     gps_id = models.IntegerField(default=0)
     gps_imei = models.CharField(max_length=100, blank=True, default='')
     coord_time = models.DateTimeField(null=True, verbose_name="Час отримання координат")
@@ -296,19 +296,19 @@ class Vehicle(models.Model):
     car_status = models.CharField(max_length=18, null=False, default="Serviceable", verbose_name='Статус автомобіля')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер авто')
     purchase_price = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Вартість автомобіля")
-    сurrency = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
+    currency = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
                                 verbose_name='Валюта покупки')
     currency_rate = models.DecimalField(decimal_places=2, max_digits=10, default=0,
-                                        verbose_name="Курс валюти при покупці(НБУ)")
+                                        verbose_name="Курс валюти при покупці (НБУ)")
     car_earnings = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Заробіток авто")
-    сurrency_back = models.CharField(max_length=4, default=Currency.UAH, choices=Currency.choices,
+    currency_back = models.CharField(max_length=4, default=Currency.USD, choices=Currency.choices,
                                      verbose_name='Валюта повернення коштів')
     investor_car = models.ForeignKey(Investor, blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Машина інвестора')
     investor_percentage = models.DecimalField(decimal_places=2, max_digits=10, default=0.35,
                                               verbose_name="Відсоток інвестора")
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Додано автомобіль')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
     class Meta:
@@ -354,20 +354,20 @@ class Vehicle(models.Model):
             return None
 
 
-class TransactionsConversantion(models.Model):
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Машина')
-    sum_before_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума до транзакції")
-    сurrency = models.CharField(max_length=4, verbose_name='Валюта покупки')
-    currency_rate = models.DecimalField(decimal_places=2, max_digits=10, default=0,
-                                        verbose_name="Курс валюти")
-    sum_after_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума після транзакції")
+class TransactionsConversation(models.Model):
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Автомобіль')
+    investor = models.ForeignKey(Investor, on_delete=models.SET_NULL, null=True, verbose_name='Інвестор')
+    sum_before_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума в гривні")
+    currency = models.CharField(max_length=4, verbose_name='Валюта покупки')
+    currency_rate = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Курс валюти")
+    sum_after_transaction = models.DecimalField(decimal_places=2, max_digits=10, verbose_name="Сума у валюті")
 
     class Meta:
-        verbose_name = 'Транзакцію'
-        verbose_name_plural = 'Транзакції'
+        verbose_name = 'Виплату інвестору'
+        verbose_name_plural = 'Виплати інвестору'
 
     def __str__(self) -> str:
-        return f'{self.vehicle} {self.sum_before_transaction} {self.сurrency}'
+        return f'{self.vehicle} {self.sum_before_transaction} {self.currency}'
 
 
 class VehicleSpending(models.Model):
@@ -384,9 +384,8 @@ class VehicleSpending(models.Model):
     photo = models.ImageField(upload_to='spending/', blank=True, null=True, verbose_name='Фото')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
 
-
     class Meta:
-        verbose_name = 'Витрата'
+        verbose_name = 'Витрату'
         verbose_name_plural = 'Витрати'
 
     def __str__(self) -> str:
@@ -574,7 +573,7 @@ class Fleets_drivers_vehicles_rate(models.Model):
     driver_external_id = models.CharField(max_length=255, verbose_name='Унікальний індифікатор по автопарку')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
     pay_cash = models.BooleanField(default=False, verbose_name='Оплата готівкою')
 
@@ -890,7 +889,7 @@ class Comment(models.Model):
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
     def __str__(self):
@@ -991,7 +990,7 @@ class Report_of_driver_debt(models.Model):
     driver = models.CharField(max_length=255, verbose_name='Водій')
     image = models.ImageField(upload_to='.', verbose_name='Фото')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
 
     class Meta:
@@ -1008,7 +1007,7 @@ class Event(models.Model):
     event_date = models.DateTimeField(null=True, blank=True, verbose_name='Час події')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Ідентифікатор чата')
     created_at = models.DateTimeField(auto_now_add=True, editable=False, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
     class Meta:
         verbose_name = 'Відпочинок і лікування'
@@ -1016,7 +1015,7 @@ class Event(models.Model):
 
 
 class SubscribeUsers(models.Model):
-    email = models.EmailField(max_length=254, verbose_name='Електрона пошта')
+    email = models.EmailField(max_length=254, verbose_name='Електронна пошта')
     created_at = models.DateTimeField(editable=False, auto_now=True, verbose_name='Створено')
 
     class Meta:
@@ -1257,7 +1256,7 @@ class NewUklonPaymentsOrder(models.Model):
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
     vendor_name = 'NewUklon'
 
@@ -1308,7 +1307,7 @@ class UberPaymentsOrder(models.Model):
     tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
 
     vendor_name = 'Uber'
 
