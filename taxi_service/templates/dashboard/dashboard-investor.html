@@ -126,21 +126,21 @@
 		</div>
 		<div class="main-cards">
 			<div class="card">
-				<h2>{% trans 'ЗАГАЛЬНИЙ ДОХІД' %}</h2>
+				<h2>{% trans 'Загальний дохід' %}</h2>
 				<span class="weekly-income-amount"></span>
-				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<h2>{% trans 'Період' %}</h2>
 				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<h2>{% trans 'ЗАГАЛЬНИЙ ПРОБІГ' %}</h2>
+				<h2>{% trans 'Загальний Пробіг' %}</h2>
 				<span class="income-km"></span>
-				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<h2>{% trans 'Період' %}</h2>
 				<span class="weekly-income-dates"></span>
 			</div>
 			<div class="card">
-				<h2>{% trans 'ЗАГАЛЬНІ ВИТРАТИ НА АВТО' %}</h2>
+				<h2>{% trans 'Загальні витрати на авто' %}</h2>
 				<span class="spending-all"></span>
-				<h2>{% trans 'ПЕРІОД' %}</h2>
+				<h2>{% trans 'Період' %}</h2>
 				<span class="weekly-income-dates"></span>
 			</div>
 			{#			<div class="card">#}
@@ -155,11 +155,13 @@
 		<div class="charts">
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Дохід' %}</h2>
+				<div id="noDataMessage-1" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
 				<div id="bar-chart"></div>
 			</div>
 
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Пробіг автомобіля' %}</h2>
+				<div id="noDataMessage-2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
 				<div id="area-chart"></div>
 			</div>
 		</div>
