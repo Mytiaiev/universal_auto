@@ -16,8 +16,8 @@ from django.utils.decorators import method_decorator
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import average_effective_vehicle, \
-    car_piggy_bank, get_driver_info, manager_car_piggy_bank, partner_car_piggy_bank
-from app.models import ParkSettings, Driver, Vehicle, Partner, Manager, Investor
+    car_piggy_bank, manager_car_piggy_bank, partner_car_piggy_bank
+from app.models import ParkSettings, Driver, Vehicle, Investor
 from auto_bot.main import bot
 
 

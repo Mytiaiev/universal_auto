@@ -84,11 +84,8 @@ def get_dates(period=None):
 
     elif period == 'current_week':
         weekday = current_date.weekday()
-        if weekday == 0:
-            start_date = current_date - timedelta(days=7)
-        else:
-            start_date = current_date - timedelta(days=weekday)
-        end_date = current_date
+        start_date = current_date - timedelta(days=weekday)
+        end_date = start_date + timedelta(days=6)
 
     elif period == 'current_month':
         start_date = current_date.replace(day=1)
@@ -113,12 +110,9 @@ def get_dates(period=None):
             end_date = date(current_date.year, 12, 31)
 
     elif period == 'last_week':
-        end_date = current_date - timedelta(days=1)
-        weekday = end_date.weekday()
-        if weekday == 0:
-            start_date = end_date - timedelta(days=6)
-        else:
-            start_date = end_date - timedelta(days=weekday)
+        start_date = current_date - timedelta(
+            days=current_date.weekday() + 7)
+        end_date = start_date + timedelta(days=6)
 
     elif period == 'last_month':
         last_month = current_date.replace(day=1) - timedelta(days=1)

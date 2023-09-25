@@ -162,20 +162,6 @@ class GetRequestHandler:
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
-    def handle_get_drivers_cash(self, request):
-        period = request.GET.get('period')
-        user = request.user
-        if user.is_active and Manager.objects.filter(user=user).exists():
-            get_drivers_cash = collect_total_earnings(period, user.pk)
-            json_data = JsonResponse({'data': get_drivers_cash}, safe=False)
-            response = HttpResponse(json_data, content_type='application/json')
-            return response
-        elif user.is_active and Partner.objects.filter(user=user).exists():
-            get_cash = investor_cash_car(period, user.pk)
-            json_data = JsonResponse({'data': get_cash}, safe=False)
-            response = HttpResponse(json_data, content_type='application/json')
-            return response
-
     def handle_get_investor_cash(self, request):
         period = request.GET.get('period')
         start_date = request.GET.get('start_date')
