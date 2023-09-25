@@ -6,7 +6,7 @@ import json
 from django.urls import reverse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User as AuUser
 from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
 from django.views.generic import View, TemplateView
@@ -190,11 +190,16 @@ class GoogleAuthView(View):
         redirect_url = reverse('index')
 
         if email:
-            user = User.objects.filter(email=email).first()
+            user = AuUser.objects.filter(email=email).first()
             if user:
                 user.backend = 'django.contrib.auth.backends.ModelBackend'
                 login(request, user)
-                redirect_url = reverse('dashboard')
+                if hasattr(user, 'partner'):
+                    redirect_url = reverse('dashboard_partner')
+                elif hasattr(user, 'manager'):
+                    redirect_url = reverse('dashboard_manager')
+                elif hasattr(user, 'investor'):
+                    redirect_url = reverse('dashboard_investor')
             else:
 
                 return redirect(reverse('index') + "?signed_in=false")
