@@ -163,11 +163,13 @@
 
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Каса' %}</h2>
+				<div id="noDataMessage-1" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
 				<div id="bar-chart"></div>
 			</div>
 
 			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Ефективність автомобіля' %}</h2>
+				<div id="noDataMessage-2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
 				{#				<div class="car-select">#}
 				{#					<select id="vehicle-select">#}
 				{#						{% for vehicle in get_all_vehicle %}#}

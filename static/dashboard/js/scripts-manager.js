@@ -267,35 +267,56 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate
 		},
 		success: function (response) {
-			let data = response.data[0];
-			let totalAmount = parseFloat(response.data[1]).toFixed(2);
-			let totalRent = parseFloat(response.data[2]).toFixed(2);
-			let startDate = response.data[3];
-			let endDate = response.data[4];
-			let efficiency = parseFloat(response.data[5]).toFixed(2);
-			let formattedData = {};
-
-			Object.keys(data).forEach(function (key) {
-				let value = parseFloat(data[key]).toFixed(2);
-				if (value > 0) {
-					formattedData[key] = value;
+			let isAllValuesZero = true;
+			for (let key in response.data[0]) {
+				if (parseFloat(response.data[0][key]) !== 0) {
+					isAllValuesZero = false;
+					break;
 				}
-			});
+			}
+			if (isAllValuesZero) {
+				$("#noDataMessage-1").show();
+				$('#bar-chart').hide();
+			} else {
+				$("#noDataMessage-1").hide();
+				$('#bar-chart').show();
+				let data = response.data[0];
+				let totalAmount = parseFloat(response.data[1]).toFixed(2);
+				let totalRent = parseFloat(response.data[2]).toFixed(2);
+				let startDate = response.data[3];
+				let endDate = response.data[4];
+				let efficiency = parseFloat(response.data[5]).toFixed(2);
+				let formattedData = {};
 
-			let sortedKeys = Object.keys(formattedData).sort();
-			let sortedFormattedData = {};
-			sortedKeys.forEach(function (key) {
-				sortedFormattedData[key] = formattedData[key];
-			});
+				Object.keys(data).forEach(function (key) {
+					let value = parseFloat(data[key]).toFixed(2);
+					if (value > 0) {
+						formattedData[key] = value;
+					}
+				});
 
-			barChartOptions.series[0].data = Object.values(formattedData);
-			barChartOptions.xaxis.categories = Object.keys(formattedData);
-			barChart.updateOptions(barChartOptions);
+				let sortedKeys = Object.keys(formattedData).sort();
+				let sortedFormattedData = {};
+				sortedKeys.forEach(function (key) {
+					sortedFormattedData[key] = formattedData[key];
+				});
 
-			$('.weekly-income-dates').text(gettext('З ') + startDate + gettext(' по ') + endDate);
-			$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
-			$('.weekly-income-rent').text(totalRent + gettext(' км'));
-			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				barChartOptions.series[0].data = Object.values(formattedData);
+				barChartOptions.xaxis.categories = Object.keys(formattedData);
+				barChart.updateOptions(barChartOptions);
+
+				if (period === 'yesterday') {
+					$('.weekly-income-dates').text(startDate);
+					$('.weekly-income-rent').text(totalRent + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				} else {
+					$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+					$('.weekly-income-rent').text(totalRent + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				}
+			}
 		}
 	});
 }
@@ -312,37 +333,43 @@ function loadEffectiveChart(period, startDate, endDate) {
 		},
 		success: function (response) {
 			let dataObject = response.data;
+			if (Object.keys(response.data).length === 0) {
+				$("#noDataMessage-2").show();
+				$('#area-chart').hide();
+			} else {
+				$("#noDataMessage-2").hide();
+				$('#area-chart').show();
+				let carData = {};
 
-			let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
+				// Проходимося по кожному ідентифікатору автомобіля
+				Object.keys(dataObject).forEach(function (carNumber) {
+					carData[carNumber] = dataObject[carNumber].map(function (item) {
+						return {
+							date: new Date(item.date_effective),
+							efficiency: parseFloat(item.efficiency)
+						};
+					});
+				});
 
-			// Проходимося по кожному ідентифікатору автомобіля
-			Object.keys(dataObject).forEach(function (carNumber) {
-				carData[carNumber] = dataObject[carNumber].map(function (item) {
+				let efficiencySeries = Object.keys(carData).map(function (carNumber) {
 					return {
-						date: new Date(item.date_effective),
-						efficiency: parseFloat(item.efficiency)
+						name: carNumber,
+						data: carData[carNumber].map(function (entry) {
+							return entry.efficiency;
+						})
 					};
 				});
-			});
 
-			let efficiencySeries = Object.keys(carData).map(function (carNumber) {
-				return {
-					name: carNumber,
-					data: carData[carNumber].map(function (entry) {
-						return entry.efficiency;
-					})
-				};
-			});
+				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+				});
 
-			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-			});
+				// Оновити опції графіка з новими даними
+				areaChartOptions.series = efficiencySeries;
+				areaChartOptions.labels = dates;
 
-			// Оновити опції графіка з новими даними
-			areaChartOptions.series = efficiencySeries;
-			areaChartOptions.labels = dates;
-
-			areaChart.updateOptions(areaChartOptions);
+				areaChart.updateOptions(areaChartOptions);
+			}
 		}
 	});
 }
@@ -396,7 +423,11 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 				table.append(row);
 
-				$('.income-drivers-date').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+				if (period === 'yesterday') {
+					$('.income-drivers-date').text(startDate);
+				} else {
+					$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+				}
 			});
 		}
 	});
@@ -422,7 +453,7 @@ showButton.on('click', function (event) {
 });
 
 loadDefaultKasa('yesterday');
-loadEffectiveChart('current_week');
+loadEffectiveChart('yesterday');
 loadDefaultDriver('yesterday');
 
 function showDatePicker(periodSelectId, datePickerId) {
@@ -452,163 +483,6 @@ function applyCustomDateRange() {
 	loadDefaultKasa(selectedPeriod, startDate, endDate);
 	loadEffectiveChart(selectedPeriod, startDate, endDate);
 }
-
-$(document).ready(function () {
-
-	const partnerForm = $("#partnerForm");
-	const partnerLoginField = $("#partnerLogin");
-	const partnerRadioButtons = $("input[name='partner']");
-
-	partnerRadioButtons.change(function () {
-		const selectedPartner = $("input[name='partner']:checked").val();
-		updateLoginField(selectedPartner);
-	});
-
-	function updateLoginField(partner) {
-		if (partner === 'uklon') {
-			partnerLoginField.val('+380');
-		} else {
-			partnerLoginField.val('');
-			$("#partnerPassword").val("");
-		}
-	}
-
-	if (sessionStorage.getItem('settings') === 'true') {
-		$("#settingsWindow").fadeIn();
-	}
-
-	if (localStorage.getItem('uber')) {
-		$("#partnerLogin").hide()
-		$("#partnerPassword").hide()
-		$(".opt-partnerForm").hide()
-		$(".login-ok").show()
-		$("#loginErrorMessage").hide()
-	}
-
-	$("#settingBtn").click(function () {
-		sessionStorage.setItem('settings', 'true');
-		$("#settingsWindow").fadeIn();
-	});
-
-	$(".close-btn").click(function () {
-		$("#settingsWindow").fadeOut();
-		sessionStorage.setItem('settings', 'false');
-		location.reload();
-	});
-
-	$(".login-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		const partnerLogin = partnerForm.find("#partnerLogin").val();
-		const partnerPassword = partnerForm.find("#partnerPassword").val();
-
-		if (partnerForm[0].checkValidity() && selectedPartner) {
-			showLoader(partnerForm);
-			sendLoginDataToServer(selectedPartner, partnerLogin, partnerPassword);
-		}
-	});
-
-	$(".logout-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		sendLogautDataToServer(selectedPartner);
-		localStorage.removeItem(selectedPartner);
-		$("#partnerLogin").show()
-		$("#partnerPassword").show()
-		$(".opt-partnerForm").show()
-		$(".login-ok").hide()
-		$("#loginErrorMessage").hide()
-	});
-
-	// Show/hide password functionality
-	$("#showPasswordPartner").click(function () {
-		let $checkbox = $(this);
-		let $passwordField = $checkbox.closest('.settings-content').find('.partnerPassword');
-		let change = $checkbox.is(":checked") ? "text" : "password";
-		$passwordField.prop('type', change);
-	});
-
-	function showLoader(form) {
-		$(".opt-partnerForm").hide();
-		form.find(".loader-login").show();
-		$("input[name='partner']").prop("disabled", true);
-	}
-
-	function hideLoader(form) {
-		form.find(".loader-login").hide();
-		$("input[name='partner']").prop("disabled", false);
-	}
-
-
-	$('[name="partner"]').change(function () {
-		let partner = $(this).val()
-		let login = localStorage.getItem(partner)
-
-		if (login === "success") {
-			$("#partnerLogin").hide()
-			$("#partnerPassword").hide()
-			$(".opt-partnerForm").hide()
-			$(".login-ok").show()
-			$("#loginErrorMessage").hide()
-		} else {
-			$("#partnerLogin").show()
-			$("#partnerPassword").show()
-			$(".opt-partnerForm").show()
-			$(".login-ok").hide()
-			$("#loginErrorMessage").hide()
-		}
-	})
-
-	function sendLoginDataToServer(partner, login, password) {
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner,
-				login: login,
-				password: password,
-			},
-			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'success');
-					$("#partnerLogin").hide()
-					$("#partnerPassword").hide()
-					$(".opt-partnerForm").hide()
-					$(".login-ok").show()
-					$("#loginErrorMessage").hide()
-				} else {
-					$(".opt-partnerForm").show();
-					$("#loginErrorMessage").show()
-					$("#partnerLogin").val("").addClass("error-border");
-					$("#partnerPassword").val("").addClass("error-border");
-				}
-				hideLoader(partnerForm);
-			}
-		});
-	}
-
-	function sendLogautDataToServer(partner) {
-		console.log(partner + "_logout")
-		$("#partnerLogin").val("")
-		$("#partnerPassword").val("")
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner + "_logout",
-			},
-			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'false');
-					$("#partnerLogin").show()
-					$("#partnerPassword").show()
-					$(".opt-partnerForm").show()
-					$(".login-ok").hide()
-				}
-			}
-		});
-	}
-});
 
 
 $(document).ready(function () {
