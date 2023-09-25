@@ -276,42 +276,56 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate,
 		},
 		success: function (response) {
-			let data = response.data[0];
-			let totalAmount = parseFloat(response.data[1]).toFixed(2);
-			let totalDistance = parseFloat(response.data[2]).toFixed(2);
-			let startDate = response.data[3];
-			let endDate = response.data[4];
-			let efficiency = parseFloat(response.data[5]).toFixed(2);
-			let formattedData = {};
-
-			Object.keys(data).forEach(function (key) {
-				let value = parseFloat(data[key]).toFixed(2);
-				if (value > 0) {
-					let formattedKey = key;
-					formattedData[formattedKey] = value;
+			let isAllValuesZero = true;
+			for (let key in response.data[0]) {
+				if (parseFloat(response.data[0][key]) !== 0) {
+					isAllValuesZero = false;
+					break;
 				}
-			});
-
-			let sortedKeys = Object.keys(formattedData).sort();
-			let sortedFormattedData = {};
-			sortedKeys.forEach(function (key) {
-				sortedFormattedData[key] = formattedData[key];
-			});
-
-			barChartOptions.series[0].data = Object.values(sortedFormattedData);
-			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-			barChart.updateOptions(barChartOptions);
-
-			if (period === 'yesterday') {
-				$('.weekly-income-dates').text(startDate);
-				$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+			}
+			if (isAllValuesZero) {
+				$("#noDataMessage-1").show();
+				$('#bar-chart').hide();
 			} else {
-				$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
-				$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				$("#noDataMessage-1").hide();
+				$('#bar-chart').show();
+				let data = response.data[0];
+				let totalAmount = parseFloat(response.data[1]).toFixed(2);
+				let totalDistance = parseFloat(response.data[2]).toFixed(2);
+				let startDate = response.data[3];
+				let endDate = response.data[4];
+				let efficiency = parseFloat(response.data[5]).toFixed(2);
+				let formattedData = {};
+
+				Object.keys(data).forEach(function (key) {
+					let value = parseFloat(data[key]).toFixed(2);
+					if (value > 0) {
+						let formattedKey = key;
+						formattedData[formattedKey] = value;
+					}
+				});
+
+				let sortedKeys = Object.keys(formattedData).sort();
+				let sortedFormattedData = {};
+				sortedKeys.forEach(function (key) {
+					sortedFormattedData[key] = formattedData[key];
+				});
+
+				barChartOptions.series[0].data = Object.values(sortedFormattedData);
+				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
+				barChart.updateOptions(barChartOptions);
+
+				if (period === 'yesterday') {
+					$('.weekly-income-dates').text(startDate);
+					$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				} else {
+					$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+					$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				}
 			}
 		}
 	});
@@ -329,36 +343,43 @@ function loadEffectiveChart(period, startDate, endDate) {
 		},
 		success: function (response) {
 			let dataObject = response.data;
-			let carData = {};
+			if (Object.keys(response.data).length === 0) {
+				$("#noDataMessage-2").show();
+				$('#area-chart').hide();
+			} else {
+				$("#noDataMessage-2").hide();
+				$('#area-chart').show();
+				let carData = {};
 
-			// Проходимося по кожному ідентифікатору автомобіля
-			Object.keys(dataObject).forEach(function (carNumber) {
-				carData[carNumber] = dataObject[carNumber].map(function (item) {
+				// Проходимося по кожному ідентифікатору автомобіля
+				Object.keys(dataObject).forEach(function (carNumber) {
+					carData[carNumber] = dataObject[carNumber].map(function (item) {
+						return {
+							date: new Date(item.date_effective),
+							efficiency: parseFloat(item.efficiency)
+						};
+					});
+				});
+
+				let mileageSeries = Object.keys(carData).map(function (carNumber) {
 					return {
-						date: new Date(item.date_effective),
-						efficiency: parseFloat(item.efficiency)
+						name: carNumber,
+						data: carData[carNumber].map(function (entry) {
+							return entry.efficiency;
+						})
 					};
 				});
-			});
 
-			let mileageSeries = Object.keys(carData).map(function (carNumber) {
-				return {
-					name: carNumber,
-					data: carData[carNumber].map(function (entry) {
-						return entry.efficiency;
-					})
-				};
-			});
+				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+				});
 
-			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-			});
+				// Оновити опції графіка з новими даними
+				areaChartOptions.series = mileageSeries;
+				areaChartOptions.labels = dates;
 
-			// Оновити опції графіка з новими даними
-			areaChartOptions.series = mileageSeries;
-			areaChartOptions.labels = dates;
-
-			areaChart.updateOptions(areaChartOptions);
+				areaChart.updateOptions(areaChartOptions);
+			}
 		}
 	});
 }
@@ -468,7 +489,7 @@ showButton.on('click', function (event) {
 });
 
 loadDefaultKasa('yesterday');
-loadEffectiveChart('current_week');
+loadEffectiveChart('yesterday');
 loadDefaultDriver('yesterday');
 
 function showDatePicker(periodSelectId, datePickerId) {
