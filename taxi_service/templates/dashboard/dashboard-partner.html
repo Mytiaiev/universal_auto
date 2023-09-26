@@ -182,15 +182,13 @@
 				<option value="last_quarter">{% trans 'Минулий квартал' %}</option>
 				<option value="custom">{% trans 'Вибрати період >' %}</option>
 			</select>
-			<input type="button" value={% trans 'Показати' %} id="common-show-button"
-						 onclick="showDatePicker('period-common', 'datePicker')">
 		</div>
 		<div id="datePicker" style="display: none;">
 			<label for="start_date">{% trans 'Початкова дата:' %}</label>
 			<input type="date" id="start_date" name="start_date">
 			<label for="end_date">{% trans 'Кінцева дата:' %}</label>
 			<input type="date" id="end_date" name="end_date">
-			<input type="button" value={% trans 'Фільтрувати' %} onclick="applyCustomDateRange()">
+			<input class="apply-filter-button" type="button" value={% trans 'Фільтрувати' %} onclick="applyCustomDateRange()">
 		</div>
 		<div class="main-cards">
 			<div class="card">
@@ -231,6 +229,7 @@
 				<h2 class="chart-title">{% trans 'Ефективність автомобіля' %}</h2>
 				<div id="noDataMessage-2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
 				<div id="area-chart"></div>
+				<button type="button" id="reset-button">{% trans "Скинути zoom" %}</button>
 			</div>
 		</div>
 		{% for car in car_piggy_bank %}
@@ -270,15 +269,13 @@
 					<option value="last_quarter">{% trans 'Минулий квартал' %}</option>
 					<option value="custom">{% trans 'Вибрати період >' %}</option>
 				</select>
-				<input type="button" value={% trans 'Показати' %} id="show-button"
-							 onclick="showDatePicker('period', 'datePickerDriver')">
 			</div>
 			<div id="datePickerDriver" style="display: none;">
 				<label for="start_date">{% trans 'Початкова дата:' %}</label>
 				<input type="date" id="start_date" name="start_date">
 				<label for="end_date">{% trans 'Кінцева дата:' %}</label>
 				<input type="date" id="end_date" name="end_date">
-				<input type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
+				<input class="apply-filter-button" type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
 			</div>
 			<table class="driver-table">
 				<tr>

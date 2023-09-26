@@ -267,6 +267,7 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate
 		},
 		success: function (response) {
+			$(".apply-filter-button").prop("disabled", false);
 			let isAllValuesZero = true;
 			for (let key in response.data[0]) {
 				if (parseFloat(response.data[0][key]) !== 0) {
@@ -332,6 +333,7 @@ function loadEffectiveChart(period, startDate, endDate) {
 			end_date: endDate
 		},
 		success: function (response) {
+			$(".apply-filter-button").prop("disabled", false);
 			let dataObject = response.data;
 			if (Object.keys(response.data).length === 0) {
 				$("#noDataMessage-2").show();
@@ -386,6 +388,7 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 		},
 		success: function (response) {
+			$(".apply-filter-button").prop("disabled", false);
 			let table = $('.info-driver table');
 			let startDate = response.data[1];
 			let endDate = response.data[2];
@@ -434,22 +437,31 @@ function loadDefaultDriver(period, startDate, endDate) {
 }
 
 const commonPeriodSelect = $('#period-common');
-const showCommonButton = $('#common-show-button');
 const periodSelect = $('#period');
-const showButton = $('#show-button');
-showCommonButton.on('click', function (event) {
-	event.preventDefault();
 
+commonPeriodSelect.on('change', function () {
 	const selectedPeriod = commonPeriodSelect.val();
-	loadDefaultKasa(selectedPeriod);
-	loadEffectiveChart(selectedPeriod);
+	if (selectedPeriod !== "custom") {
+		loadDefaultKasa(selectedPeriod);
+		loadEffectiveChart(selectedPeriod);
+	}
+	if (selectedPeriod === "custom") {
+		$("#datePicker").css("display", "block");
+	} else {
+		$("#datePicker").css("display", "none");
+	}
 });
 
-showButton.on('click', function (event) {
-	event.preventDefault();
-
+periodSelect.on('change', function () {
 	const selectedPeriod = periodSelect.val();
-	loadDefaultDriver(selectedPeriod);
+	if (selectedPeriod !== "custom") {
+		loadDefaultDriver(selectedPeriod);
+	}
+	if (selectedPeriod === "custom") {
+		$("#datePickerDriver").css("display", "block");
+	} else {
+		$("#datePickerDriver").css("display", "none");
+	}
 });
 
 loadDefaultKasa('yesterday');
@@ -468,14 +480,18 @@ function showDatePicker(periodSelectId, datePickerId) {
 }
 
 function customDateRange() {
-	let startDate = $("#datePickerDriver #start_date").val();
-	let endDate = $("#datePickerDriver #end_date").val();
+	$(".apply-filter-button").prop("disabled", true);
+
+	let startDate = $("#start_date").val();
+	let endDate = $("#end_date").val();
 
 	const selectedPeriod = periodSelect.val();
 	loadDefaultDriver(selectedPeriod, startDate, endDate);
 }
 
 function applyCustomDateRange() {
+$(".apply-filter-button").prop("disabled", true);
+
 	let startDate = $("#start_date").val();
 	let endDate = $("#end_date").val();
 
@@ -582,5 +598,11 @@ $(document).ready(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
+	});
+
+	const resetButton = $("#reset-button");
+
+	resetButton.on("click", function () {
+		areaChart.resetSeries();
 	});
 });

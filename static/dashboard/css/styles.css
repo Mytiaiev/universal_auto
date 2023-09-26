@@ -370,6 +370,9 @@ p, span, div {
   .car-details {
     flex-direction: column;
   }
+  #reset-button {
+    display: none;
+  }
 }
 
 /*!* Стилі для вікна з налаштуваннями(логін партнерів) *!*/
@@ -734,6 +737,18 @@ input[type="button"] {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+#reset-button {
+  padding: 8px 16px;
+  font-size: 16px;
+  background-color: #3e8f3e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  left: 85%;
 }
 
 form {
