@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'fake_uber',
     'taxi_service',
     'rest_framework',
+    'api',
 ]
 
 MIDDLEWARE = [

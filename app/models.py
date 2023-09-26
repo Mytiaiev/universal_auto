@@ -122,9 +122,9 @@ class SummaryReport(models.Model):
         verbose_name_plural = 'Зведені звіти'
 
     def total_drivers_amount(self, rate):
-        return self.kassa() * rate + float(self.total_amount_cash)
+        return self.get_kasa() * rate + float(self.total_amount_cash)
 
-    def kassa(self):
+    def get_kasa(self):
         return float(self.total_amount_without_fee)
 
 
