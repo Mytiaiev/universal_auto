@@ -108,6 +108,7 @@ class GetRequestView(View):
             'is_logged_in': handler.handle_is_logged_in,
             'get_role': handler.handle_get_role,
             'aggregators': handler.handle_check_aggregators,
+            'check_task': handler.handle_check_task,
         }
 
         if action in method:

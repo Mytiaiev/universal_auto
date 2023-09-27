@@ -741,23 +741,32 @@ $(document).ready(function () {
 				action: "upd_database",
 			},
 			success: function (response) {
-				if (response.data === true) {
-					$("#loadingMessage").text(gettext("База даних оновлено"));
-					$("#loader").css("display", "none");
-					$("#checkmark").css("display", "block");
+				console.log(response.task_id)
+				let task_id = response.task_id
+				let interval = setInterval(function () {
+					$.ajax({
+						type: "GET",
+						url: ajaxGetUrl,
+						data: {
+							action: "check_task",
+							task_id: task_id,
+						},
+						success: function (response) {
+							console.log(response.data)
+							if (response.data === true) {
+								$("#loadingMessage").text(gettext("База даних оновлено"));
+								$("#loader").css("display", "none");
+								$("#checkmark").css("display", "block");
 
-					setTimeout(function () {
-						$("#loadingModal").css("display", "none");
-						window.location.reload();
-					}, 3000);
-				} else {
-					$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше або зверніться до адміністратора"));
-
-					setTimeout(function () {
-						$("#loadingModal").css("display", "none");
-						window.location.reload();
-					}, 3000);
-				}
+								setTimeout(function () {
+									$("#loadingModal").css("display", "none");
+									window.location.reload();
+								}, 3000);
+								clearInterval(interval);
+							}
+						}
+					});
+				}, 5000);
 			}
 		});
 	});

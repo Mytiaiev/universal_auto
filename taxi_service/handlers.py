@@ -137,12 +137,17 @@ class PostRequestHandler:
     def handler_update_database(self, request):
         partner = Partner.objects.get(user=request.user.pk)
         upd = update_driver_data.delay(partner.pk)
-        while True:
-            if upd.ready():
-                result = upd.get()
-                json_data = JsonResponse({'data': result[1]}, safe=False)
-                response = HttpResponse(json_data, content_type='application/json')
-                return response
+        json_data = JsonResponse({'task_id': upd.id}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
+
+
+        # while True:
+        #     if upd.ready():
+        #         result = upd.get()
+        #         json_data = JsonResponse({'data': result[1]}, safe=False)
+        #         response = HttpResponse(json_data, content_type='application/json')
+        #         return response
 
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
@@ -251,6 +256,18 @@ class GetRequestHandler:
         json_data = JsonResponse({'data': aggregators}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
+
+    def handle_check_task(self, request):
+        upd = update_driver_data.AsyncResult(request.GET.get('task_id'))
+        if upd.ready():
+            result = upd.get()
+            json_data = JsonResponse({'data': result[1]}, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
+        else:
+            json_data = JsonResponse({'data': 'in progress'}, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)
