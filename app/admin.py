@@ -76,10 +76,10 @@ def filter_queryset_by_group(*groups, field_to_filter=None):
                 queryset = super().get_queryset(request)
                 if request.user.groups.filter(name='Investor').exists():
 
-                    investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
-                    investor_vehicle_ids = investor_vehicles.values_list('licence_plate', flat=True)
-
-                    queryset = queryset.filter(licence_plate__in=investor_vehicle_ids)
+                    try:
+                        queryset = queryset.filter(vehicle__investor_car__user=request.user)
+                    except FieldError:
+                        queryset = queryset.filter(investor_car__user=request.user)
                 if request.user.groups.filter(name='Manager').exists():
                     try:
                         queryset = queryset.filter(manager__user=request.user)
