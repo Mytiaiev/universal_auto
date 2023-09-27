@@ -29,7 +29,7 @@
 
 	<!-- Header -->
 	<header class="header">
-		<div class="menu-icon" onclick="openSidebar()">
+		<div class="menu-icon" onclick="toggleSidebar()">
 			<span class="material-icons-outlined">menu</span>
 		</div>
 		{#		<div class="header-left">#}
@@ -234,7 +234,7 @@
 				<input type="date" id="end_date" name="end_date">
 				<input class="apply-filter-button" type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
 			</div>
-			<table>
+			<table class="driver-table">
 				<tr>
 					<th>{% trans 'Водій' %}</th>
 					<th>{% trans 'Каса' %}</th>
@@ -256,6 +256,23 @@
 					<td></td>
 				</tr>
 			</table>
+		</div>
+		<div class="driver-container">
+			<div class="driver-block">
+				<div class="driver-name">
+					<h3>Ім'я водія</h3>
+					<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>
+				</div>
+				<div class="driver-info">
+					<p>Каса: $XXXX</p>
+					<p>Кількість замовлень: XX</p>
+					<p>Відсоток прийнятих замовлень: XX%</p>
+					<p>Середній чек, грн: XXX</p>
+					<p>Пробіг, км: XXXX</p>
+					<p>Ефективність, грн/км: X.XX</p>
+					<p>Час в дорозі: XX год.</p>
+				</div>
+			</div>
 		</div>
 	</main>
 	<!-- End Main Manager-->

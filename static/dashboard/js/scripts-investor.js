@@ -3,17 +3,19 @@
 let sidebarOpen = false;
 let sidebar = document.getElementById("sidebar");
 
-function openSidebar() {
-	if (!sidebarOpen) {
-		sidebar.classList.add("sidebar-responsive");
-		sidebarOpen = true;
-	}
-}
+// Визначте змінну для стану бічного бару
 
-function closeSidebar() {
+function toggleSidebar() {
+	const sidebar = document.getElementById("sidebar");
+
 	if (sidebarOpen) {
+		// Закрити бічний бар
 		sidebar.classList.remove("sidebar-responsive");
 		sidebarOpen = false;
+	} else {
+		// Відкрити бічний бар
+		sidebar.classList.add("sidebar-responsive");
+		sidebarOpen = true;
 	}
 }
 
@@ -489,12 +491,12 @@ $(document).ready(function () {
 	});
 
 	$('#investorVehicleBtnContainer').click(function () {
-		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide();
+		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
 	$(".close-btn").click(function () {

@@ -3,17 +3,19 @@
 let sidebarOpen = false;
 let sidebar = document.getElementById("sidebar");
 
-function openSidebar() {
-	if (!sidebarOpen) {
-		sidebar.classList.add("sidebar-responsive");
-		sidebarOpen = true;
-	}
-}
+// Визначте змінну для стану бічного бару
 
-function closeSidebar() {
+function toggleSidebar() {
+	const sidebar = document.getElementById("sidebar");
+
 	if (sidebarOpen) {
+		// Закрити бічний бар
 		sidebar.classList.remove("sidebar-responsive");
 		sidebarOpen = false;
+	} else {
+		// Відкрити бічний бар
+		sidebar.classList.add("sidebar-responsive");
+		sidebarOpen = true;
 	}
 }
 
@@ -432,6 +434,30 @@ function loadDefaultDriver(period, startDate, endDate) {
 					$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
 				}
 			});
+			$('.driver-container').empty();
+
+			response.data[0].forEach(function (driver) {
+				let driverBlock = $('<div class="driver-block"></div>');
+				let driverName = $('<div class="driver-name"></div>');
+				let driverInfo = $('<div class="driver-info"></div>');
+
+				driverName.append('<h3>' + driver.driver + '</h3>');
+				driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+
+				driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
+				driverInfo.append('<p>Кількість замовлень: ' + driver.total_orders + '</p>');
+				driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
+				driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
+				driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
+				driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
+				driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
+
+				driverBlock.append(driverName);
+				driverBlock.append(driverInfo);
+
+				// Додати блок водія до контейнера
+				$('.driver-container').append(driverBlock);
+			});
 		}
 	});
 }
@@ -576,13 +602,14 @@ $(document).ready(function () {
 	});
 
 	$('#managerVehicleBtnContainer').click(function () {
-		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.info-driver').hide();
 		$('.common-period').hide();
+		$('.driver-container').hide()
 		$('#datePicker').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
 	$('#managerDriverBtnContainer').click(function () {
@@ -592,6 +619,10 @@ $(document).ready(function () {
 		$('.main-cards').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
+		if (window.innerWidth <= 900) {
+			$('.driver-container').css('display', 'block');
+		}
 	});
 
 	$(".close-btn").click(function () {
@@ -606,3 +637,26 @@ $(document).ready(function () {
 		areaChart.resetSeries();
 	});
 });
+
+function toggleDriverInfo(arrow) {
+	const driverBlock = $(arrow).closest('.driver-block');
+	driverBlock.toggleClass('active');
+}
+
+function formatTime(time) {
+	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+
+	if (!parts) {
+		return time;
+	} else {
+		let days = parseInt(parts[1]);
+		let hours = parseInt(parts[2]);
+		let minutes = parseInt(parts[3]);
+		let seconds = parseInt(parts[4]);
+
+		hours += days * 24;
+
+		// Форматувати рядок у вигляді HH:mm:ss
+		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+}
