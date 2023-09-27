@@ -843,6 +843,7 @@ $(document).ready(function () {
 		$('.info-driver').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide()
+		$('.driver-container').hide()
 		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
