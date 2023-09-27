@@ -42,9 +42,9 @@ class NinjaRequest:
         return response.json()
 
     def get_drivers_info(self, start: str, end: str):
-        response = requests.get(f"/drivers_info/{start}/{end}", headers=self.get_headers())
+        response = requests.get(f"/api/drivers_info/{start}/{end}", headers=self.get_headers())
         return response.json()
 
     def get_efficiency_info(self, start: str, end: str):
-        response = requests.get(f"/car_efficiencies/{start}/{end}", headers=self.get_headers())
+        response = requests.get(f"/api/car_efficiencies/{start}/{end}", headers=self.get_headers())
         return response.json()
