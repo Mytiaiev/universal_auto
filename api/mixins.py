@@ -1,6 +1,9 @@
 from django.db.models import Q
+from rest_framework import authentication
+
 from app.models import SummaryReport, Driver, CarEfficiency, DriverEfficiency, Vehicle
 from .permissions import IsPartnerUser, IsManagerUser, IsInvestorUser
+from api.authentication import TokenAuthentication
 
 
 class PartnerFilterMixin:
@@ -42,6 +45,8 @@ class InvestorFilterMixin:
 
 
 class CombinedPermissionsMixin:
+    authentication_classes = [authentication.SessionAuthentication,
+                              TokenAuthentication]
 
     def get_permissions(self):
         permissions = [

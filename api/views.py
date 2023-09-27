@@ -59,8 +59,6 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-
-        # Create a dictionary to group data by 'report_from' date
         grouped_data = {}
         total_mileage = queryset.aggregate(total_mileage=Sum('mileage'))['total_mileage']
         for item in queryset:
@@ -70,13 +68,9 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
                 "mileage": str(item.mileage),
                 "efficiency": str(item.efficiency)
             }
-
             if report_from not in grouped_data:
                 grouped_data[report_from] = []
-
             grouped_data[report_from].append(item_data)
-
-        # Serialize the grouped data
         serialized_data = []
 
         for report_from, records in grouped_data.items():
