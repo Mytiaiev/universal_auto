@@ -16,6 +16,7 @@ models = {
     'Driver':                       {'view': True, 'add': False, 'change': True, 'delete': False},
     'Vehicle':                      {'view': True, 'add': False, 'change': True, 'delete': True},
     'Manager':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Investor':                      {'view': True, 'add': True, 'change': True, 'delete': True},
     # 'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
     'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
@@ -421,18 +422,19 @@ class TransactionsConversationAdmin(admin.ModelAdmin):
 
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ['licence_plate']
+    list_filter = ['vehicle']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['report_from', 'licence_plate', 'total_kasa', 'clean_kasa', 'total_spendings', 'efficiency', 'mileage']
+            return ['report_from', 'vehicle', 'total_kasa',
+                    'clean_kasa', 'total_spending', 'efficiency', 'mileage']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
-            ('Інформація по авто',          {'fields': ['report_from', 'licence_plate', 'clean_kasa', 'total_kasa',
-                                                        'total_spendings', 'efficiency',
+            ('Інформація по авто',          {'fields': ['report_from', 'vehicle', 'clean_kasa', 'total_kasa',
+                                                        'total_spending', 'efficiency',
                                                         'mileage']}),
         ]
 
@@ -441,8 +443,7 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='Manager').exists():
-            manager_vehicles = Vehicle.objects.filter(manager__user=request.user)
-            return qs.filter(licence_plate__in=manager_vehicles.values_list('licence_plate', flat=True))
+            qs = CarEfficiency.objects.filter(vehicle__manager__user=request.user)
         return qs
 
 
@@ -680,12 +681,48 @@ class PartnerAdmin(admin.ModelAdmin):
 
 @admin.register(Investor)
 class InvestorAdmin(admin.ModelAdmin):
-    list_display = ('phone_number', 'user', 'role')
+    list_display = ('first_name', 'last_name', 'phone_number')
     list_per_page = 25
 
-    fieldsets = [
-        (None, {'fields': ['phone_number', 'user', 'role']}),
-    ]
+    def save_model(self, request, obj, form, change):
+        if not request.user.is_superuser:
+            partner = Partner.objects.get(user=request.user)
+            if not change:
+                user = AuthUser.objects.create_user(
+                    username=obj.email,
+                    password=obj.password,
+                    is_staff=True,
+                    is_active=True,
+                    is_superuser=False,
+                    first_name=obj.first_name,
+                    last_name=obj.last_name,
+                    email=obj.email
+                )
+                user.groups.add(Group.objects.get(name='Investor'))
+
+                obj.user = user
+                obj.partner = partner
+            if change and not obj.user.is_active:
+                obj.partner = None
+                AuthUser.objects.filter(username=obj.email).delete()
+        super().save_model(request, obj, form, change)
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Інформація про інвестора',
+                 {'fields': ['email', 'password',
+                             'last_name', 'first_name',
+                             'phone_number', 'partner',
+                             'user']}),
+            ]
+        else:
+            fieldsets = [
+                ('Інформація про інвестора',
+                 {'fields': ['email', 'password', 'last_name', 'first_name', 'phone_number']}),
+            ]
+
+        return fieldsets
 
 
 @admin.register(Manager)
@@ -893,16 +930,17 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         elif request.user.groups.filter(name='Partner').exists():
             fieldsets = (
-                ('Номер автомобіля',            {'fields': ['licence_plate',
+                ('Номер автомобіля',            {'fields': ['licence_plate', 'gps_imei',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'purchase_price',
+                                                            'investor_car', 'investor_percentage'
                                                             ]}),
                 ('Додатково',                   {'fields': ['manager',
                                                             ]}),
             )
         else:
             fieldsets = (
-                ('Номер автомобіля',            {'fields': ['licence_plate',
+                ('Номер автомобіля',            {'fields': ['licence_plate', 'gps_imei',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'purchase_price',
                                                             ]}),

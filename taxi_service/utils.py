@@ -180,8 +180,8 @@ def manager_total_earnings(period, user_id, start_date=None, end_date=None):
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]
 
-    vehicle_license_plates = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
-    vehicle = CarEfficiency.objects.filter(report_from__range=(start_period, end_period), licence_plate__in=vehicle_license_plates)
+    vehicles = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
+    vehicle = CarEfficiency.objects.filter(report_from__range=(start_period, end_period), vehicle__in=vehicles)
     effective = 0
     if vehicle:
         mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum']
@@ -234,7 +234,6 @@ def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
 
     investor = Investor.objects.get(user_id=investor_pk)
     investor_cars = Vehicle.objects.filter(investor_car=investor)
-    licence_plates = [car.licence_plate for car in investor_cars]
 
     if start_date and end_date:
         start_period = datetime.strptime(start_date, '%Y-%m-%d')
@@ -246,15 +245,14 @@ def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
     results = CarEfficiency.objects.filter(
-        Q(licence_plate__in=licence_plates) &
-        Q(report_from__range=(start_period, end_period))
+        vehicle__in=investor_cars,
+        report_from__range=(start_period, end_period)
     )
 
     for result in results:
-        licence_plate = result.licence_plate
+        licence_plate = result.vehicle.licence_plate
         total_kasa = result.total_kasa
-        vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-        earnings = float(total_kasa) * float(vehicle.investor_percentage)
+        earnings = float(total_kasa) * float(result.vehicle.investor_percentage)
 
         if licence_plate not in vehicles:
             vehicles[licence_plate] = earnings
@@ -267,7 +265,7 @@ def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
     overall_spent = sum(
         spending.amount
         for spending in VehicleSpending.objects.filter(
-            vehicle__licence_plate__in=licence_plates,
+            vehicle__in=investor_cars,
             created_at__range=(start_period, end_period)
         )
     )
@@ -279,14 +277,13 @@ def get_car_data(cars, investor=None):
     cars_data = []
 
     for car in cars:
-        licence_plate = car.licence_plate
         purchase_price = car.purchase_price
 
         spending = VehicleSpending.objects.filter(vehicle=car)
         total_spent = sum(spend.amount for spend in spending)
 
         car_efficiencies = CarEfficiency.objects.filter(
-            licence_plate=licence_plate)
+            licence_plate=car.licence_plate)
         clean_kasa = round(sum(efficiency.clean_kasa for efficiency in car_efficiencies), 2)
         total_kasa = round(sum(efficiency.total_kasa for efficiency in car_efficiencies), 2)
 
@@ -299,7 +296,7 @@ def get_car_data(cars, investor=None):
                 if purchase_price > 0 else 0
 
         cars_data.append({
-            'licence_plate': licence_plate,
+            'licence_plate': car.licence_plate,
             'purchase_price': purchase_price,
             'total_spent': total_spent,
             'total_kasa': round(clean_kasa, 2),
@@ -354,39 +351,36 @@ def effective_vehicle(period, user_id, action, start_date=None, end_date=None):
     else:
         start_period, end_period = get_dates(period)
 
-    licence_plates = []
+    vehicles = []
 
     if action == 'investor':
         investor = Investor.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(
-            investor_car=investor).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
+        vehicles = Vehicle.objects.filter(investor_car=investor)
     elif action == 'manager':
         manager = Manager.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(
-            manager=manager).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
+        vehicles = Vehicle.objects.filter(manager=manager)
     elif action == 'partner':
         partner = Partner.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(
-            partner=partner).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
+        vehicles = Vehicle.objects.filter(partner=partner)
 
     effective_objects = CarEfficiency.objects.filter(
-        licence_plate__in=licence_plates,
+        vehicle__in=vehicles,
         report_from__range=(start_period, end_period)
-    ).order_by('licence_plate', 'report_from')
+    ).order_by('vehicle', 'report_from')
 
     result = {}
 
     for effective in effective_objects:
         car_data = {
             'date_effective': effective.report_from,
-            'car': effective.licence_plate,
+            'car': effective.vehicle.licence_plate,
             'mileage': effective.mileage,
             'efficiency': effective.efficiency
         }
-        if effective.licence_plate not in result:
-            result[effective.licence_plate] = [car_data]
+        if effective.vehicle.licence_plate not in result:
+            result[effective.vehicle.licence_plate] = [car_data]
         else:
-            result[effective.licence_plate].append(car_data)
+            result[effective.vehicle.licence_plate].append(car_data)
     return result
 
 

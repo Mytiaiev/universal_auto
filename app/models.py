@@ -99,7 +99,8 @@ class Payments(models.Model):
 class SummaryReport(models.Model):
     report_from = models.DateField(verbose_name='Дата звіту')
     full_name = models.CharField(null=True, max_length=255, verbose_name='ПІ водія')
-    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чистий дохід')
+    total_amount_without_fee = models.DecimalField(decimal_places=2, max_digits=10,
+                                                   verbose_name='Чистий дохід', db_index=True)
     total_amount_cash = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
     total_amount_on_card = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='На картку')
     total_amount = models.DecimalField(null=True, decimal_places=2, max_digits=10, verbose_name='Загальна сума')
@@ -263,9 +264,13 @@ class Manager(models.Model):
 
 
 class Investor(models.Model):
+    password = models.CharField(max_length=255, verbose_name='Пароль')
+    first_name = models.CharField(max_length=255, verbose_name="Ім'я")
+    last_name = models.CharField(max_length=255, verbose_name='Прізвище')
+    email = models.EmailField(max_length=254, verbose_name='Електронна пошта')
     phone_number = models.CharField(max_length=13, blank=True, null=True, verbose_name='Номер телефона')
     role = models.CharField(max_length=25, default=Role.INVESTOR, choices=Role.choices)
-
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
 
     class Meta:
@@ -273,7 +278,7 @@ class Investor(models.Model):
         verbose_name_plural = 'Інвестори'
 
     def __str__(self) -> str:
-        return str(self.user.username) if self.user else ''
+        return f"{self.first_name} {self.last_name}"
 
 
 class Vehicle(models.Model):
@@ -284,7 +289,7 @@ class Vehicle(models.Model):
 
     name = models.CharField(max_length=255, verbose_name='Назва')
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
-    licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак')
+    licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак', db_index=True)
     registration = models.CharField(null=True, max_length=12, unique=True, verbose_name='Номер документа')
     vin_code = models.CharField(max_length=17, blank=True)
     chat_id = models.CharField(max_length=15, blank=True, null=True, verbose_name="Група автомобіля телеграм")
@@ -1111,25 +1116,25 @@ def admin_image_preview(image, default_image=None):
 
 class CarEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
-    licence_plate = models.CharField(null=True, max_length=25, verbose_name='Номер автомобіля')
+    vehicle = models.ForeignKey(Vehicle, null=True, on_delete=models.CASCADE, verbose_name='Автомобіль', db_index=True)
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Каса')
     clean_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Чистий дохід')
-    total_spendings = models.DecimalField(null=True, decimal_places=2, max_digits=10, default=0, verbose_name='Витрати')
+    total_spending = models.DecimalField(null=True, decimal_places=2, max_digits=10, default=0, verbose_name='Витрати')
     mileage = models.DecimalField(decimal_places=2, max_digits=6, default=0, verbose_name='Пробіг, км')
     efficiency = models.DecimalField(decimal_places=2, max_digits=4, default=0, verbose_name='Ефективність, грн/км')
-    partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнер')
+    partner = models.ForeignKey(Partner, null=True, on_delete=models.SET_NULL, verbose_name='Партнер')
 
     class Meta:
         verbose_name = 'Ефективність автомобіля'
         verbose_name_plural = 'Ефективність автомобілів'
 
     def __str__(self):
-        return self.licence_plate
+        return self.vehicle
 
 
 class DriverEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
-    driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій')
+    driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій', db_index=True)
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Каса')
     total_orders = models.IntegerField(default=0, verbose_name="Замовлень за день")
     accept_percent = models.IntegerField(default=0, verbose_name="Відсоток прийнятих замовлень")

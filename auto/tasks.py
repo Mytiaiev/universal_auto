@@ -165,7 +165,7 @@ def get_car_efficiency(self, partner_pk, day=None):
     for vehicle in Vehicle.objects.filter(partner=partner_pk):
         efficiency = CarEfficiency.objects.filter(report_from=day,
                                                   partner=partner_pk,
-                                                  licence_plate=vehicle.licence_plate)
+                                                  vehicle=vehicle)
         if not efficiency:
             total_kasa = 0
             clean_kasa = 0
@@ -189,7 +189,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,
-                                         licence_plate=vehicle.licence_plate,
+                                         vehicle=vehicle,
                                          total_kasa=total_kasa,
                                          clean_kasa=clean_kasa,
                                          total_spendings=total_spending,
@@ -507,29 +507,28 @@ def add_money_to_vehicle(self, partner_pk):
     end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
     start = end - timedelta(days=6)
     car_efficiency_records = CarEfficiency.objects.filter(report_from__range=(start, end), partner=partner_pk)
-    sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'),
-                                                                           clean_sum=Sum('clean_kasa'))
+    sum_by_plate = car_efficiency_records.values('vehicle__licence_plate').annotate(total_sum=Sum('total_kasa'),
+                                                                                    clean_sum=Sum('clean_kasa'))
     for result in sum_by_plate:
-        vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'],
+        vehicle = Vehicle.objects.filter(licence_plate=result['vehicle__licence_plate'],
                                          partner=partner_pk).first()
-        if vehicle:
-            currency = vehicle.currency_back
-            total_kasa = result['total_sum'] * vehicle.investor_percentage
-            if currency != Vehicle.Currency.UAH:
-                car_earnings, rate = convert_to_currency(float(total_kasa), currency)
-            else:
-                car_earnings = total_kasa
-                rate = 0.00
-            vehicle.car_earnings += result['clean_sum']
-            vehicle.save()
-            if vehicle.investor_car:
-                TransactionsConversation.objects.create(
-                    vehicle=vehicle,
-                    investor=vehicle.investor_car,
-                    sum_before_transaction=total_kasa,
-                    currency=currency,
-                    currency_rate=rate,
-                    sum_after_transaction=car_earnings)
+        currency = vehicle.currency_back
+        total_kasa = result['total_sum'] * vehicle.investor_percentage
+        if currency != Vehicle.Currency.UAH:
+            car_earnings, rate = convert_to_currency(float(total_kasa), currency)
+        else:
+            car_earnings = total_kasa
+            rate = 0.00
+        vehicle.car_earnings += result['clean_sum']
+        vehicle.save()
+        if vehicle.investor_car:
+            TransactionsConversation.objects.create(
+                vehicle=vehicle,
+                investor=vehicle.investor_car,
+                sum_before_transaction=total_kasa,
+                currency=currency,
+                currency_rate=rate,
+                sum_after_transaction=car_earnings)
 
 
 @app.task(bind=True, queue='beat_tasks')

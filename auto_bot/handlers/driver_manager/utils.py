@@ -170,9 +170,9 @@ def generate_message_weekly(chat_id):
     return drivers_dict
 
 
-def calculate_efficiency(licence_plate, start, end):
+def calculate_efficiency(vehicle, start, end):
     efficiency_objects = CarEfficiency.objects.filter(report_from__range=(start, end),
-                                                      licence_plate=licence_plate)
+                                                      vehicle=vehicle)
     if efficiency_objects:
         total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
         total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
@@ -195,11 +195,11 @@ def get_efficiency(manager_id=None, start=None, end=None):
     report = {}
     vehicles = get_drivers_vehicles_list(manager_id, Vehicle)[0]
     for vehicle in vehicles:
-        effect = calculate_efficiency(vehicle.licence_plate, start, end)
+        effect = calculate_efficiency(vehicle, start, end)
         if effect:
             if end == yesterday:
                 yesterday_efficiency = CarEfficiency.objects.filter(report_from=yesterday,
-                                                                    licence_plate=vehicle.licence_plate).first()
+                                                                    vehicle=vehicle).first()
                 efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 0
                 distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 0
                 effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
