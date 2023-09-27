@@ -16,7 +16,7 @@ class NinjaRequest:
             "password": self.password
         }
         headers = {'Content-Type': 'application/json'}
-        response = requests.post('/api/token-auth', json=data, headers=headers)
+        response = requests.post('/api/token-auth/', json=data, headers=headers)
 
         if response.status_code == 200:
             token = response.json().get('token')
