@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-20 13:31+0300\n"
+"POT-Creation-Date: 2023-09-27 11:31+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -125,15 +125,15 @@ msgstr "Investor information panel"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:105
 #: taxi_service/templates/dashboard/dashboard-manager.html:113
-#: taxi_service/templates/dashboard/dashboard-manager.html:216
+#: taxi_service/templates/dashboard/dashboard-manager.html:217
 #: taxi_service/templates/dashboard/dashboard-partner.html:173
-#: taxi_service/templates/dashboard/dashboard-partner.html:260
+#: taxi_service/templates/dashboard/dashboard-partner.html:261
 msgid "Виберіть період:"
 msgstr "Select a period:"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:108
 #: taxi_service/templates/dashboard/dashboard-manager.html:116
-#: taxi_service/templates/dashboard/dashboard-manager.html:219
+#: taxi_service/templates/dashboard/dashboard-manager.html:220
 #: taxi_service/templates/dashboard/dashboard-partner.html:176
 #: taxi_service/templates/dashboard/dashboard-partner.html:263
 msgid "Вчора"
@@ -141,7 +141,7 @@ msgstr "Yesterday"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:109
 #: taxi_service/templates/dashboard/dashboard-manager.html:117
-#: taxi_service/templates/dashboard/dashboard-manager.html:220
+#: taxi_service/templates/dashboard/dashboard-manager.html:221
 #: taxi_service/templates/dashboard/dashboard-partner.html:177
 #: taxi_service/templates/dashboard/dashboard-partner.html:264
 msgid "Поточний тиждень"
@@ -149,7 +149,7 @@ msgstr "Current week"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:110
 #: taxi_service/templates/dashboard/dashboard-manager.html:118
-#: taxi_service/templates/dashboard/dashboard-manager.html:221
+#: taxi_service/templates/dashboard/dashboard-manager.html:222
 #: taxi_service/templates/dashboard/dashboard-partner.html:178
 #: taxi_service/templates/dashboard/dashboard-partner.html:265
 msgid "Минулий тиждень"
@@ -157,7 +157,7 @@ msgstr "Last week"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:111
 #: taxi_service/templates/dashboard/dashboard-manager.html:119
-#: taxi_service/templates/dashboard/dashboard-manager.html:222
+#: taxi_service/templates/dashboard/dashboard-manager.html:223
 #: taxi_service/templates/dashboard/dashboard-partner.html:179
 #: taxi_service/templates/dashboard/dashboard-partner.html:266
 msgid "Поточний місяць"
@@ -165,7 +165,7 @@ msgstr "Current month"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:112
 #: taxi_service/templates/dashboard/dashboard-manager.html:120
-#: taxi_service/templates/dashboard/dashboard-manager.html:223
+#: taxi_service/templates/dashboard/dashboard-manager.html:224
 #: taxi_service/templates/dashboard/dashboard-partner.html:180
 #: taxi_service/templates/dashboard/dashboard-partner.html:267
 msgid "Минулий місяць"
@@ -173,7 +173,7 @@ msgstr "Last month"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:113
 #: taxi_service/templates/dashboard/dashboard-manager.html:121
-#: taxi_service/templates/dashboard/dashboard-manager.html:224
+#: taxi_service/templates/dashboard/dashboard-manager.html:225
 #: taxi_service/templates/dashboard/dashboard-partner.html:181
 #: taxi_service/templates/dashboard/dashboard-partner.html:268
 msgid "Поточний квартал"
@@ -181,7 +181,7 @@ msgstr "Current quarter"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:114
 #: taxi_service/templates/dashboard/dashboard-manager.html:122
-#: taxi_service/templates/dashboard/dashboard-manager.html:225
+#: taxi_service/templates/dashboard/dashboard-manager.html:226
 #: taxi_service/templates/dashboard/dashboard-partner.html:182
 #: taxi_service/templates/dashboard/dashboard-partner.html:269
 msgid "Минулий квартал"
@@ -189,99 +189,106 @@ msgstr "Last quarter"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:115
 #: taxi_service/templates/dashboard/dashboard-manager.html:123
-#: taxi_service/templates/dashboard/dashboard-manager.html:226
+#: taxi_service/templates/dashboard/dashboard-manager.html:227
 #: taxi_service/templates/dashboard/dashboard-partner.html:183
 #: taxi_service/templates/dashboard/dashboard-partner.html:270
 msgid "Вибрати період >"
 msgstr "Select period >"
 
-#: taxi_service/templates/dashboard/dashboard-investor.html:117
-#: taxi_service/templates/dashboard/dashboard-manager.html:125
-#: taxi_service/templates/dashboard/dashboard-manager.html:228
-#: taxi_service/templates/dashboard/dashboard-partner.html:185
-#: taxi_service/templates/dashboard/dashboard-partner.html:272
-msgid "Показати"
-msgstr "Show"
-
-#: taxi_service/templates/dashboard/dashboard-investor.html:121
-#: taxi_service/templates/dashboard/dashboard-manager.html:129
+#: taxi_service/templates/dashboard/dashboard-investor.html:119
+#: taxi_service/templates/dashboard/dashboard-manager.html:127
 #: taxi_service/templates/dashboard/dashboard-manager.html:231
-#: taxi_service/templates/dashboard/dashboard-partner.html:189
-#: taxi_service/templates/dashboard/dashboard-partner.html:275
+#: taxi_service/templates/dashboard/dashboard-partner.html:187
+#: taxi_service/templates/dashboard/dashboard-partner.html:274
 msgid "Початкова дата:"
 msgstr "Start date:"
 
-#: taxi_service/templates/dashboard/dashboard-investor.html:123
-#: taxi_service/templates/dashboard/dashboard-manager.html:131
+#: taxi_service/templates/dashboard/dashboard-investor.html:121
+#: taxi_service/templates/dashboard/dashboard-manager.html:129
 #: taxi_service/templates/dashboard/dashboard-manager.html:233
-#: taxi_service/templates/dashboard/dashboard-partner.html:191
-#: taxi_service/templates/dashboard/dashboard-partner.html:277
+#: taxi_service/templates/dashboard/dashboard-partner.html:189
+#: taxi_service/templates/dashboard/dashboard-partner.html:276
 msgid "Кінцева дата:"
 msgstr "End date:"
 
-#: taxi_service/templates/dashboard/dashboard-investor.html:125
-#: taxi_service/templates/dashboard/dashboard-manager.html:133
+#: taxi_service/templates/dashboard/dashboard-investor.html:123
+#: taxi_service/templates/dashboard/dashboard-manager.html:131
 #: taxi_service/templates/dashboard/dashboard-manager.html:235
-#: taxi_service/templates/dashboard/dashboard-partner.html:193
-#: taxi_service/templates/dashboard/dashboard-partner.html:279
+#: taxi_service/templates/dashboard/dashboard-partner.html:191
+#: taxi_service/templates/dashboard/dashboard-partner.html:278
 msgid "Фільтрувати"
 msgstr "Filter"
 
+#: taxi_service/templates/dashboard/dashboard-investor.html:127
+#: taxi_service/templates/dashboard/dashboard-manager.html:135
+#: taxi_service/templates/dashboard/dashboard-partner.html:195
+msgid "Загальний дохід"
+msgstr "Total income"
+
 #: taxi_service/templates/dashboard/dashboard-investor.html:129
-#: taxi_service/templates/dashboard/dashboard-manager.html:137
-#: taxi_service/templates/dashboard/dashboard-partner.html:197
-msgid "ЗАГАЛЬНИЙ ДОХІД"
-msgstr "TOTAL INCOME"
-
-#: taxi_service/templates/dashboard/dashboard-investor.html:131
-#: taxi_service/templates/dashboard/dashboard-investor.html:137
-#: taxi_service/templates/dashboard/dashboard-investor.html:143
-#: taxi_service/templates/dashboard/dashboard-manager.html:139
-#: taxi_service/templates/dashboard/dashboard-manager.html:145
-#: taxi_service/templates/dashboard/dashboard-manager.html:151
-#: taxi_service/templates/dashboard/dashboard-partner.html:199
-#: taxi_service/templates/dashboard/dashboard-partner.html:205
-#: taxi_service/templates/dashboard/dashboard-partner.html:211
-msgid "ПЕРІОД"
-msgstr "PERIOD"
-
 #: taxi_service/templates/dashboard/dashboard-investor.html:135
-msgid "ЗАГАЛЬНИЙ ПРОБІГ"
-msgstr "TOTAL MILEAGE"
-
 #: taxi_service/templates/dashboard/dashboard-investor.html:141
-msgid "ЗАГАЛЬНІ ВИТРАТИ НА АВТО"
-msgstr "TOTAL EXPENSES ON CAR"
+#: taxi_service/templates/dashboard/dashboard-manager.html:137
+#: taxi_service/templates/dashboard/dashboard-manager.html:143
+#: taxi_service/templates/dashboard/dashboard-manager.html:149
+#: taxi_service/templates/dashboard/dashboard-partner.html:197
+#: taxi_service/templates/dashboard/dashboard-partner.html:203
+#: taxi_service/templates/dashboard/dashboard-partner.html:209
+msgid "Період"
+msgstr "Period"
 
-#: taxi_service/templates/dashboard/dashboard-investor.html:157
+#: taxi_service/templates/dashboard/dashboard-investor.html:133
+msgid "Загальний Пробіг"
+msgstr "Total mileage"
+
+#: taxi_service/templates/dashboard/dashboard-investor.html:139
+msgid "Загальні витрати на авто"
+msgstr "Total car expenses"
+
+#: taxi_service/templates/dashboard/dashboard-investor.html:155
 msgid "Дохід"
 msgstr "Income"
 
+#: taxi_service/templates/dashboard/dashboard-investor.html:156
 #: taxi_service/templates/dashboard/dashboard-investor.html:162
+#: taxi_service/templates/dashboard/dashboard-manager.html:164
+#: taxi_service/templates/dashboard/dashboard-manager.html:170
+#: taxi_service/templates/dashboard/dashboard-partner.html:224
+#: taxi_service/templates/dashboard/dashboard-partner.html:230
+msgid "За обраний період відсутні дані."
+msgstr "There is no data for the selected period."
+
+#: taxi_service/templates/dashboard/dashboard-investor.html:161
 msgid "Пробіг автомобіля"
 msgstr "Mileage of the car"
 
-#: taxi_service/templates/dashboard/dashboard-investor.html:173
-#: taxi_service/templates/dashboard/dashboard-manager.html:196
-#: taxi_service/templates/dashboard/dashboard-partner.html:241
-msgid "Номер авто:"
-msgstr "Car number:"
+#: taxi_service/templates/dashboard/dashboard-investor.html:164
+#: taxi_service/templates/dashboard/dashboard-manager.html:186
+#: taxi_service/templates/dashboard/dashboard-partner.html:232
+msgid "Скинути zoom"
+msgstr "Reset zoom"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:174
 #: taxi_service/templates/dashboard/dashboard-manager.html:197
 #: taxi_service/templates/dashboard/dashboard-partner.html:242
-msgid "Заробіток:"
-msgstr "Earnings:"
+msgid "Номер авто:"
+msgstr "Car number:"
 
 #: taxi_service/templates/dashboard/dashboard-investor.html:175
 #: taxi_service/templates/dashboard/dashboard-manager.html:198
 #: taxi_service/templates/dashboard/dashboard-partner.html:243
+msgid "Заробіток:"
+msgstr "Earnings:"
+
+#: taxi_service/templates/dashboard/dashboard-investor.html:176
+#: taxi_service/templates/dashboard/dashboard-manager.html:199
+#: taxi_service/templates/dashboard/dashboard-partner.html:244
 msgid "Витрати:"
 msgstr "Expenses:"
 
-#: taxi_service/templates/dashboard/dashboard-investor.html:181
-#: taxi_service/templates/dashboard/dashboard-manager.html:205
-#: taxi_service/templates/dashboard/dashboard-partner.html:249
+#: taxi_service/templates/dashboard/dashboard-investor.html:182
+#: taxi_service/templates/dashboard/dashboard-manager.html:206
+#: taxi_service/templates/dashboard/dashboard-partner.html:250
 msgid "Вартість авто:"
 msgstr "Car cost:"
 
@@ -300,65 +307,67 @@ msgstr "Drivers"
 msgid "Інформаційна панель Менеджера"
 msgstr "Manager information panel"
 
-#: taxi_service/templates/dashboard/dashboard-manager.html:143
-#: taxi_service/templates/dashboard/dashboard-partner.html:203
-msgid "ЗАГАЛЬНА ОРЕНДА"
-msgstr "TOTAL RENT"
+#: taxi_service/templates/dashboard/dashboard-manager.html:141
+#: taxi_service/templates/dashboard/dashboard-partner.html:201
+msgid "Загльна оренда"
+msgstr "Total rent"
 
-#: taxi_service/templates/dashboard/dashboard-manager.html:149
-#: taxi_service/templates/dashboard/dashboard-partner.html:209
-msgid "ЗАГАЛЬНА ЕФЕКТИВНІСТЬ АВТО"
-msgstr "TOTAL CAR EFFICIENCY"
+#: taxi_service/templates/dashboard/dashboard-manager.html:147
+#: taxi_service/templates/dashboard/dashboard-partner.html:207
+#, fuzzy
+#| msgid "Ефективність автомобіля"
+msgid "Загальна ефективність авто"
+msgstr "Car efficiency"
 
-#: taxi_service/templates/dashboard/dashboard-manager.html:165
+#: taxi_service/templates/dashboard/dashboard-manager.html:163
 #: taxi_service/templates/dashboard/dashboard-manager.html:240
-#: taxi_service/templates/dashboard/dashboard-partner.html:225
-#: taxi_service/templates/dashboard/dashboard-partner.html:284
+#: taxi_service/templates/dashboard/dashboard-partner.html:223
+#: taxi_service/templates/dashboard/dashboard-partner.html:283
 msgid "Каса"
-msgstr "Cash register"
+msgstr "Cash"
 
-#: taxi_service/templates/dashboard/dashboard-manager.html:170
-#: taxi_service/templates/dashboard/dashboard-partner.html:230
+#: taxi_service/templates/dashboard/dashboard-manager.html:169
+#: taxi_service/templates/dashboard/dashboard-partner.html:229
 msgid "Ефективність автомобіля"
 msgstr "Car efficiency"
 
-#: taxi_service/templates/dashboard/dashboard-manager.html:212
-#: taxi_service/templates/dashboard/dashboard-partner.html:256
+#: taxi_service/templates/dashboard/dashboard-manager.html:213
+#: taxi_service/templates/dashboard/dashboard-partner.html:257
 msgid "Рейтинг Водіїв"
 msgstr "Driver rating"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:239
-#: taxi_service/templates/dashboard/dashboard-partner.html:283
+#: taxi_service/templates/dashboard/dashboard-partner.html:282
 msgid "Водій"
 msgstr "Driver"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:241
-#: taxi_service/templates/dashboard/dashboard-partner.html:285
+#: taxi_service/templates/dashboard/dashboard-partner.html:284
 msgid "Кількість замовлень"
 msgstr "Total orders"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:242
-#: taxi_service/templates/dashboard/dashboard-partner.html:286
+#: taxi_service/templates/dashboard/dashboard-partner.html:285
 msgid "Відсоток прийнятих замовлень"
 msgstr "Percentage of accepted orders"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:243
-#: taxi_service/templates/dashboard/dashboard-partner.html:287
+#: taxi_service/templates/dashboard/dashboard-partner.html:286
 msgid "Середній чек, грн"
 msgstr "Average check, UAH"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:244
-#: taxi_service/templates/dashboard/dashboard-partner.html:288
+#: taxi_service/templates/dashboard/dashboard-partner.html:287
 msgid "Пробіг, км"
 msgstr "Mileage, km"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:245
-#: taxi_service/templates/dashboard/dashboard-partner.html:289
+#: taxi_service/templates/dashboard/dashboard-partner.html:288
 msgid "Ефективність, грн/км"
 msgstr "Efficiency, UAH/km"
 
 #: taxi_service/templates/dashboard/dashboard-manager.html:246
-#: taxi_service/templates/dashboard/dashboard-partner.html:290
+#: taxi_service/templates/dashboard/dashboard-partner.html:289
 msgid "Час в дорозі"
 msgstr "Time on the road"
 
