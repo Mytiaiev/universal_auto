@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from app.models import CarEfficiency, Vehicle, DriverEfficiency
-
 
 class AggregateReportSerializer(serializers.Serializer):
     full_name = serializers.CharField()
@@ -21,9 +19,13 @@ class CarEfficiencyDataSerializer(serializers.Serializer):
 
 class CarDetailSerializer(serializers.Serializer):
     licence_plate = serializers.CharField()
+    price = serializers.IntegerField()
+    kasa = serializers.DecimalField(max_digits=10, decimal_places=2)
+    spending = serializers.DecimalField(max_digits=10, decimal_places=2)
+    progress_percentage = serializers.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        fields = ('licence_plate', 'kasa', 'spending')
+        fields = ('licence_plate', 'price', 'kasa', 'spending', 'progress_percentage')
 
 
 class DriverEfficiencySerializer(serializers.Serializer):
@@ -36,6 +38,7 @@ class DriverEfficiencySerializer(serializers.Serializer):
     mileage = serializers.DecimalField(max_digits=10, decimal_places=2)
     average_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     rent_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
     class Meta:
         fields = ('full_name', 'total_kasa', 'total_orders',
                   'accept_percent', 'average_price', 'road_time',

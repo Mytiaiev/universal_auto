@@ -1,7 +1,6 @@
-from collections import defaultdict
-
-from django.db.models import Sum, F, OuterRef, Subquery, DecimalField, Avg, Value, CharField, ExpressionWrapper
-from django.db.models.functions import Concat
+from django.db.models import Sum, F, OuterRef, Subquery, DecimalField, Avg, Value, CharField, ExpressionWrapper, Case, \
+    When
+from django.db.models.functions import Concat, Round
 from rest_framework import generics
 from rest_framework.response import Response
 
@@ -67,7 +66,7 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
         for item in queryset:
             report_from = item.report_from.strftime('%Y-%m-%d')
             item_data = {
-                "licence_plate": item.licence_plate,
+                "licence_plate": item.vehicle.licence_plate,
                 "mileage": str(item.mileage),
                 "efficiency": str(item.efficiency)
             }
@@ -129,19 +128,46 @@ class DriverEfficiencyListView(CombinedPermissionsMixin,
 
 
 class CarsInformationListView(CombinedPermissionsMixin,
-                                generics.ListAPIView):
+                              generics.ListAPIView):
     serializer_class = CarDetailSerializer
 
     def get_queryset(self):
         queryset = []
-        partner_queryset = PartnerFilterMixin.get_queryset(self, Vehicle)
-        if partner_queryset:
-            queryset = partner_queryset
-        manager_queryset = ManagerFilterMixin.get_queryset(self, Vehicle)
-        if manager_queryset:
-            queryset = manager_queryset
         investor_queryset = InvestorFilterMixin.get_queryset(self, Vehicle)
         if investor_queryset:
             queryset = investor_queryset
+            qs = queryset.values('licence_plate').annotate(
+                price=F('purchase_price'),
+                kasa=ExpressionWrapper(Sum('carefficiency__total_kasa') * F('investor_percentage'),
+                                       output_field=DecimalField(decimal_places=2, max_digits=10)),
+                spending=Sum('carefficiency__total_spending')
+            ).annotate(
+                progress_percentage=ExpressionWrapper(
+                    Round((F('kasa') / F('purchase_price')) * 100),
+                    output_field=DecimalField(max_digits=5, decimal_places=2)
+                )
+            )
+        else:
+            partner_queryset = PartnerFilterMixin.get_queryset(self, Vehicle)
+            if partner_queryset:
+                queryset = partner_queryset
+            manager_queryset = ManagerFilterMixin.get_queryset(self, Vehicle)
+            if manager_queryset:
+                queryset = manager_queryset
 
-        return queryset
+            qs = queryset.values('licence_plate').annotate(
+                price=F('purchase_price'),
+                kasa=Sum('carefficiency__clean_kasa'),
+                spending=Sum('carefficiency__total_spending')
+            ).annotate(
+                progress_percentage=ExpressionWrapper(
+                    Case(
+                        When(purchase_price__gt=0,
+                             then=Round(((F('kasa') - F('spending')) / F('purchase_price')) * 100)),
+                        default=Value(0),
+                        output_field=DecimalField(max_digits=4, decimal_places=1)
+                    ),
+                    output_field=DecimalField(max_digits=4, decimal_places=1)
+                )
+            )
+        return qs

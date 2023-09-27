@@ -1,8 +1,5 @@
-from datetime import timedelta
-
-from django.utils import timezone
-
-from app.models import SummaryReport, Driver
+from django.db.models import Q
+from app.models import SummaryReport, Driver, CarEfficiency, DriverEfficiency, Vehicle
 from .permissions import IsPartnerUser, IsManagerUser, IsInvestorUser
 
 
@@ -14,16 +11,33 @@ class PartnerFilterMixin:
 
 class ManagerFilterMixin:
     def get_queryset(self, model):
-        if isinstance(model, SummaryReport):
-            manager_drivers = Driver.objects.filter(manager__user=self.request.user)
-            full_names = [f"{driver.name} {driver.second_name}" for driver in manager_drivers]
-            queryset = model.objects.filter(full_name__in=full_names)
-            return queryset
+        user = self.request.user
+
+        model_filter_map = {
+            SummaryReport: Q(full_name__in=[f"{driver.name} {driver.second_name}" for driver in
+                                            Driver.objects.filter(manager__user=user)]),
+            CarEfficiency: Q(vehicle__manager=user),
+            DriverEfficiency: Q(driver__manager=user),
+            Vehicle: Q(manager=user),
+        }
+
+        filter_condition = model_filter_map.get(model)
+        if filter_condition:
+            queryset = model.objects.filter(filter_condition)
+        else:
+            queryset = model.objects.none()
+
+        return queryset
 
 
 class InvestorFilterMixin:
     def get_queryset(self, model):
-        queryset = model.objects.filter(investor_car__user=self.request.user)
+        if isinstance(model, Vehicle):
+            queryset = model.objects.filter(investor_car__user=self.request.user)
+        elif isinstance(model, CarEfficiency):
+            queryset = model.objects.filter(vehicle__investor_car__user=self.request.user)
+        else:
+            queryset = model.objects.none()
         return queryset
 
 
