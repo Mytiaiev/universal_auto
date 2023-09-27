@@ -1,4 +1,5 @@
 import os
+import socket
 from datetime import datetime, timedelta, time
 import time as tm
 import requests
@@ -13,11 +14,9 @@ from celery.utils.log import get_task_logger
 from telegram import ParseMode
 from telegram.error import BadRequest
 
-from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, \
-    ParkSettings, DriverEfficiency, FleetOrder, \
-    UseOfCars, CarEfficiency, Payments, SummaryReport, Manager, Partner, \
-    DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversantion, VehicleSpendings, DriverReshuffle
+from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
+    Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
+    TransactionsConversantion, VehicleSpending, DriverReshuffle
 from django.db.models import Sum, IntegerField, FloatField, Q
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
@@ -26,9 +25,9 @@ from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_searc
     inline_spot_keyboard, inline_second_payment_kb, inline_reject_order, personal_order_end_kb, \
     personal_driver_end_kb
 
-from auto_bot.handlers.order.static_text import decline_order, order_info, client_order_info, search_driver_1, \
+from auto_bot.handlers.order.static_text import decline_order, order_info, search_driver_1, \
     search_driver_2, no_driver_in_radius, driver_arrived, driver_complete_text, \
-    client_order_text, order_customer_text, search_driver, personal_time_route_end, personal_order_info, \
+    order_customer_text, search_driver, personal_time_route_end, personal_order_info, \
     pd_order_not_accepted, driver_text_personal_end, client_text_personal_end, payment_text
 from auto_bot.handlers.order.utils import text_to_client, check_reshuffle
 from auto_bot.main import bot
@@ -169,9 +168,9 @@ def get_car_efficiency(self, partner_pk, day=None):
             clean_kasa = 0
             total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
 
-            total_spendings = VehicleSpendings.objects.filter(
+            total_spending = VehicleSpending.objects.filter(
                 vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
-            result = - Decimal(total_spendings)
+            result = - Decimal(total_spending)
             if total_km:
                 reshuffle = DriverReshuffle.objects.filter(swap_time__date=day, swap_vehicle=vehicle).first()
                 drivers = [reshuffle.driver_start, reshuffle.driver_finish] if reshuffle \
@@ -185,12 +184,12 @@ def get_car_efficiency(self, partner_pk, day=None):
                         clean_kasa += report.total_amount_without_fee * (1 - driver.rate) if driver.schema in ("HALF", "CUSTOM") else driver.rental / 7
 
                 result = max(
-                    Decimal(total_kasa) - Decimal(total_spendings), Decimal(0)) / Decimal(total_km) if total_km else 0
+                    Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,
                                          licence_plate=vehicle.licence_plate,
                                          total_kasa=total_kasa,
                                          clean_kasa=clean_kasa,
-                                         total_spendings=total_spendings,
+                                         total_spendings=total_spending,
                                          mileage=total_km,
                                          efficiency=result,
                                          partner=Partner.get_partner(partner_pk))
@@ -372,9 +371,9 @@ def manager_paid_weekly(self, partner_pk):
 def send_weekly_report(self, partner_pk):
     result = []
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
-    managers.append(Partner.objects.get(pk=partner_pk).chat_id)
-    for chat_id in managers:
-        result.append(generate_message_weekly(chat_id))
+    managers.append(Partner.objects.get(pk=partner_pk).values('chat_id'))
+    for manager in managers:
+        result.append(generate_message_weekly(manager['chat_id']))
     return result
 
 
@@ -383,8 +382,10 @@ def send_daily_report(self, partner_pk):
     message = ''
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    if not managers:
+        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
     for manager in managers:
-        result = get_daily_report(manager_id=manager)
+        result = get_daily_report(manager_id=manager['chat_id'])
         if result:
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
@@ -403,8 +404,10 @@ def send_efficiency_report(self, partner_pk):
     message = ''
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    if not managers:
+        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
     for manager in managers:
-        result = get_efficiency(manager_id=manager)
+        result = get_efficiency(manager_id=manager['chat_id'])
         if result:
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v)
@@ -420,8 +423,10 @@ def send_driver_efficiency(self, partner_pk):
     message = ''
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    if not managers:
+        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
     for manager in managers:
-        result = get_driver_efficiency_report(manager_id=manager)
+        result = get_driver_efficiency_report(manager_id=manager['chat_id'])
         if result:
             for k, v in result.items():
                 message += f"{k}\n" + "".join(v) + "\n"
@@ -730,41 +735,54 @@ def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
         logger.info(e)
 
 
-@app.task(bind=True, queue='beat_tasks')
+@app.task(bind=True, max_retries=10, queue='beat_tasks')
 def get_driver_reshuffles(self, partner, delta=0):
     day = timezone.localtime() - timedelta(days=delta)
     start = timezone.make_aware(datetime.combine(day, time.min))
     end = timezone.make_aware(datetime.combine(day, time.max))
-    events = GoogleCalendar().get_list_events(ParkSettings.get_value("GOOGLE_ID_CALENDAR", partner=partner), start, end)
-    for event in events['items']:
-        calendar_event_id = event['id']
-        event_summary = event['summary'].split(',')
-        if len(event_summary) == 2:
-            licence_plate, driver = event_summary
-            name, second_name = driver.split()
-            driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
-            driver_finish = None
-            vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
-            swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))
-        else:
-            swap_time = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z").astimezone()
-            licence_plate, first_driver, second_driver = event_summary
-            name, second_name = first_driver.split()
-            other_name, other_second_name = second_driver.split()
-            driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
-                                                 Q(name=second_name, second_name=name)).first()
-            driver_finish = Driver.objects.filter(Q(name=other_name, second_name=other_second_name) |
-                                                  Q(name=other_second_name, second_name=other_name)).first()
-            vehicle = Vehicle.objects.filter(licence_plate=licence_plate).first()
-        obj_data = {
-            "calendar_event_id": calendar_event_id,
-            "swap_vehicle": vehicle,
-            "driver_start": driver_start,
-            "driver_finish": driver_finish,
-            "swap_time": swap_time
-        }
-        reshuffle = DriverReshuffle.objects.filter(calendar_event_id=calendar_event_id)
-        reshuffle.update(**obj_data) if reshuffle else DriverReshuffle.objects.create(**obj_data)
+    obj_partner = list(Partner.objects.filter(pk=partner))
+    managers = list(Manager.objects.filter(partner=partner))
+    users = obj_partner + managers
+    for user in users:
+        try:
+            events = GoogleCalendar().get_list_events(user.calendar, start, end)
+            list_events = []
+            for event in events['items']:
+                calendar_event_id = event['id']
+                list_events.append(calendar_event_id)
+                event_summary = event['summary'].split(',')
+                if len(event_summary) == 2:
+                    licence_plate, driver = event_summary
+                    name, second_name = driver.split()
+                    driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
+                    driver_finish = None
+                    vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
+                    swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))
+                else:
+                    swap_time = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z").astimezone()
+                    licence_plate, first_driver, second_driver = event_summary
+                    name, second_name = first_driver.split()
+                    other_name, other_second_name = second_driver.split()
+                    driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
+                                                         Q(name=second_name, second_name=name)).first()
+                    driver_finish = Driver.objects.filter(Q(name=other_name, second_name=other_second_name) |
+                                                          Q(name=other_second_name, second_name=other_name)).first()
+                    vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
+                obj_data = {
+                    "calendar_event_id": calendar_event_id,
+                    "swap_vehicle": vehicle,
+                    "driver_start": driver_start,
+                    "driver_finish": driver_finish,
+                    "swap_time": swap_time
+                }
+                reshuffle = DriverReshuffle.objects.filter(calendar_event_id=calendar_event_id)
+                reshuffle.update(**obj_data) if reshuffle else DriverReshuffle.objects.create(**obj_data)
+            if delta:
+                deleted_reshuffles = DriverReshuffle.objects.exclude(calendar_event_id__in=list_events)
+                for reshuffle in deleted_reshuffles.filter(swap_time__date=day.date()):
+                    reshuffle.delete()
+        except socket.timeout:
+            self.retry(args=[partner, delta], countdown=600)
 
 
 def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):

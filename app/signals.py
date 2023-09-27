@@ -12,7 +12,7 @@ from auto_bot.handlers.order.static_text import client_order_info, client_person
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from django.contrib.auth.models import User as AuUser
-from scripts.google_calendar import datetime_with_timezone
+from scripts.google_calendar import datetime_with_timezone, GoogleCalendar
 from scripts.settings_for_park import settings_for_partner
 
 # @receiver(post_save, sender=AuUser)
