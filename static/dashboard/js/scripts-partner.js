@@ -276,37 +276,58 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate,
 		},
 		success: function (response) {
-			let data = response.data[0];
-			let totalAmount = parseFloat(response.data[1]).toFixed(2);
-			let totalDistance = parseFloat(response.data[2]).toFixed(2);
-			let startDate = response.data[3];
-			let endDate = response.data[4];
-			let efficiency = parseFloat(response.data[5]).toFixed(2);
-			let formattedData = {};
-
-			Object.keys(data).forEach(function (key) {
-				let value = parseFloat(data[key]).toFixed(2);
-				if (value > 0) {
-					let formattedKey = key;
-					formattedData[formattedKey] = value;
+			$(".apply-filter-button").prop("disabled", false);
+			let isAllValuesZero = true;
+			for (let key in response.data[0]) {
+				if (parseFloat(response.data[0][key]) !== 0) {
+					isAllValuesZero = false;
+					break;
 				}
-			});
+			}
+			if (isAllValuesZero) {
+				$("#noDataMessage-1").show();
+				$('#bar-chart').hide();
+			} else {
+				$("#noDataMessage-1").hide();
+				$('#bar-chart').show();
+				let data = response.data[0];
+				let totalAmount = parseFloat(response.data[1]).toFixed(2);
+				let totalDistance = parseFloat(response.data[2]).toFixed(2);
+				let startDate = response.data[3];
+				let endDate = response.data[4];
+				let efficiency = parseFloat(response.data[5]).toFixed(2);
+				let formattedData = {};
 
-			let sortedKeys = Object.keys(formattedData).sort();
-			let sortedFormattedData = {};
-			sortedKeys.forEach(function (key) {
-				sortedFormattedData[key] = formattedData[key];
-			});
+				Object.keys(data).forEach(function (key) {
+					let value = parseFloat(data[key]).toFixed(2);
+					if (value > 0) {
+						let formattedKey = key;
+						formattedData[formattedKey] = value;
+					}
+				});
 
-			barChartOptions.series[0].data = Object.values(sortedFormattedData);
-			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-			barChart.updateOptions(barChartOptions);
+				let sortedKeys = Object.keys(formattedData).sort();
+				let sortedFormattedData = {};
+				sortedKeys.forEach(function (key) {
+					sortedFormattedData[key] = formattedData[key];
+				});
 
-			$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
-			$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-			$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				barChartOptions.series[0].data = Object.values(sortedFormattedData);
+				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
+				barChart.updateOptions(barChartOptions);
 
+				if (period === 'yesterday') {
+					$('.weekly-income-dates').text(startDate);
+					$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				} else {
+					$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+					$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				}
+			}
 		}
 	});
 }
@@ -323,36 +344,43 @@ function loadEffectiveChart(period, startDate, endDate) {
 		},
 		success: function (response) {
 			let dataObject = response.data;
-			let carData = {};
+			if (Object.keys(response.data).length === 0) {
+				$("#noDataMessage-2").show();
+				$('#area-chart').hide();
+			} else {
+				$("#noDataMessage-2").hide();
+				$('#area-chart').show();
+				let carData = {};
 
-			// Проходимося по кожному ідентифікатору автомобіля
-			Object.keys(dataObject).forEach(function (carNumber) {
-				carData[carNumber] = dataObject[carNumber].map(function (item) {
+				// Проходимося по кожному ідентифікатору автомобіля
+				Object.keys(dataObject).forEach(function (carNumber) {
+					carData[carNumber] = dataObject[carNumber].map(function (item) {
+						return {
+							date: new Date(item.date_effective),
+							efficiency: parseFloat(item.efficiency)
+						};
+					});
+				});
+
+				let mileageSeries = Object.keys(carData).map(function (carNumber) {
 					return {
-						date: new Date(item.date_effective),
-						efficiency: parseFloat(item.efficiency)
+						name: carNumber,
+						data: carData[carNumber].map(function (entry) {
+							return entry.efficiency;
+						})
 					};
 				});
-			});
 
-			let mileageSeries = Object.keys(carData).map(function (carNumber) {
-				return {
-					name: carNumber,
-					data: carData[carNumber].map(function (entry) {
-						return entry.efficiency;
-					})
-				};
-			});
+				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+				});
 
-			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-			});
+				// Оновити опції графіка з новими даними
+				areaChartOptions.series = mileageSeries;
+				areaChartOptions.labels = dates;
 
-			// Оновити опції графіка з новими даними
-			areaChartOptions.series = mileageSeries;
-			areaChartOptions.labels = dates;
-
-			areaChart.updateOptions(areaChartOptions);
+				areaChart.updateOptions(areaChartOptions);
+			}
 		}
 	});
 }
@@ -369,7 +397,9 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 		},
 		success: function (response) {
+			$(".apply-filter-button").prop("disabled", false);
 			let table = $('.info-driver table');
+			let driverBlock = $('.driver-block');
 			let startDate = response.data[1];
 			let endDate = response.data[2];
 			table.find('tr:gt(0)').remove();
@@ -406,33 +436,71 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 				table.append(row);
 
-				$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+				if (period === 'yesterday') {
+					$('.income-drivers-date').text(startDate);
+				} else {
+					$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+				}
+			});
+
+			$('.driver-container').empty();
+
+			response.data[0].forEach(function (driver) {
+				let driverBlock = $('<div class="driver-block"></div>');
+				let driverName = $('<div class="driver-name"></div>');
+				let driverInfo = $('<div class="driver-info"></div>');
+
+				driverName.append('<h3>' + driver.driver + '</h3>');
+				driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+
+				driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
+				driverInfo.append('<p>Кількість замовлень: ' + driver.total_orders + '</p>');
+				driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
+				driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
+				driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
+				driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
+				driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
+
+				driverBlock.append(driverName);
+				driverBlock.append(driverInfo);
+
+				// Додати блок водія до контейнера
+				$('.driver-container').append(driverBlock);
 			});
 		}
 	});
 }
 
 const commonPeriodSelect = $('#period-common');
-const showCommonButton = $('#common-show-button');
 const periodSelect = $('#period');
-const showButton = $('#show-button');
-showCommonButton.on('click', function (event) {
-	event.preventDefault();
 
+commonPeriodSelect.on('change', function () {
 	const selectedPeriod = commonPeriodSelect.val();
-	loadDefaultKasa(selectedPeriod);
-	loadEffectiveChart(selectedPeriod);
+	if (selectedPeriod !== "custom") {
+		loadDefaultKasa(selectedPeriod);
+		loadEffectiveChart(selectedPeriod);
+	}
+	if (selectedPeriod === "custom") {
+		$("#datePicker").css("display", "block");
+	} else {
+		$("#datePicker").css("display", "none");
+	}
 });
 
-showButton.on('click', function (event) {
-	event.preventDefault();
-
+periodSelect.on('change', function () {
 	const selectedPeriod = periodSelect.val();
-	loadDefaultDriver(selectedPeriod);
+	if (selectedPeriod !== "custom") {
+		loadDefaultDriver(selectedPeriod);
+	}
+	if (selectedPeriod === "custom") {
+		$("#datePickerDriver").css("display", "block");
+	} else {
+		$("#datePickerDriver").css("display", "none");
+	}
 });
 
 loadDefaultKasa('yesterday');
-loadEffectiveChart('current_week');
+loadEffectiveChart('yesterday');
 loadDefaultDriver('yesterday');
 
 function showDatePicker(periodSelectId, datePickerId) {
@@ -447,14 +515,18 @@ function showDatePicker(periodSelectId, datePickerId) {
 }
 
 function customDateRange() {
-	let startDate = $("#datePickerDriver #start_date").val();
-	let endDate = $("#datePickerDriver #end_date").val();
+	$(".apply-filter-button").prop("disabled", true);
+
+	let startDate = $("#start_date").val();
+	let endDate = $("#end_date").val();
 
 	const selectedPeriod = periodSelect.val();
 	loadDefaultDriver(selectedPeriod, startDate, endDate);
 }
 
 function applyCustomDateRange() {
+	$(".apply-filter-button").prop("disabled", true);
+
 	let startDate = $("#start_date").val();
 	let endDate = $("#end_date").val();
 
@@ -465,6 +537,22 @@ function applyCustomDateRange() {
 
 
 $(document).ready(function () {
+	$.ajax({
+		url: ajaxGetUrl,
+		type: "GET",
+		data: {
+			action: "aggregators"
+		},
+		success: function (response) {
+			let aggregators = response.data;
+
+			for (let aggregator in aggregators) {
+				if (aggregators.hasOwnProperty(aggregator)) {
+					localStorage.setItem(aggregator, aggregators[aggregator] ? 'success' : 'false');
+				}
+			}
+		}
+	});
 
 	const partnerForm = $("#partnerForm");
 	const partnerLoginField = $("#partnerLogin");
@@ -477,10 +565,10 @@ $(document).ready(function () {
 	// Перевірка умови, коли показувати або ховати елемент
 	if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
 		// Показуємо елемент
-		$("#updateDatabase").show();
+		$("#updateDatabaseContainer").show();
 	} else {
 		// Ховаємо елемент
-		$("#updateDatabase").hide();
+		$("#updateDatabaseContainer").hide();
 	}
 
 	partnerRadioButtons.change(function () {
@@ -749,13 +837,14 @@ $(document).ready(function () {
 	});
 
 	$('#partnerVehicleBtnContainer').click(function () {
-		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.info-driver').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide()
+		$('.driver-container').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
 	$('#partnerDriverBtnContainer').click(function () {
@@ -765,6 +854,10 @@ $(document).ready(function () {
 		$('.main-cards').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
+		if (window.innerWidth <= 900) {
+			$('.driver-container').css('display', 'block');
+		}
 	});
 
 	$(".close-btn").click(function () {
@@ -772,4 +865,34 @@ $(document).ready(function () {
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
 	});
+
+	const resetButton = $("#reset-button");
+
+	resetButton.on("click", function () {
+		areaChart.resetSeries();
+	});
 });
+
+
+function toggleDriverInfo(arrow) {
+	const driverBlock = $(arrow).closest('.driver-block');
+	driverBlock.toggleClass('active');
+}
+
+function formatTime(time) {
+	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+
+	if (!parts) {
+		return time;
+	} else {
+		let days = parseInt(parts[1]);
+		let hours = parseInt(parts[2]);
+		let minutes = parseInt(parts[3]);
+		let seconds = parseInt(parts[4]);
+
+		hours += days * 24;
+
+		// Форматувати рядок у вигляді HH:mm:ss
+		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+}

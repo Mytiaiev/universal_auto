@@ -133,14 +133,19 @@ p, span, div {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  padding: 25px;
+  padding: 20px;
   border-radius: 5px;
 }
 
 .main-cards .card span,
 .main-cards-partner .card-partner h3 {
-  font-size: 26px;
+  font-size: 22px;
   opacity: 0.77;
+}
+
+.main-cards .card h2 {
+  font-size: 24px;
+  margin: 0;
 }
 
 .card:first-child,
@@ -190,10 +195,15 @@ p, span, div {
   position: relative;
 }
 
+.charts-card h2 {
+  margin-bottom: 20px;
+}
+
 .chart-title {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 24px;
 }
 
 .car-select {
@@ -313,12 +323,13 @@ p, span, div {
 }
 
 .car-image img {
-  width: 150px;
-  height: auto;
+  width: 100px;
 }
 
 .car-details {
   display: flex;
+  flex-direction: row;
+  justify-content: space-between;
   align-items: center;
   width: 100%;
 }
@@ -327,6 +338,8 @@ p, span, div {
   display: inline-block;
   white-space: nowrap;
   padding: 10px 10px;
+  margin: 0;
+  width: auto;
 }
 
 .car-details h3 {
@@ -353,8 +366,16 @@ p, span, div {
   color: #fff;
 }
 
-/*!* Стилі для вікна з налаштуваннями(логін партнерів) *!*/
+@media (max-width: 700px) {
+  .car-details {
+    flex-direction: column;
+  }
+  #reset-button {
+    display: none;
+  }
+}
 
+/*!* Стилі для вікна з налаштуваннями(логін партнерів) *!*/
 .loader-login {
   display: none;
   border: 4px solid #f3f3f3;
@@ -520,7 +541,6 @@ p, span, div {
 }
 
 /*стилі для виходу з акаунта*/
-
 .header-right {
   display: flex;
   align-items: center;
@@ -533,7 +553,6 @@ p, span, div {
 }
 
 /*burger-menu*/
-
 .burger-menu {
   position: relative;
   width: 30px;
@@ -607,6 +626,11 @@ p, span, div {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
+.info-driver table {
+  width: 100%;
+  max-width: 100%;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -640,6 +664,50 @@ th, td {
   border-bottom: 1px solid #ddd;
 }
 
+.driver-container {
+  display: none;
+}
+
+.driver-block {
+  background-color: #38423B;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin: 10px;
+  padding: 10px;
+}
+
+.driver-name {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.arrow {
+  font-size: 18px;
+  transform: rotate(0deg);
+  transition: transform 0.2s;
+}
+
+.driver-info {
+  display: none;
+  margin-top: 10px;
+}
+
+.driver-block.active .arrow {
+  transform: rotate(180deg);
+}
+
+.driver-block.active .driver-info {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .driver-table {
+    display: none;
+  }
+}
+
 
 /* Стилізація форми періода */
 form {
@@ -669,6 +737,18 @@ input[type="button"] {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+#reset-button {
+  padding: 8px 16px;
+  font-size: 16px;
+  background-color: #3e8f3e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  left: 85%;
 }
 
 form {
@@ -742,8 +822,6 @@ select:focus {
 }
 
 /*стилі для періода*/
-
-
 .common-period {
   margin: 20px 0 20px;
 }

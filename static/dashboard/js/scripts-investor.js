@@ -3,17 +3,19 @@
 let sidebarOpen = false;
 let sidebar = document.getElementById("sidebar");
 
-function openSidebar() {
-	if (!sidebarOpen) {
-		sidebar.classList.add("sidebar-responsive");
-		sidebarOpen = true;
-	}
-}
+// Визначте змінну для стану бічного бару
 
-function closeSidebar() {
+function toggleSidebar() {
+	const sidebar = document.getElementById("sidebar");
+
 	if (sidebarOpen) {
+		// Закрити бічний бар
 		sidebar.classList.remove("sidebar-responsive");
 		sidebarOpen = false;
+	} else {
+		// Відкрити бічний бар
+		sidebar.classList.add("sidebar-responsive");
+		sidebarOpen = true;
 	}
 }
 
@@ -266,36 +268,58 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate,
 		},
 		success: function (response) {
-			let data = response.data[0];
-			let totalAmount = parseFloat(response.data[1]).toFixed(2);
-			let totalKm = parseFloat(response.data[2]).toFixed(2);
-			let spending = response.data[3];
-			let startDate = response.data[4];
-			let endDate = response.data[5];
-			let formattedData = {};
-
-			Object.keys(data).forEach(function (key) {
-				let value = parseFloat(data[key]).toFixed(2);
-				if (value !== 0) {
-					let formattedKey = key;
-					formattedData[formattedKey] = value;
+			$(".apply-filter-button").prop("disabled", false);
+			let isAllValuesZero = true;
+			for (let key in response.data[0]) {
+				if (parseFloat(response.data[0][key]) !== 0) {
+					isAllValuesZero = false;
+					break;
 				}
-			});
+			}
+			if (isAllValuesZero) {
+				$("#noDataMessage-1").show();
+				$('#bar-chart').hide();
+			} else {
+				$("#noDataMessage-1").hide();
+				$('#bar-chart').show();
+				let data = response.data[0];
+				let totalAmount = parseFloat(response.data[1]).toFixed(2);
+				let totalKm = parseFloat(response.data[2]).toFixed(2);
+				let spending = response.data[3];
+				let startDate = response.data[4];
+				let endDate = response.data[5];
+				let formattedData = {};
 
-			let sortedKeys = Object.keys(formattedData).sort();
-			let sortedFormattedData = {};
-			sortedKeys.forEach(function (key) {
-				sortedFormattedData[key] = formattedData[key];
-			});
+				Object.keys(data).forEach(function (key) {
+					let value = parseFloat(data[key]).toFixed(2);
+					if (value !== 0) {
+						let formattedKey = key;
+						formattedData[formattedKey] = value;
+					}
+				});
 
-			barChartOptions.series[0].data = Object.values(sortedFormattedData);
-			barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-			barChart.updateOptions(barChartOptions);
+				let sortedKeys = Object.keys(formattedData).sort();
+				let sortedFormattedData = {};
+				sortedKeys.forEach(function (key) {
+					sortedFormattedData[key] = formattedData[key];
+				});
 
-			$('.weekly-income-dates').text(gettext('З ') + startDate + gettext(' по ') + endDate);
-			$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
-			$('.spending-all').text(spending + gettext(' грн'));
-			$('.income-km').text(totalKm + gettext(' км'));
+				barChartOptions.series[0].data = Object.values(sortedFormattedData);
+				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
+				barChart.updateOptions(barChartOptions);
+
+				if (period === 'yesterday') {
+					$('.weekly-income-dates').text(startDate);
+					$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
+					$('.spending-all').text(spending + gettext(' грн'));
+					$('.income-km').text(totalKm + gettext(' км'));
+				} else {
+					$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+					$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
+					$('.spending-all').text(spending + gettext(' грн'));
+					$('.income-km').text(totalKm + gettext(' км'));
+				}
+			}
 		}
 	});
 }
@@ -312,55 +336,64 @@ function loadEffectiveChart(period, startDate, endDate) {
 		},
 		success: function (response) {
 			let dataObject = response.data;
+			if (Object.keys(response.data).length === 0) {
+				$("#noDataMessage-2").show();
+				$('#area-chart').hide();
+			} else {
+				$("#noDataMessage-2").hide();
+				$('#area-chart').show();
+				let carData = {};
+				// Проходимося по кожному ідентифікатору автомобіля
+				Object.keys(dataObject).forEach(function (carNumber) {
+					carData[carNumber] = dataObject[carNumber].map(function (item) {
+						return {
+							date: new Date(item.date_effective),
+							mileage: parseFloat(item.mileage)
+						};
+					});
+				});
 
-			let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
-
-			// Проходимося по кожному ідентифікатору автомобіля
-			Object.keys(dataObject).forEach(function (carNumber) {
-				carData[carNumber] = dataObject[carNumber].map(function (item) {
+				let mileageSeries = Object.keys(carData).map(function (carNumber) {
 					return {
-						date: new Date(item.date_effective),
-						mileage: parseFloat(item.mileage)
+						name: carNumber,
+						data: carData[carNumber].map(function (entry) {
+							return entry.mileage;
+						})
 					};
 				});
-			});
 
-			let mileageSeries = Object.keys(carData).map(function (carNumber) {
-				return {
-					name: carNumber,
-					data: carData[carNumber].map(function (entry) {
-						return entry.mileage;
-					})
-				};
-			});
+				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+				});
 
-			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-			});
+				// Оновити опції графіка з новими даними
+				areaChartOptions.series = mileageSeries;
+				areaChartOptions.labels = dates;
 
-			// Оновити опції графіка з новими даними
-			areaChartOptions.series = mileageSeries;
-			areaChartOptions.labels = dates;
-
-			areaChart.updateOptions(areaChartOptions);
+				areaChart.updateOptions(areaChartOptions);
+			}
 		}
 	});
 }
 
 
 const commonPeriodSelect = $('#period-common');
-const showCommonButton = $('#common-show-button');
 
-showCommonButton.on('click', function (event) {
-	event.preventDefault();
-
+commonPeriodSelect.on('change', function () {
 	const selectedPeriod = commonPeriodSelect.val();
-	loadDefaultKasa(selectedPeriod);
-	loadEffectiveChart(selectedPeriod);
+	if (selectedPeriod !== "custom") {
+		loadDefaultKasa(selectedPeriod);
+		loadEffectiveChart(selectedPeriod);
+	}
+	if (selectedPeriod === "custom") {
+		$("#datePicker").css("display", "block");
+	} else {
+		$("#datePicker").css("display", "none");
+	}
 });
 
 loadDefaultKasa('yesterday');
-loadEffectiveChart('current_week');
+loadEffectiveChart('yesterday');
 
 function showDatePicker(periodSelectId, datePickerId) {
 	let periodSelect = $("#" + periodSelectId);
@@ -374,8 +407,10 @@ function showDatePicker(periodSelectId, datePickerId) {
 }
 
 function applyCustomDate() {
-	let startDate = $("#datePicker #start_date").val();
-	let endDate = $("#datePicker #end_date").val();
+	$(".apply-filter-button").prop("disabled", true);
+
+	let startDate = $("#start_date").val();
+	let endDate = $("#end_date").val();
 
 	const selectedPeriod = commonPeriodSelect.val();
 	loadDefaultKasa(selectedPeriod, startDate, endDate);
@@ -456,17 +491,23 @@ $(document).ready(function () {
 	});
 
 	$('#investorVehicleBtnContainer').click(function () {
-		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide();
+		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
 	$(".close-btn").click(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
+	});
+
+	const resetButton = $("#reset-button");
+
+	resetButton.on("click", function () {
+		areaChart.resetSeries();
 	});
 });
