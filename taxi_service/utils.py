@@ -174,7 +174,7 @@ def manager_total_earnings(period, user_id, start_date=None, end_date=None):
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]
 
-    vehicles = Vehicle.objects.filter(manager=manager).values_list('licence_plate', flat=True)
+    vehicles = Vehicle.objects.filter(manager=manager)
     vehicle = CarEfficiency.objects.filter(report_from__range=(start_period, end_period), vehicle__in=vehicles)
     effective = 0
     if vehicle:
@@ -272,15 +272,10 @@ def get_car_data(cars, investor=None):
 
     for car in cars:
         purchase_price = car.purchase_price
-
-        spending = VehicleSpending.objects.filter(vehicle=car)
-        total_spent = sum(spend.amount for spend in spending)
-
-        car_efficiencies = CarEfficiency.objects.filter(
-            licence_plate=car.licence_plate)
+        car_efficiencies = CarEfficiency.objects.filter(vehicle=car)
         clean_kasa = round(sum(efficiency.clean_kasa for efficiency in car_efficiencies), 2)
         total_kasa = round(sum(efficiency.total_kasa for efficiency in car_efficiencies), 2)
-
+        total_spent = sum(efficiency.total_spending for efficiency in car_efficiencies)
         percentage = car.investor_percentage if investor and hasattr(car, 'investor_percentage') else None
         if percentage is not None:
             clean_kasa = total_kasa * percentage
