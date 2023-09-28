@@ -689,23 +689,42 @@ $(document).ready(function () {
 				password: password,
 			},
 			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'success');
-					$("#partnerLogin").hide()
-					$("#partnerPassword").hide().val('')
-					$(".opt-partnerForm").hide()
-					$(".login-ok").show()
-					$("#loginErrorMessage").hide()
-				} else {
-					$(".opt-partnerForm").show();
-					$("#loginErrorMessage").show()
-					$("#partnerLogin").val("").addClass("error-border");
-					$("#partnerPassword").val("").addClass("error-border");
-				}
-				hideLoader(partnerForm);
-			}
+				let task_id = response.task_id;
+				let interval = setInterval(function () {
+					$.ajax({
+						type: "GET",
+						url: ajaxGetUrl,
+						data: {
+							action: "check_task",
+							task_id: task_id,
+						},
+						success: function (response) {
+							console.log(response);
+							if (response.data === true) {
+								localStorage.setItem(partner, 'success');
+								$("#partnerLogin").hide();
+								$("#partnerPassword").hide().val('');
+								$(".opt-partnerForm").hide();
+								$(".login-ok").show();
+								$("#loginErrorMessage").hide();
+								hideLoader(partnerForm);
+								clearInterval(interval); // Очистити інтервал після отримання "true"
+							}
+							if (response.data === false) {
+								$(".opt-partnerForm").show();
+								$("#loginErrorMessage").show();
+								$("#partnerLogin").val("").addClass("error-border");
+								$("#partnerPassword").val("").addClass("error-border");
+								hideLoader(partnerForm);
+								clearInterval(interval); // Очистити інтервал після отримання "false"
+							}
+						},
+					});
+				}, 5000);
+			},
 		});
 	}
+
 
 	function sendLogautDataToServer(partner) {
 		$("#partnerLogin").val("")
@@ -741,7 +760,6 @@ $(document).ready(function () {
 				action: "upd_database",
 			},
 			success: function (response) {
-				console.log(response.task_id)
 				let task_id = response.task_id
 				let interval = setInterval(function () {
 					$.ajax({
@@ -752,7 +770,6 @@ $(document).ready(function () {
 							task_id: task_id,
 						},
 						success: function (response) {
-							console.log(response.data)
 							if (response.data === true) {
 								$("#loadingMessage").text(gettext("База даних оновлено"));
 								$("#loader").css("display", "none");

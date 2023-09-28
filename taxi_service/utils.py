@@ -3,7 +3,7 @@ import random
 import secrets
 from datetime import timedelta, date, datetime
 
-from django.db.models import Sum, Q, Avg
+from django.db.models import Sum, Q, Avg, F, Count, Prefetch
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
@@ -16,6 +16,7 @@ from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
                         Manager, Investor, Vehicle, VehicleSpending, DriverEfficiency, )
 from selenium_ninja.driver import SeleniumTools
 from scripts.redis_conn import get_logger
+from collections import defaultdict
 
 
 def active_vehicles_gps():
@@ -71,6 +72,9 @@ def restart_order(id_order, car_delivery_price, action):
 
 
 # Робота з dashboard.html
+
+def get_partner_id_by_investor(user_id):
+    return Investor.objects.filter(user=user_id).values('partner_id')[0]['partner_id']
 
 
 def get_dates(period=None):
@@ -222,7 +226,6 @@ def partner_total_earnings(period, user_id, start_date=None, end_date=None):
 
 
 def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
-    vehicles = {}
     total_amount = 0
     total_km = 0
 
@@ -240,31 +243,21 @@ def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
     end_date_formatted = end_period.strftime('%d.%m.%Y')
 
     results = CarEfficiency.objects.filter(
-        Q(licence_plate__in=licence_plates) &
-        Q(report_from__range=(start_period, end_period))
+        licence_plate__in=licence_plates,
+        report_from__range=(start_period, end_period)
+    ).values('licence_plate').annotate(
+        total_earnings=Sum(F('total_kasa') * F('partner__vehicle__investor_percentage')),
+        total_mileage=Sum('mileage')
     )
 
-    for result in results:
-        licence_plate = result.licence_plate
-        total_kasa = result.total_kasa
-        vehicle = Vehicle.objects.get(licence_plate=licence_plate)
-        earnings = float(total_kasa) * float(vehicle.investor_percentage)
+    vehicles = {result['licence_plate']: result['total_earnings'] for result in results}
+    total_amount = sum(result['total_earnings'] for result in results)
+    total_km = sum(result['total_mileage'] for result in results)
 
-        if licence_plate not in vehicles:
-            vehicles[licence_plate] = earnings
-        else:
-            vehicles[licence_plate] += earnings
-
-        total_amount += earnings
-        total_km += result.mileage
-
-    overall_spent = sum(
-        spending.amount
-        for spending in VehicleSpending.objects.filter(
-            vehicle__licence_plate__in=licence_plates,
-            created_at__range=(start_period, end_period)
-        )
-    )
+    overall_spent = VehicleSpending.objects.filter(
+        vehicle__licence_plate__in=licence_plates,
+        created_at__range=(start_period, end_period)
+    ).aggregate(total_spent=Sum('amount'))['total_spent'] or 0
 
     return vehicles, total_amount, total_km, overall_spent, start_date_formatted, end_date_formatted
 
@@ -351,36 +344,42 @@ def effective_vehicle(period, user_id, action, start_date=None, end_date=None):
     licence_plates = []
 
     if action == 'investor':
-        investor = Investor.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(
-            investor_car=investor).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(investor_car__user_id=user_id, licence_plate__isnull=False,).values_list('licence_plate', flat=True)
     elif action == 'manager':
-        manager = Manager.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(
-            manager=manager).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(manager__user_id=user_id, licence_plate__isnull=False,).values_list('licence_plate', flat=True)
     elif action == 'partner':
-        partner = Partner.objects.get(user_id=user_id)
-        licence_plates = Vehicle.objects.filter(
-            partner=partner).exclude(licence_plate='Unknown car').values_list('licence_plate', flat=True)
+        licence_plates = Vehicle.objects.filter(partner__user_id=user_id, licence_plate__isnull=False,).values_list('licence_plate', flat=True)
 
-    effective_objects = CarEfficiency.objects.filter(
-        licence_plate__in=licence_plates,
-        report_from__range=(start_period, end_period)
-    ).order_by('licence_plate', 'report_from')
+    car_efficiency_aggregate = CarEfficiency.objects.filter(licence_plate__in=licence_plates, report_from__range=(start_period, end_period)
+                                                            ).values('licence_plate', 'report_from').annotate(
+        total_mileage=Sum('mileage'), total_efficiency=Sum(F('mileage') * F('efficiency')))
 
-    result = {}
-
-    for effective in effective_objects:
-        car_data = {
-            'date_effective': effective.report_from,
-            'car': effective.licence_plate,
-            'mileage': effective.mileage,
-            'efficiency': effective.efficiency
+    car_efficiency_data = {
+        (car['licence_plate'], car['report_from']): {
+            'total_mileage': car['total_mileage'],
+            'total_efficiency': car['total_efficiency'],
         }
-        if effective.licence_plate not in result:
-            result[effective.licence_plate] = [car_data]
-        else:
-            result[effective.licence_plate].append(car_data)
+        for car in car_efficiency_aggregate
+    }
+
+    result = defaultdict(list)
+
+    for effective in car_efficiency_data:
+        licence_plate = effective[0]
+        total_mileage = car_efficiency_data[effective]['total_mileage']
+        efficiency = car_efficiency_data[effective]['total_efficiency'] / total_mileage if total_mileage != 0 else 0
+
+        car_data = {
+            'date_effective': effective[1],
+            'car': licence_plate,
+            'mileage': car_efficiency_data[effective]['total_mileage'],
+            'efficiency': round(efficiency, 2),
+        }
+        result[licence_plate].append(car_data)
+
+    for key in result:
+        result[key] = sorted(result[key], key=lambda x: x['date_effective'])
+
     return result
 
 
@@ -456,23 +455,16 @@ def get_driver_info(request, period, user_id, action, start_date=None, end_date=
     return driver_info_list, start_date_formatted, end_date_formatted
 
 
-def login_in(action, login_name, password, user_id):
-    partner = Partner.objects.get(user_id=user_id)
+def login_in(action=None, user_id=None, success_login=None, login_name=None, password=None, url=None, token=None):
+    partner = Partner.objects.get(id=user_id)
     selenium_tools = SeleniumTools(partner=partner.pk)
-    success_login = False
     if action == 'bolt':
-        success_login, url = selenium_tools.bolt_login(
-            login=login_name,
-            password=password)
         if success_login:
             bolt_url_id = url.split('/')[-2]
             update_park_set(partner, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt')
             update_park_set(partner, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt')
             update_park_set(partner, 'BOLT_URL_ID_PARK', bolt_url_id, description='BOLT_URL_ID_Парка')
     elif action == 'uklon':
-        success_login = selenium_tools.uklon_login(
-            login=login_name[4:],
-            password=password)
         if success_login:
             update_park_set(partner, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon')
             update_park_set(partner, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon')
@@ -483,17 +475,13 @@ def login_in(action, login_name, password, user_id):
                 partner, 'CLIENT_ID', random_hex,
                 description='Ідентифікатор клієнта Uklon', check_value=False)
     elif action == 'uber':
-        success_login = selenium_tools.uber_login(
-            session=True,
-            login=login_name,
-            password=password)
         if success_login:
             update_park_set(partner, 'UBER_PASSWORD', password, description='Пароль користувача Uber')
             update_park_set(partner, 'UBER_NAME', login_name, description='Ім\'я користувача Uber')
     elif action == 'gps':
         success_login = selenium_tools.gps_login(login=login_name, password=password)
         if success_login:
-            update_park_set(partner, 'UAGPS_TOKEN', success_login, description='Токен для GPS сервісу')
+            update_park_set(partner, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу')
             update_park_set(partner, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
             update_park_set(partner, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
             success_login = True

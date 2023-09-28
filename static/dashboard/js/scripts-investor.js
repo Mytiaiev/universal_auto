@@ -331,8 +331,8 @@ function loadEffectiveChart(period, startDate, endDate) {
 		data: {
 			action: 'investor',
 			period: period,
-			startDate: startDate,
-			endDate: endDate,
+			start_date: startDate,
+			end_date: endDate,
 		},
 		success: function (response) {
 			let dataObject = response.data;

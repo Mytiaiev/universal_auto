@@ -41,7 +41,7 @@ from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberRequest
 from selenium_ninja.uklon_sync import UklonRequest
 from scripts.nbu_conversion import convert_to_currency
-
+from taxi_service.utils import login_in
 
 logger = get_task_logger(__name__)
 
@@ -111,9 +111,57 @@ def auto_send_task_bot(self):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def get_uber_session(self, partner_pk):
-    chrome = SeleniumTools(partner_pk)
-    chrome.uber_login(session=True)
+def get_uber_session(self, partner_pk, login=None, password=None):
+    try:
+        chrome = SeleniumTools(partner_pk)
+        success = chrome.uber_login(session=True, login=login, password=password)
+        login_in(action='uber', user_id=partner_pk, success_login=True, login_name=login, password=password)
+    except Exception as e:
+        success = False
+        logger.error(e)
+
+    return partner_pk, success
+
+
+@app.task(bind=True, queue='beat_tasks')
+def get_bolt_session(self, partner_pk, login=None, password=None):
+    try:
+        chrome = SeleniumTools(partner_pk)
+        success = chrome.bolt_login(login=login, password=password)
+        login_in(action='bolt', user_id=partner_pk, success_login=True, login_name=login, password=password, url=success[1])
+    except Exception as e:
+        success = False
+        logger.error(e)
+
+    return partner_pk, success[0]
+
+
+@app.task(bind=True, queue='beat_tasks')
+def get_uklon_session(self, partner_pk, login=None, password=None):
+    try:
+        login_name = login[4:]
+        chrome = SeleniumTools(partner_pk)
+        success = chrome.uklon_login(login=login_name, password=password)
+        login_in(action='uklon', user_id=partner_pk, success_login=True, login_name=login, password=password)
+    except Exception as e:
+        success = False
+        logger.error(e)
+
+    return partner_pk, success
+
+
+@app.task(bind=True, queue='beat_tasks')
+def get_gps_session(self, partner_pk, login=None, password=None):
+    try:
+        chrome = SeleniumTools(partner_pk)
+        token = chrome.gps_login(login=login, password=password)
+        if token:
+            success = login_in(action='gps', user_id=partner_pk, success_login=True, login_name=login, password=password, token=token)
+    except Exception as e:
+        success = False
+        logger.error(e)
+
+    return partner_pk, success
 
 
 @app.task(bind=True, queue='beat_tasks')

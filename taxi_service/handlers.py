@@ -15,7 +15,7 @@ from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 investor_cash_car, get_driver_info, partner_total_earnings,
                                 manager_total_earnings, check_aggregators)
 
-from auto.tasks import update_driver_data
+from auto.tasks import update_driver_data, get_uber_session, get_bolt_session, get_uklon_session, get_gps_session
 
 
 class PostRequestHandler:
@@ -65,15 +65,41 @@ class PostRequestHandler:
 
         return JsonResponse({}, status=200)
 
+    # def handler_success_login(self, request):
+    #     action = request.POST.get('action')
+    #     login = request.POST.get('login')
+    #     password = request.POST.get('password')
+    #     partner = Partner.objects.get(user=request.user.pk)
+    #     if action == 'uber':
+    #         uber = get_uber_session.delay(partner.pk, login=login, password=password)
+    #         json_data = JsonResponse({'task_id': uber.id}, safe=False)
+    #         response = HttpResponse(json_data, content_type='application/json')
+    #     elif action == 'bolt':
+    #         bolt = get_bolt_session.delay(partner.pk, login=login, password=password)
+    #         json_data = JsonResponse({'task_id': bolt.id}, safe=False)
+    #         response = HttpResponse(json_data, content_type='application/json')
+    #     elif action == 'uklon':
+    #         uklon = get_uklon_session.delay(partner.pk, login=login, password=password)
+    #         json_data = JsonResponse({'task_id': uklon.id}, safe=False)
+    #         response = HttpResponse(json_data, content_type='application/json')
+    #
+    #     return response
+
     def handler_success_login(self, request):
         action = request.POST.get('action')
         login = request.POST.get('login')
         password = request.POST.get('password')
-        user_pk = request.user.pk
+        partner = Partner.objects.get(user=request.user.pk)
 
-        success_login = login_in(action, login, password, user_pk)
-        json_data = JsonResponse({'data': success_login}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
+        def get_session_task(service_name):
+            task = globals()[f'get_{service_name}_session'].delay(partner.pk, login=login, password=password)
+            return JsonResponse({'task_id': task.id}, safe=False)
+
+        if action in ['uber', 'bolt', 'uklon', 'gps']:
+            response = HttpResponse(get_session_task(action), content_type='application/json')
+        else:
+            response = JsonResponse({'error': 'Invalid action'}, status=400)
+
         return response
 
     def handler_handler_logout(self, request):
@@ -140,14 +166,6 @@ class PostRequestHandler:
         json_data = JsonResponse({'task_id': upd.id}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
-
-
-        # while True:
-        #     if upd.ready():
-        #         result = upd.get()
-        #         json_data = JsonResponse({'data': result[1]}, safe=False)
-        #         response = HttpResponse(json_data, content_type='application/json')
-        #         return response
 
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
