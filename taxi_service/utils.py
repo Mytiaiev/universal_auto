@@ -456,34 +456,31 @@ def get_driver_info(request, period, user_id, action, start_date=None, end_date=
 
 
 def login_in(action=None, user_id=None, success_login=None, login_name=None, password=None, url=None, token=None):
-    partner = Partner.objects.get(id=user_id)
-    selenium_tools = SeleniumTools(partner=partner.pk)
     if action == 'bolt':
         if success_login:
             bolt_url_id = url.split('/')[-2]
-            update_park_set(partner, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt')
-            update_park_set(partner, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt')
-            update_park_set(partner, 'BOLT_URL_ID_PARK', bolt_url_id, description='BOLT_URL_ID_Парка')
+            update_park_set(user_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt')
+            update_park_set(user_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt')
+            update_park_set(user_id, 'BOLT_URL_ID_PARK', bolt_url_id, description='BOLT_URL_ID_Парка')
     elif action == 'uklon':
         if success_login:
-            update_park_set(partner, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon')
-            update_park_set(partner, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon')
-            update_park_set(partner, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
+            update_park_set(user_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon')
+            update_park_set(user_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon')
+            update_park_set(user_id, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
             hex_length = 16
             random_hex = secrets.token_hex(hex_length)
             update_park_set(
-                partner, 'CLIENT_ID', random_hex,
+                user_id, 'CLIENT_ID', random_hex,
                 description='Ідентифікатор клієнта Uklon', check_value=False)
     elif action == 'uber':
         if success_login:
-            update_park_set(partner, 'UBER_PASSWORD', password, description='Пароль користувача Uber')
-            update_park_set(partner, 'UBER_NAME', login_name, description='Ім\'я користувача Uber')
+            update_park_set(user_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber')
+            update_park_set(user_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber')
     elif action == 'gps':
-        success_login = selenium_tools.gps_login(login=login_name, password=password)
         if success_login:
-            update_park_set(partner, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу')
-            update_park_set(partner, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
-            update_park_set(partner, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
+            update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу')
+            update_park_set(user_id, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
+            update_park_set(user_id, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
             success_login = True
     return success_login
 

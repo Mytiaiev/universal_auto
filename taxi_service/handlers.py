@@ -65,26 +65,6 @@ class PostRequestHandler:
 
         return JsonResponse({}, status=200)
 
-    # def handler_success_login(self, request):
-    #     action = request.POST.get('action')
-    #     login = request.POST.get('login')
-    #     password = request.POST.get('password')
-    #     partner = Partner.objects.get(user=request.user.pk)
-    #     if action == 'uber':
-    #         uber = get_uber_session.delay(partner.pk, login=login, password=password)
-    #         json_data = JsonResponse({'task_id': uber.id}, safe=False)
-    #         response = HttpResponse(json_data, content_type='application/json')
-    #     elif action == 'bolt':
-    #         bolt = get_bolt_session.delay(partner.pk, login=login, password=password)
-    #         json_data = JsonResponse({'task_id': bolt.id}, safe=False)
-    #         response = HttpResponse(json_data, content_type='application/json')
-    #     elif action == 'uklon':
-    #         uklon = get_uklon_session.delay(partner.pk, login=login, password=password)
-    #         json_data = JsonResponse({'task_id': uklon.id}, safe=False)
-    #         response = HttpResponse(json_data, content_type='application/json')
-    #
-    #     return response
-
     def handler_success_login(self, request):
         action = request.POST.get('action')
         login = request.POST.get('login')

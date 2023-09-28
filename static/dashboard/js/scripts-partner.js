@@ -699,7 +699,6 @@ $(document).ready(function () {
 							task_id: task_id,
 						},
 						success: function (response) {
-							console.log(response);
 							if (response.data === true) {
 								localStorage.setItem(partner, 'success');
 								$("#partnerLogin").hide();
