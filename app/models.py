@@ -428,6 +428,7 @@ class Driver(User):
     def get_driver_external_id(self, vendor: str):
         try:
             return Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self,
+                                                            partner=self.partner,
                                                             deleted_at=None).driver_external_id
         except ObjectDoesNotExist:
             return

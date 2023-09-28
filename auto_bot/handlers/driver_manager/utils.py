@@ -158,9 +158,9 @@ def generate_message_weekly(chat_id):
             if result[6]:
                 driver_message += f" - Оренда {result[6]}"
             driver_message += f" = {result[3]}\n"
-        if driver.chat_id:
-            drivers_dict[driver.chat_id] = driver_message
-        message += driver_message
+            if driver.chat_id:
+                drivers_dict[driver.chat_id] = driver_message
+            message += driver_message
         if driver_message:
             message += "*" * 39 + '\n'
     manager_message = f'Ваш баланс за минулий тиждень:%.2f\n' % balance

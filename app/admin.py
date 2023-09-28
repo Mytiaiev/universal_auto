@@ -405,6 +405,8 @@ class VehicleSpendingAdmin(admin.ModelAdmin):
             queryset = queryset.filter(vehicle__investor_car__user=request.user)
         if request.user.groups.filter(name='Manager').exists():
             queryset = queryset.filter(vehicle__manager__user=request.user)
+        if request.user.groups.filter(name='Partner').exists():
+            queryset = queryset.filter(vehicle__partner__user=request.user)
 
         return queryset
 
@@ -666,7 +668,7 @@ class PartnerAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['user', 'chat_id', 'calendar']}),
+        (None, {'fields': ['user', 'chat_id']}),
     ]
 
     def save_model(self, request, obj, form, change):
