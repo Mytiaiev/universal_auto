@@ -95,7 +95,8 @@ def calculate_weekly_reports(start, end, driver):
                 rent = 0
                 efficiency_obj = DriverEfficiency.objects.filter(report_from__range=(start, end),
                                                                  driver=driver)
-                overall_distance = efficiency_obj.aggregate(distance=(Sum('mileage')))['distance']
+                overall_distance = efficiency_obj.aggregate(
+                    distance=Coalesce(Sum('mileage'), 0, output_field=DecimalField()))['distance']
                 driver_overall = overall_distance - int(ParkSettings.get_value(
                     "TOTAL_KM_PER_WEEK", 2000, partner=driver.partner.pk))
                 rent_value = max(driver_overall * int(ParkSettings.get_value(
@@ -157,9 +158,9 @@ def generate_message_weekly(chat_id):
             if result[6]:
                 driver_message += f" - Оренда {result[6]}"
             driver_message += f" = {result[3]}\n"
-        if driver.chat_id:
-            drivers_dict[driver.chat_id] = driver_message
-        message += driver_message
+            if driver.chat_id:
+                drivers_dict[driver.chat_id] = driver_message
+            message += driver_message
         if driver_message:
             message += "*" * 39 + '\n'
     manager_message = f'Ваш баланс за минулий тиждень:%.2f\n' % balance
@@ -169,9 +170,9 @@ def generate_message_weekly(chat_id):
     return drivers_dict
 
 
-def calculate_efficiency(licence_plate, start, end):
+def calculate_efficiency(vehicle, start, end):
     efficiency_objects = CarEfficiency.objects.filter(report_from__range=(start, end),
-                                                      licence_plate=licence_plate)
+                                                      vehicle=vehicle)
     if efficiency_objects:
         total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
         total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
@@ -194,11 +195,11 @@ def get_efficiency(manager_id=None, start=None, end=None):
     report = {}
     vehicles = get_drivers_vehicles_list(manager_id, Vehicle)[0]
     for vehicle in vehicles:
-        effect = calculate_efficiency(vehicle.licence_plate, start, end)
+        effect = calculate_efficiency(vehicle, start, end)
         if effect:
             if end == yesterday:
                 yesterday_efficiency = CarEfficiency.objects.filter(report_from=yesterday,
-                                                                    licence_plate=vehicle.licence_plate).first()
+                                                                    vehicle=vehicle).first()
                 efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 0
                 distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 0
                 effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
@@ -226,16 +227,20 @@ def calculate_efficiency_driver(driver, start, end):
         efficiency = 0
         accept_percent = 0
         avg_price = 0
-        total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
-        total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
-        total_orders = efficiency_objects.aggregate(total_orders=Sum('total_orders'))['total_orders']
-        if total_orders:
+        aggregations = efficiency_objects.aggregate(
+            total_kasa=Sum('total_kasa'),
+            total_distance=Sum('mileage'),
+            total_orders=Sum('total_orders'),
+            total_hours=Sum('road_time')
+        )
+        if aggregations['total_orders']:
             accept_percent = float('{:.2f}'.format(efficiency_objects.exclude(accept_percent=0).aggregate(
                 accept=Avg('accept_percent'))['accept']))
-            avg_price = float('{:.2f}'.format(total_kasa / total_orders))
-        if total_distance:
-            efficiency = float('{:.2f}'.format(total_kasa / total_distance))
-        return efficiency, total_orders, accept_percent, avg_price, total_distance
+            avg_price = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_orders']))
+        if aggregations['total_distance']:
+            efficiency = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_distance']))
+        return (efficiency, aggregations['total_orders'], accept_percent,
+                avg_price, aggregations['total_distance'], aggregations['total_hours'])
 
 
 def get_driver_efficiency_report(manager_id=None, start=None, end=None):
@@ -258,6 +263,7 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
                 accept_percent = 0
                 average_price = 0
                 distance = 0
+                road_time = timedelta()
                 yesterday_efficiency = DriverEfficiency.objects.filter(report_from=yesterday,
                                                                        driver=driver).first()
                 if yesterday_efficiency:
@@ -266,18 +272,21 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
                     accept_percent = yesterday_efficiency.accept_percent
                     average_price = yesterday_efficiency.average_price
                     distance = yesterday_efficiency.mileage
+                    road_time = yesterday_efficiency.road_time
                 effective_driver[driver] = {'Ефективність(грн/км)': f"{effect[0]} (+{efficiency})",
                                             'Кількість замовлень': f"{effect[1]} (+{orders})",
                                             'Прийнято замовлень %': f"{effect[2]} ({accept_percent})",
                                             'Cередній чек грн': f"{effect[3]} ({average_price})",
-                                            'Пробіг, км': f"{effect[4]} ({distance})"
+                                            'Пробіг, км': f"{effect[4]} ({distance})",
+                                            'Час в дорозі': f"{effect[5]}({road_time})"
                                             }
             else:
                 effective_driver[driver] = {'Ефективність(грн/км)': f"{effect[0]}",
                                             'Кількість замовлень': f"{effect[1]}",
                                             'Прийнято замовлень %': f"{effect[2]}",
                                             'Cередній чек грн': f"{effect[3]}",
-                                            'Пробіг, км': f"{effect[4]}"
+                                            'Пробіг, км': f"{effect[4]}",
+                                            'Час в дорозі': f"{effect[5]}"
                                             }
     sorted_effective_driver = dict(sorted(effective_driver.items(),
                                    key=lambda x: float(x[1]['Ефективність(грн/км)'].split()[0]),

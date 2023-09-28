@@ -228,17 +228,16 @@ def update_car_efficiency():
         try:
             driver = Driver.objects.get(name=report.full_name.split()[0], second_name=report.full_name.split()[1])
             vehicle = driver.vehicle
-            licence_plate = vehicle.licence_plate
+
         except Driver.DoesNotExist:
-            licence_plate = None
+            vehicle = None
 
         efficiency = calculate_efficiency(total_amount, total_distance)
 
         car_efficiency, created = CarEfficiency.objects.get_or_create(
             report_from=report.report_from,
-            licence_plate=licence_plate,
+            vehicle=vehicle,
             defaults={
-                'driver': report.full_name,
                 'total_kasa': total_amount,
                 'mileage': total_distance,
                 'efficiency': efficiency,
@@ -246,7 +245,6 @@ def update_car_efficiency():
         )
 
         if not created:
-            car_efficiency.driver = report.full_name
             car_efficiency.total_kasa = total_amount
             car_efficiency.mileage = total_distance
             car_efficiency.efficiency = efficiency

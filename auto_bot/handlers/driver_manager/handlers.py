@@ -1,6 +1,7 @@
 # Create driver and other
-from datetime import datetime
+from datetime import datetime, timedelta
 from celery.signals import task_postrun
+from django.utils import timezone
 from telegram import ReplyKeyboardRemove
 
 from app.models import Manager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
@@ -17,6 +18,7 @@ from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_da
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, send_driver_efficiency
+from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from auto_bot.handlers.main.keyboards import back_to_main_menu
@@ -312,7 +314,23 @@ def create_period_efficiency(update, context):
 
 @task_postrun.connect
 def send_into_group(sender=None, **kwargs):
-    if sender in (send_daily_report, send_efficiency_report, send_driver_efficiency):
+    yesterday = timezone.localtime() - timedelta(days=1)
+    if sender in (send_daily_report, send_driver_efficiency):
+        messages, drivers_messages = kwargs.get('retval')
+        for partner, message in messages.items():
+            if message and ParkSettings.get_value('DRIVERS_CHAT', partner=partner):
+                bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
+        for pk, message in drivers_messages.items():
+            driver = Driver.objects.get(pk=pk)
+            vehicle = check_reshuffle(driver, yesterday.date())[0]
+            if vehicle:
+                if vehicle.chat_id and message:
+                    bot.send_message(chat_id=vehicle.chat_id, text=message)
+
+
+@task_postrun.connect
+def send_vehicle_efficiency(sender=None, **kwargs):
+    if sender == send_efficiency_report:
         messages = kwargs.get('retval')
         for partner, message in messages.items():
             if message and ParkSettings.get_value('DRIVERS_CHAT', partner=partner):

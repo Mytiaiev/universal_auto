@@ -73,9 +73,6 @@ def restart_order(id_order, car_delivery_price, action):
 
 # Робота з dashboard.html
 
-def get_partner_id_by_investor(user_id):
-    return Investor.objects.filter(user=user_id).values('partner_id')[0]['partner_id']
-
 
 def get_dates(period=None):
     current_date = timezone.now().date()
@@ -231,7 +228,6 @@ def investor_cash_car(period, investor_pk, start_date=None, end_date=None):
 
     investor = Investor.objects.get(user_id=investor_pk)
     investor_cars = Vehicle.objects.filter(investor_car=investor)
-    licence_plates = [car.licence_plate for car in investor_cars]
 
     if start_date and end_date:
         start_period = datetime.strptime(start_date, '%Y-%m-%d')
@@ -266,17 +262,11 @@ def get_car_data(cars, investor=None):
     cars_data = []
 
     for car in cars:
-        licence_plate = car.licence_plate
         purchase_price = car.purchase_price
-
-        spending = VehicleSpending.objects.filter(vehicle=car)
-        total_spent = sum(spend.amount for spend in spending)
-
-        car_efficiencies = CarEfficiency.objects.filter(
-            licence_plate=licence_plate)
+        car_efficiencies = CarEfficiency.objects.filter(vehicle=car)
         clean_kasa = round(sum(efficiency.clean_kasa for efficiency in car_efficiencies), 2)
         total_kasa = round(sum(efficiency.total_kasa for efficiency in car_efficiencies), 2)
-
+        total_spent = sum(efficiency.total_spending for efficiency in car_efficiencies)
         percentage = car.investor_percentage if investor and hasattr(car, 'investor_percentage') else None
         if percentage is not None:
             clean_kasa = total_kasa * percentage
@@ -286,7 +276,7 @@ def get_car_data(cars, investor=None):
                 if purchase_price > 0 else 0
 
         cars_data.append({
-            'licence_plate': licence_plate,
+            'licence_plate': car.licence_plate,
             'purchase_price': purchase_price,
             'total_spent': total_spent,
             'total_kasa': round(clean_kasa, 2),
@@ -341,7 +331,7 @@ def effective_vehicle(period, user_id, action, start_date=None, end_date=None):
     else:
         start_period, end_period = get_dates(period)
 
-    licence_plates = []
+    vehicles = []
 
     if action == 'investor':
         licence_plates = Vehicle.objects.filter(investor_car__user_id=user_id, licence_plate__isnull=False,).values_list('licence_plate', flat=True)

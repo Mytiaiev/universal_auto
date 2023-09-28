@@ -16,7 +16,7 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversantion, VehicleSpending, DriverReshuffle
+    TransactionsConversation, VehicleSpending, DriverReshuffle
 from django.db.models import Sum, IntegerField, FloatField, Q
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
@@ -172,8 +172,11 @@ def get_orders_from_fleets(self, partner_pk, day=None):
     for setting in settings:
         request_class = fleets.get(setting.key)
         if request_class:
-            for driver in drivers:
-                request_class(partner_pk).get_fleet_orders(day, driver.pk)
+            if isinstance(request_class(partner_pk), UberRequest):
+                request_class(partner_pk).get_fleet_orders(day)
+            else:
+                for driver in drivers:
+                    request_class(partner_pk).get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -210,7 +213,7 @@ def get_car_efficiency(self, partner_pk, day=None):
     for vehicle in Vehicle.objects.filter(partner=partner_pk):
         efficiency = CarEfficiency.objects.filter(report_from=day,
                                                   partner=partner_pk,
-                                                  licence_plate=vehicle.licence_plate)
+                                                  vehicle=vehicle)
         if not efficiency:
             total_kasa = 0
             clean_kasa = 0
@@ -234,7 +237,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,
-                                         licence_plate=vehicle.licence_plate,
+                                         vehicle=vehicle,
                                          total_kasa=total_kasa,
                                          clean_kasa=clean_kasa,
                                          total_spendings=total_spending,
@@ -419,7 +422,7 @@ def manager_paid_weekly(self, partner_pk):
 def send_weekly_report(self, partner_pk):
     result = []
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
-    managers.append(Partner.objects.get(pk=partner_pk).values('chat_id'))
+    managers.append(Partner.objects.filter(pk=partner_pk).values('chat_id').first())
     for manager in managers:
         result.append(generate_message_weekly(manager['chat_id']))
     return result
@@ -428,23 +431,25 @@ def send_weekly_report(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def send_daily_report(self, partner_pk):
     message = ''
+    driver_dict_msg = {}
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
     if not managers:
-        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
+        managers = list(Partner.objects.filter(pk=partner_pk).values('chat_id'))
     for manager in managers:
         result = get_daily_report(manager_id=manager['chat_id'])
         if result:
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
-                    num = "\U0001f3c6" if num == 1 else f"{num}."
-                    message += "{}{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
-                        num, key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
+                    driver_msg = "{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
+                        key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
+                    driver_dict_msg[key.pk] = driver_msg
+                    message += f"{num}.{driver_msg}"
             if partner_pk in dict_msg:
                 dict_msg[partner_pk] += message
             else:
                 dict_msg[partner_pk] = message
-    return dict_msg
+    return dict_msg, driver_dict_msg
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -453,12 +458,12 @@ def send_efficiency_report(self, partner_pk):
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
     if not managers:
-        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
+        managers = [Partner.objects.filter(pk=partner_pk).values('chat_id').first()]
     for manager in managers:
         result = get_efficiency(manager_id=manager['chat_id'])
         if result:
             for k, v in result.items():
-                message += f"{k}\n" + "".join(v)
+                message += f"{k}\n" + "".join(v) + "\n"
             if partner_pk in dict_msg:
                 dict_msg[partner_pk] += message
             else:
@@ -469,20 +474,23 @@ def send_efficiency_report(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def send_driver_efficiency(self, partner_pk):
     message = ''
+    driver_dict_msg = {}
     dict_msg = {}
     managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
     if not managers:
-        managers = [Partner.objects.get(pk=partner_pk).values('chat_id')]
+        managers = [Partner.objects.filter(pk=partner_pk).values('chat_id').first()]
     for manager in managers:
         result = get_driver_efficiency_report(manager_id=manager['chat_id'])
         if result:
             for k, v in result.items():
-                message += f"{k}\n" + "".join(v) + "\n"
+                driver_msg = f"{k}\n" + "".join(v)
+                driver_dict_msg[k.pk] = driver_msg
+                message += driver_msg + "\n"
             if partner_pk in dict_msg:
                 dict_msg[partner_pk] += message
             else:
                 dict_msg[partner_pk] = message
-    return dict_msg
+    return dict_msg, driver_dict_msg
 
 
 @app.task(bind=True, queue='bot_tasks')
@@ -544,27 +552,29 @@ def check_personal_orders(self):
 
 @app.task(bind=True, queue='beat_tasks')
 def add_money_to_vehicle(self, partner_pk):
-    yesterday = timezone.localtime() - timedelta(days=1)
-    car_efficiency_records = CarEfficiency.objects.filter(report_from=yesterday.date(), partner=partner_pk)
-    sum_by_plate = car_efficiency_records.values('licence_plate').annotate(total_sum=Sum('total_kasa'))
+    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+    start = end - timedelta(days=6)
+    car_efficiency_records = CarEfficiency.objects.filter(report_from__range=(start, end), partner=partner_pk)
+    sum_by_plate = car_efficiency_records.values('vehicle__licence_plate').annotate(total_sum=Sum('total_kasa'),
+                                                                                    clean_sum=Sum('clean_kasa'))
     for result in sum_by_plate:
-        vehicle = Vehicle.objects.filter(licence_plate=result['licence_plate'], partner=partner_pk).first()
-        if vehicle:
-            currency = vehicle.сurrency_back
-            total_kasa = result['total_sum']
-            if currency != Vehicle.Currency.UAH:
-                result, rate = convert_to_currency(float(total_kasa), currency)
-                car_earnings = result * vehicle.investor_percentage
-            else:
-                car_earnings = total_kasa * vehicle.investor_percentage
-                rate = 0.00
-            vehicle.car_earnings += car_earnings
-            vehicle.save()
-
-            TransactionsConversantion.objects.create(
+        vehicle = Vehicle.objects.filter(licence_plate=result['vehicle__licence_plate'],
+                                         partner=partner_pk).first()
+        currency = vehicle.currency_back
+        total_kasa = result['total_sum'] * vehicle.investor_percentage
+        if currency != Vehicle.Currency.UAH:
+            car_earnings, rate = convert_to_currency(float(total_kasa), currency)
+        else:
+            car_earnings = total_kasa
+            rate = 0.00
+        vehicle.car_earnings += result['clean_sum']
+        vehicle.save()
+        if vehicle.investor_car:
+            TransactionsConversation.objects.create(
                 vehicle=vehicle,
-                sum_before_transaction=total_kasa / 2,
-                сurrency=currency,
+                investor=vehicle.investor_car,
+                sum_before_transaction=total_kasa,
+                currency=currency,
                 currency_rate=rate,
                 sum_after_transaction=car_earnings)
 
@@ -802,7 +812,8 @@ def get_driver_reshuffles(self, partner, delta=0):
                 if len(event_summary) == 2:
                     licence_plate, driver = event_summary
                     name, second_name = driver.split()
-                    driver_start = Driver.objects.filter(name=name, second_name=second_name).first()
+                    driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
+                                                         Q(name=second_name, second_name=name)).first()
                     driver_finish = None
                     vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
                     swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))
