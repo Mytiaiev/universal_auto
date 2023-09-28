@@ -136,4 +136,3 @@ dmypy.json
 _SeleniumChromeUsers
 .idea/
 .DS_Store
-/data/db/dump.sql
