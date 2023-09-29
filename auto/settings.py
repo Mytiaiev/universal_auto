@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'fake_uber',
     'taxi_service',
     'rest_framework',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
     'api',
 ]
 

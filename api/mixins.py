@@ -19,9 +19,9 @@ class ManagerFilterMixin:
         model_filter_map = {
             SummaryReport: Q(full_name__in=[f"{driver.name} {driver.second_name}" for driver in
                                             Driver.objects.filter(manager__user=user)]),
-            CarEfficiency: Q(vehicle__manager=user),
-            DriverEfficiency: Q(driver__manager=user),
-            Vehicle: Q(manager=user),
+            CarEfficiency: Q(vehicle__manager__user=user),
+            DriverEfficiency: Q(driver__manager__user=user),
+            Vehicle: Q(manager__user=user),
         }
 
         filter_condition = model_filter_map.get(model)

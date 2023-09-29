@@ -21,7 +21,7 @@ class SummaryReportListView(CombinedPermissionsMixin,
     def get_queryset(self):
         start = self.kwargs['start']
         end = self.kwargs['end']
-        queryset = []
+        queryset = SummaryReport.objects.none()
         partner_queryset = PartnerFilterMixin.get_queryset(self, SummaryReport)
         if partner_queryset:
             queryset = partner_queryset
@@ -46,7 +46,7 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
     def get_queryset(self):
         start = self.kwargs['start']
         end = self.kwargs['end']
-        queryset = []
+        queryset = CarEfficiency.objects.none()
         partner_queryset = PartnerFilterMixin.get_queryset(self, CarEfficiency)
         if partner_queryset:
             queryset = partner_queryset
@@ -90,7 +90,7 @@ class DriverEfficiencyListView(CombinedPermissionsMixin,
     def get_queryset(self):
         start = self.kwargs['start']
         end = self.kwargs['end']
-        queryset = []
+        queryset = DriverEfficiency.objects.none()
         partner_queryset = PartnerFilterMixin.get_queryset(self, DriverEfficiency)
         if partner_queryset:
             queryset = partner_queryset
@@ -126,11 +126,11 @@ class CarsInformationListView(CombinedPermissionsMixin,
     serializer_class = CarDetailSerializer
 
     def get_queryset(self):
-        queryset = []
+        queryset = Vehicle.objects.none()
         investor_queryset = InvestorFilterMixin.get_queryset(self, Vehicle)
         if investor_queryset:
             queryset = investor_queryset
-            qs = queryset.values('licence_plate').annotate(
+            queryset = queryset.values('licence_plate').annotate(
                 price=F('purchase_price'),
                 kasa=ExpressionWrapper(Sum('carefficiency__total_kasa') * F('investor_percentage'),
                                        output_field=DecimalField(decimal_places=2, max_digits=10)),
@@ -149,7 +149,7 @@ class CarsInformationListView(CombinedPermissionsMixin,
             if manager_queryset:
                 queryset = manager_queryset
 
-            qs = queryset.values('licence_plate').annotate(
+            queryset = queryset.values('licence_plate').annotate(
                 price=F('purchase_price'),
                 kasa=Sum('carefficiency__clean_kasa'),
                 spending=Sum('carefficiency__total_spending')
@@ -164,4 +164,4 @@ class CarsInformationListView(CombinedPermissionsMixin,
                     output_field=DecimalField(max_digits=4, decimal_places=1)
                 )
             )
-        return qs
+        return queryset
