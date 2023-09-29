@@ -1,5 +1,6 @@
 import requests
 
+from auto import settings
 from scripts.redis_conn import redis_instance
 
 
@@ -9,6 +10,7 @@ class NinjaRequest:
         self.user = user
         self.password = password
         self.redis = redis_instance()
+        self.base_url = settings.CSRF_TRUSTED_ORIGINS[0]
 
     def get_token(self):
         data = {
@@ -16,7 +18,7 @@ class NinjaRequest:
             "password": self.password
         }
         headers = {'Content-Type': 'application/json'}
-        response = requests.post('/api/token-auth/', json=data, headers=headers)
+        response = requests.post(f'{self.base_url}/api/token-auth/', json=data, headers=headers)
 
         if response.status_code == 200:
             token = response.json().get('token')
@@ -34,17 +36,17 @@ class NinjaRequest:
         return headers
 
     def get_vehicles_info(self):
-        response = requests.get("/api/vehicle_info/", headers=self.get_headers())
+        response = requests.get(f"{self.base_url}/api/vehicles_info/", headers=self.get_headers())
         return response.json()
 
     def get_reports(self, start: str, end: str):
-        response = requests.get(f"/api/reports/{start}/{end}", headers=self.get_headers())
+        response = requests.get(f"{self.base_url}/api/reports/{start}/{end}/", headers=self.get_headers())
         return response.json()
 
     def get_drivers_info(self, start: str, end: str):
-        response = requests.get(f"/api/drivers_info/{start}/{end}", headers=self.get_headers())
+        response = requests.get(f"{self.base_url}/api/drivers_info/{start}/{end}/", headers=self.get_headers())
         return response.json()
 
     def get_efficiency_info(self, start: str, end: str):
-        response = requests.get(f"/api/car_efficiencies/{start}/{end}", headers=self.get_headers())
+        response = requests.get(f"{self.base_url}/api/car_efficiencies/{start}/{end}/", headers=self.get_headers())
         return response.json()

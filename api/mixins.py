@@ -35,9 +35,9 @@ class ManagerFilterMixin:
 
 class InvestorFilterMixin:
     def get_queryset(self, model):
-        if isinstance(model, Vehicle):
+        if isinstance(model(), Vehicle):
             queryset = model.objects.filter(investor_car__user=self.request.user)
-        elif isinstance(model, CarEfficiency):
+        elif isinstance(model(), CarEfficiency):
             queryset = model.objects.filter(vehicle__investor_car__user=self.request.user)
         else:
             queryset = model.objects.none()

@@ -1130,7 +1130,7 @@ class CarEfficiency(models.Model):
         verbose_name_plural = 'Ефективність автомобілів'
 
     def __str__(self):
-        return self.vehicle
+        return str(self.vehicle)
 
 
 class DriverEfficiency(models.Model):
