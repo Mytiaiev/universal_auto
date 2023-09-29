@@ -8,20 +8,42 @@ import pendulum
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.db import models, IntegrityError, ProgrammingError
-from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from django.contrib.auth.models import User as AuUser
 
 
 class Role(models.TextChoices):
-    CLIENT = 'CLIENT', 'Client'
-    DRIVER = 'DRIVER', 'Driver'
-    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
-    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
-    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
-    OWNER = 'OWNER', 'Owner'
-    INVESTOR = 'INVESTOR', 'Investor'
+    CLIENT = 'CLIENT', 'Клієнт'
+    DRIVER = 'DRIVER', 'Водій'
+    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Менеджер водіїв'
+    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Сервісний менеджер'
+    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Менеджер підтримки'
+    OWNER = 'OWNER', 'Власник'
+    INVESTOR = 'INVESTOR', 'Інвестор'
+
+
+class Schema(models.Model):
+    SCHEMA_CHOICES = [
+        ('RENT', 'Схема оренди'),
+        ('HALF', 'Схема 50/50'),
+        ('DYNAMIC_WEEK', 'Динамічний тиждень'),
+        ('DYNAMIC_DAY', 'Динамічний день'),
+        ('CUSTOM', 'Індивідуальний відсоток'),
+    ]
+
+    title = models.CharField(max_length=25, choices=SCHEMA_CHOICES, verbose_name='Назва схеми')
+
+    @classmethod
+    def get_half_schema_id(cls):
+        try:
+            half_schema = cls.objects.get(title='HALF')
+            return half_schema.pk
+        except ObjectDoesNotExist:
+            return None
+
+    def __str__(self):
+        return self.get_title_display() if self.title else ''
 
 
 class Partner(models.Model):
@@ -405,18 +427,13 @@ class Driver(User):
     OFFLINE = 'Не працюю'
     RENT = 'Орендую авто'
 
-    class Schema(models.TextChoices):
-        RENT = 'RENT', 'Схема оренди'
-        HALF = 'HALF', 'Схема 50/50'
-        # BUYER = 'BUYER', 'Схема під викуп'
-        CUSTOM = 'CUSTOM', 'Індивідуальний відсоток'
-
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     worked = models.BooleanField(default=True, verbose_name='Працює')
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
-    schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
+    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, null=True, default=Schema.get_half_schema_id,
+                               verbose_name='Схема роботи')
     plan = models.IntegerField(default=12000, verbose_name='План водія')
     rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
     rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
@@ -439,25 +456,6 @@ class Driver(User):
         qset = Payments.objects.filter(vendor_name=vendor, driver_id=driver_external_id) \
             .filter(report_from__lte=current_date.end_of('week'), report_to__gte=current_date.start_of('week'))
         return sum(map(lambda x: x.kassa(), qset))
-
-    def get_dynamic_rate(self, vendor: str, week_number: [str, None] = None, kassa: float = None) -> float:
-        if kassa is None:
-            kassa = self.get_kassa(vendor, week_number)
-        dct = DriverRateLevels.objects.filter(fleet__name=vendor, threshold_value__gte=kassa,
-                                              deleted_at=None).aggregate(Sum('rate_delta'))
-        rate = self.get_rate(vendor) + float(dct['rate_delta__sum'] if dct['rate_delta__sum'] is not None else 0)
-        return max(rate, 0)
-
-    def get_salary(self, vendor: str, week_number: [str, None] = None) -> float:
-        try:
-            min_fee = float(Fleet.objects.get(name=vendor).min_fee)
-        except Fleet.DoesNotExist:
-            min_fee = 0
-        kassa = self.get_kassa(vendor, week_number)
-        rate = self.get_dynamic_rate(vendor, week_number, kassa)
-        salary = kassa * rate
-        print(kassa, rate, salary, min(salary, max(kassa - min_fee, 0)))
-        return min(salary, max(kassa - min_fee, 0))
 
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
@@ -591,17 +589,19 @@ class Fleets_drivers_vehicles_rate(models.Model):
         verbose_name_plural = 'Водії в агрегаторах'
 
 
-class DriverRateLevels(models.Model):
-    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
-    threshold_value = models.DecimalField(decimal_places=2, max_digits=15, default=0)
-    rate_delta = models.DecimalField(decimal_places=2, max_digits=3, default=0)
-    created_at = models.DateTimeField(editable=False, auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
+class DriverSchemaRate(models.Model):
+    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, verbose_name='Схема роботи')
+    threshold = models.DecimalField(decimal_places=2, max_digits=15, default=0, verbose_name="Поріг доходу")
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0, verbose_name="Відсоток")
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
-        verbose_name = 'Рівень рейтингу водія'
-        verbose_name_plural = 'Рівень рейтингу водіїв'
+        verbose_name = 'Тариф водія'
+        verbose_name_plural = 'Тарифи водія'
+
+    @staticmethod
+    def get_rate_tier(schema: object):
+        return DriverSchemaRate.objects.filter(schema=schema).order_by('threshold')
 
 
 class RawGPS(models.Model):
@@ -988,8 +988,8 @@ class FleetOrder(models.Model):
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
-        verbose_name = 'Стороннє замовлення'
-        verbose_name_plural = 'Сторонні замовлення'
+        verbose_name = 'Замовлення в агрегаторах'
+        verbose_name_plural = 'Замовлення в агрегаторах'
 
 
 class Report_of_driver_debt(models.Model):

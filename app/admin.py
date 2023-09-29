@@ -224,14 +224,28 @@ class FleetAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(DriverRateLevels)
+@admin.register(Schema)
+class SchemaAdmin(admin.ModelAdmin):
+    list_display = ['title']
+    list_per_page = 25
+
+
+@admin.register(DriverSchemaRate)
 class DriverRateLevelsAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in DriverRateLevels._meta.fields]
+    list_display = ['schema', 'threshold', 'rate']
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['fleet', 'threshold_value', 'rate_delta']}),
+        (None, {'fields': ['schema', 'threshold', 'rate']}),
     ]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'schema':
+            try:
+                kwargs['queryset'] = db_field.related_model.objects.filter(title__in=("DYNAMIC_DAY", "DYNAMIC_WEEK"))
+            except ObjectDoesNotExist:
+                pass
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(RawGPS)
