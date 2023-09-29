@@ -8,10 +8,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      celery:
-        condition: service_healthy
-      flower:
-        condition: service_healthy
     build: .
     env_file:
       .env
@@ -88,42 +84,5 @@ services:
     restart: always
     environment:
       SE_NODE_SESSION_TIMEOUT: 600
-      SE_NODE_MAX_SESSIONS: 6
-      SE_NODE_MAX_INSTANCES: 7
-
-  celery:
-    container_name: universal_auto_celery
-    platform: linux/amd64
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    build: .
-    env_file:
-      .env
-    command: celery -A auto worker --beat --loglevel=info --pool=solo
-    healthcheck:
-      test: [ "CMD-SHELL", "celery -A auto inspect ping" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  flower:
-    container_name: universal_auto_flower
-    image: mher/flower:latest
-    platform: linux/amd64
-    build: .
-    env_file:
-      .env
-    depends_on:
-      celery:
-        condition: service_healthy
-    command: celery -A auto flower --address=0.0.0.0 --port=5566 --inspect
-    healthcheck:
-      test: [ "CMD-SHELL", "curl --fail http://localhost:5566 || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    ports:
-      - "5566:5566"
+      SE_NODE_MAX_SESSIONS: 3
+      SE_NODE_MAX_INSTANCES: 3
