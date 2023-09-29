@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.models import User as AuthUser
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldError
 
 from scripts.google_calendar import GoogleCalendar
 from .models import *
@@ -15,6 +16,7 @@ models = {
     'Driver':                       {'view': True, 'add': False, 'change': True, 'delete': False},
     'Vehicle':                      {'view': True, 'add': False, 'change': True, 'delete': True},
     'Manager':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Investor':                      {'view': True, 'add': True, 'change': True, 'delete': True},
     # 'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
     'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
@@ -74,13 +76,16 @@ def filter_queryset_by_group(*groups, field_to_filter=None):
                 queryset = super().get_queryset(request)
                 if request.user.groups.filter(name='Investor').exists():
 
-                    investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
-                    investor_vehicle_ids = investor_vehicles.values_list('licence_plate', flat=True)
-
-                    queryset = queryset.filter(licence_plate__in=investor_vehicle_ids)
-
+                    try:
+                        queryset = queryset.filter(vehicle__investor_car__user=request.user)
+                    except FieldError:
+                        queryset = queryset.filter(investor_car__user=request.user)
                 if request.user.groups.filter(name='Manager').exists():
-                    queryset = queryset.filter(manager__user=request.user)
+                    try:
+                        queryset = queryset.filter(manager__user=request.user)
+                    except FieldError:
+                        pass
+
                 if request.user.groups.filter(name='Partner').exists():
                     queryset = queryset.filter(partner__user=request.user)
                     if field_to_filter is not None:
@@ -397,44 +402,51 @@ class VehicleSpendingAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         if request.user.groups.filter(name='Investor').exists():
-            investor_vehicles = Vehicle.objects.filter(investor_car__user=request.user)
-            investor_vehicle_ids = investor_vehicles.values_list('licence_plate', flat=True)
-            queryset = queryset.filter(vehicle__licence_plate__in=investor_vehicle_ids)
+            queryset = queryset.filter(vehicle__investor_car__user=request.user)
+        if request.user.groups.filter(name='Manager').exists():
+            queryset = queryset.filter(vehicle__manager__user=request.user)
+        if request.user.groups.filter(name='Partner').exists():
+            queryset = queryset.filter(vehicle__partner__user=request.user)
+
         return queryset
 
 
-VehicleSpendingAdmin = filter_queryset_by_group('Investor')(VehicleSpendingAdmin)
-
-
-@admin.register(TransactionsConversantion)
-class TransactionsConversantionAdmin(admin.ModelAdmin):
+@admin.register(TransactionsConversation)
+class TransactionsConversationAdmin(admin.ModelAdmin):
     list_filter = ['vehicle']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['vehicle', 'sum_before_transaction', 'сurrency', 'currency_rate', 'sum_after_transaction']
+            return ['vehicle', 'sum_before_transaction', 'currency', 'currency_rate', 'sum_after_transaction']
 
 
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ['licence_plate']
+    list_filter = ['vehicle']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         else:
-            return ['report_from', 'licence_plate', 'total_kasa', 'clean_kasa', 'total_spendings', 'efficiency', 'mileage']
+            return ['report_from', 'vehicle', 'total_kasa',
+                    'clean_kasa', 'total_spending', 'efficiency', 'mileage']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
-            ('Інформація по авто',          {'fields': ['report_from', 'licence_plate', 'clean_kasa', 'total_kasa',
-                                                        'total_spendings', 'efficiency',
+            ('Інформація по авто',          {'fields': ['report_from', 'vehicle', 'clean_kasa', 'total_kasa',
+                                                        'total_spending', 'efficiency',
                                                         'mileage']}),
         ]
 
         return fieldsets
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.groups.filter(name='Manager').exists():
+            qs = CarEfficiency.objects.filter(vehicle__manager__user=request.user)
+        return qs
 
 
 @admin.register(DriverEfficiency)
@@ -460,6 +472,12 @@ class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
         ]
 
         return fieldsets
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.groups.filter(name='Manager').exists():
+            return qs.filter(driver__manager__user=request.user)
+        return qs
 
 
 @admin.register(Service)
@@ -519,6 +537,12 @@ class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)
 
         return fieldsets
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.groups.filter(name='Manager').exists():
+            return qs.filter(driver__manager__user=request.user)
+        return qs
+
 
 @admin.register(Payments)
 class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
@@ -569,6 +593,14 @@ class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             ]}),
             ]
         return fieldsets
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.groups.filter(name='Manager').exists():
+            manager_drivers = Driver.objects.filter(manager__user=request.user)
+            full_names = [f"{driver.name} {driver.second_name}" for driver in manager_drivers]
+            return qs.filter(full_name__in=full_names)
+        return qs
 
 
 @admin.register(SummaryReport)
@@ -621,6 +653,14 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         return fieldsets
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.groups.filter(name='Manager').exists():
+            manager_drivers = Driver.objects.filter(manager__user=request.user)
+            full_names = [f"{driver.name} {driver.second_name}" for driver in manager_drivers]
+            return qs.filter(full_name__in=full_names)
+        return qs
+
 
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
@@ -628,7 +668,7 @@ class PartnerAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['user', 'chat_id', 'calendar']}),
+        (None, {'fields': ['user', 'chat_id']}),
     ]
 
     def save_model(self, request, obj, form, change):
@@ -643,12 +683,48 @@ class PartnerAdmin(admin.ModelAdmin):
 
 @admin.register(Investor)
 class InvestorAdmin(admin.ModelAdmin):
-    list_display = ('phone_number', 'user', 'role')
+    list_display = ('first_name', 'last_name', 'phone_number')
     list_per_page = 25
 
-    fieldsets = [
-        (None, {'fields': ['phone_number', 'user', 'role']}),
-    ]
+    def save_model(self, request, obj, form, change):
+        if not request.user.is_superuser:
+            partner = Partner.objects.get(user=request.user)
+            if not change:
+                user = AuthUser.objects.create_user(
+                    username=obj.email,
+                    password=obj.password,
+                    is_staff=True,
+                    is_active=True,
+                    is_superuser=False,
+                    first_name=obj.first_name,
+                    last_name=obj.last_name,
+                    email=obj.email
+                )
+                user.groups.add(Group.objects.get(name='Investor'))
+
+                obj.user = user
+                obj.partner = partner
+            if change and not obj.user.is_active:
+                obj.partner = None
+                AuthUser.objects.filter(username=obj.email).delete()
+        super().save_model(request, obj, form, change)
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                ('Інформація про інвестора',
+                 {'fields': ['email', 'password',
+                             'last_name', 'first_name',
+                             'phone_number', 'partner',
+                             'user']}),
+            ]
+        else:
+            fieldsets = [
+                ('Інформація про інвестора',
+                 {'fields': ['email', 'password', 'last_name', 'first_name', 'phone_number']}),
+            ]
+
+        return fieldsets
 
 
 @admin.register(Manager)
@@ -657,36 +733,38 @@ class ManagerAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_per_page = 25
 
     def save_model(self, request, obj, form, change):
-        gc = GoogleCalendar()
-        emails = [obj.email,
-                  obj.partner.user.email]
-        if not change:
-            user = AuthUser.objects.create_user(
-                username=obj.email,
-                password=obj.password,
-                is_staff=True,
-                is_active=True,
-                is_superuser=False,
-                first_name=obj.first_name,
-                last_name=obj.last_name,
-                email=obj.email
-            )
-            user.groups.add(Group.objects.get(name='Manager'))
+        if not request.user.is_superuser:
+            gc = GoogleCalendar()
+            partner = Partner.objects.get(user=request.user)
+            emails = [obj.email,
+                      partner.user.email]
+            if not change:
+                user = AuthUser.objects.create_user(
+                    username=obj.email,
+                    password=obj.password,
+                    is_staff=True,
+                    is_active=True,
+                    is_superuser=False,
+                    first_name=obj.first_name,
+                    last_name=obj.last_name,
+                    email=obj.email
+                )
+                user.groups.add(Group.objects.get(name='Manager'))
 
-            obj.user = user
-            obj.partner = Partner.objects.get(user=request.user)
-            cal_id = gc.create_calendar(f"Розклад водіїв {obj.first_name} {obj.last_name}")
-            obj.calendar = cal_id
-            for email in emails:
-                permissions = gc.add_permission(email)
-                gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
-        if change and not obj.user.is_active:
-            obj.partner = None
-            existing_acl = gc.service.acl().list(calendarId=obj.calendar).execute()
-            for acl_rule in existing_acl.get('items', []):
-                if acl_rule['scope']['type'] == 'user' and acl_rule['scope']['value'] in emails:
-                    gc.service.acl().delete(calendarId=obj.calendar, ruleId=acl_rule['id']).execute()
-            AuthUser.objects.filter(username=obj.login).delete()
+                obj.user = user
+                obj.partner = partner
+                cal_id = gc.create_calendar(f"Розклад водіїв {obj.first_name} {obj.last_name}")
+                obj.calendar = cal_id
+                for email in emails:
+                    permissions = gc.add_permission(email)
+                    gc.service.acl().insert(calendarId=cal_id, body=permissions).execute()
+            if change and not obj.user.is_active:
+                obj.partner = None
+                existing_acl = gc.service.acl().list(calendarId=obj.calendar).execute()
+                for acl_rule in existing_acl.get('items', []):
+                    if acl_rule['scope']['type'] == 'user' and acl_rule['scope']['value'] in emails:
+                        gc.service.acl().delete(calendarId=obj.calendar, ruleId=acl_rule['id']).execute()
+                AuthUser.objects.filter(username=obj.email).delete()
         super().save_model(request, obj, form, change)
 
     def get_list_display(self, request):
@@ -733,12 +811,18 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
-        else:
+        elif request.user.groups.filter(name='Partner').exists():
             return ['name', 'second_name',
                     'vehicle', 'manager', 'chat_id',
                     'schema', 'plan', 'rental',
                     'driver_status',
                     'created_at',
+                    ]
+        else:
+            return ['name', 'second_name',
+                    'vehicle', 'chat_id',
+                    'schema', 'plan', 'rental',
+                    'driver_status'
                     ]
 
     def get_fieldsets(self, request, obj=None):
@@ -753,7 +837,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                                                             ]}),
             )
 
-        else:
+        elif request.user.groups.filter(name='Partner').exists():
             fieldsets = (
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number', 'chat_id',
@@ -763,7 +847,16 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Додатково',                   {'fields': ['driver_status', 'manager',  'vehicle'
                                                             ]}),
             )
-
+        else:
+            fieldsets = (
+                ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
+                                                            'phone_number', 'chat_id',
+                                                            ]}),
+                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
+                                                            )}),
+                ('Додатково',                   {'fields': ['driver_status', 'vehicle'
+                                                            ]}),
+            )
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -809,11 +902,16 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
-        else:
+        elif request.user.groups.filter(name='Partner').exists():
             return ['licence_plate', 'name',
                     'vin_code',
                     'purchase_price',
                     'manager', 'created_at'
+                    ]
+        else:
+            return ['licence_plate', 'name',
+                    'vin_code',
+                    'purchase_price'
                     ]
 
     def get_fieldsets(self, request, obj=None):
@@ -822,26 +920,33 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Номер автомобіля',            {'fields': ['licence_plate',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'purchase_price',
-                                                            'сurrency', 'investor_car', 'investor_percentage',
-                                                            'currency_rate', 'сurrency_back',
+                                                            'currency', 'investor_car', 'investor_percentage',
+                                                            'currency_rate', 'currency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei', 'lat', 'lon',
                                                             'car_status', 'gps_id',
                                                             ]}),
-                ('Додатково',                   {'fields': ['partner', 'manager',
+                ('Додатково',                   {'fields': ['chat_id', 'partner', 'manager',
                                                             ]}),
             ]
 
-        else:
-            fieldsets = [
-                ('Номер автомобіля',            {'fields': ['licence_plate',
+        elif request.user.groups.filter(name='Partner').exists():
+            fieldsets = (
+                ('Номер автомобіля',            {'fields': ['licence_plate', 'gps_imei',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'purchase_price',
+                                                            'investor_car', 'investor_percentage'
                                                             ]}),
                 ('Додатково',                   {'fields': ['manager',
                                                             ]}),
-            ]
-
+            )
+        else:
+            fieldsets = (
+                ('Номер автомобіля',            {'fields': ['licence_plate', 'gps_imei',
+                                                            ]}),
+                ('Інформація про машину',       {'fields': ['name', 'purchase_price',
+                                                            ]}),
+            )
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):

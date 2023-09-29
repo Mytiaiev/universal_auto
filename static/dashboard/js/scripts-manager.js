@@ -3,17 +3,19 @@
 let sidebarOpen = false;
 let sidebar = document.getElementById("sidebar");
 
-function openSidebar() {
-	if (!sidebarOpen) {
-		sidebar.classList.add("sidebar-responsive");
-		sidebarOpen = true;
-	}
-}
+// Визначте змінну для стану бічного бару
 
-function closeSidebar() {
+function toggleSidebar() {
+	const sidebar = document.getElementById("sidebar");
+
 	if (sidebarOpen) {
+		// Закрити бічний бар
 		sidebar.classList.remove("sidebar-responsive");
 		sidebarOpen = false;
+	} else {
+		// Відкрити бічний бар
+		sidebar.classList.add("sidebar-responsive");
+		sidebarOpen = true;
 	}
 }
 
@@ -267,35 +269,57 @@ function loadDefaultKasa(period, startDate, endDate) {
 			end_date: endDate
 		},
 		success: function (response) {
-			let data = response.data[0];
-			let totalAmount = parseFloat(response.data[1]).toFixed(2);
-			let totalRent = parseFloat(response.data[2]).toFixed(2);
-			let startDate = response.data[3];
-			let endDate = response.data[4];
-			let efficiency = parseFloat(response.data[5]).toFixed(2);
-			let formattedData = {};
-
-			Object.keys(data).forEach(function (key) {
-				let value = parseFloat(data[key]).toFixed(2);
-				if (value > 0) {
-					formattedData[key] = value;
+			$(".apply-filter-button").prop("disabled", false);
+			let isAllValuesZero = true;
+			for (let key in response.data[0]) {
+				if (parseFloat(response.data[0][key]) !== 0) {
+					isAllValuesZero = false;
+					break;
 				}
-			});
+			}
+			if (isAllValuesZero) {
+				$("#noDataMessage-1").show();
+				$('#bar-chart').hide();
+			} else {
+				$("#noDataMessage-1").hide();
+				$('#bar-chart').show();
+				let data = response.data[0];
+				let totalAmount = parseFloat(response.data[1]).toFixed(2);
+				let totalRent = parseFloat(response.data[2]).toFixed(2);
+				let startDate = response.data[3];
+				let endDate = response.data[4];
+				let efficiency = parseFloat(response.data[5]).toFixed(2);
+				let formattedData = {};
 
-			let sortedKeys = Object.keys(formattedData).sort();
-			let sortedFormattedData = {};
-			sortedKeys.forEach(function (key) {
-				sortedFormattedData[key] = formattedData[key];
-			});
+				Object.keys(data).forEach(function (key) {
+					let value = parseFloat(data[key]).toFixed(2);
+					if (value > 0) {
+						formattedData[key] = value;
+					}
+				});
 
-			barChartOptions.series[0].data = Object.values(formattedData);
-			barChartOptions.xaxis.categories = Object.keys(formattedData);
-			barChart.updateOptions(barChartOptions);
+				let sortedKeys = Object.keys(formattedData).sort();
+				let sortedFormattedData = {};
+				sortedKeys.forEach(function (key) {
+					sortedFormattedData[key] = formattedData[key];
+				});
 
-			$('.weekly-income-dates').text(gettext('З ') + startDate + gettext(' по ') + endDate);
-			$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
-			$('.weekly-income-rent').text(totalRent + gettext(' км'));
-			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				barChartOptions.series[0].data = Object.values(formattedData);
+				barChartOptions.xaxis.categories = Object.keys(formattedData);
+				barChart.updateOptions(barChartOptions);
+
+				if (period === 'yesterday') {
+					$('.weekly-income-dates').text(startDate);
+					$('.weekly-income-rent').text(totalRent + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				} else {
+					$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+					$('.weekly-income-rent').text(totalRent + ' ' + gettext('км'));
+					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+				}
+			}
 		}
 	});
 }
@@ -311,38 +335,45 @@ function loadEffectiveChart(period, startDate, endDate) {
 			end_date: endDate
 		},
 		success: function (response) {
+			$(".apply-filter-button").prop("disabled", false);
 			let dataObject = response.data;
+			if (Object.keys(response.data).length === 0) {
+				$("#noDataMessage-2").show();
+				$('#area-chart').hide();
+			} else {
+				$("#noDataMessage-2").hide();
+				$('#area-chart').show();
+				let carData = {};
 
-			let carData = {}; // Об'єкт для зберігання даних кожного автомобіля
+				// Проходимося по кожному ідентифікатору автомобіля
+				Object.keys(dataObject).forEach(function (carNumber) {
+					carData[carNumber] = dataObject[carNumber].map(function (item) {
+						return {
+							date: new Date(item.date_effective),
+							efficiency: parseFloat(item.efficiency)
+						};
+					});
+				});
 
-			// Проходимося по кожному ідентифікатору автомобіля
-			Object.keys(dataObject).forEach(function (carNumber) {
-				carData[carNumber] = dataObject[carNumber].map(function (item) {
+				let efficiencySeries = Object.keys(carData).map(function (carNumber) {
 					return {
-						date: new Date(item.date_effective),
-						efficiency: parseFloat(item.efficiency)
+						name: carNumber,
+						data: carData[carNumber].map(function (entry) {
+							return entry.efficiency;
+						})
 					};
 				});
-			});
 
-			let efficiencySeries = Object.keys(carData).map(function (carNumber) {
-				return {
-					name: carNumber,
-					data: carData[carNumber].map(function (entry) {
-						return entry.efficiency;
-					})
-				};
-			});
+				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
+					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+				});
 
-			let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-				return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-			});
+				// Оновити опції графіка з новими даними
+				areaChartOptions.series = efficiencySeries;
+				areaChartOptions.labels = dates;
 
-			// Оновити опції графіка з новими даними
-			areaChartOptions.series = efficiencySeries;
-			areaChartOptions.labels = dates;
-
-			areaChart.updateOptions(areaChartOptions);
+				areaChart.updateOptions(areaChartOptions);
+			}
 		}
 	});
 }
@@ -359,6 +390,7 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 		},
 		success: function (response) {
+			$(".apply-filter-button").prop("disabled", false);
 			let table = $('.info-driver table');
 			let startDate = response.data[1];
 			let endDate = response.data[2];
@@ -396,33 +428,70 @@ function loadDefaultDriver(period, startDate, endDate) {
 
 				table.append(row);
 
-				$('.income-drivers-date').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+				if (period === 'yesterday') {
+					$('.income-drivers-date').text(startDate);
+				} else {
+					$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+				}
+			});
+			$('.driver-container').empty();
+
+			response.data[0].forEach(function (driver) {
+				let driverBlock = $('<div class="driver-block"></div>');
+				let driverName = $('<div class="driver-name"></div>');
+				let driverInfo = $('<div class="driver-info"></div>');
+
+				driverName.append('<h3>' + driver.driver + '</h3>');
+				driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+
+				driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
+				driverInfo.append('<p>Кількість замовлень: ' + driver.total_orders + '</p>');
+				driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
+				driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
+				driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
+				driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
+				driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
+
+				driverBlock.append(driverName);
+				driverBlock.append(driverInfo);
+
+				// Додати блок водія до контейнера
+				$('.driver-container').append(driverBlock);
 			});
 		}
 	});
 }
 
 const commonPeriodSelect = $('#period-common');
-const showCommonButton = $('#common-show-button');
 const periodSelect = $('#period');
-const showButton = $('#show-button');
-showCommonButton.on('click', function (event) {
-	event.preventDefault();
 
+commonPeriodSelect.on('change', function () {
 	const selectedPeriod = commonPeriodSelect.val();
-	loadDefaultKasa(selectedPeriod);
-	loadEffectiveChart(selectedPeriod);
+	if (selectedPeriod !== "custom") {
+		loadDefaultKasa(selectedPeriod);
+		loadEffectiveChart(selectedPeriod);
+	}
+	if (selectedPeriod === "custom") {
+		$("#datePicker").css("display", "block");
+	} else {
+		$("#datePicker").css("display", "none");
+	}
 });
 
-showButton.on('click', function (event) {
-	event.preventDefault();
-
+periodSelect.on('change', function () {
 	const selectedPeriod = periodSelect.val();
-	loadDefaultDriver(selectedPeriod);
+	if (selectedPeriod !== "custom") {
+		loadDefaultDriver(selectedPeriod);
+	}
+	if (selectedPeriod === "custom") {
+		$("#datePickerDriver").css("display", "block");
+	} else {
+		$("#datePickerDriver").css("display", "none");
+	}
 });
 
 loadDefaultKasa('yesterday');
-loadEffectiveChart('current_week');
+loadEffectiveChart('yesterday');
 loadDefaultDriver('yesterday');
 
 function showDatePicker(periodSelectId, datePickerId) {
@@ -437,14 +506,18 @@ function showDatePicker(periodSelectId, datePickerId) {
 }
 
 function customDateRange() {
-	let startDate = $("#datePickerDriver #start_date").val();
-	let endDate = $("#datePickerDriver #end_date").val();
+	$(".apply-filter-button").prop("disabled", true);
+
+	let startDate = $("#start_date").val();
+	let endDate = $("#end_date").val();
 
 	const selectedPeriod = periodSelect.val();
 	loadDefaultDriver(selectedPeriod, startDate, endDate);
 }
 
 function applyCustomDateRange() {
+$(".apply-filter-button").prop("disabled", true);
+
 	let startDate = $("#start_date").val();
 	let endDate = $("#end_date").val();
 
@@ -452,163 +525,6 @@ function applyCustomDateRange() {
 	loadDefaultKasa(selectedPeriod, startDate, endDate);
 	loadEffectiveChart(selectedPeriod, startDate, endDate);
 }
-
-$(document).ready(function () {
-
-	const partnerForm = $("#partnerForm");
-	const partnerLoginField = $("#partnerLogin");
-	const partnerRadioButtons = $("input[name='partner']");
-
-	partnerRadioButtons.change(function () {
-		const selectedPartner = $("input[name='partner']:checked").val();
-		updateLoginField(selectedPartner);
-	});
-
-	function updateLoginField(partner) {
-		if (partner === 'uklon') {
-			partnerLoginField.val('+380');
-		} else {
-			partnerLoginField.val('');
-			$("#partnerPassword").val("");
-		}
-	}
-
-	if (sessionStorage.getItem('settings') === 'true') {
-		$("#settingsWindow").fadeIn();
-	}
-
-	if (localStorage.getItem('uber')) {
-		$("#partnerLogin").hide()
-		$("#partnerPassword").hide()
-		$(".opt-partnerForm").hide()
-		$(".login-ok").show()
-		$("#loginErrorMessage").hide()
-	}
-
-	$("#settingBtn").click(function () {
-		sessionStorage.setItem('settings', 'true');
-		$("#settingsWindow").fadeIn();
-	});
-
-	$(".close-btn").click(function () {
-		$("#settingsWindow").fadeOut();
-		sessionStorage.setItem('settings', 'false');
-		location.reload();
-	});
-
-	$(".login-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		const partnerLogin = partnerForm.find("#partnerLogin").val();
-		const partnerPassword = partnerForm.find("#partnerPassword").val();
-
-		if (partnerForm[0].checkValidity() && selectedPartner) {
-			showLoader(partnerForm);
-			sendLoginDataToServer(selectedPartner, partnerLogin, partnerPassword);
-		}
-	});
-
-	$(".logout-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		sendLogautDataToServer(selectedPartner);
-		localStorage.removeItem(selectedPartner);
-		$("#partnerLogin").show()
-		$("#partnerPassword").show()
-		$(".opt-partnerForm").show()
-		$(".login-ok").hide()
-		$("#loginErrorMessage").hide()
-	});
-
-	// Show/hide password functionality
-	$("#showPasswordPartner").click(function () {
-		let $checkbox = $(this);
-		let $passwordField = $checkbox.closest('.settings-content').find('.partnerPassword');
-		let change = $checkbox.is(":checked") ? "text" : "password";
-		$passwordField.prop('type', change);
-	});
-
-	function showLoader(form) {
-		$(".opt-partnerForm").hide();
-		form.find(".loader-login").show();
-		$("input[name='partner']").prop("disabled", true);
-	}
-
-	function hideLoader(form) {
-		form.find(".loader-login").hide();
-		$("input[name='partner']").prop("disabled", false);
-	}
-
-
-	$('[name="partner"]').change(function () {
-		let partner = $(this).val()
-		let login = localStorage.getItem(partner)
-
-		if (login === "success") {
-			$("#partnerLogin").hide()
-			$("#partnerPassword").hide()
-			$(".opt-partnerForm").hide()
-			$(".login-ok").show()
-			$("#loginErrorMessage").hide()
-		} else {
-			$("#partnerLogin").show()
-			$("#partnerPassword").show()
-			$(".opt-partnerForm").show()
-			$(".login-ok").hide()
-			$("#loginErrorMessage").hide()
-		}
-	})
-
-	function sendLoginDataToServer(partner, login, password) {
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner,
-				login: login,
-				password: password,
-			},
-			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'success');
-					$("#partnerLogin").hide()
-					$("#partnerPassword").hide()
-					$(".opt-partnerForm").hide()
-					$(".login-ok").show()
-					$("#loginErrorMessage").hide()
-				} else {
-					$(".opt-partnerForm").show();
-					$("#loginErrorMessage").show()
-					$("#partnerLogin").val("").addClass("error-border");
-					$("#partnerPassword").val("").addClass("error-border");
-				}
-				hideLoader(partnerForm);
-			}
-		});
-	}
-
-	function sendLogautDataToServer(partner) {
-		console.log(partner + "_logout")
-		$("#partnerLogin").val("")
-		$("#partnerPassword").val("")
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner + "_logout",
-			},
-			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'false');
-					$("#partnerLogin").show()
-					$("#partnerPassword").show()
-					$(".opt-partnerForm").show()
-					$(".login-ok").hide()
-				}
-			}
-		});
-	}
-});
 
 
 $(document).ready(function () {
@@ -686,13 +602,14 @@ $(document).ready(function () {
 	});
 
 	$('#managerVehicleBtnContainer').click(function () {
-		$('.payback-car').show();
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
 		$('.info-driver').hide();
 		$('.common-period').hide();
+		$('.driver-container').hide()
 		$('#datePicker').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
 	$('#managerDriverBtnContainer').click(function () {
@@ -702,6 +619,19 @@ $(document).ready(function () {
 		$('.main-cards').hide();
 		$('.common-period').hide();
 		$('#datePicker').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
+		if (window.innerWidth <= 900) {
+			$('.driver-container').css('display', 'block');
+		}
+	});
+
+	$(".sidebar-list-item.admin").on("click", function () {
+
+		let adminPanelURL = $(this).data("url");
+
+		if (adminPanelURL) {
+			window.open(adminPanelURL, "_blank");
+		}
 	});
 
 	$(".close-btn").click(function () {
@@ -709,4 +639,33 @@ $(document).ready(function () {
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
 	});
+
+	const resetButton = $("#reset-button");
+
+	resetButton.on("click", function () {
+		areaChart.resetSeries();
+	});
 });
+
+function toggleDriverInfo(arrow) {
+	const driverBlock = $(arrow).closest('.driver-block');
+	driverBlock.toggleClass('active');
+}
+
+function formatTime(time) {
+	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+
+	if (!parts) {
+		return time;
+	} else {
+		let days = parseInt(parts[1]);
+		let hours = parseInt(parts[2]);
+		let minutes = parseInt(parts[3]);
+		let seconds = parseInt(parts[4]);
+
+		hours += days * 24;
+
+		// Форматувати рядок у вигляді HH:mm:ss
+		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+}
