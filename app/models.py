@@ -23,22 +23,26 @@ class Role(models.TextChoices):
     INVESTOR = 'INVESTOR', 'Інвестор'
 
 
+class SalaryCalculation(models.TextChoices):
+    WEEK = 'WEEK', 'Тижневий розрахунок'
+    DAY = 'DAY', 'Денний розрахунок'
+
+
 class Schema(models.Model):
     SCHEMA_CHOICES = [
         ('RENT', 'Схема оренди'),
         ('HALF', 'Схема 50/50'),
-        ('DYNAMIC_WEEK', 'Динамічний тиждень'),
-        ('DYNAMIC_DAY', 'Динамічний день'),
+        ('DYNAMIC', 'Динамічна схема'),
         ('CUSTOM', 'Індивідуальний відсоток'),
     ]
 
     title = models.CharField(max_length=25, choices=SCHEMA_CHOICES, verbose_name='Назва схеми')
 
     @classmethod
-    def get_half_schema_id(cls):
+    def get_half_schema_id(cls, title="HALF"):
         try:
-            half_schema = cls.objects.get(title='HALF')
-            return half_schema.pk
+            schema = cls.objects.get(title=title)
+            return schema.pk
         except ObjectDoesNotExist:
             return None
 
@@ -432,8 +436,10 @@ class Driver(User):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     worked = models.BooleanField(default=True, verbose_name='Працює')
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
-    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, null=True, default=Schema.get_half_schema_id,
-                               verbose_name='Схема роботи')
+    salary_calculation = models.CharField(max_length=25, choices=SalaryCalculation.choices,
+                                          default=SalaryCalculation.WEEK, verbose_name='Період розрахунку зарплати')
+    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, null=True,
+                               default=Schema.get_half_schema_id, verbose_name='Схема роботи')
     plan = models.IntegerField(default=12000, verbose_name='План водія')
     rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
     rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
@@ -590,7 +596,7 @@ class Fleets_drivers_vehicles_rate(models.Model):
 
 
 class DriverSchemaRate(models.Model):
-    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, verbose_name='Схема роботи')
+    period = models.CharField(max_length=25, choices=SalaryCalculation.choices, verbose_name='Період розрахунку')
     threshold = models.DecimalField(decimal_places=2, max_digits=15, default=0, verbose_name="Поріг доходу")
     rate = models.DecimalField(decimal_places=2, max_digits=3, default=0, verbose_name="Відсоток")
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -600,8 +606,8 @@ class DriverSchemaRate(models.Model):
         verbose_name_plural = 'Тарифи водія'
 
     @staticmethod
-    def get_rate_tier(schema: object):
-        return DriverSchemaRate.objects.filter(schema=schema).order_by('threshold')
+    def get_rate_tier(period):
+        return DriverSchemaRate.objects.filter(period=period).order_by('threshold')
 
 
 class RawGPS(models.Model):

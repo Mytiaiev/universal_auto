@@ -6,7 +6,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from app.models import CarEfficiency, Driver, SummaryReport, Manager, \
-    Vehicle, RentInformation, ParkSettings, DriverEfficiency, Partner, Role
+    Vehicle, RentInformation, ParkSettings, DriverEfficiency, Partner, Role, DriverSchemaRate, SalaryCalculation
 
 
 def validate_date(date_str):
@@ -71,19 +71,40 @@ def calculate_daily_reports(start, end, driver):
         return kasa, rent
 
 
+def calculate_by_rate(driver, kasa):
+    rate_tiers = DriverSchemaRate.get_rate_tier(period=driver.salary_calculation)
+    driver_spending = 0
+    tier = 0
+    rates = rate_tiers[2:] if kasa >= driver.plan else rate_tiers
+    for tier_kasa, rate in rates:
+        tier_kasa -= tier
+        if kasa > tier_kasa:
+            driver_spending += tier_kasa * rate
+            kasa -= tier_kasa
+            tier += tier_kasa
+        else:
+            driver_spending += kasa * rate
+            break
+    return driver_spending
+
+
 def calculate_weekly_reports(start, end, driver):
     incomplete = 0
     driver_report = SummaryReport.objects.filter(report_from__range=(start, end),
                                                  full_name=driver)
     if driver_report:
-        kasa = driver_report.aggregate(
-            kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
         cash = driver_report.aggregate(
             cash=Coalesce(Sum('total_amount_cash'), 0, output_field=DecimalField()))['cash']
+        kasa = driver_report.aggregate(
+            kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
+        rent = calculate_rent(start, end, driver)
+        rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', 15, partner=driver.partner.pk))
         if kasa:
-            if driver.schema in ("HALF", "CUSTOM"):
-                rent = calculate_rent(start, end, driver)
-                rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', 15, partner=driver.partner.pk))
+            if driver.schema.title == "DYNAMIC":
+                driver_spending = calculate_by_rate(driver, kasa)
+                balance = rent_value + kasa - driver_spending
+                salary = '%.2f' % (driver_spending - cash - rent_value)
+            elif driver.schema.title in ("HALF", "CUSTOM"):
                 if kasa < driver.plan:
                     balance = driver.rental + rent_value
                     incomplete = (driver.plan - kasa) * Decimal(1 - driver.rate)
@@ -137,7 +158,7 @@ def generate_message_weekly(chat_id):
     drivers_dict = {}
     balance = 0
     drivers, rent, user = get_drivers_vehicles_list(chat_id, Driver)
-    for driver in drivers:
+    for driver in drivers.filter(salary_calculation=SalaryCalculation.WEEK):
         driver_message = ''
         result = calculate_weekly_reports(start, end, driver)
         if result:
@@ -145,16 +166,14 @@ def generate_message_weekly(chat_id):
             driver_message += f"{driver} каса: {result[1]}\n"
             if result[5]:
                 driver_message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
-            if driver.schema in ("HALF", "CUSTOM"):
-                driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
+            if driver.schema.title in ("HALF", "DYNAMIC" "CUSTOM"):
+                driver_message += 'Зарплата {0} * {1} - Готівка {2}'.format(
                     result[1], driver.rate, result[2])
                 if result[4]:
                     driver_message += " - План {:.2f}".format(result[4])
-            elif driver.schema == "RENT":
-                driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
-                    result[1], driver.rate, result[2], driver.rental)
             else:
-                pass
+                driver_message += 'Зарплата {0} * {1} - Готівка {2} - Абонплата {3}'.format(
+                    result[1], driver.rate, result[2], driver.rental)
             if result[6]:
                 driver_message += f" - Оренда {result[6]}"
             driver_message += f" = {result[3]}\n"
@@ -163,7 +182,7 @@ def generate_message_weekly(chat_id):
             message += driver_message
         if driver_message:
             message += "*" * 39 + '\n'
-    manager_message = f'Ваш баланс за минулий тиждень:%.2f\n' % balance
+    manager_message = f'Ваш баланс:%.2f\n' % balance
     manager_message += message
     if user:
         drivers_dict[user.chat_id] = manager_message

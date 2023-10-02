@@ -232,20 +232,12 @@ class SchemaAdmin(admin.ModelAdmin):
 
 @admin.register(DriverSchemaRate)
 class DriverRateLevelsAdmin(admin.ModelAdmin):
-    list_display = ['schema', 'threshold', 'rate']
+    list_display = ['period', 'threshold', 'rate']
     list_per_page = 25
-
+    list_filter = ("period",)
     fieldsets = [
-        (None, {'fields': ['schema', 'threshold', 'rate']}),
+        (None, {'fields': ['period', 'threshold', 'rate']}),
     ]
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'schema':
-            try:
-                kwargs['queryset'] = db_field.related_model.objects.filter(title__in=("DYNAMIC_DAY", "DYNAMIC_WEEK"))
-            except ObjectDoesNotExist:
-                pass
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(RawGPS)
@@ -845,7 +837,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number',   'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
+                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate', 'salary_calculation',
                                                             )}),
                 ('Додатково',                   {'fields': ['partner', 'manager', 'vehicle', 'driver_status'
                                                             ]}),
@@ -856,7 +848,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number', 'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
+                ('Тарифний план',               {'fields': ('salary_calculation','schema', 'plan', 'rental', 'rate'
                                                             )}),
                 ('Додатково',                   {'fields': ['driver_status', 'manager',  'vehicle'
                                                             ]}),
@@ -866,7 +858,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number', 'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
+                ('Тарифний план',               {'fields': ('salary_calculation', 'schema', 'plan', 'rental', 'rate'
                                                             )}),
                 ('Додатково',                   {'fields': ['driver_status', 'vehicle'
                                                             ]}),
@@ -876,17 +868,19 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if not request.user.is_superuser:
             if db_field.name in ('manager', 'vehicle'):
-                kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
-
+                if request.user.groups.filter(name='Partner').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+                if request.user.groups.filter(name='Manager').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
         schema_field = form.cleaned_data.get('schema')
 
-        if schema_field == 'HALF':
+        if schema_field.title == 'HALF':
             obj.rate = 0.5
             obj.rental = obj.plan * obj.rate
-        elif schema_field == 'RENT':
+        elif schema_field.title == 'RENT':
             obj.rate = 1
         else:
             obj.rental = obj.plan * (1 - obj.rate)

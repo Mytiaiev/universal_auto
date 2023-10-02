@@ -38,7 +38,7 @@ services:
     volumes:
       - ./data/db:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U universal_auto_dev -d universal_auto_dev"]
       interval: 10s
