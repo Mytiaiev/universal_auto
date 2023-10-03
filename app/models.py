@@ -24,8 +24,8 @@ class Role(models.TextChoices):
 
 
 class SalaryCalculation(models.TextChoices):
-    WEEK = 'WEEK', 'Тижневий розрахунок'
-    DAY = 'DAY', 'Денний розрахунок'
+    WEEK = 'WEEK', 'Тижневий'
+    DAY = 'DAY', 'Денний'
 
 
 class Schema(models.Model):
@@ -607,7 +607,9 @@ class DriverSchemaRate(models.Model):
 
     @staticmethod
     def get_rate_tier(period):
-        return DriverSchemaRate.objects.filter(period=period).order_by('threshold')
+        data = DriverSchemaRate.objects.filter(period=period).order_by('threshold').values('threshold', 'rate')
+        result = [(decimal['threshold'], decimal['rate']) for decimal in data]
+        return result
 
 
 class RawGPS(models.Model):
@@ -1155,6 +1157,26 @@ class DriverEfficiency(models.Model):
     class Meta:
         verbose_name = 'Ефективність водія'
         verbose_name_plural = 'Ефективність водіїв'
+
+    def __str__(self):
+        return f"{self.driver}"
+
+
+class DriverPayments(models.Model):
+    report_from = models.DateField(verbose_name='Звіт з')
+    report_to = models.DateField(verbose_name='Звіт по')
+    report_type = models.CharField(max_length=25, choices=SalaryCalculation.choices, verbose_name='Тип звіту')
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name="Водій")
+    kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Заробіток за період')
+    cash = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Готівка')
+    rent_distance = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Орендована дистанція')
+    rent = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Оренда авто')
+    salary = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Виплачено водію')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, verbose_name="Партнер")
+
+    class Meta:
+        verbose_name = 'Виплати водію'
+        verbose_name_plural = 'Виплати водіям'
 
     def __str__(self):
         return f"{self.driver}"

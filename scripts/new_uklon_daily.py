@@ -1,6 +1,7 @@
+from pprint import pprint
+
 from auto.tasks import get_driver_reshuffles, check_available_fleets
 from selenium_ninja.bolt_sync import BoltRequest
-
 
 def run(*args):
     # rate = [(1600, 0.38), (1800, 0.44), (2000, 0.5), (2500, 0.55), (3000, 0.6)]

@@ -16,11 +16,11 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversation, VehicleSpending, DriverReshuffle
-from django.db.models import Sum, IntegerField, FloatField, Q
+    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation
+from django.db.models import Sum, IntegerField, FloatField, Q, DecimalField
 from django.db.models.functions import Cast, Coalesce
-from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
-    get_driver_efficiency_report
+from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_report, \
+    get_driver_efficiency_report, calculate_by_rate, calculate_rent
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_spot_keyboard, inline_second_payment_kb, inline_reject_order, personal_order_end_kb, \
     personal_driver_end_kb
@@ -419,23 +419,27 @@ def manager_paid_weekly(self, partner_pk):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def send_weekly_report(self, partner_pk):
+def send_driver_report(self, partner_pk, daily=False):
     result = []
-    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
-    managers.append(Partner.objects.filter(pk=partner_pk).values('chat_id').first())
+    managers = list(Manager.objects.filter(
+        partner=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id'))
+    managers.append(Partner.objects.filter(
+        pk=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id').first())
     for manager in managers:
-        result.append(generate_message_weekly(manager['chat_id']))
+        result.append(generate_message_report(manager['chat_id'], daily=daily))
     return result
 
 
 @app.task(bind=True, queue='beat_tasks')
-def send_daily_report(self, partner_pk):
+def send_daily_statistic(self, partner_pk):
     message = ''
     driver_dict_msg = {}
     dict_msg = {}
-    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    managers = list(Manager.objects.filter(
+        partner=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id'))
     if not managers:
-        managers = list(Partner.objects.filter(pk=partner_pk).values('chat_id'))
+        managers = list(Partner.objects.filter(
+            pk=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id'))
     for manager in managers:
         result = get_daily_report(manager_id=manager['chat_id'])
         if result:
@@ -881,6 +885,63 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
             pass
 
 
+@app.task(bind=True, queue='beat_tasks')
+def calculate_driver_reports(self, partner_pk, daily=False):
+    if daily:
+        start = end = timezone.localtime().date() - timedelta(days=1)
+        calculation = SalaryCalculation.DAY
+    else:
+        end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+        start = end - timedelta(days=6)
+        calculation = SalaryCalculation.WEEK
+    for driver in Driver.objects.filter(salary_calculation=calculation):
+        if DriverPayments.objects.filter(report_from=start,
+                                         report_to=end,
+                                         driver=driver).exists():
+            return
+        driver_report = SummaryReport.objects.filter(report_from__range=(start, end),
+                                                     full_name=driver)
+        if driver_report:
+
+            cash = driver_report.aggregate(
+                cash=Coalesce(Sum('total_amount_cash'), 0, output_field=DecimalField()))['cash']
+            kasa = driver_report.aggregate(
+                kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
+            rent = calculate_rent(start, end, driver)
+            rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', 15, partner=driver.partner.pk))
+            if kasa:
+                if driver.schema.title == "DYNAMIC":
+                    driver_spending = calculate_by_rate(driver, kasa)
+                    salary = '%.2f' % (driver_spending - cash - rent_value)
+                elif driver.schema.title in ("HALF", "CUSTOM"):
+                    if kasa < driver.plan:
+                        incomplete = (driver.plan - kasa) * Decimal(1 - driver.rate)
+                        salary = '%.2f' % (kasa * driver.rate - cash - incomplete - rent_value)
+                    else:
+                        salary = '%.2f' % (kasa * driver.rate - cash - rent_value)
+                else:
+                    efficiency_obj = DriverEfficiency.objects.filter(report_from__range=(start, end),
+                                                                     driver=driver)
+                    overall_distance = efficiency_obj.aggregate(
+                        distance=Coalesce(Sum('mileage'), 0, output_field=DecimalField()))['distance']
+                    rent = overall_distance - int(ParkSettings.get_value(
+                        "TOTAL_KM_PER_WEEK", 2000, partner=driver.partner.pk))
+                    rent_value = max(rent * int(ParkSettings.get_value(
+                        "OVERALL_KM_PRICE", 6, partner=driver.partner.pk)), 0)
+                    salary = '%.2f' % (kasa * driver.rate - cash - driver.rental - rent_value)
+
+                DriverPayments.objects.create(report_from=start,
+                                              report_to=end,
+                                              report_type=calculation,
+                                              driver=driver,
+                                              rent_distance=rent,
+                                              kasa=kasa,
+                                              cash=cash,
+                                              salary=salary,
+                                              rent=rent_value,
+                                              partner=Partner.get_partner(partner_pk))
+
+
 @app.on_after_finalize.connect
 def run_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute="*/2"), send_time_order.s())
@@ -908,9 +969,13 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="5"), add_money_to_vehicle.s(partner_id))
     sender.add_periodic_task(crontab(minute="20", hour="4"), get_driver_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_statistic.s(partner_id))
+    sender.add_periodic_task(crontab(minute="55", hour="4"), calculate_driver_reports.s(partner_id, daily=True))
+    sender.add_periodic_task(crontab(minute="55", hour="4", day_of_week="1"),
+                             calculate_driver_reports.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
-                             send_weekly_report.s(partner_id))
+                             send_driver_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="56", hour="8"), send_driver_report.s(partner_id, daily=True))
     # sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
                              # manager_paid_weekly.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="9", day_of_week="1"),

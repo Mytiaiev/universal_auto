@@ -5,6 +5,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError
 
 from scripts.google_calendar import GoogleCalendar
+from .filters import VehicleEfficiencyUserFilter, DriverEfficiencyUserFilter, RentInformationUserFilter, \
+    TransactionInvestorUserFilter, SummaryReportUserFilter, ReportUserFilter, VehicleManagerFilter
 from .models import *
 
 
@@ -16,18 +18,21 @@ models = {
     'Driver':                       {'view': True, 'add': False, 'change': True, 'delete': False},
     'Vehicle':                      {'view': True, 'add': False, 'change': True, 'delete': True},
     'Manager':                      {'view': True, 'add': True, 'change': True, 'delete': True},
-    'Investor':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Investor':                     {'view': True, 'add': True, 'change': True, 'delete': True},
     # 'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
     'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
     'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpending':             {'view': True, 'add': True, 'change': False, 'delete': False},
+    'VehicleSpending':              {'view': True, 'add': True, 'change': False, 'delete': False},
+    'DriverSchemaRate':             {'view': True, 'add': False, 'change': True, 'delete': False},
+    'TransactionConversation':      {'view': True, 'add': False, 'change': False, 'delete': False},
 }
 
 investor_permissions = {
     'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpending':             {'view': True, 'add': False, 'change': False, 'delete': False},
+    'VehicleSpending':              {'view': True, 'add': False, 'change': False, 'delete': False},
+    'TransactionConversation':      {'view': True, 'add': False, 'change': False, 'delete': False},
 }
 
 manager_permissions = {
@@ -38,7 +43,7 @@ manager_permissions = {
     'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
     'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpending':             {'view': True, 'add': True, 'change': False, 'delete': False},
+    'VehicleSpending':              {'view': True, 'add': True, 'change': False, 'delete': False},
 }
 
 group_permissions = {
@@ -238,6 +243,7 @@ class DriverRateLevelsAdmin(admin.ModelAdmin):
     fieldsets = [
         (None, {'fields': ['period', 'threshold', 'rate']}),
     ]
+    readonly_fields = ('period',)
 
 
 @admin.register(RawGPS)
@@ -419,7 +425,7 @@ class VehicleSpendingAdmin(admin.ModelAdmin):
 
 @admin.register(TransactionsConversation)
 class TransactionsConversationAdmin(admin.ModelAdmin):
-    list_filter = ['vehicle']
+    list_filter = (TransactionInvestorUserFilter, )
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -430,7 +436,7 @@ class TransactionsConversationAdmin(admin.ModelAdmin):
 
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ['vehicle']
+    list_filter = (VehicleEfficiencyUserFilter, )
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -457,7 +463,7 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(DriverEfficiency)
 class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ['driver']
+    list_filter = [DriverEfficiencyUserFilter]
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -513,7 +519,7 @@ class UberServiceAdmin(admin.ModelAdmin):
 
 @admin.register(RentInformation)
 class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ('driver', 'created_at')
+    list_filter = (RentInformationUserFilter, 'created_at')
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -553,7 +559,7 @@ class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)
 @admin.register(Payments)
 class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('vendor_name', 'full_name')
-    list_filter = ('vendor_name', 'full_name')
+    list_filter = ('vendor_name', ReportUserFilter)
     ordering = ('-report_from', 'full_name')
     list_per_page = 25
 
@@ -611,7 +617,7 @@ class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(SummaryReport)
 class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ('full_name',)
+    list_filter = (SummaryReportUserFilter,)
     ordering = ('-report_from', 'full_name')
     list_per_page = 25
 
@@ -905,7 +911,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     exclude = ('deleted_at',)
     list_display_links = ('licence_plate',)
     list_per_page = 25
-    list_filter = ('manager',)
+    list_filter = (VehicleManagerFilter,)
 
     def get_list_display(self, request):
         if request.user.is_superuser:
