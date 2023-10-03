@@ -23,7 +23,7 @@ models = {
     'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
     'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpending':              {'view': True, 'add': True, 'change': False, 'delete': False},
+    'VehicleSpending':              {'view': True, 'add': True, 'change': True, 'delete': True},
     'DriverSchemaRate':             {'view': True, 'add': False, 'change': True, 'delete': False},
     'TransactionConversation':      {'view': True, 'add': False, 'change': False, 'delete': False},
 }
@@ -240,10 +240,28 @@ class DriverRateLevelsAdmin(admin.ModelAdmin):
     list_display = ['period', 'threshold', 'rate']
     list_per_page = 25
     list_filter = ("period",)
-    fieldsets = [
-        (None, {'fields': ['period', 'threshold', 'rate']}),
-    ]
     readonly_fields = ('period',)
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.readonly_fields if not request.user.is_superuser else tuple()
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                (None, {'fields': ['period', 'threshold', 'rate', 'partner']}),
+            ]
+        else:
+            fieldsets = [
+                (None, {'fields': ['period', 'threshold', 'rate']}),
+            ]
+        return fieldsets
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if request.user.groups.filter(name='Partner').exists():
+            queryset = queryset.filter(partner__user=request.user)
+
+        return queryset
 
 
 @admin.register(RawGPS)
@@ -421,6 +439,15 @@ class VehicleSpendingAdmin(admin.ModelAdmin):
             queryset = queryset.filter(vehicle__partner__user=request.user)
 
         return queryset
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser:
+            if db_field.name == 'vehicle':
+                if request.user.groups.filter(name='Partner').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+                if request.user.groups.filter(name='Manager').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(TransactionsConversation)
