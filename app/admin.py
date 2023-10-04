@@ -721,7 +721,7 @@ class PartnerAdmin(admin.ModelAdmin):
 
 
 @admin.register(Investor)
-class InvestorAdmin(admin.ModelAdmin):
+class InvestorAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = ('first_name', 'last_name', 'phone_number')
     list_per_page = 25
 
@@ -842,7 +842,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     ordering = ('name', 'second_name')
     list_display_links = ('name', 'second_name')
     list_per_page = 25
-    readonly_fields = ('name', 'second_name', 'email', 'phone_number',)
+    readonly_fields = ('name', 'second_name', 'email', 'phone_number', 'driver_status')
 
     def get_readonly_fields(self, request, obj=None):
         return self.readonly_fields if not request.user.is_superuser else tuple()
@@ -939,6 +939,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display_links = ('licence_plate',)
     list_per_page = 25
     list_filter = (VehicleManagerFilter,)
+    readonly_fields = ('licence_plate',)
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -947,7 +948,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return ['licence_plate', 'name',
                     'vin_code',
                     'purchase_price',
-                    'manager', 'created_at'
+                    'manager', 'investor_car' 'created_at'
                     ]
         else:
             return ['licence_plate', 'name',
@@ -992,7 +993,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if not request.user.is_superuser:
-            if db_field.name == 'manager':
+            if db_field.name in ('manager', 'investor_car'):
                 kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)

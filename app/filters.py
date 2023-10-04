@@ -11,6 +11,7 @@ class VehicleEfficiencyUserFilter(admin.SimpleListFilter):
     def lookups(self, request, model_admin):
         user = request.user
         queryset = CarEfficiency.objects.all()
+        vehicle_choices = []
         if user.groups.filter(name='Manager').exists():
             vehicles = Vehicle.objects.filter(manager__user=user)
             queryset = queryset.filter(vehicle__in=vehicles)
@@ -19,14 +20,13 @@ class VehicleEfficiencyUserFilter(admin.SimpleListFilter):
         if user.groups.filter(name='Investor').exists():
             vehicles = Vehicle.objects.filter(investor_car__user=user)
             queryset = queryset.filter(vehicle__in=vehicles)
-        vehicle_ids = queryset.values_list('vehicle_id', flat=True)
-        vehicle_labels = queryset.values_list('vehicle__licence_plate', flat=True)
-        return set(zip(vehicle_ids, vehicle_labels))
+        vehicle_choices.extend(queryset.values_list('vehicle_id', 'vehicle__licence_plate'))
+        return sorted(set(vehicle_choices), key=lambda x: x[1])
 
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            return queryset.filter(vehicle__id=value)
+            return queryset.filter(vehicle__id=int(value))
 
 
 class TransactionInvestorUserFilter(admin.SimpleListFilter):
@@ -36,19 +36,19 @@ class TransactionInvestorUserFilter(admin.SimpleListFilter):
     def lookups(self, request, model_admin):
         user = request.user
         queryset = TransactionsConversation.objects.all()
+        vehicle_choices = []
         if user.groups.filter(name='Investor').exists():
             vehicles = Vehicle.objects.filter(investor_car__user=user)
             queryset.filter(vehicle__in=vehicles)
         if user.groups.filter(name='Partner').exists():
             queryset = TransactionsConversation.objects.filter(investor__partner__user=user)
-        vehicle_ids = queryset.values_list('vehicle_id', flat=True)
-        vehicle_labels = queryset.values_list('vehicle__licence_plate', flat=True)
-        return set(zip(vehicle_ids, vehicle_labels))
+        vehicle_choices.extend(queryset.values_list('vehicle_id', 'vehicle__licence_plate'))
+        return sorted(set(vehicle_choices), key=lambda x: x[1])
 
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            return queryset.filter(vehicle__id=value)
+            return queryset.filter(vehicle__id=int(value))
 
 
 class VehicleManagerFilter(admin.SimpleListFilter):
@@ -58,18 +58,20 @@ class VehicleManagerFilter(admin.SimpleListFilter):
     def lookups(self, request, model_admin):
         user = request.user
         queryset = Vehicle.objects.exclude(manager__isnull=True)
-        if user.groups.filter(name='Partner').exists():
-            queryset = queryset.filter(partner__user=user)
-        if user.groups.filter(name='Investor').exists():
-            queryset = queryset.filter(investor_car__user=user)
-        manager_ids = queryset.values_list('manager_id', flat=True)
-        manager_labels = [f'{item.manager.first_name} {item.manager.last_name}' for item in queryset]
-        return set(zip(manager_ids, manager_labels))
+        if not user.groups.filter(name='Manager').exists():
+            if user.groups.filter(name='Partner').exists():
+                queryset = queryset.filter(partner__user=user)
+            if user.groups.filter(name='Investor').exists():
+                queryset = queryset.filter(investor_car__user=user)
+            manager_ids = queryset.values_list('manager_id', flat=True)
+            manager_labels = [f'{item.manager.first_name} {item.manager.last_name}' for item in queryset]
+            return set(zip(manager_ids, manager_labels))
 
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            return queryset.filter(manager__id=value)
+            if not request.user.groups.filter(name='Manager').exists():
+                return queryset.filter(manager__id=value)
 
 
 class DriverRelatedFilter(admin.SimpleListFilter):
