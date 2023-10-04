@@ -76,7 +76,7 @@ def calculate_by_rate(driver, kasa):
     rate_tiers = DriverSchemaRate.get_rate_tier(period=driver.salary_calculation)
     driver_spending = 0
     tier = 0
-    rates = rate_tiers[2:] if kasa >= driver.plan else rate_tiers
+    rates = rate_tiers[2:] if kasa >= driver.schema.plan else rate_tiers
     for tier_kasa, rate in rates:
         tier_kasa -= tier
         if kasa > tier_kasa:
@@ -133,18 +133,18 @@ def generate_message_report(chat_id, daily=False):
             driver_message += f"{driver} каса: {payment.kasa}\n"
             if payment.rent:
                 driver_message += "Оренда авто: {0} * {1} = {2}\n".format(payment.rent_distance, rent, payment.rent)
-            if driver.schema.title in ("HALF", "CUSTOM"):
+            if driver.schema.schema in ("HALF", "CUSTOM"):
                 driver_message += 'Зарплата {0} * {1} - Готівка {2}'.format(
-                    payment.kasa, driver.rate, payment.cash)
-                if payment.kasa < driver.plan:
-                    incomplete = (driver.plan - payment.kasa) * Decimal(1 - driver.rate)
+                    payment.kasa, driver.schema.rate, payment.cash)
+                if payment.kasa < driver.schema.plan:
+                    incomplete = (driver.schema.plan - payment.kasa) * Decimal(1 - driver.schema.rate)
                     driver_message += " - План {:.2f}".format(incomplete)
-            elif driver.schema.title == "DYNAMIC":
+            elif driver.schema.schema == "DYNAMIC":
                 driver_message += 'Зарплата {0} - Готівка {1}'.format(
                     payment.salary + payment.cash + payment.rent,  payment.cash)
             else:
                 driver_message += 'Зарплата {0} * {1} - Готівка {2} - Абонплата {3}'.format(
-                    payment.kasa, driver.rate, payment.cash, driver.rental)
+                    payment.kasa, driver.schema.rate, payment.cash, driver.schema.rental)
             if payment.rent:
                 driver_message += f" - Оренда {payment.rent}"
             driver_message += f" = {payment.salary}\n"

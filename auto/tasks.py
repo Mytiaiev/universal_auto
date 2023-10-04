@@ -232,7 +232,8 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
-                        clean_kasa += report.total_amount_without_fee * (1 - driver.rate) if driver.schema in ("HALF", "CUSTOM") else driver.rental / 7
+                        clean_kasa += report.total_amount_without_fee * (1 - driver.schema.rate) if \
+                            driver.schema.schema in ("HALF", "CUSTOM") else driver.schema.rental / 7
 
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
@@ -910,15 +911,15 @@ def calculate_driver_reports(self, partner_pk, daily=False):
             rent = calculate_rent(start, end, driver)
             rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', 15, partner=driver.partner.pk))
             if kasa:
-                if driver.schema.title == "DYNAMIC":
+                if driver.schema.schema == "DYNAMIC":
                     driver_spending = calculate_by_rate(driver, kasa)
                     salary = '%.2f' % (driver_spending - cash - rent_value)
-                elif driver.schema.title in ("HALF", "CUSTOM"):
-                    if kasa < driver.plan:
-                        incomplete = (driver.plan - kasa) * Decimal(1 - driver.rate)
-                        salary = '%.2f' % (kasa * driver.rate - cash - incomplete - rent_value)
+                elif driver.schema.schema in ("HALF", "CUSTOM"):
+                    if kasa < driver.schema.plan:
+                        incomplete = (driver.schema.plan - kasa) * Decimal(1 - driver.schema.rate)
+                        salary = '%.2f' % (kasa * driver.schema.rate - cash - incomplete - rent_value)
                     else:
-                        salary = '%.2f' % (kasa * driver.rate - cash - rent_value)
+                        salary = '%.2f' % (kasa * driver.schema.rate - cash - rent_value)
                 else:
                     efficiency_obj = DriverEfficiency.objects.filter(report_from__range=(start, end),
                                                                      driver=driver)
@@ -928,7 +929,7 @@ def calculate_driver_reports(self, partner_pk, daily=False):
                         "TOTAL_KM_PER_WEEK", 2000, partner=driver.partner.pk))
                     rent_value = max(rent * int(ParkSettings.get_value(
                         "OVERALL_KM_PRICE", 6, partner=driver.partner.pk)), 0)
-                    salary = '%.2f' % (kasa * driver.rate - cash - driver.rental - rent_value)
+                    salary = '%.2f' % (kasa * driver.schema.rate - cash - driver.schema.rental - rent_value)
 
                 DriverPayments.objects.create(report_from=start,
                                               report_to=end,

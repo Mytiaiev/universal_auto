@@ -480,6 +480,8 @@ def login_in(action=None, user_id=None, success_login=None, login_name=None, pas
             update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
             update_park_set(user_id, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
             update_park_set(user_id, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
+            update_park_set(user_id, 'TOTAL_KM_PER_WEEK', 2000, description='Ліміт на тиждень (км)')
+            update_park_set(user_id, 'OVERALL_KM_PRICE', 6, description='Вартість км понад лімітом (грн)')
             success_login = True
     return success_login
 
@@ -490,7 +492,7 @@ def partner_logout(action, user_pk):
     park_dict = {
         'bolt_logout': 'BOLT_URL_ID_PARK',
         'uklon_logout': 'WITHDRAW_UKLON',
-        'gps_logout': ('FREE_RENT', 'RENT_PRICE')
+        'gps_logout': ('FREE_RENT', 'RENT_PRICE', "TOTAL_KM_PER_WEEK", "OVERALL_KM_PRICE")
     }
     credential_dict = {
         'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),

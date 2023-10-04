@@ -30,28 +30,6 @@ class SalaryCalculation(models.TextChoices):
     DAY = 'DAY', 'Денний'
 
 
-class Schema(models.Model):
-    SCHEMA_CHOICES = [
-        ('RENT', 'Схема оренди'),
-        ('HALF', 'Схема 50/50'),
-        ('DYNAMIC', 'Динамічна схема'),
-        ('CUSTOM', 'Індивідуальний відсоток'),
-    ]
-
-    title = models.CharField(max_length=25, choices=SCHEMA_CHOICES, verbose_name='Назва схеми')
-
-    @classmethod
-    def get_half_schema_id(cls, title="HALF"):
-        try:
-            schema = cls.objects.get(title=title)
-            return schema.pk
-        except ObjectDoesNotExist:
-            return None
-
-    def __str__(self):
-        return self.get_title_display() if self.title else ''
-
-
 class Partner(models.Model):
     role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
@@ -75,6 +53,38 @@ class Partner(models.Model):
     class Meta:
         verbose_name = 'Власника'
         verbose_name_plural = 'Власники'
+
+
+class Schema(models.Model):
+    SCHEMA_CHOICES = [
+        ('RENT', 'Схема оренди'),
+        ('HALF', 'Схема 50/50'),
+        ('DYNAMIC', 'Динамічна схема'),
+        ('CUSTOM', 'Індивідуальний відсоток'),
+    ]
+
+    title = models.CharField(max_length=255, verbose_name='Назва схеми')
+    schema = models.CharField(max_length=25, default=SCHEMA_CHOICES[1],
+                              choices=SCHEMA_CHOICES, verbose_name='Шаблон схеми')
+    plan = models.IntegerField(default=12000, verbose_name='План водія')
+    rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+
+    @classmethod
+    def get_half_schema_id(cls, title="HALF"):
+        try:
+            schema = cls.objects.get(schema=title)
+            return schema.pk
+        except ObjectDoesNotExist:
+            return None
+
+    def __str__(self):
+        return self.title if self.title else ''
+
+    class Meta:
+        verbose_name = 'Схему роботи'
+        verbose_name_plural = 'Схеми роботи'
 
 
 class Payments(models.Model):
@@ -440,11 +450,8 @@ class Driver(User):
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
     salary_calculation = models.CharField(max_length=25, choices=SalaryCalculation.choices,
                                           default=SalaryCalculation.WEEK, verbose_name='Період розрахунку зарплати')
-    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, null=True,
-                               default=Schema.get_half_schema_id, verbose_name='Схема роботи')
-    plan = models.IntegerField(default=12000, verbose_name='План водія')
-    rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
-    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
+    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, default=Schema.get_half_schema_id,
+                               verbose_name='Схема роботи')
 
     class Meta:
         verbose_name = 'Водія'

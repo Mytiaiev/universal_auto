@@ -1,5 +1,6 @@
 import json
 
+from celery.result import AsyncResult
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.models import User
@@ -256,7 +257,7 @@ class GetRequestHandler:
         return response
 
     def handle_check_task(self, request):
-        upd = update_driver_data.AsyncResult(request.GET.get('task_id'))
+        upd = AsyncResult(request.GET.get('task_id'))
         if upd.ready():
             result = upd.get()
             json_data = JsonResponse({'data': result[1]}, safe=False)

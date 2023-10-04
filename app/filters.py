@@ -58,11 +58,9 @@ class VehicleManagerFilter(admin.SimpleListFilter):
     def lookups(self, request, model_admin):
         user = request.user
         queryset = Vehicle.objects.exclude(manager__isnull=True)
-        if not user.groups.filter(name='Manager').exists():
+        if not user.groups.filter(name__in=('Manager', 'Investor')).exists():
             if user.groups.filter(name='Partner').exists():
                 queryset = queryset.filter(partner__user=user)
-            if user.groups.filter(name='Investor').exists():
-                queryset = queryset.filter(investor_car__user=user)
             manager_ids = queryset.values_list('manager_id', flat=True)
             manager_labels = [f'{item.manager.first_name} {item.manager.last_name}' for item in queryset]
             return set(zip(manager_ids, manager_labels))
@@ -70,7 +68,7 @@ class VehicleManagerFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            if not request.user.groups.filter(name='Manager').exists():
+            if not request.user.groups.filter(name__in=('Manager', 'Investor')).exists():
                 return queryset.filter(manager__id=value)
 
 
