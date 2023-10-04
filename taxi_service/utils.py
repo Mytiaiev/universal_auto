@@ -377,6 +377,7 @@ def update_park_set(partner, key, value, description=None, check_value=True):
             setting.value = value
             setting.save()
     except ObjectDoesNotExist:
+        partner = Partner.objects.get(pk=partner)
         ParkSettings.objects.create(key=key, value=value, description=description, partner=partner)
 
 
