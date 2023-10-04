@@ -948,7 +948,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return ['licence_plate', 'name',
                     'vin_code',
                     'purchase_price',
-                    'manager', 'investor_car' 'created_at'
+                    'manager', 'investor_car', 'created_at'
                     ]
         else:
             return ['licence_plate', 'name',

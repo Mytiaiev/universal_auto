@@ -16,7 +16,7 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation
+    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, CredentialPartner
 from django.db.models import Sum, IntegerField, FloatField, Q, DecimalField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_report, \
@@ -53,7 +53,7 @@ fleets = {
 
 
 def check_available_fleets(partner_pk):
-    settings = ParkSettings.objects.filter(
+    settings = CredentialPartner.objects.filter(
                 Q(key="BOLT_PASSWORD") |
                 Q(key="UKLON_PASSWORD") |
                 Q(key="UBER_PASSWORD") |
@@ -129,11 +129,11 @@ def get_bolt_session(self, partner_pk, login=None, password=None):
         chrome = SeleniumTools(partner_pk)
         success = chrome.bolt_login(login=login, password=password)
         login_in(action='bolt', user_id=partner_pk, success_login=True, login_name=login, password=password, url=success[1])
+        return partner_pk, success[0]
     except Exception as e:
         success = False
         logger.error(e)
-
-    return partner_pk, success[0]
+        return partner_pk, success
 
 
 @app.task(bind=True, queue='beat_tasks')

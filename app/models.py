@@ -1,3 +1,4 @@
+import os
 import string
 import random
 import csv
@@ -11,6 +12,7 @@ from django.db import models, IntegrityError, ProgrammingError
 from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from django.contrib.auth.models import User as AuUser
+from cryptography.fernet import Fernet
 
 
 class Role(models.TextChoices):
@@ -1219,13 +1221,28 @@ class ParkSettings(models.Model):
             return default
         return setting.value
 
-    @classmethod
-    def get_key(cls, key, default=None):
+
+class CredentialPartner(models.Model):
+    key = models.CharField(max_length=255, verbose_name='Ключ')
+    value = models.BinaryField(verbose_name='Значення')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+
+    @staticmethod
+    def encrypt_credential(value):
+        return Fernet(os.environ.get("CRYPT_KEY").encode('utf-8')).encrypt(value.encode())
+
+    @staticmethod
+    def decrypt_credential(value):
+        key = os.environ.get("CRYPT_KEY").encode('utf-8')
+        return Fernet(key).decrypt(value).decode()
+
+    @staticmethod
+    def get_value(key, default=None, **kwargs):
         try:
-            setting = cls.objects.get(key=key)
-            print(setting.key)
-        except (ProgrammingError, ObjectDoesNotExist):
+            setting = CredentialPartner.objects.get(key=key, **kwargs)
+        except ObjectDoesNotExist:
             return default
+        return setting.decrypt_credential(bytes(setting.value))
 
 
 class Service(PolymorphicModel):

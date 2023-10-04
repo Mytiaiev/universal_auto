@@ -5,7 +5,8 @@ from datetime import datetime
 import requests
 from django.utils import timezone
 
-from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder
+from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
+    CredentialPartner
 from scripts.redis_conn import redis_instance
 from selenium_ninja.synchronizer import Synchronizer
 from django.db import IntegrityError
@@ -22,11 +23,11 @@ class UklonRequest(Synchronizer):
 
     def park_payload(self) -> dict:
         payload = {
-            'client_id': ParkSettings.get_value(key='CLIENT_ID', partner=self.partner_id),
-            'contact': ParkSettings.get_value(key='UKLON_NAME', partner=self.partner_id),
+            'client_id': CredentialPartner.get_value(key='CLIENT_ID', partner=self.partner_id),
+            'contact': CredentialPartner.get_value(key='UKLON_NAME', partner=self.partner_id),
             'device_id': "38c13dc5-2ef3-4637-99f5-8de26b2e8216",
             'grant_type': "password_mfa",
-            'password': ParkSettings.get_value(key='UKLON_PASSWORD', partner=self.partner_id),
+            'password': CredentialPartner.get_value(key='UKLON_PASSWORD', partner=self.partner_id),
         }
         return payload
 

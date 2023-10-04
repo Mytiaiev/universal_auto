@@ -18,7 +18,7 @@ from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException, NoSuchElementException, InvalidArgumentException
 
 from app.models import ParkSettings, UberService, UberSession, Partner, BoltService, NewUklonService, NewUklonFleet, \
-    FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService
+    FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService, CredentialPartner
 from auto import settings
 from scripts.redis_conn import redis_instance, get_logger
 
@@ -262,7 +262,7 @@ class SeleniumTools:
         if login:
             input_login.send_keys(login)
         else:
-            input_login.send_keys(ParkSettings.get_value("UBER_NAME", partner=self.partner))
+            input_login.send_keys(CredentialPartner.get_value("UBER_NAME", partner=self.partner))
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
         try:
@@ -337,7 +337,7 @@ class SeleniumTools:
         if password:
             input_password.send_keys(password)
         else:
-            input_password.send_keys(ParkSettings.get_value("UBER_PASSWORD", partner=self.partner))
+            input_password.send_keys(CredentialPartner.get_value("UBER_PASSWORD", partner=self.partner))
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
 

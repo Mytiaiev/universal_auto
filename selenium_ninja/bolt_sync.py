@@ -8,7 +8,8 @@ import requests
 from django.db import IntegrityError
 from django.utils import timezone
 
-from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder
+from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
+    CredentialPartner
 from auto import settings
 from selenium_ninja.synchronizer import Synchronizer
 
@@ -21,8 +22,8 @@ class BoltRequest(Synchronizer):
 
     def get_login_token(self):
         payload = {
-            'username': ParkSettings.get_value("BOLT_NAME", partner=self.partner_id),
-            'password': ParkSettings.get_value("BOLT_PASSWORD", partner=self.partner_id),
+            'username': CredentialPartner.get_value("BOLT_NAME", partner=self.partner_id),
+            'password': CredentialPartner.get_value("BOLT_PASSWORD", partner=self.partner_id),
             'device_name': "Chrome",
             'device_os_version': "NT 10.0",
             "device_uid": "6439b6c1-37c2-4736-b898-cb2a8608e6e2"
