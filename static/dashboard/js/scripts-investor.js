@@ -141,35 +141,33 @@ barChart.render();
 // AREA CHART
 let areaChartOptions = {
 	series: [{
-		name: "",
-		data: [''],
-	}, {
-		name: "",
-		data: [''],
+		data: [],
+		name: gettext("Пробіг (км): "),
 	}],
 	chart: {
-		type: "area",
+		type: "bar",
 		background: "transparent",
 		height: 350,
-		stacked: false,
 		toolbar: {
 			show: false,
 		},
 	},
-	colors: ["#00ab57", "#d50000", "#ff6d00", "#583cb3", "#c51162", "#00bfa5"],
-	labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
+	colors: [
+		"#2e7d32",
+	],
+	plotOptions: {
+		bar: {
+			distributed: true,
+			borderRadius: 4,
+			horizontal: true,
+			columnWidth: "40%",
+		}
+	},
 	dataLabels: {
 		enabled: false,
 	},
 	fill: {
-		gradient: {
-			opacityFrom: 0.4,
-			opacityTo: 0.1,
-			shadeIntensity: 1,
-			stops: [0, 100],
-			type: "vertical",
-		},
-		type: "gradient",
+		opacity: 1,
 	},
 	grid: {
 		borderColor: "#55596e",
@@ -188,19 +186,48 @@ let areaChartOptions = {
 		labels: {
 			colors: "#f5f7ff",
 		},
-		show: true,
+		show: false,
 		position: "top",
-		horizontalAlign: 'left',
-	},
-	markers: {
-		size: 6,
-		strokeColors: "#1b2635",
-		strokeWidth: 3,
 	},
 	stroke: {
-		curve: "smooth",
+		colors: ["transparent"],
+		show: true,
+		width: 2
 	},
-	xAxis: {
+	tooltip: {
+		shared: true,
+		intersect: false,
+		theme: "dark",
+	},
+	xaxis: {
+		categories: [],
+		title: {
+			style: {
+				color: "#f5f7ff",
+			},
+		},
+		axisBorder: {
+			show: true,
+			color: "#55596e",
+		},
+		axisTicks: {
+			show: true,
+			color: "#55596e",
+		},
+		labels: {
+			style: {
+				colors: "#f5f7ff",
+			},
+			rotate: -45,
+		},
+	},
+	yaxis: {
+		title: {
+			text: gettext("Пробіг (км.)"),
+			style: {
+				color: "#f5f7ff",
+			},
+		},
 		axisBorder: {
 			color: "#55596e",
 			show: true,
@@ -210,46 +237,10 @@ let areaChartOptions = {
 			show: true,
 		},
 		labels: {
-			offsetY: 5,
 			style: {
 				colors: "#f5f7ff",
 			},
 		},
-	},
-	yAxis:
-		[
-			{
-				title: {
-					text: gettext("пробіг км"),
-					style: {
-						color: "#f5f7ff",
-					},
-				},
-				labels: {
-					style: {
-						colors: ["#f5f7ff"],
-					},
-				},
-			},
-			{
-				opposite: true,
-				title: {
-					text: gettext("пробіг км"),
-					style: {
-						color: "#f5f7ff",
-					},
-				},
-				labels: {
-					style: {
-						colors: ["#f5f7ff"],
-					},
-				},
-			},
-		],
-	tooltip: {
-		shared: true,
-		intersect: false,
-		theme: "dark",
 	}
 };
 
@@ -343,33 +334,29 @@ function loadEffectiveChart(period, startDate, endDate) {
 				$("#noDataMessage-2").hide();
 				$('#area-chart').show();
 				let carData = {};
+
 				// Проходимося по кожному ідентифікатору автомобіля
 				Object.keys(dataObject).forEach(function (carNumber) {
-					carData[carNumber] = dataObject[carNumber].map(function (item) {
-						return {
-							date: new Date(item.date_effective),
-							mileage: parseFloat(item.mileage)
-						};
-					});
+					carData[carNumber] = dataObject[carNumber].reduce(function (totalMileage, item) {
+						return totalMileage + parseFloat(item.mileage);
+					}, 0).toFixed(2);
 				});
 
-				let mileageSeries = Object.keys(carData).map(function (carNumber) {
-					return {
-						name: carNumber,
-						data: carData[carNumber].map(function (entry) {
-							return entry.mileage;
-						})
-					};
+				// Сортуємо об'єкт за значеннями
+				let sortedKeys = Object.keys(carData).sort(function (a, b) {
+					return carData[a] - carData[b];
 				});
 
-				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
+				let sortedFormattedData = {};
+				sortedKeys.forEach(function (key) {
+					sortedFormattedData[key] = carData[key];
 				});
 
-				// Оновити опції графіка з новими даними
-				areaChartOptions.series = mileageSeries;
-				areaChartOptions.labels = dates;
+				console.log(sortedFormattedData);
 
+
+				areaChartOptions.series[0].data = Object.values(sortedFormattedData);
+				areaChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
 				areaChart.updateOptions(areaChartOptions);
 			}
 		}
@@ -503,11 +490,5 @@ $(document).ready(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
-	});
-
-	const resetButton = $("#reset-button");
-
-	resetButton.on("click", function () {
-		areaChart.resetSeries();
 	});
 });
