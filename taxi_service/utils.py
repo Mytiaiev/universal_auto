@@ -315,7 +315,7 @@ def average_effective_vehicle():
     if vehicle:
         mileage = vehicle.aggregate(Sum('mileage'))['mileage__sum'] or 0
         total_kasa = vehicle.aggregate(Sum('total_kasa'))['total_kasa__sum'] or 0
-        effective = total_kasa / mileage
+        effective = total_kasa / mileage if mileage != 0 else 0
         effective = float('{:.2f}'.format(effective))
 
     return effective, start_date_formatted, end_date_formatted
