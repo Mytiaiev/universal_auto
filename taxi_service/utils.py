@@ -457,10 +457,8 @@ def get_driver_info(request, period, user_id, action, start_date=None, end_date=
 def login_in(action=None, user_id=None, success_login=None, login_name=None, password=None, url=None, token=None):
     if action == 'bolt':
         if success_login:
-            bolt_url_id = url.split('/')[-2]
             update_park_set(user_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
             update_park_set(user_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
-            update_park_set(user_id, 'BOLT_URL_ID_PARK', bolt_url_id, description='BOLT_URL_ID_Парка')
     elif action == 'uklon':
         if success_login:
             update_park_set(user_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)

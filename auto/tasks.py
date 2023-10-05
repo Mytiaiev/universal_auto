@@ -125,15 +125,9 @@ def get_uber_session(self, partner_pk, login=None, password=None):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_bolt_session(self, partner_pk, login=None, password=None):
-    try:
-        chrome = SeleniumTools(partner_pk)
-        success = chrome.bolt_login(login=login, password=password)
-        login_in(action='bolt', user_id=partner_pk, success_login=True, login_name=login, password=password, url=success[1])
-        return partner_pk, success[0]
-    except Exception as e:
-        success = False
-        logger.error(e)
-        return partner_pk, success
+    success = BoltRequest(partner_pk).get_login_token(login=login, password=password)
+    login_in(action='bolt', user_id=partner_pk, success_login=success, login_name=login, password=password)
+    return partner_pk, success
 
 
 @app.task(bind=True, queue='beat_tasks')

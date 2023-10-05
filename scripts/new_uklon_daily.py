@@ -1,3 +1,5 @@
+from selenium_ninja.bolt_sync import BoltRequest
+
 
 def run(*args):
-    pass
+    BoltRequest(4).get_access_token()
