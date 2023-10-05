@@ -256,9 +256,15 @@ class SeleniumTools:
         except InvalidArgumentException:
             return False
         time.sleep(self.sleep)
-        input_login = WebDriverWait(self.driver, self.sleep).until(
-            ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
-        clickandclear(input_login)
+        try:
+            input_login = WebDriverWait(self.driver, self.sleep).until(
+                ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
+            clickandclear(input_login)
+        except TimeoutException:
+            self.driver.refresh()
+            input_login = WebDriverWait(self.driver, self.sleep).until(
+                ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
+            clickandclear(input_login)
         if login:
             input_login.send_keys(login)
         else:

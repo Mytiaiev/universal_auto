@@ -61,15 +61,15 @@ class Synchronizer:
                                         ) & Q(partner=self.partner_id)).first()
         if not driver and kwargs['email']:
             driver = Driver.objects.filter(email__icontains=kwargs['email']).first()
-            if not driver:
-                driver = Driver.objects.create(name=name,
-                                               second_name=second_name,
-                                               phone_number=kwargs['phone_number']
-                                               if len(kwargs['phone_number']) <= 13 else None,
-                                               email=kwargs['email'],
-                                               vehicle=self.get_or_create_vehicle(**kwargs),
-                                               role=Role.DRIVER,
-                                               partner=Partner.get_partner(self.partner_id))
+        if not driver:
+            driver = Driver.objects.create(name=name,
+                                           second_name=second_name,
+                                           phone_number=kwargs['phone_number']
+                                           if len(kwargs['phone_number']) <= 13 else None,
+                                           email=kwargs['email'],
+                                           vehicle=self.get_or_create_vehicle(**kwargs),
+                                           role=Role.DRIVER,
+                                           partner=Partner.get_partner(self.partner_id))
             try:
                 client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
                 driver.chat_id = client.chat_id
