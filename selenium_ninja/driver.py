@@ -21,6 +21,7 @@ from app.models import ParkSettings, UberService, UberSession, Partner, BoltServ
     FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService, CredentialPartner
 from auto import settings
 from scripts.redis_conn import redis_instance, get_logger
+from selenium_ninja.synchronizer import InfinityTokenError, AuthenticationError
 
 
 class SeleniumTools:
@@ -122,7 +123,6 @@ class SeleniumTools:
             if cookie.get('name') == 'sessions':
                 session = cookie.get('value')
         self.quit()
-        infinity_token = None
         if session:
             params = {
                 'sid': session,
@@ -135,50 +135,11 @@ class SeleniumTools:
                 if not token.get('dur'):
                     infinity_token = token['h']
                     break
-            return infinity_token
-
-    def bolt_login(self, login, password):
-        try:
-            self.driver.get(f"{BoltService.get_value('BOLT_LOGIN_URL')}")
-            if self.sleep:
-                time.sleep(self.sleep)
-            element = WebDriverWait(self.driver, self.sleep).until(
-                ec.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_1'))))
-            element.clear()
-            element.send_keys(login)
-            element = WebDriverWait(self.driver, self.sleep).until(
-                ec.presence_of_element_located((By.ID, BoltService.get_value('BOLT_LOGIN_2'))))
-            element.clear()
-            element.send_keys(password)
-            self.driver.find_element(By.XPATH, BoltService.get_value('BOLT_LOGIN_3')).click()
-            time.sleep(self.sleep)
-            self.driver.find_element(By.XPATH, BoltService.get_value('CHECK_LOGIN_BOLT'))
-            url = self.driver.current_url
-            login_success = True
-        except (NoSuchElementException, InvalidArgumentException):
-            url = None
-            login_success = False
-        self.quit()
-        return login_success, url
-
-    def uklon_login(self, login, password):
-        try:
-            self.driver.get(NewUklonService.get_value('UKLON_LOGIN_1'))
-            if self.sleep:
-                time.sleep(self.sleep)
-            log = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_2'))
-            log.send_keys(login)
-            pas = self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_3'))
-            clickandclear(pas)
-            pas.send_keys(password)
-            self.driver.find_element(By.XPATH, NewUklonService.get_value('UKLON_LOGIN_4')).click()
-            time.sleep(self.sleep)
-            self.driver.find_element(By.XPATH, NewUklonService.get_value('CHECK_LOGIN_UKLON'))
-            login_success = True
-        except (NoSuchElementException, InvalidArgumentException):
-            login_success = False
-        self.quit()
-        return login_success
+            else:
+                raise InfinityTokenError
+        else:
+            raise AuthenticationError(f"Gps login or password incorrect.")
+        return infinity_token
 
     def add_driver(self, job_application):
 
@@ -251,10 +212,10 @@ class SeleniumTools:
         self.quit()
 
     def uber_login(self, session=None, login=None, password=None):
-        try:
-            self.driver.get(UberService.get_value('UBER_LOGIN_URL'))
-        except InvalidArgumentException:
-            return False
+        if not (login and password):
+            login = CredentialPartner.get_value("UBER_NAME", partner=self.partner)
+            password = CredentialPartner.get_value("UBER_PASSWORD", partner=self.partner)
+        self.driver.get(UberService.get_value('UBER_LOGIN_URL'))
         time.sleep(self.sleep)
         try:
             input_login = WebDriverWait(self.driver, self.sleep).until(
@@ -265,57 +226,40 @@ class SeleniumTools:
             input_login = WebDriverWait(self.driver, self.sleep).until(
                 ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
             clickandclear(input_login)
-        if login:
-            input_login.send_keys(login)
-        else:
-            input_login.send_keys(CredentialPartner.get_value("UBER_NAME", partner=self.partner))
+        input_login.send_keys(login)
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
         try:
-            if password:
-                self.password_form(password)
-            else:
-                self.password_form()
+            self.password_form(password)
         except TimeoutException:
             try:
                 WebDriverWait(self.driver, self.sleep).until(
                     ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_4')))).click()
-                if password:
-                    self.password_form(password)
-                else:
-                    self.password_form()
+                self.password_form(password)
             except TimeoutException:
                 try:
                     WebDriverWait(self.driver, self.sleep).until(
                         ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_5')))).click()
                     WebDriverWait(self.driver, self.sleep).until(
                         ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_6')))).click()
-                    if password:
-                        self.password_form(password)
-                    else:
-                        self.password_form()
+                    self.password_form(password)
                 except TimeoutException:
-                    return False
+                    raise AuthenticationError("Uber login or password invalid")
         time.sleep(self.sleep)
         try:
             self.driver.get(UberService.get_value('BASE_URL'))
             time.sleep(self.sleep)
             self.driver.find_element(By.XPATH, UberService.get_value('CHECK_LOGIN_UBER'))
-            login_success = True
-            if session:
-                self.save_uber()
-                self.quit()
+            login_success = self.save_uber() if session else True
+            self.quit()
         except (NoSuchElementException, InvalidArgumentException):
             login_success = False
         return login_success
 
     def save_uber(self):
-        url = UberService.get_value('BASE_URL')
-        self.driver.get(url)
-        time.sleep(self.sleep)
-        new_url = self.driver.current_url
+        url = self.driver.current_url
         uuid_pattern = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-        uuid_list = re.findall(uuid_pattern, new_url)
+        uuid_list = re.findall(uuid_pattern, url)
         sid = None
         csid = None
         if uuid_list:
@@ -331,19 +275,17 @@ class SeleniumTools:
                                            uber_uuid=uuid,
                                            partner=Partner.get_partner(self.partner)
                                            )
+                return True
             else:
-                self.logger.error(f"Cookie error{sid}, {csid}")
+                raise AuthenticationError(f"Uber cookie error {sid}, {csid}")
         else:
-            self.logger.error(f"{new_url} without uuid")
+            raise Exception(f"{url}  uber url without uuid")
 
-    def password_form(self, password=None):
+    def password_form(self, password):
         input_password = WebDriverWait(self.driver, self.sleep).until(
             ec.presence_of_element_located((By.ID, UberService.get_value('UBER_LOGIN_3'))))
         clickandclear(input_password)
-        if password:
-            input_password.send_keys(password)
-        else:
-            input_password.send_keys(CredentialPartner.get_value("UBER_PASSWORD", partner=self.partner))
+        input_password.send_keys(password)
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
 
@@ -450,16 +392,8 @@ class SeleniumTools:
             xpath = UberService.get_value('UBER_GENERATE_TRIPS_1')
             WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
         except Exception:
-            try:
-                xpath = UberService.get_value('UBER_GENERATE_TRIPS_1')
-                WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
-            except Exception:
-                xpath = UberService.get_value('UBER_GENERATE_TRIPS_2')
-                WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
-        try:
-            self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_3')).click()
-        except:
-            pass
+            xpath = UberService.get_value('UBER_GENERATE_TRIPS_2')
+            WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4')).click()
         self.click_uber_calendar(day.strftime("%B"),
                                  day.strftime("%Y"),
@@ -496,31 +430,29 @@ class SeleniumTools:
 
         self.logger.info(self.file_pattern(fleet, day))
         if self.payments_order_file_name(fleet, day) is not None:
-            try:
-                with open(self.payments_order_file_name(fleet, day), encoding="utf-8") as file:
-                    reader = csv.reader(file)
-                    next(reader)
-                    for row in reader:
-                        if FleetOrder.objects.filter(order_id=row[0]):
-                            continue
-                        try:
-                            finish = timezone.make_aware(datetime.strptime(row[8], "%Y-%m-%d %H:%M:%S"))
-                        except ValueError:
-                            finish = None
-                        driver = Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=row[1]).first()
-                        if driver:
-                            order = {"order_id": row[0],
-                                     "driver": driver.driver,
-                                     "fleet": fleet,
-                                     "from_address": row[9],
-                                     "destination": row[10],
-                                     "accepted_time": timezone.make_aware(datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S")),
-                                     "finish_time": finish,
-                                     "state": states.get(row[12]),
-                                     "partner": Partner.get_partner(self.partner)}
-                            FleetOrder.objects.create(**order)
-            except FileNotFoundError:
-                pass
+            with open(self.payments_order_file_name(fleet, day), encoding="utf-8") as file:
+                reader = csv.reader(file)
+                next(reader)
+                for row in reader:
+                    if FleetOrder.objects.filter(order_id=row[0]):
+                        continue
+                    try:
+                        finish = timezone.make_aware(datetime.strptime(row[8], "%Y-%m-%d %H:%M:%S"))
+                    except ValueError:
+                        finish = None
+                    driver = Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=row[1]).first()
+                    if driver:
+                        order = {"order_id": row[0],
+                                 "driver": driver.driver,
+                                 "fleet": fleet,
+                                 "from_address": row[9],
+                                 "destination": row[10],
+                                 "accepted_time": timezone.make_aware(datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S")),
+                                 "finish_time": finish,
+                                 "state": states.get(row[12]),
+                                 "partner": Partner.get_partner(self.partner)}
+                        FleetOrder.objects.create(**order)
+
 
 
 def clickandclear(element):

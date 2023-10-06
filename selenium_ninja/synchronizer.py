@@ -8,9 +8,21 @@ from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Rol
 import datetime
 
 
+class AuthenticationError(Exception):
+    def __init__(self, message="Authentication error"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class InfinityTokenError(Exception):
+    def __init__(self, message="No infinity gps token"):
+        self.message = message
+        super().__init__(self.message)
+
+
 class Synchronizer:
 
-    def __init__(self, partner_id, fleet='Uklon'):
+    def __init__(self, partner_id, fleet):
         self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance()
@@ -121,8 +133,10 @@ class Synchronizer:
         swap_vehicle = Vehicle.objects.filter(licence_plate=kwargs['licence_plate']).first()
         reshuffle = DriverReshuffle.objects.filter(swap_vehicle=swap_vehicle,
                                                    swap_time__date=yesterday.date())
-        vehicle = None if reshuffle else self.get_or_create_vehicle(**kwargs)
-        if reshuffle or (driver.vehicle != vehicle and vehicle is not None):
+        if reshuffle:
+            Driver.objects.filter(vehicle=swap_vehicle).update(vehicle=None)
+        else:
+            vehicle = self.get_or_create_vehicle(**kwargs)
             driver.vehicle = vehicle
         if phone_number and not driver.phone_number:
             driver.phone_number = phone_number
@@ -140,14 +154,6 @@ class Synchronizer:
     @staticmethod
     def end_report_interval(day):
         return datetime.datetime.combine(day, datetime.time.max)
-
-    @staticmethod
-    def parameters() -> dict:
-        params = {
-            'limit': '50',
-            'offset': '0',
-        }
-        return params
 
     @staticmethod
     def r_dup(text):

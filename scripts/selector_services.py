@@ -3,20 +3,9 @@
 bolt_states = {
     'REQUEST_BOLT_LOGIN_URL': ('https://fleetownerportal.live.boltsvc.net/fleetOwnerPortal/', 'url'),
     'R_BOLT_ADD_DRIVER_1': ("https://node.taxify.eu/fleet-registration/driverPortal/", 'url'),
-    'BOLT_LOGIN_1': ('email', 'ID'),
-    'BOLT_LOGIN_2': ('current-password', 'ID'),
-    'BOLT_LOGIN_3': ('//button[@type="submit"]', 'XPATH'),
-    'BOLT_LOGIN_URL': ('https://fleets.bolt.eu/v2/login', 'url'),
-    'CHECK_LOGIN_BOLT': ('//div[@role="tablist"]', 'XPATH'),
 }
 
 newuklon_states = {
-    'BASE_URL': ('https://fleets.uklon.com.ua', 'url'),
-    'UKLON_LOGIN_1': ('https://fleets.uklon.com.ua/auth/login', 'url'),
-    'UKLON_LOGIN_2': ('//input[@data-cy="phone-number-control"]', 'XPATH'),
-    'UKLON_LOGIN_3': ('//input[@data-cy="password"]', 'XPATH'),
-    'UKLON_LOGIN_4': ('//button[@data-cy="login-btn"]', 'XPATH'),
-    'CHECK_LOGIN_UKLON': ('//div[@data-cy="side-nav-menu"]', 'XPATH'),
     'NEWUKLON_ADD_DRIVER_1': ('https://partner-registration.uklon.com.ua/registration', 'url'),
     'NEWUKLON_ADD_DRIVER_2': ("//span[text()='Обрати зі списку']", 'XPATH'),
     'NEWUKLON_ADD_DRIVER_3': ("//div[@class='region-name' and contains(text(),'Київ')]", 'XPATH'),

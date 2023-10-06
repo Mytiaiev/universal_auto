@@ -454,34 +454,30 @@ def get_driver_info(request, period, user_id, action, start_date=None, end_date=
     return driver_info_list, start_date_formatted, end_date_formatted
 
 
-def login_in(action=None, user_id=None, success_login=None, login_name=None, password=None, url=None, token=None):
+def login_in(action=None, user_id=None, login_name=None, password=None, token=None):
     if action == 'bolt':
-        if success_login:
-            update_park_set(user_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
-            update_park_set(user_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
+        update_park_set(user_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
+        update_park_set(user_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
     elif action == 'uklon':
-        if success_login:
-            update_park_set(user_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)
-            update_park_set(user_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon', park=False)
-            update_park_set(user_id, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
-            hex_length = 16
-            random_hex = secrets.token_hex(hex_length)
-            update_park_set(
-                user_id, 'CLIENT_ID', random_hex,
-                description='Ідентифікатор клієнта Uklon', check_value=False, park=False)
+        update_park_set(user_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)
+        update_park_set(user_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon', park=False)
+        update_park_set(user_id, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
+        hex_length = 16
+        random_hex = secrets.token_hex(hex_length)
+        update_park_set(
+            user_id, 'CLIENT_ID', random_hex,
+            description='Ідентифікатор клієнта Uklon', check_value=False, park=False)
     elif action == 'uber':
-        if success_login:
-            update_park_set(user_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber', park=False)
-            update_park_set(user_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
+        update_park_set(user_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber', park=False)
+        update_park_set(user_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
     elif action == 'gps':
-        if success_login:
-            update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
-            update_park_set(user_id, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
-            update_park_set(user_id, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
-            update_park_set(user_id, 'TOTAL_KM_PER_WEEK', 2000, description='Ліміт на тиждень (км)')
-            update_park_set(user_id, 'OVERALL_KM_PRICE', 6, description='Вартість км понад лімітом (грн)')
-            success_login = True
-    return success_login
+        update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
+        update_park_set(user_id, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
+        update_park_set(user_id, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
+        update_park_set(user_id, 'TOTAL_KM_PER_WEEK', 2000, description='Ліміт на тиждень (км)')
+        update_park_set(user_id, 'OVERALL_KM_PRICE', 6, description='Вартість км понад лімітом (грн)')
+
+    return True
 
 
 def partner_logout(action, user_pk):

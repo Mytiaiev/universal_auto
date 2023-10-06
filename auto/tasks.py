@@ -37,6 +37,7 @@ from scripts.google_calendar import GoogleCalendar
 from scripts.redis_conn import redis_instance
 from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
+from selenium_ninja.synchronizer import AuthenticationError
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberRequest
 from selenium_ninja.uklon_sync import UklonRequest
@@ -114,8 +115,8 @@ def auto_send_task_bot(self):
 def get_uber_session(self, partner_pk, login=None, password=None):
     try:
         chrome = SeleniumTools(partner_pk)
-        success = chrome.uber_login(session=True, login=login, password=password)
-        login_in(action='uber', user_id=partner_pk, success_login=True, login_name=login, password=password)
+        chrome.uber_login(session=True, login=login, password=password)
+        success = login_in(action='uber', user_id=partner_pk, login_name=login, password=password)
     except Exception as e:
         success = False
         logger.error(e)
@@ -125,19 +126,21 @@ def get_uber_session(self, partner_pk, login=None, password=None):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_bolt_session(self, partner_pk, login=None, password=None):
-    success = BoltRequest(partner_pk).get_login_token(login=login, password=password)
-    login_in(action='bolt', user_id=partner_pk, success_login=success, login_name=login, password=password)
+    try:
+        BoltRequest(partner_pk).get_login_token(login=login, password=password)
+        success = login_in(action='bolt', user_id=partner_pk, login_name=login, password=password)
+    except AuthenticationError as e:
+        logger.error(e)
+        success = False
     return partner_pk, success
 
 
 @app.task(bind=True, queue='beat_tasks')
 def get_uklon_session(self, partner_pk, login=None, password=None):
     try:
-        login_name = login[4:]
-        chrome = SeleniumTools(partner_pk)
-        success = chrome.uklon_login(login=login_name, password=password)
-        login_in(action='uklon', user_id=partner_pk, success_login=True, login_name=login, password=password)
-    except Exception as e:
+        UklonRequest(partner_pk).create_session(login=login, password=password)
+        success = login_in(action='uklon', user_id=partner_pk, login_name=login, password=password)
+    except AuthenticationError as e:
         success = False
         logger.error(e)
 
@@ -149,8 +152,7 @@ def get_gps_session(self, partner_pk, login=None, password=None):
     try:
         chrome = SeleniumTools(partner_pk)
         token = chrome.gps_login(login=login, password=password)
-        if token:
-            success = login_in(action='gps', user_id=partner_pk, success_login=True, login_name=login, password=password, token=token)
+        success = login_in(action='gps', user_id=partner_pk, login_name=login, password=password, token=token)
     except Exception as e:
         success = False
         logger.error(e)
@@ -167,7 +169,10 @@ def get_orders_from_fleets(self, partner_pk, day=None):
         request_class = fleets.get(setting.key)
         if request_class:
             if isinstance(request_class(partner_pk), UberRequest):
-                request_class(partner_pk).get_fleet_orders(day)
+                try:
+                    request_class(partner_pk).get_fleet_orders(day)
+                except Exception as e:
+                    logger.error(e)
             else:
                 for driver in drivers:
                     request_class(partner_pk).get_fleet_orders(day, driver.pk)

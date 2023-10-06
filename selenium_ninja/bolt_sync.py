@@ -11,7 +11,7 @@ from django.utils import timezone
 from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
     CredentialPartner
 from auto import settings
-from selenium_ninja.synchronizer import Synchronizer
+from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from taxi_service.utils import login_in
 
 
@@ -36,12 +36,10 @@ class BoltRequest(Synchronizer):
                                  params=self.param,
                                  json=payload)
         if response.json()["code"] == 66610:
-            success = False
+            raise AuthenticationError(f"{self.fleet} login or password incorrect.")
         else:
-            success = True
             refresh_token = response.json()["data"]["refresh_token"]
             self.redis.set(f"{self.partner_id}_{self.fleet}_refresh", refresh_token)
-        return success
 
     def get_access_token(self):
         token = self.redis.get(f"{self.partner_id}_{self.fleet}_refresh")
@@ -68,8 +66,8 @@ class BoltRequest(Synchronizer):
                 first_token = response.json()["data"]["access_token"]
                 headers = {'Authorization': f'Bearer {first_token}'}
                 response = requests.get(url=f'{self.base_url}getProfile',
-                                         params=self.param,
-                                         headers=headers)
+                                        params=self.param,
+                                        headers=headers)
                 if not response.json()['code']:
                     park_id = response.json()["data"]["companies"][0]["id"]
                     self.redis.set(f"{self.partner_id}_{self.fleet}_park_id", park_id)
