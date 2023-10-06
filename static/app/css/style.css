@@ -1,8 +1,17 @@
 body {
-	font-family: 'Source Sans 3', sans-serif;
 	color: #040000;
 	background-color: #ffffff;
 	font-size: 18px;
+}
+
+/* Заголовки використовують Montserrat */
+h1, h2, h3, h4, h5, h6 {
+	font-family: 'Montserrat', sans-serif;
+}
+
+/* Інший текст використовує Open Sans */
+p, span, div {
+	font-family: 'Open Sans', sans-serif;
 }
 
 html, body {
@@ -363,14 +372,14 @@ label[for="showPassword"] {
 }
 
 .telegram-button button {
-  background-color: #EC6323;
-  color: #fff;
-  padding: 10px 55px;
-  border: none;
-  border-radius: 25px;
-  font-size: 16px;
-  text-decoration: none;
-  cursor: pointer;
+	background-color: #EC6323;
+	color: #fff;
+	padding: 10px 55px;
+	border: none;
+	border-radius: 25px;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
 }
 
 /*END BLOCK-1*/
@@ -378,7 +387,48 @@ label[for="showPassword"] {
 /*BLOCK-2*/
 
 .about_section {
-	margin-top: 250px;
+	margin-top: 200px;
+}
+
+.heading_container h2 {
+	position: relative;
+	margin-top: 10px;
+	color: #141E17;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
+	z-index: 2;
+}
+
+.about-section {
+	position: relative;
+	color: #53785E;
+	font-size: 23px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+	z-index: 2;
+}
+
+.text-image img {
+	width: 118%;
+	height: auto;
+	position: absolute;
+	top: 25px;
+	right: 300px;
+	z-index: 1;
+}
+
+
+.img-box img {
+	margin-top: 60px;
+}
+
+.detail-box .telegram-button {
+	position: relative;
+	z-index: 2;
 }
 
 /*#timer {*/
