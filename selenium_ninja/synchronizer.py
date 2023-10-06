@@ -135,7 +135,8 @@ class Synchronizer:
             Driver.objects.filter(vehicle=swap_vehicle).update(vehicle=None)
         else:
             vehicle = self.get_or_create_vehicle(**kwargs)
-            driver.vehicle = vehicle
+            if vehicle is not None:
+                driver.vehicle = vehicle
         if phone_number and not driver.phone_number:
             driver.phone_number = phone_number
 
