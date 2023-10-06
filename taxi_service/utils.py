@@ -13,7 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from app.models import (Driver, UseOfCars, VehicleGPS, Order, RentInformation,
                         SummaryReport, CarEfficiency, Partner, ParkSettings,
-                        Manager, Investor, Vehicle, VehicleSpending, DriverEfficiency, )
+                        Manager, Investor, Vehicle, VehicleSpending, DriverEfficiency, CredentialPartner, )
 from selenium_ninja.driver import SeleniumTools
 from scripts.redis_conn import get_logger
 from collections import defaultdict
@@ -370,14 +370,26 @@ def effective_vehicle(period, user_id, action, start_date=None, end_date=None):
     return result
 
 
-def update_park_set(partner, key, value, description=None, check_value=True):
-    try:
-        setting = ParkSettings.objects.get(key=key, partner=partner)
-        if setting.value != value and check_value:
-            setting.value = value
-            setting.save()
-    except ObjectDoesNotExist:
-        ParkSettings.objects.create(key=key, value=value, description=description, partner=partner)
+def update_park_set(partner, key, value, description=None, check_value=True, park=True):
+    if park:
+        try:
+            setting = ParkSettings.objects.get(key=key, partner=partner)
+            if setting.value != value and check_value:
+                setting.value = value
+                setting.save()
+        except ObjectDoesNotExist:
+            partner = Partner.get_partner(partner)
+            ParkSettings.objects.create(key=key, value=value, description=description, partner=partner)
+    else:
+        try:
+            setting = CredentialPartner.objects.get(key=key, partner=partner)
+            if CredentialPartner.decrypt_credential(value) != value and check_value:
+                setting.value = CredentialPartner.encrypt_credential(value)
+                setting.save()
+        except ObjectDoesNotExist:
+            partner = Partner.get_partner(partner)
+            value = CredentialPartner.encrypt_credential(value)
+            CredentialPartner.objects.create(key=key, value=value, partner=partner)
 
 
 def get_driver_info(request, period, user_id, action, start_date=None, end_date=None):
@@ -442,47 +454,53 @@ def get_driver_info(request, period, user_id, action, start_date=None, end_date=
     return driver_info_list, start_date_formatted, end_date_formatted
 
 
-def login_in(action=None, user_id=None, success_login=None, login_name=None, password=None, url=None, token=None):
+def login_in(action=None, user_id=None, login_name=None, password=None, token=None):
     if action == 'bolt':
-        if success_login:
-            bolt_url_id = url.split('/')[-2]
-            update_park_set(user_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt')
-            update_park_set(user_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt')
-            update_park_set(user_id, 'BOLT_URL_ID_PARK', bolt_url_id, description='BOLT_URL_ID_Парка')
+        update_park_set(user_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
+        update_park_set(user_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
     elif action == 'uklon':
-        if success_login:
-            update_park_set(user_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon')
-            update_park_set(user_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon')
-            update_park_set(user_id, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
-            hex_length = 16
-            random_hex = secrets.token_hex(hex_length)
-            update_park_set(
-                user_id, 'CLIENT_ID', random_hex,
-                description='Ідентифікатор клієнта Uklon', check_value=False)
+        update_park_set(user_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)
+        update_park_set(user_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon', park=False)
+        update_park_set(user_id, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
+        hex_length = 16
+        random_hex = secrets.token_hex(hex_length)
+        update_park_set(
+            user_id, 'CLIENT_ID', random_hex,
+            description='Ідентифікатор клієнта Uklon', check_value=False, park=False)
     elif action == 'uber':
-        if success_login:
-            update_park_set(user_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber')
-            update_park_set(user_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber')
+        update_park_set(user_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber', park=False)
+        update_park_set(user_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
     elif action == 'gps':
-        if success_login:
-            update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу')
-            update_park_set(user_id, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
-            update_park_set(user_id, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
-            success_login = True
-    return success_login
+        update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
+        print(token)
+        update_park_set(user_id, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
+        update_park_set(user_id, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
+        update_park_set(user_id, 'TOTAL_KM_PER_WEEK', 2000, description='Ліміт на тиждень (км)')
+        update_park_set(user_id, 'OVERALL_KM_PRICE', 6, description='Вартість км понад лімітом (грн)')
+
+    return True
 
 
 def partner_logout(action, user_pk):
     settings = ParkSettings.objects.filter(partner=Partner.get_partner(user_pk))
-    action_dict = {
-        'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),
-        'bolt_logout': ('BOLT_NAME', 'BOLT_PASSWORD', 'BOLT_URL_ID_PARK'),
-        'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID', 'WITHDRAW_UKLON'),
-        'gps_logout': ('UAGPS_TOKEN', 'FREE_RENT', 'RENT_PRICE')
+    credentials = CredentialPartner.objects.filter(partner=Partner.get_partner(user_pk))
+    park_dict = {
+        'bolt_logout': 'BOLT_URL_ID_PARK',
+        'uklon_logout': 'WITHDRAW_UKLON',
+        'gps_logout': ('FREE_RENT', 'RENT_PRICE', "TOTAL_KM_PER_WEEK", "OVERALL_KM_PRICE")
     }
-    choose_action = action_dict.get(action)
-    if choose_action:
-        settings.filter(key__in=choose_action).delete()
+    credential_dict = {
+        'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),
+        'bolt_logout': ('BOLT_NAME', 'BOLT_PASSWORD'),
+        'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID'),
+        'gps_logout': ('UAGPS_TOKEN',)
+    }
+    park_action = park_dict.get(action)
+    credential_action = credential_dict.get(action)
+    if park_action:
+        settings.filter(key__in=park_action).delete()
+    if credential_action:
+        credentials.filter(key__in=credential_action).delete()
     return True
 
 
@@ -543,10 +561,10 @@ def check_aggregators(user_pk):
     partner = Partner.objects.get(user_id=user_pk)
 
     aggregator_results = {
-        'bolt': ParkSettings.objects.filter(partner=partner, key='BOLT_NAME').exists(),
-        'uklon': ParkSettings.objects.filter(partner=partner, key='UKLON_NAME').exists(),
-        'uber': ParkSettings.objects.filter(partner=partner, key='UBER_NAME').exists(),
-        'gps': ParkSettings.objects.filter(partner=partner, key='UAGPS_TOKEN').exists(),
+        'bolt': CredentialPartner.objects.filter(partner=partner, key='BOLT_NAME').exists(),
+        'uklon': CredentialPartner.objects.filter(partner=partner, key='UKLON_NAME').exists(),
+        'uber': CredentialPartner.objects.filter(partner=partner, key='UBER_NAME').exists(),
+        'gps': CredentialPartner.objects.filter(partner=partner, key='UAGPS_TOKEN').exists(),
     }
 
     return aggregator_results

@@ -5,6 +5,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError
 
 from scripts.google_calendar import GoogleCalendar
+from .filters import VehicleEfficiencyUserFilter, DriverEfficiencyUserFilter, RentInformationUserFilter, \
+    TransactionInvestorUserFilter, SummaryReportUserFilter, ReportUserFilter, VehicleManagerFilter
 from .models import *
 
 
@@ -14,20 +16,24 @@ models = {
     'SummaryReport':                {'view': True, 'add': False, 'change': False, 'delete': False},
     # 'Order':                        {'view': True, 'add': False, 'change': False, 'delete': False},
     'Driver':                       {'view': True, 'add': False, 'change': True, 'delete': False},
+    'Schema':                       {'view': True, 'add': True, 'change': True, 'delete': True},
     'Vehicle':                      {'view': True, 'add': False, 'change': True, 'delete': True},
     'Manager':                      {'view': True, 'add': True, 'change': True, 'delete': True},
-    'Investor':                      {'view': True, 'add': True, 'change': True, 'delete': True},
+    'Investor':                     {'view': True, 'add': True, 'change': True, 'delete': True},
     # 'Comment':                      {'view': True, 'add': False, 'change': True, 'delete': False},
     'ParkSettings':                 {'view': True, 'add': False, 'change': True, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
     'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpending':             {'view': True, 'add': True, 'change': False, 'delete': False},
+    'VehicleSpending':              {'view': True, 'add': True, 'change': True, 'delete': True},
+    'DriverSchemaRate':             {'view': True, 'add': False, 'change': True, 'delete': False},
+    'TransactionConversation':      {'view': True, 'add': False, 'change': False, 'delete': False},
 }
 
 investor_permissions = {
     'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpending':             {'view': True, 'add': False, 'change': False, 'delete': False},
+    'VehicleSpending':              {'view': True, 'add': False, 'change': False, 'delete': False},
+    'TransactionConversation':      {'view': True, 'add': False, 'change': False, 'delete': False},
 }
 
 manager_permissions = {
@@ -38,7 +44,7 @@ manager_permissions = {
     'Vehicle':                      {'view': True, 'add': False, 'change': False, 'delete': False},
     'CarEfficiency':                {'view': True, 'add': False, 'change': False, 'delete': False},
     'DriverEfficiency':             {'view': True, 'add': False, 'change': False, 'delete': False},
-    'VehicleSpending':             {'view': True, 'add': True, 'change': False, 'delete': False},
+    'VehicleSpending':              {'view': True, 'add': True, 'change': False, 'delete': False},
 }
 
 group_permissions = {
@@ -224,14 +230,45 @@ class FleetAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(DriverRateLevels)
-class DriverRateLevelsAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in DriverRateLevels._meta.fields]
+@admin.register(Schema)
+class SchemaAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    list_display = ['title', 'schema']
     list_per_page = 25
 
-    fieldsets = [
-        (None, {'fields': ['fleet', 'threshold_value', 'rate_delta']}),
-    ]
+    def save_model(self, request, obj, form, change):
+        schema_field = form.cleaned_data.get('schema')
+
+        if schema_field == 'HALF':
+            obj.rate = 0.5
+            obj.rental = obj.plan * obj.rate
+        elif schema_field == 'RENT':
+            obj.rate = 1
+        else:
+            obj.rental = obj.plan * (1 - obj.rate)
+
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(DriverSchemaRate)
+class DriverRateLevelsAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+    list_display = ['period', 'threshold', 'rate']
+    list_per_page = 25
+    list_filter = ("period",)
+    readonly_fields = ('period',)
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.readonly_fields if not request.user.is_superuser else tuple()
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.is_superuser:
+            fieldsets = [
+                (None, {'fields': ['period', 'threshold', 'rate', 'partner']}),
+            ]
+        else:
+            fieldsets = [
+                (None, {'fields': ['period', 'threshold', 'rate']}),
+            ]
+        return fieldsets
 
 
 @admin.register(RawGPS)
@@ -410,10 +447,19 @@ class VehicleSpendingAdmin(admin.ModelAdmin):
 
         return queryset
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if not request.user.is_superuser:
+            if db_field.name == 'vehicle':
+                if request.user.groups.filter(name='Partner').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+                if request.user.groups.filter(name='Manager').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(TransactionsConversation)
 class TransactionsConversationAdmin(admin.ModelAdmin):
-    list_filter = ['vehicle']
+    list_filter = (TransactionInvestorUserFilter, )
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -424,7 +470,7 @@ class TransactionsConversationAdmin(admin.ModelAdmin):
 
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ['vehicle']
+    list_filter = (VehicleEfficiencyUserFilter, )
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -451,7 +497,7 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(DriverEfficiency)
 class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ['driver']
+    list_filter = [DriverEfficiencyUserFilter]
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -507,7 +553,7 @@ class UberServiceAdmin(admin.ModelAdmin):
 
 @admin.register(RentInformation)
 class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ('driver', 'created_at')
+    list_filter = (RentInformationUserFilter, 'created_at')
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -547,7 +593,7 @@ class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)
 @admin.register(Payments)
 class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     search_fields = ('vendor_name', 'full_name')
-    list_filter = ('vendor_name', 'full_name')
+    list_filter = ('vendor_name', ReportUserFilter)
     ordering = ('-report_from', 'full_name')
     list_per_page = 25
 
@@ -605,7 +651,7 @@ class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(SummaryReport)
 class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ('full_name',)
+    list_filter = (SummaryReportUserFilter,)
     ordering = ('-report_from', 'full_name')
     list_per_page = 25
 
@@ -682,7 +728,7 @@ class PartnerAdmin(admin.ModelAdmin):
 
 
 @admin.register(Investor)
-class InvestorAdmin(admin.ModelAdmin):
+class InvestorAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_display = ('first_name', 'last_name', 'phone_number')
     list_per_page = 25
 
@@ -803,7 +849,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     ordering = ('name', 'second_name')
     list_display_links = ('name', 'second_name')
     list_per_page = 25
-    readonly_fields = ('name', 'second_name', 'email', 'phone_number',)
+    readonly_fields = ('name', 'second_name', 'email', 'phone_number', 'driver_status')
 
     def get_readonly_fields(self, request, obj=None):
         return self.readonly_fields if not request.user.is_superuser else tuple()
@@ -814,14 +860,14 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
         elif request.user.groups.filter(name='Partner').exists():
             return ['name', 'second_name',
                     'vehicle', 'manager', 'chat_id',
-                    'schema', 'plan', 'rental',
+                    'schema',
                     'driver_status',
                     'created_at',
                     ]
         else:
             return ['name', 'second_name',
                     'vehicle', 'chat_id',
-                    'schema', 'plan', 'rental',
+                    'schema',
                     'driver_status'
                     ]
 
@@ -831,7 +877,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number',   'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
+                ('Тарифний план',               {'fields': ('schema', 'salary_calculation',
                                                             )}),
                 ('Додатково',                   {'fields': ['partner', 'manager', 'vehicle', 'driver_status'
                                                             ]}),
@@ -842,7 +888,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number', 'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
+                ('Тарифний план',               {'fields': ('salary_calculation', 'schema'
                                                             )}),
                 ('Додатково',                   {'fields': ['driver_status', 'manager',  'vehicle'
                                                             ]}),
@@ -852,7 +898,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number', 'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('schema', 'plan', 'rental', 'rate'
+                ('Тарифний план',               {'fields': ('salary_calculation', 'schema'
                                                             )}),
                 ('Додатково',                   {'fields': ['driver_status', 'vehicle'
                                                             ]}),
@@ -861,21 +907,14 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if not request.user.is_superuser:
-            if db_field.name in ('manager', 'vehicle'):
-                kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
-
+            if db_field.name in ('manager', 'vehicle', 'schema'):
+                if request.user.groups.filter(name='Partner').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+                if request.user.groups.filter(name='Manager').exists():
+                    kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
-        schema_field = form.cleaned_data.get('schema')
-
-        if schema_field == 'HALF':
-            obj.rate = 0.5
-            obj.rental = obj.plan * obj.rate
-        elif schema_field == 'RENT':
-            obj.rate = 1
-        else:
-            obj.rental = obj.plan * (1 - obj.rate)
         fleet = Fleet.objects.get(name='Ninja')
         chat_id = form.cleaned_data.get('chat_id')
         driver_fleet = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
@@ -897,7 +936,8 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     exclude = ('deleted_at',)
     list_display_links = ('licence_plate',)
     list_per_page = 25
-    list_filter = ('manager',)
+    list_filter = (VehicleManagerFilter,)
+    readonly_fields = ('licence_plate',)
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -906,7 +946,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return ['licence_plate', 'name',
                     'vin_code',
                     'purchase_price',
-                    'manager', 'created_at'
+                    'manager', 'investor_car', 'created_at'
                     ]
         else:
             return ['licence_plate', 'name',
@@ -951,7 +991,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if not request.user.is_superuser:
-            if db_field.name == 'manager':
+            if db_field.name in ('manager', 'investor_car'):
                 kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)

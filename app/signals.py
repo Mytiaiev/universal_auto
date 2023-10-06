@@ -6,14 +6,15 @@ from auto.tasks import send_on_job_application_on_driver, check_time_order, setu
     remove_periodic_tasks, search_driver_for_order, detaching_the_driver_from_the_car
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
-from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order, UseOfCars
+from app.models import Driver, StatusChange, JobApplication, ParkSettings, Partner, Order, UseOfCars, DriverSchemaRate
 from auto_bot.handlers.order.keyboards import inline_reject_order
 from auto_bot.handlers.order.static_text import client_order_info, client_personal_info
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import datetime_with_timezone, GoogleCalendar
-from scripts.settings_for_park import settings_for_partner
+from scripts.settings_for_park import standard_rates
+
 
 # @receiver(post_save, sender=AuUser)
 # def create_partner(sender, instance, created, **kwargs):
@@ -25,8 +26,9 @@ from scripts.settings_for_park import settings_for_partner
 def create_park_settings(sender, instance, created, **kwargs):
     if created:
         setup_periodic_tasks(instance)
-        for key, value in settings_for_partner.items():
-            ParkSettings.objects.create(key=key, value=value[0], description=value[1], partner=instance)
+        for key, values in standard_rates.items():
+            for value in values:
+                DriverSchemaRate.objects.create(period=key, threshold=value[0], rate=value[1], partner=instance)
 
 # @receiver(post_delete, sender=AuUser)
 # def delete_park_settings(sender, instance, **kwargs):

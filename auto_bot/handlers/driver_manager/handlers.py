@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from celery.signals import task_postrun
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove
+from telegram.error import BadRequest
 
 from app.models import Manager, Vehicle, User, Driver, Fleets_drivers_vehicles_rate, Fleet, JobApplication, \
     Payments, ParkSettings, VehicleSpending, Partner
@@ -14,10 +15,10 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
     inline_statistic_kb, inline_driver_eff_kb, inline_func_with_vehicle_kb, vehicle_spending_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_date, get_efficiency, \
-    generate_message_weekly, get_driver_efficiency_report, validate_sum
+    generate_message_report, get_driver_efficiency_report, validate_sum, generate_report_period
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
-    update_driver_data, send_daily_report, send_efficiency_report, send_weekly_report, send_driver_efficiency
+    update_driver_data, send_daily_statistic, send_efficiency_report, send_driver_report, send_driver_efficiency
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
@@ -192,7 +193,8 @@ def create_driver_eff(update, context):
 def get_weekly_report(update, context):
     query = update.callback_query
     query.edit_message_text(generate_text)
-    messages = generate_message_weekly(query.from_user.id)
+    daily = True if query.data == "Daily_payment" else False
+    messages = generate_message_report(query.from_user.id, daily)
     owner_message = messages.get(str(query.from_user.id))
     query.edit_message_text(owner_message)
     query.edit_message_reply_markup(back_to_main_menu())
@@ -241,18 +243,9 @@ def create_period_report(update, context):
         if start > end:
             start, end = end, start
         msg = update.message.reply_text(generate_text)
-        report = get_daily_report(update.message.chat_id, start, end)
-        if report[0]:
-            message = ''
-            for key, value in report[0].items():
-                if report[0][key]:
-                    message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
-                        key, report[0][key], report[1].get(key, 0), report[2].get(key, 0), report[3].get(key, 0))
-            bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
-                                  message_id=msg.message_id, reply_markup=inline_manager_kb())
-        else:
-            bot.edit_message_text(chat_id=update.effective_chat.id, text=no_drivers_text,
-                                  message_id=msg.message_id, reply_markup=inline_manager_kb())
+        report = generate_report_period(update.effective_chat.id, start, end)
+        bot.edit_message_text(chat_id=update.effective_chat.id, text=report,
+                              message_id=msg.message_id, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_EARNINGS)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
@@ -315,11 +308,16 @@ def create_period_efficiency(update, context):
 @task_postrun.connect
 def send_into_group(sender=None, **kwargs):
     yesterday = timezone.localtime() - timedelta(days=1)
-    if sender in (send_daily_report, send_driver_efficiency):
+    if sender in (send_daily_statistic, send_driver_efficiency):
         messages, drivers_messages = kwargs.get('retval')
         for partner, message in messages.items():
             if message and ParkSettings.get_value('DRIVERS_CHAT', partner=partner):
                 bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
+            else:
+                try:
+                    bot.send_message(chat_id=Partner.get_partner(partner).chat_id, text=message)
+                except BadRequest:
+                    pass
         for pk, message in drivers_messages.items():
             driver = Driver.objects.get(pk=pk)
             vehicle = check_reshuffle(driver, yesterday.date())[0]
@@ -335,11 +333,16 @@ def send_vehicle_efficiency(sender=None, **kwargs):
         for partner, message in messages.items():
             if message and ParkSettings.get_value('DRIVERS_CHAT', partner=partner):
                 bot.send_message(chat_id=ParkSettings.get_value('DRIVERS_CHAT', partner=partner), text=message)
+            else:
+                try:
+                    bot.send_message(chat_id=Partner.get_partner(partner).chat_id, text=message)
+                except BadRequest:
+                    pass
 
 
 @task_postrun.connect
 def send_week_report(sender=None, **kwargs):
-    if sender == send_weekly_report:
+    if sender == send_driver_report:
         result = kwargs.get('retval')
         for messages in result:
             for user, message in messages.items():

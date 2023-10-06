@@ -1,3 +1,4 @@
+import os
 import string
 import random
 import csv
@@ -8,20 +9,25 @@ import pendulum
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.db import models, IntegrityError, ProgrammingError
-from django.db.models import Sum
 from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from django.contrib.auth.models import User as AuUser
+from cryptography.fernet import Fernet
 
 
 class Role(models.TextChoices):
-    CLIENT = 'CLIENT', 'Client'
-    DRIVER = 'DRIVER', 'Driver'
-    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Driver manager'
-    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Service station manager'
-    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Support manager'
-    OWNER = 'OWNER', 'Owner'
-    INVESTOR = 'INVESTOR', 'Investor'
+    CLIENT = 'CLIENT', 'Клієнт'
+    DRIVER = 'DRIVER', 'Водій'
+    DRIVER_MANAGER = 'DRIVER_MANAGER', 'Менеджер водіїв'
+    SERVICE_STATION_MANAGER = 'SERVICE_STATION_MANAGER', 'Сервісний менеджер'
+    SUPPORT_MANAGER = 'SUPPORT_MANAGER', 'Менеджер підтримки'
+    OWNER = 'OWNER', 'Власник'
+    INVESTOR = 'INVESTOR', 'Інвестор'
+
+
+class SalaryCalculation(models.TextChoices):
+    WEEK = 'WEEK', 'Тижневий'
+    DAY = 'DAY', 'Денний'
 
 
 class Partner(models.Model):
@@ -47,6 +53,38 @@ class Partner(models.Model):
     class Meta:
         verbose_name = 'Власника'
         verbose_name_plural = 'Власники'
+
+
+class Schema(models.Model):
+    SCHEMA_CHOICES = [
+        ('RENT', 'Схема оренди'),
+        ('HALF', 'Схема 50/50'),
+        ('DYNAMIC', 'Динамічна схема'),
+        ('CUSTOM', 'Індивідуальний відсоток'),
+    ]
+
+    title = models.CharField(max_length=255, verbose_name='Назва схеми')
+    schema = models.CharField(max_length=25, default=SCHEMA_CHOICES[1],
+                              choices=SCHEMA_CHOICES, verbose_name='Шаблон схеми')
+    plan = models.IntegerField(default=12000, verbose_name='План водія')
+    rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+
+    @classmethod
+    def get_half_schema_id(cls, title="HALF"):
+        try:
+            schema = cls.objects.get(schema=title)
+            return schema.pk
+        except ObjectDoesNotExist:
+            return None
+
+    def __str__(self):
+        return self.title if self.title else ''
+
+    class Meta:
+        verbose_name = 'Схему роботи'
+        verbose_name_plural = 'Схеми роботи'
 
 
 class Payments(models.Model):
@@ -405,21 +443,15 @@ class Driver(User):
     OFFLINE = 'Не працюю'
     RENT = 'Орендую авто'
 
-    class Schema(models.TextChoices):
-        RENT = 'RENT', 'Схема оренди'
-        HALF = 'HALF', 'Схема 50/50'
-        # BUYER = 'BUYER', 'Схема під викуп'
-        CUSTOM = 'CUSTOM', 'Індивідуальний відсоток'
-
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     worked = models.BooleanField(default=True, verbose_name='Працює')
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
-    schema = models.CharField(max_length=20, choices=Schema.choices, default=Schema.HALF, verbose_name='Схема роботи')
-    plan = models.IntegerField(default=12000, verbose_name='План водія')
-    rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
-    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
+    salary_calculation = models.CharField(max_length=25, choices=SalaryCalculation.choices,
+                                          default=SalaryCalculation.WEEK, verbose_name='Період розрахунку зарплати')
+    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, default=Schema.get_half_schema_id,
+                               verbose_name='Схема роботи')
 
     class Meta:
         verbose_name = 'Водія'
@@ -439,25 +471,6 @@ class Driver(User):
         qset = Payments.objects.filter(vendor_name=vendor, driver_id=driver_external_id) \
             .filter(report_from__lte=current_date.end_of('week'), report_to__gte=current_date.start_of('week'))
         return sum(map(lambda x: x.kassa(), qset))
-
-    def get_dynamic_rate(self, vendor: str, week_number: [str, None] = None, kassa: float = None) -> float:
-        if kassa is None:
-            kassa = self.get_kassa(vendor, week_number)
-        dct = DriverRateLevels.objects.filter(fleet__name=vendor, threshold_value__gte=kassa,
-                                              deleted_at=None).aggregate(Sum('rate_delta'))
-        rate = self.get_rate(vendor) + float(dct['rate_delta__sum'] if dct['rate_delta__sum'] is not None else 0)
-        return max(rate, 0)
-
-    def get_salary(self, vendor: str, week_number: [str, None] = None) -> float:
-        try:
-            min_fee = float(Fleet.objects.get(name=vendor).min_fee)
-        except Fleet.DoesNotExist:
-            min_fee = 0
-        kassa = self.get_kassa(vendor, week_number)
-        rate = self.get_dynamic_rate(vendor, week_number, kassa)
-        salary = kassa * rate
-        print(kassa, rate, salary, min(salary, max(kassa - min_fee, 0)))
-        return min(salary, max(kassa - min_fee, 0))
 
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
@@ -591,17 +604,21 @@ class Fleets_drivers_vehicles_rate(models.Model):
         verbose_name_plural = 'Водії в агрегаторах'
 
 
-class DriverRateLevels(models.Model):
-    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, verbose_name='Автопарк')
-    threshold_value = models.DecimalField(decimal_places=2, max_digits=15, default=0)
-    rate_delta = models.DecimalField(decimal_places=2, max_digits=3, default=0)
-    created_at = models.DateTimeField(editable=False, auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
+class DriverSchemaRate(models.Model):
+    period = models.CharField(max_length=25, choices=SalaryCalculation.choices, verbose_name='Період розрахунку')
+    threshold = models.DecimalField(decimal_places=2, max_digits=15, default=0, verbose_name="Поріг доходу")
+    rate = models.DecimalField(decimal_places=2, max_digits=3, default=0, verbose_name="Відсоток")
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
-        verbose_name = 'Рівень рейтингу водія'
-        verbose_name_plural = 'Рівень рейтингу водіїв'
+        verbose_name = 'Тариф водія'
+        verbose_name_plural = 'Тарифи водія'
+
+    @staticmethod
+    def get_rate_tier(period):
+        data = DriverSchemaRate.objects.filter(period=period).order_by('threshold').values('threshold', 'rate')
+        result = [(decimal['threshold'], decimal['rate']) for decimal in data]
+        return result
 
 
 class RawGPS(models.Model):
@@ -988,8 +1005,8 @@ class FleetOrder(models.Model):
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     class Meta:
-        verbose_name = 'Стороннє замовлення'
-        verbose_name_plural = 'Сторонні замовлення'
+        verbose_name = 'Замовлення в агрегаторах'
+        verbose_name_plural = 'Замовлення в агрегаторах'
 
 
 class Report_of_driver_debt(models.Model):
@@ -1154,6 +1171,26 @@ class DriverEfficiency(models.Model):
         return f"{self.driver}"
 
 
+class DriverPayments(models.Model):
+    report_from = models.DateField(verbose_name='Звіт з')
+    report_to = models.DateField(verbose_name='Звіт по')
+    report_type = models.CharField(max_length=25, choices=SalaryCalculation.choices, verbose_name='Тип звіту')
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, verbose_name="Водій")
+    kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Заробіток за період')
+    cash = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Готівка')
+    rent_distance = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Орендована дистанція')
+    rent = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Оренда авто')
+    salary = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Виплачено водію')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, verbose_name="Партнер")
+
+    class Meta:
+        verbose_name = 'Виплати водію'
+        verbose_name_plural = 'Виплати водіям'
+
+    def __str__(self):
+        return f"{self.driver}"
+
+
 class UseOfCars(models.Model):
     user_vehicle = models.CharField(max_length=255, verbose_name='Користувач автомобіля')
     chat_id = models.CharField(blank=True, max_length=10, verbose_name='Індетифікатор чата')
@@ -1191,13 +1228,28 @@ class ParkSettings(models.Model):
             return default
         return setting.value
 
-    @classmethod
-    def get_key(cls, key, default=None):
+
+class CredentialPartner(models.Model):
+    key = models.CharField(max_length=255, verbose_name='Ключ')
+    value = models.BinaryField(verbose_name='Значення')
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+
+    @staticmethod
+    def encrypt_credential(value):
+        return Fernet(os.environ.get("CRYPT_KEY").encode('utf-8')).encrypt(value.encode())
+
+    @staticmethod
+    def decrypt_credential(value):
+        key = os.environ.get("CRYPT_KEY").encode('utf-8')
+        return Fernet(key).decrypt(value).decode()
+
+    @staticmethod
+    def get_value(key, default=None, **kwargs):
         try:
-            setting = cls.objects.get(key=key)
-            print(setting.key)
-        except (ProgrammingError, ObjectDoesNotExist):
+            setting = CredentialPartner.objects.get(key=key, **kwargs)
+        except ObjectDoesNotExist:
             return default
+        return setting.decrypt_credential(bytes(setting.value))
 
 
 class Service(PolymorphicModel):

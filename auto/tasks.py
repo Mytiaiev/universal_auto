@@ -16,11 +16,11 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversation, VehicleSpending, DriverReshuffle
-from django.db.models import Sum, IntegerField, FloatField, Q
+    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, CredentialPartner
+from django.db.models import Sum, IntegerField, FloatField, Q, DecimalField
 from django.db.models.functions import Cast, Coalesce
-from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_weekly, \
-    get_driver_efficiency_report
+from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_report, \
+    get_driver_efficiency_report, calculate_by_rate, calculate_rent
 from auto_bot.handlers.order.keyboards import inline_markup_accept, inline_search_kb, inline_client_spot, \
     inline_spot_keyboard, inline_second_payment_kb, inline_reject_order, personal_order_end_kb, \
     personal_driver_end_kb
@@ -37,6 +37,7 @@ from scripts.google_calendar import GoogleCalendar
 from scripts.redis_conn import redis_instance
 from selenium_ninja.bolt_sync import BoltRequest
 from selenium_ninja.driver import SeleniumTools
+from selenium_ninja.synchronizer import AuthenticationError
 from selenium_ninja.uagps_sync import UaGpsSynchronizer
 from selenium_ninja.uber_sync import UberRequest
 from selenium_ninja.uklon_sync import UklonRequest
@@ -53,7 +54,7 @@ fleets = {
 
 
 def check_available_fleets(partner_pk):
-    settings = ParkSettings.objects.filter(
+    settings = CredentialPartner.objects.filter(
                 Q(key="BOLT_PASSWORD") |
                 Q(key="UKLON_PASSWORD") |
                 Q(key="UBER_PASSWORD") |
@@ -114,8 +115,8 @@ def auto_send_task_bot(self):
 def get_uber_session(self, partner_pk, login=None, password=None):
     try:
         chrome = SeleniumTools(partner_pk)
-        success = chrome.uber_login(session=True, login=login, password=password)
-        login_in(action='uber', user_id=partner_pk, success_login=True, login_name=login, password=password)
+        chrome.uber_login(session=True, login=login, password=password)
+        success = login_in(action='uber', user_id=partner_pk, login_name=login, password=password)
     except Exception as e:
         success = False
         logger.error(e)
@@ -126,24 +127,20 @@ def get_uber_session(self, partner_pk, login=None, password=None):
 @app.task(bind=True, queue='beat_tasks')
 def get_bolt_session(self, partner_pk, login=None, password=None):
     try:
-        chrome = SeleniumTools(partner_pk)
-        success = chrome.bolt_login(login=login, password=password)
-        login_in(action='bolt', user_id=partner_pk, success_login=True, login_name=login, password=password, url=success[1])
-    except Exception as e:
-        success = False
+        BoltRequest(partner_pk).get_login_token(login=login, password=password)
+        success = login_in(action='bolt', user_id=partner_pk, login_name=login, password=password)
+    except AuthenticationError as e:
         logger.error(e)
-
-    return partner_pk, success[0]
+        success = False
+    return partner_pk, success
 
 
 @app.task(bind=True, queue='beat_tasks')
 def get_uklon_session(self, partner_pk, login=None, password=None):
     try:
-        login_name = login[4:]
-        chrome = SeleniumTools(partner_pk)
-        success = chrome.uklon_login(login=login_name, password=password)
-        login_in(action='uklon', user_id=partner_pk, success_login=True, login_name=login, password=password)
-    except Exception as e:
+        UklonRequest(partner_pk).create_session(login=login, password=password)
+        success = login_in(action='uklon', user_id=partner_pk, login_name=login, password=password)
+    except AuthenticationError as e:
         success = False
         logger.error(e)
 
@@ -155,8 +152,7 @@ def get_gps_session(self, partner_pk, login=None, password=None):
     try:
         chrome = SeleniumTools(partner_pk)
         token = chrome.gps_login(login=login, password=password)
-        if token:
-            success = login_in(action='gps', user_id=partner_pk, success_login=True, login_name=login, password=password, token=token)
+        success = login_in(action='gps', user_id=partner_pk, login_name=login, password=password, token=token)
     except Exception as e:
         success = False
         logger.error(e)
@@ -173,7 +169,10 @@ def get_orders_from_fleets(self, partner_pk, day=None):
         request_class = fleets.get(setting.key)
         if request_class:
             if isinstance(request_class(partner_pk), UberRequest):
-                request_class(partner_pk).get_fleet_orders(day)
+                try:
+                    request_class(partner_pk).get_fleet_orders(day)
+                except Exception as e:
+                    logger.error(e)
             else:
                 for driver in drivers:
                     request_class(partner_pk).get_fleet_orders(day, driver.pk)
@@ -232,7 +231,8 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                           full_name=driver).first()
                     if report:
                         total_kasa += report.total_amount_without_fee
-                        clean_kasa += report.total_amount_without_fee * (1 - driver.rate) if driver.schema in ("HALF", "CUSTOM") else driver.rental / 7
+                        clean_kasa += report.total_amount_without_fee * (1 - driver.schema.rate) if \
+                            driver.schema.schema in ("HALF", "CUSTOM") else driver.schema.rental / 7
 
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
@@ -419,23 +419,27 @@ def manager_paid_weekly(self, partner_pk):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def send_weekly_report(self, partner_pk):
+def send_driver_report(self, partner_pk, daily=False):
     result = []
-    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
-    managers.append(Partner.objects.filter(pk=partner_pk).values('chat_id').first())
+    managers = list(Manager.objects.filter(
+        partner=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id'))
+    managers.append(Partner.objects.filter(
+        pk=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id').first())
     for manager in managers:
-        result.append(generate_message_weekly(manager['chat_id']))
+        result.append(generate_message_report(manager['chat_id'], daily=daily))
     return result
 
 
 @app.task(bind=True, queue='beat_tasks')
-def send_daily_report(self, partner_pk):
+def send_daily_statistic(self, partner_pk):
     message = ''
     driver_dict_msg = {}
     dict_msg = {}
-    managers = list(Manager.objects.filter(partner=partner_pk).values('chat_id'))
+    managers = list(Manager.objects.filter(
+        partner=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id'))
     if not managers:
-        managers = list(Partner.objects.filter(pk=partner_pk).values('chat_id'))
+        managers = list(Partner.objects.filter(
+            pk=partner_pk, chat_id__isnull=False).exclude(chat_id='').values('chat_id'))
     for manager in managers:
         result = get_daily_report(manager_id=manager['chat_id'])
         if result:
@@ -881,6 +885,63 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
             pass
 
 
+@app.task(bind=True, queue='beat_tasks')
+def calculate_driver_reports(self, partner_pk, daily=False):
+    if daily:
+        start = end = timezone.localtime().date() - timedelta(days=1)
+        calculation = SalaryCalculation.DAY
+    else:
+        end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+        start = end - timedelta(days=6)
+        calculation = SalaryCalculation.WEEK
+    for driver in Driver.objects.filter(salary_calculation=calculation, partner=partner_pk):
+        if DriverPayments.objects.filter(report_from=start,
+                                         report_to=end,
+                                         driver=driver).exists():
+            return
+        driver_report = SummaryReport.objects.filter(report_from__range=(start, end),
+                                                     full_name=driver)
+        if driver_report:
+
+            cash = driver_report.aggregate(
+                cash=Coalesce(Sum('total_amount_cash'), 0, output_field=DecimalField()))['cash']
+            kasa = driver_report.aggregate(
+                kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
+            rent = calculate_rent(start, end, driver)
+            rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', 15, partner=driver.partner.pk))
+            if kasa:
+                if driver.schema.schema == "DYNAMIC":
+                    driver_spending = calculate_by_rate(driver, kasa)
+                    salary = '%.2f' % (driver_spending - cash - rent_value)
+                elif driver.schema.schema in ("HALF", "CUSTOM"):
+                    if kasa < driver.schema.plan:
+                        incomplete = (driver.schema.plan - kasa) * Decimal(1 - driver.schema.rate)
+                        salary = '%.2f' % (kasa * driver.schema.rate - cash - incomplete - rent_value)
+                    else:
+                        salary = '%.2f' % (kasa * driver.schema.rate - cash - rent_value)
+                else:
+                    efficiency_obj = DriverEfficiency.objects.filter(report_from__range=(start, end),
+                                                                     driver=driver)
+                    overall_distance = efficiency_obj.aggregate(
+                        distance=Coalesce(Sum('mileage'), 0, output_field=DecimalField()))['distance']
+                    rent = overall_distance - int(ParkSettings.get_value(
+                        "TOTAL_KM_PER_WEEK", 2000, partner=driver.partner.pk))
+                    rent_value = max(rent * int(ParkSettings.get_value(
+                        "OVERALL_KM_PRICE", 6, partner=driver.partner.pk)), 0)
+                    salary = '%.2f' % (kasa * driver.schema.rate - cash - driver.schema.rental - rent_value)
+
+                DriverPayments.objects.create(report_from=start,
+                                              report_to=end,
+                                              report_type=calculation,
+                                              driver=driver,
+                                              rent_distance=rent,
+                                              kasa=kasa,
+                                              cash=cash,
+                                              salary=salary,
+                                              rent=rent_value,
+                                              partner=Partner.get_partner(partner_pk))
+
+
 @app.on_after_finalize.connect
 def run_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(crontab(minute="*/2"), send_time_order.s())
@@ -908,9 +969,13 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="5"), add_money_to_vehicle.s(partner_id))
     sender.add_periodic_task(crontab(minute="20", hour="4"), get_driver_efficiency.s(partner_id))
-    sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="1", hour="9"), send_daily_statistic.s(partner_id))
+    sender.add_periodic_task(crontab(minute="55", hour="4"), calculate_driver_reports.s(partner_id, daily=True))
+    sender.add_periodic_task(crontab(minute="55", hour="4", day_of_week="1"),
+                             calculate_driver_reports.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="8", day_of_week="1"),
-                             send_weekly_report.s(partner_id))
+                             send_driver_report.s(partner_id))
+    sender.add_periodic_task(crontab(minute="56", hour="8"), send_driver_report.s(partner_id, daily=True))
     # sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
                              # manager_paid_weekly.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="9", day_of_week="1"),

@@ -4,8 +4,8 @@ import requests
 from _decimal import Decimal
 from django.db.models import Q
 from django.utils import timezone
-from app.models import UaGpsService, ParkSettings, Driver, Vehicle, StatusChange, RentInformation, Partner, FleetOrder, \
-    DriverEfficiency, DriverReshuffle
+from app.models import UaGpsService, Driver, Vehicle, RentInformation, Partner, FleetOrder, \
+    DriverEfficiency, DriverReshuffle, CredentialPartner
 from scripts.redis_conn import redis_instance
 
 
@@ -20,7 +20,7 @@ class UaGpsSynchronizer:
 
         params = {
             'svc': 'token/login',
-            'params': json.dumps({"token": ParkSettings.get_value('UAGPS_TOKEN', partner=self.partner_id)})
+            'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner_id)})
         }
         login = requests.get(self.url, params=params)
         return login.json()['eid']

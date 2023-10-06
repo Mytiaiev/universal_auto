@@ -8,9 +8,21 @@ from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Rol
 import datetime
 
 
+class AuthenticationError(Exception):
+    def __init__(self, message="Authentication error"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class InfinityTokenError(Exception):
+    def __init__(self, message="No infinity gps token"):
+        self.message = message
+        super().__init__(self.message)
+
+
 class Synchronizer:
 
-    def __init__(self, partner_id, fleet='Uklon'):
+    def __init__(self, partner_id, fleet):
         self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance()
@@ -53,17 +65,15 @@ class Synchronizer:
             drivers.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
-        name = self.r_dup(kwargs['name'])
-        second_name = self.r_dup(kwargs['second_name'])
-        driver = Driver.objects.filter((Q(name=name, second_name=second_name) |
-                                        Q(name=second_name, second_name=name) |
+        driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
+                                        Q(name=kwargs['second_name'], second_name=kwargs['name']) |
                                         Q(phone_number__icontains=kwargs['phone_number'][-10:])
                                         ) & Q(partner=self.partner_id)).first()
         if not driver and kwargs['email']:
             driver = Driver.objects.filter(email__icontains=kwargs['email']).first()
         if not driver:
-            driver = Driver.objects.create(name=name,
-                                           second_name=second_name,
+            driver = Driver.objects.create(name=kwargs['name'],
+                                           second_name=kwargs['second_name'],
                                            phone_number=kwargs['phone_number']
                                            if len(kwargs['phone_number']) <= 13 else None,
                                            email=kwargs['email'],
@@ -121,9 +131,12 @@ class Synchronizer:
         swap_vehicle = Vehicle.objects.filter(licence_plate=kwargs['licence_plate']).first()
         reshuffle = DriverReshuffle.objects.filter(swap_vehicle=swap_vehicle,
                                                    swap_time__date=yesterday.date())
-        vehicle = None if reshuffle else self.get_or_create_vehicle(**kwargs)
-        if reshuffle or (driver.vehicle != vehicle and vehicle is not None):
-            driver.vehicle = vehicle
+        if reshuffle:
+            Driver.objects.filter(vehicle=swap_vehicle).update(vehicle=None)
+        else:
+            vehicle = self.get_or_create_vehicle(**kwargs)
+            if vehicle is not None:
+                driver.vehicle = vehicle
         if phone_number and not driver.phone_number:
             driver.phone_number = phone_number
 
@@ -134,23 +147,6 @@ class Synchronizer:
         driver.save()
 
     @staticmethod
-    def start_report_interval(day):
-        return datetime.datetime.combine(day, datetime.time.min)
-
-    @staticmethod
-    def end_report_interval(day):
-        return datetime.datetime.combine(day, datetime.time.max)
-
-    @staticmethod
-    def parameters() -> dict:
-        params = {
-            'limit': '50',
-            'offset': '0',
-        }
-        return params
-
-    @staticmethod
-    def r_dup(text):
-        if 'DUP' in text:
-            text = text[:-3]
-        return text
+    def report_interval(day, start=None):
+        report_time = datetime.time.min if start else datetime.time.max
+        return int(datetime.datetime.combine(day, report_time).timestamp())

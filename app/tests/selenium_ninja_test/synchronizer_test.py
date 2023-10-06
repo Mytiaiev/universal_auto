@@ -186,23 +186,16 @@ def test_update_vehicle_fields_with_no_changes(synchronizer, vehicle):
     assert vehicle.vin_code == '123456789123'
 
 
-def test_start_report_interval(synchronizer):
-    day = datetime.date(2023, 4, 25)
-
-    result = synchronizer.start_report_interval(day)
-
-    assert result == datetime.datetime(2023, 4, 25, 0, 0)
-
-
-def test_end_report_interval(synchronizer):
+def test_report_interval(synchronizer):
     # Arrange
     day = datetime.date(2023, 4, 25)
 
     # Act
-    result = synchronizer.end_report_interval(day)
+    result = synchronizer.report_interval(day, start=True)
+    result_end = synchronizer.report_interval(day)
 
-    # Assert
-    assert not result == datetime.datetime(2023, 4, 25, 23, 59, 59)
+    assert result == datetime.datetime(2023, 4, 25, 0, 0)
+    assert result_end == datetime.datetime(2023, 4, 25, 23, 59, 59)
 
 
 @pytest.mark.django_db
