@@ -383,8 +383,8 @@ def update_park_set(partner, key, value, description=None, check_value=True, par
     else:
         try:
             setting = CredentialPartner.objects.get(key=key, partner=partner)
-            if setting.decrypt_credential(value) != value and check_value:
-                setting.value = setting.encrypt_credential(value)
+            if CredentialPartner.decrypt_credential(value) != value and check_value:
+                setting.value = CredentialPartner.encrypt_credential(value)
                 setting.save()
         except ObjectDoesNotExist:
             partner = Partner.get_partner(partner)
@@ -472,6 +472,7 @@ def login_in(action=None, user_id=None, login_name=None, password=None, token=No
         update_park_set(user_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
     elif action == 'gps':
         update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
+        print(token)
         update_park_set(user_id, 'FREE_RENT', 15, description='Безкоштовна оренда (км)')
         update_park_set(user_id, 'RENT_PRICE', 15, description='Ціна за оренду (грн)')
         update_park_set(user_id, 'TOTAL_KM_PER_WEEK', 2000, description='Ліміт на тиждень (км)')
@@ -492,7 +493,7 @@ def partner_logout(action, user_pk):
         'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),
         'bolt_logout': ('BOLT_NAME', 'BOLT_PASSWORD'),
         'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID'),
-        'gps_logout': 'UAGPS_TOKEN'
+        'gps_logout': ('UAGPS_TOKEN',)
     }
     park_action = park_dict.get(action)
     credential_action = credential_dict.get(action)

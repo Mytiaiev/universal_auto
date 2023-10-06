@@ -73,8 +73,8 @@ def inline_partner_drivers(callback, drivers, back_step, pk_vehicle=None):
 
 def inline_efficiency_report_kb(back_step):
     keyboard = [
-        [InlineKeyboardButton(report_period[1], callback_data="Efficiency_daily")],
-        [InlineKeyboardButton(report_period[2], callback_data="Efficiency_custom")],
+        [InlineKeyboardButton(efficiency_period[0], callback_data="Efficiency_daily")],
+        [InlineKeyboardButton(efficiency_period[1], callback_data="Efficiency_custom")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)],
         main
 
@@ -84,8 +84,8 @@ def inline_efficiency_report_kb(back_step):
 
 def inline_driver_eff_kb(back_step):
     keyboard = [
-        [InlineKeyboardButton(report_period[1], callback_data="Driver_daily")],
-        [InlineKeyboardButton(report_period[2], callback_data="Driver_custom")],
+        [InlineKeyboardButton(efficiency_period[0], callback_data="Driver_daily")],
+        [InlineKeyboardButton(efficiency_period[1], callback_data="Driver_custom")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)],
         main
 

@@ -117,6 +117,7 @@ class SeleniumTools:
             self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
             time.sleep(self.sleep)
             cookies = self.driver.get_cookies()
+            print(cookies)
         except (NoSuchElementException, InvalidArgumentException):
             return False
         for cookie in cookies:
