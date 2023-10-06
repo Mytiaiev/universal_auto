@@ -17,7 +17,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException, NoSuchElementException, InvalidArgumentException
 
-from app.models import ParkSettings, UberService, UberSession, Partner, BoltService, NewUklonService, NewUklonFleet, \
+from app.models import ParkSettings, UberService, UberSession, Partner, NewUklonService, NewUklonFleet, \
     FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService, CredentialPartner
 from auto import settings
 from scripts.redis_conn import redis_instance, get_logger
@@ -25,7 +25,7 @@ from selenium_ninja.synchronizer import InfinityTokenError, AuthenticationError
 
 
 class SeleniumTools:
-    def __init__(self, partner=None, remote=True, driver=True, sleep=5):
+    def __init__(self, partner=None, remote=True, driver=True, sleep=4):
         self.partner = partner
         self.remote = remote
         self.sleep = sleep
@@ -211,7 +211,7 @@ class SeleniumTools:
         job_application.save()
         self.quit()
 
-    def uber_login(self, session=None, login=None, password=None):
+    def uber_login(self, session=None, login=None, password=None, url=UberService.get_value('BASE_URL')):
         if not (login and password):
             login = CredentialPartner.get_value("UBER_NAME", partner=self.partner)
             password = CredentialPartner.get_value("UBER_PASSWORD", partner=self.partner)
@@ -246,15 +246,12 @@ class SeleniumTools:
                 except TimeoutException:
                     raise AuthenticationError("Uber login or password invalid")
         time.sleep(self.sleep)
-        try:
-            self.driver.get(UberService.get_value('BASE_URL'))
-            time.sleep(self.sleep)
-            self.driver.find_element(By.XPATH, UberService.get_value('CHECK_LOGIN_UBER'))
-            login_success = self.save_uber() if session else True
+
+        self.driver.get(url)
+        time.sleep(self.sleep)
+        if session:
+            self.save_uber()
             self.quit()
-        except (NoSuchElementException, InvalidArgumentException):
-            login_success = False
-        return login_success
 
     def save_uber(self):
         url = self.driver.current_url
@@ -385,8 +382,7 @@ class SeleniumTools:
     def generate_payments_order(self, fleet, day):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}{self.get_uuid()}/reports"
         xpath = UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')
-        self.uber_login()
-        self.driver.get(url)
+        self.uber_login(url=url)
         WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
         try:
             xpath = UberService.get_value('UBER_GENERATE_TRIPS_1')
@@ -452,7 +448,6 @@ class SeleniumTools:
                                  "state": states.get(row[12]),
                                  "partner": Partner.get_partner(self.partner)}
                         FleetOrder.objects.create(**order)
-
 
 
 def clickandclear(element):

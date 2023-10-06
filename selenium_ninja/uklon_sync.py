@@ -2,6 +2,7 @@ import json
 import secrets
 import uuid
 from datetime import datetime
+from pprint import pprint
 
 import requests
 from django.utils import timezone
@@ -125,29 +126,26 @@ class UklonRequest(Synchronizer):
 
         return nested_data
 
-    def download_report(self, day):
-        report = Payments.objects.filter(report_from=self.start_report_interval(day),
-                                         vendor_name=self.fleet,
-                                         partner=self.partner_id)
-        return list(report)
-
     def save_report(self, day):
-        if self.download_report(day):
-            return self.download_report(day)
+        if Payments.objects.filter(report_from=day.date(),
+                                   vendor_name=self.fleet,
+                                   partner=self.partner_id):
+            return
         param = self.parameters.copy()
-        param.update({'dateFrom': self.start_report_interval(day).timestamp(),
-                     'dateTo': self.end_report_interval(day).timestamp()
+        param.update({'dateFrom': self.report_interval(day, start=True),
+                     'dateTo': self.report_interval(day)
                       })
         url = f"{Service.get_value('UKLON_3')}{self.uklon_id()}"
         url += Service.get_value('UKLON_4')
         data = self.response_data(url=url, params=param)['items']
+        pprint(data)
         if data:
             for i in data:
                 order = Payments(
-                    report_from=self.start_report_interval(day).date(),
+                    report_from=day.date(),
                     vendor_name=self.fleet,
                     full_name=f"{i['driver']['first_name'].split()[0]} {i['driver']['last_name'].split()[0]}",
-                    driver_id=str(i['driver']['id']),
+                    driver_id=i['driver']['id'],
                     total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
                     total_distance=float(
                         0) if 'total_distance_meters' not in i else self.to_float(i['total_distance_meters'], div=1000),
@@ -165,7 +163,6 @@ class UklonRequest(Synchronizer):
                     order.save()
                 except IntegrityError:
                     pass
-        return self.download_report(day)
 
     def get_drivers_status(self):
         first_key, second_key = 'with_client', 'wait'
@@ -241,8 +238,8 @@ class UklonRequest(Synchronizer):
             params = {"limit": 50,
                       "fleetId": self.uklon_id(),
                       "driverId": driver_id,
-                      "from": int(self.start_report_interval(day).timestamp()),
-                      "to": int(self.end_report_interval(day).timestamp())
+                      "from": self.report_interval(day, start=True),
+                      "to": self.report_interval(day)
                       }
             orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
             for order in orders['items']:

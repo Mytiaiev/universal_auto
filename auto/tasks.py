@@ -894,7 +894,7 @@ def calculate_driver_reports(self, partner_pk, daily=False):
         end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
         start = end - timedelta(days=6)
         calculation = SalaryCalculation.WEEK
-    for driver in Driver.objects.filter(salary_calculation=calculation):
+    for driver in Driver.objects.filter(salary_calculation=calculation, partner=partner_pk):
         if DriverPayments.objects.filter(report_from=start,
                                          report_to=end,
                                          driver=driver).exists():

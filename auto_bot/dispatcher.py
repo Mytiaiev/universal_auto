@@ -4,7 +4,6 @@ import re
 
 from telegram.ext import CommandHandler, PreCheckoutQueryHandler, MessageHandler, Filters, CallbackQueryHandler, \
     ConversationHandler, Dispatcher
-from app.models import Driver
 from auto_bot.main import bot
 from auto_bot.states import text
 # handlers
@@ -183,7 +182,7 @@ def setup_dispatcher(dp):
     dp.add_handler(CallbackQueryHandler(statistic_functions, pattern="Get_statistic"))
     dp.add_handler(CallbackQueryHandler(get_drivers_from_fleets, pattern="Update_drivers"))
     dp.add_handler(CallbackQueryHandler(get_earning_report, pattern="Get_report"))
-    dp.add_handler(CallbackQueryHandler(get_weekly_report, pattern="Weekly_report"))
+    dp.add_handler(CallbackQueryHandler(get_weekly_report, pattern="Weekly_payment|Daily_payment"))
     dp.add_handler(CallbackQueryHandler(get_report, pattern="Daily_report|Custom_report"))
     dp.add_handler(CallbackQueryHandler(get_efficiency_auto, pattern="Efficiency_daily|Efficiency_custom"))
     dp.add_handler(CallbackQueryHandler(get_efficiency_report, pattern="Get_efficiency_report"))

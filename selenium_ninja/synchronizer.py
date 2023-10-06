@@ -65,17 +65,15 @@ class Synchronizer:
             drivers.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
-        name = self.r_dup(kwargs['name'])
-        second_name = self.r_dup(kwargs['second_name'])
-        driver = Driver.objects.filter((Q(name=name, second_name=second_name) |
-                                        Q(name=second_name, second_name=name) |
+        driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
+                                        Q(name=kwargs['second_name'], second_name=kwargs['name']) |
                                         Q(phone_number__icontains=kwargs['phone_number'][-10:])
                                         ) & Q(partner=self.partner_id)).first()
         if not driver and kwargs['email']:
             driver = Driver.objects.filter(email__icontains=kwargs['email']).first()
         if not driver:
-            driver = Driver.objects.create(name=name,
-                                           second_name=second_name,
+            driver = Driver.objects.create(name=kwargs['name'],
+                                           second_name=kwargs['second_name'],
                                            phone_number=kwargs['phone_number']
                                            if len(kwargs['phone_number']) <= 13 else None,
                                            email=kwargs['email'],
@@ -148,15 +146,6 @@ class Synchronizer:
         driver.save()
 
     @staticmethod
-    def start_report_interval(day):
-        return datetime.datetime.combine(day, datetime.time.min)
-
-    @staticmethod
-    def end_report_interval(day):
-        return datetime.datetime.combine(day, datetime.time.max)
-
-    @staticmethod
-    def r_dup(text):
-        if 'DUP' in text:
-            text = text[:-3]
-        return text
+    def report_interval(day, start=None):
+        report_time = datetime.time.min if start else datetime.time.max
+        return int(datetime.datetime.combine(day, report_time).timestamp())

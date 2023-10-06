@@ -26,6 +26,12 @@ class UberRequest(Synchronizer):
         return str(obj_session.uber_uuid)
 
     @staticmethod
+    def remove_dup(text):
+        if 'DUP' in text:
+            text = text[:-3]
+        return text
+
+    @staticmethod
     def get_payload(query, variables):
         data = {
             'query': query,
@@ -105,8 +111,8 @@ class UberRequest(Synchronizer):
                 vin_code = driver['associatedVehicles'][0]['vin']
             phone = driver['member']['user']['phone']
             drivers.append({'fleet_name': self.fleet,
-                            'name': driver['member']['user']['name']['firstName'],
-                            'second_name': driver['member']['user']['name']['lastName'],
+                            'name': self.remove_dup(driver['member']['user']['name']['firstName']),
+                            'second_name': self.remove_dup(driver['member']['user']['name']['lastName']),
                             'email': driver['member']['user']['email'],
                             'phone_number': phone['countryCode'] + phone['nationalPhoneNumber'],
                             'driver_external_id': driver['member']['user']['uuid'],
@@ -121,8 +127,8 @@ class UberRequest(Synchronizer):
         reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
         if reports:
             return list(reports)
-        start = int(self.start_report_interval(day).timestamp() * 1000)
-        end = int(self.end_report_interval(day).timestamp() * 1000)
+        start = self.report_interval(day, True) * 1000
+        end = self.report_interval(day) * 1000
         query = '''query GetPerformanceReport($performanceReportRequest: PerformanceReportRequest__Input!) {
                   getPerformanceReport(performanceReportRequest: $performanceReportRequest) {
                     uuid

@@ -193,7 +193,8 @@ def create_driver_eff(update, context):
 def get_weekly_report(update, context):
     query = update.callback_query
     query.edit_message_text(generate_text)
-    messages = generate_message_report(query.from_user.id)
+    daily = True if query.data == "Daily_payment" else False
+    messages = generate_message_report(query.from_user.id, daily)
     owner_message = messages.get(str(query.from_user.id))
     query.edit_message_text(owner_message)
     query.edit_message_reply_markup(back_to_main_menu())
