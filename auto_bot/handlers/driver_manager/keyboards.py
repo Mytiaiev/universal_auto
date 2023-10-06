@@ -45,8 +45,8 @@ def inline_earning_report_kb(back_step):
     keyboard = [
         [InlineKeyboardButton(report_period[0], callback_data="Weekly_payment")],
         [InlineKeyboardButton(report_period[1], callback_data="Daily_payment")],
-        [InlineKeyboardButton(report_period[2], callback_data="Daily_report")],
         [InlineKeyboardButton(report_period[3], callback_data="Custom_report")],
+        [InlineKeyboardButton(report_period[2], callback_data="Daily_report")],
         [InlineKeyboardButton(order_inline_buttons[6], callback_data=back_step)],
         main
     ]

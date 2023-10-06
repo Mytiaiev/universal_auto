@@ -15,7 +15,7 @@ from auto_bot.handlers.driver_manager.keyboards import create_user_keyboard, rol
     inline_statistic_kb, inline_driver_eff_kb, inline_func_with_vehicle_kb, vehicle_spending_kb
 from auto_bot.handlers.driver_manager.static_text import *
 from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_date, get_efficiency, \
-    generate_message_report, get_driver_efficiency_report, validate_sum
+    generate_message_report, get_driver_efficiency_report, validate_sum, generate_report_period
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_daily_statistic, send_efficiency_report, send_driver_report, send_driver_efficiency
@@ -243,18 +243,9 @@ def create_period_report(update, context):
         if start > end:
             start, end = end, start
         msg = update.message.reply_text(generate_text)
-        report = get_daily_report(update.message.chat_id, start, end)
-        if report[0]:
-            message = ''
-            for key, value in report[0].items():
-                if report[0][key]:
-                    message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
-                        key, report[0][key], report[1].get(key, 0), report[2].get(key, 0), report[3].get(key, 0))
-            bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
-                                  message_id=msg.message_id, reply_markup=inline_manager_kb())
-        else:
-            bot.edit_message_text(chat_id=update.effective_chat.id, text=no_drivers_text,
-                                  message_id=msg.message_id, reply_markup=inline_manager_kb())
+        report = generate_report_period(update.effective_chat.id, start, end)
+        bot.edit_message_text(chat_id=update.effective_chat.id, text=report,
+                              message_id=msg.message_id, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_EARNINGS)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)

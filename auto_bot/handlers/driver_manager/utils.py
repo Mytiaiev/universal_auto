@@ -89,21 +89,20 @@ def calculate_by_rate(driver, kasa):
     return driver_spending
 
 
-def get_daily_report(manager_id=None, start=None, end=None):
-    yesterday = timezone.localtime().date() - timedelta(days=1)
-    if not start and not end:
-        if timezone.localtime().weekday():
-            start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
-        else:
-            start = timezone.localtime().date() - timedelta(weeks=1)
-        end = yesterday
+def get_daily_report(manager_id):
+    end = timezone.localtime().date() - timedelta(days=1)
+    if timezone.localtime().weekday():
+        start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+    else:
+        start = timezone.localtime().date() - timedelta(weeks=1)
+
     total_values = {}
     day_values = {}
     rent_daily = {}
     total_rent = {}
     drivers = get_drivers_vehicles_list(manager_id, Driver)[0]
     for driver in drivers:
-        daily_report = calculate_daily_reports(yesterday, yesterday, driver)
+        daily_report = calculate_daily_reports(end, end, driver)
         if daily_report:
             day_values[driver],  rent_daily[driver] = daily_report
         total_report = calculate_daily_reports(start, end, driver)
@@ -159,6 +158,36 @@ def generate_message_report(chat_id, daily=False):
     if user:
         drivers_dict[user.chat_id] = manager_message
     return drivers_dict
+
+
+def generate_report_period(chat_id, start, end):
+    message = ''
+    balance = 0
+
+    drivers, rent, user = get_drivers_vehicles_list(chat_id, Driver)
+    for driver in drivers:
+        payment = DriverPayments.objects.filter(report_to__range=(start, end),
+                                                driver=driver).values('driver_id').annotate(
+            period_kasa=Sum('kasa') or 0,
+            period_cash=Sum('cash') or 0,
+            period_rent_distance=Sum('rent_distance') or 0,
+            period_salary=Sum('salary') or 0,
+            period_rent=Sum('rent') or 0
+        )
+        if payment:
+            payment = payment[0]
+            driver_message = f"{driver}\n" \
+                             f"Каса: {payment['period_kasa']}\n" \
+                             f"Готівка: {payment['period_cash']}\n" \
+                             f"Оренда авто: {payment['period_rent_distance']}км, {payment['period_rent']}грн\n" \
+                             f"Зарплата: {payment['period_salary']}\n\n"
+            balance += payment['period_kasa'] - payment['period_salary'] - payment['period_cash']
+            message += driver_message
+    manager_message = "Звіт з {0} по {1}\n".format(start.date(), end.date())
+    manager_message += f'Ваш баланс: %.2f\n' % balance
+    manager_message += message
+
+    return manager_message
 
 
 def calculate_efficiency(vehicle, start, end):
