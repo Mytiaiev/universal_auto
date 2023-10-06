@@ -1291,3 +1291,7 @@ $(document).ready(function () {
 		}
 	});
 });
+
+// js for index
+
+

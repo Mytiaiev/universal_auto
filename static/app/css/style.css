@@ -10,7 +10,6 @@ html, body {
 }
 
 img {
-	max-width: 100%;
 	height: auto;
 	vertical-align: middle;
 	margin-bottom: 20px;
@@ -116,18 +115,34 @@ iframe {
 
 /*Header*/
 
+.header_section {
+	z-index: 8040;
+}
+
+.navbar-nav .nav-item:first-child .nav-link {
+	margin-left: 141px; /* Відстань між логотипом іншим елементом */
+}
+
+.navbar-nav .nav-item:not(:last-child) .nav-link {
+	margin-right: 33px; /* Відстань між елементами меню */
+}
+
 .nav-connect {
-	background-color: #EC6323;
+	background-color: #f0f0f0;
 	border-radius: 25px;
 	padding: 5px 10px;
-	color: #f0f0f0;
+	color: #EC6323;
 	text-decoration: none;
 	transition: background-color 0.3s;
 	cursor: pointer;
+	margin-right: 58px;
 }
 
 .nav-connect {
 	display: block;
+	position: absolute;
+	right: 20px;
+	z-index: 1023;
 }
 
 .nav-item {
@@ -166,7 +181,7 @@ iframe {
 	background-color: #fff;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 	border-radius: 25px;
-	left: 50%;
+	right: 80px;
 	transform: translateX(-50%);
 }
 
@@ -258,6 +273,113 @@ label[for="showPassword"] {
 }
 
 /*End Header*/
+
+/*index*/
+
+/*BLOCK-1*/
+
+.one_section {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 210px 0;
+}
+
+.image-map {
+	position: absolute;
+	left: 500px;
+	top: 95px;
+}
+
+.overlay-image {
+	position: absolute;
+	top: 255px;
+	left: 300px;
+}
+
+.right_content {
+	flex: 1;
+	position: relative;
+	text-align: center;
+}
+
+.right_content img {
+	width: 50%;
+	height: auto;
+	right: -20px;
+	top: -320px;
+	position: absolute;
+	z-index: 1021;
+}
+
+.one_section .right_content h2 {
+	color: white;
+	font-size: 36px;
+	margin: 0;
+	position: absolute;
+	bottom: 99px;
+	left: 630px;
+	right: 0;
+	padding: 10px;
+	z-index: 1022;
+	text-align: center;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.one_section .right_content .phone {
+	font-size: 32px;
+	color: #EC6323;
+	margin: 0;
+	position: absolute;
+	left: 670px;
+	bottom: 40px;
+	right: 0;
+	padding: 10px;
+	z-index: 1022;
+}
+
+.one_section .right_content .text-1 {
+	color: #fff;
+	font-size: 30px;
+	margin: 0;
+	position: absolute;
+	top: -60px;
+	left: 688px;
+	right: 0;
+	padding: 10px;
+	z-index: 1022;
+}
+
+.button-block-1 {
+	display: flex;
+	justify-content: center;
+	position: absolute;
+	top: 450px;
+	right: 400px;
+	z-index: 1022;
+}
+
+.telegram-button button {
+  background-color: #EC6323;
+  color: #fff;
+  padding: 10px 55px;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/*END BLOCK-1*/
+
+/*BLOCK-2*/
+
+.about_section {
+	margin-top: 250px;
+}
 
 /*#timer {*/
 /*	font-size: 18px;*/
