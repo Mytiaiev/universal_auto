@@ -505,7 +505,6 @@ label[for="showPassword"] {
 	font-style: normal;
 	font-weight: 700;
 	line-height: normal;
-	/*text-transform: capitalize;*/
 }
 
 .services-grid__item p {
@@ -519,6 +518,95 @@ label[for="showPassword"] {
 }
 
 /*END BLOCK-3*/
+
+/*BLOCK-4*/
+
+.app_section {
+	margin-top: 80px;
+}
+
+.container-app .detail-box {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.app_section .container .heading_container h5 {
+	color: #313A34;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+
+.detail-blocks,
+.app-image {
+	flex: 1;
+	padding: 0;
+}
+
+.detail-box {
+	margin-right: 5px;
+}
+
+.app-radio-btn {
+	display: flex;
+}
+
+.app-radio-btn input[type="radio"] {
+	display: none;
+}
+
+.app-radio-btn label {
+	display: inline-block;
+	margin-right: 10px;
+	position: relative;
+	cursor: pointer;
+}
+
+input[type="radio"]#detailsRadio:checked + label::before,
+input[type="radio"]#howItWorksRadio:checked + label::before {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 2px;
+	background-color: green;
+}
+
+
+.detail-radio-1 ul,
+.detail-radio-2 ul {
+	list-style-type: none;
+	padding-left: 0;
+}
+
+.detail-radio-1 ul li::before,
+.detail-radio-2 ul li::before {
+	content: url("/static/app/images/app-check-mark.png");
+	margin-right: 5px;
+	vertical-align: middle;
+}
+
+
+.app-image img {
+	float: left;
+	margin-left: 25px;
+}
+
+.container-app .app-deckor-image {
+	display: flex;
+	position: relative;
+	top: -400px;
+	right: 120px;
+	z-index: -1;
+}
+
+/*END BLOCK-4*/
+
 
 /*#timer {*/
 /*	font-size: 18px;*/

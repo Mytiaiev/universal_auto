@@ -1054,13 +1054,16 @@ $(document).ready(function () {
 // });
 
 
-// js for header
+
 
 $(window).on('load', function () {
 	$('.loader').remove();
 });
 
 $(document).ready(function () {
+
+	// js for header
+
 	$(".nav-item:has(.sub-menu), .nav-item:has(.social-icons)").hover(function () {
 		$(this).children(".sub-menu, .social-icons").slideDown("fast");
 	}, function () {
@@ -1290,8 +1293,25 @@ $(document).ready(function () {
 			});
 		}
 	});
+
+	// js for index
+
+	const detailsRadio = $('#detailsRadio');
+  const howItWorksRadio = $('#howItWorksRadio');
+  const detailRadio1 = $('#detail-radio-1');
+  const detailRadio2 = $('#detail-radio-2');
+
+  detailsRadio.change(function () {
+    if (this.checked) {
+      detailRadio1.show();
+      detailRadio2.hide();
+    }
+  });
+
+  howItWorksRadio.change(function () {
+    if (this.checked) {
+      detailRadio1.hide();
+      detailRadio2.show();
+    }
+  });
 });
-
-// js for index
-
-

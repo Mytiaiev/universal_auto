@@ -125,39 +125,58 @@
 
     <!-- app section -->
 
-    {#  <section class="app_section layout_padding">#}
-    {#    <div class="container">#}
-    {#      <div class="row">#}
-    {#        <div class="col-md-6">#}
-    {#          <div class="detail-box">#}
-    {#            <div class="heading_container">#}
-    {#              <h5>#}
-    {#                {% trans "Будь На Зв'язку" %}#}
-    {#              </h5>#}
-    {#              <h2>{% trans "Завантажуй наш додаток" %}</h2>#}
-    {#              <p>{% trans "Мобільний застосунок постійно вдосконалюються та додаються нові функції, які дозволяють замовляти таксі ще більш зручно та ефективно." %}</p>#}
-    {#            </div>#}
-    {#            <p>#}
-    {#              #}
-    {#            </p>#}
-    {#            <div class="btn-box">#}
-    {#              <a href="">#}
-    {#                <img src="{% static 'app/images/app_store.png' %}" alt="">#}
-    {#              </a>#}
-    {#              <a href="">#}
-    {#                <img src="{% static 'app/images/google_play.png' %}" alt="">#}
-    {#              </a>#}
-    {#            </div>#}
-    {#          </div>#}
-    {#        </div>#}
-    {#        <div class="col-md-6">#}
-    {#          <div class="img-box">#}
-    {#            <img src="{% static 'app/images/app-img.png' %}" alt="">#}
-    {#          </div>#}
-    {#        </div>#}
-    {#      </div>#}
-    {#    </div>#}
-    {#  </section>#}
+    <section class="app_section">
+      <div class="container container-app">
+        <div class="heading_container">
+          <h5>
+            {% trans "Замовити послуги від Ninja taxi" %}
+          </h5>
+        </div>
+        <div class="app-radio-btn">
+          <input type="radio" id="detailsRadio" name="radioGroup" value="details" checked>
+          <label for="detailsRadio">Деталі</label><br>
+          <input type="radio" id="howItWorksRadio" name="radioGroup" value="howItWorks">
+          <label for="howItWorksRadio">Як це працює</label><br>
+        </div>
+        <div class="detail-box">
+          <div class="detail-blocks">
+            <div class="detail-radio-1" id="detail-radio-1">
+              <p>
+                {% trans "Приєднуйтесь до нашого бота і насолоджуйтесь крутішим сервісом від еко-таксі Ninja taxi." %}
+                {% trans "Щоб розпочати Вам необхідно ввести Своє ім'я та контактний номер." %}
+              </p>
+              <ul>
+                <li>{% trans "Миттєвий доступ" %}</li>
+                <li>{% trans "Підтвердження в реальному часі" %}</li>
+                <li>{% trans "Зручний платіж" %}</li>
+                <li>{% trans "Історія поїздок" %}</li>
+                <li>{% trans "Економія часу:" %}</li>
+              </ul>
+            </div>
+            <div class="detail-radio-2" id="detail-radio-2" style="display: none">
+              <ul>
+                <li>{% trans "Перейдіть у Telegram Bot Ninja taxi" %}</li>
+                <li>{% trans "Авторизуйтеся" %}</li>
+                <li>{% trans "Оберіть потрібну Вам послугу" %}</li>
+                <li>{% trans "Здійсніть оплату за послугу " %}</li>
+                <li>{% trans "Оцініть роботу водія" %}</li>
+              </ul>
+            </div>
+            <div class="telegram-button">
+              <a href="{% url 'send_to_telegram' %}">
+                <button>{% trans "Перейти у Ninja Taxi бот" %}</button>
+              </a>
+            </div>
+          </div>
+          <div class="app-image">
+            <img src="{% static 'app/images/app-1.png' %}" alt="" loading="lazy">
+          </div>
+        </div>
+        <div class="app-deckor-image">
+          <img src="{% static 'app/images/index-one-block-6.png' %}" alt="" loading="lazy">
+        </div>
+      </div>
+    </section>
 
     <!-- end app section -->
 
