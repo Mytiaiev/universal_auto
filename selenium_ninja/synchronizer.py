@@ -49,19 +49,18 @@ class Synchronizer:
             fleet = Fleet.objects.get(name=kwargs['fleet_name'])
         except ObjectDoesNotExist:
             return
-        drivers, created = Fleets_drivers_vehicles_rate.objects.get_or_create(
-                fleet=fleet,
-                driver_external_id=kwargs['driver_external_id'],
-                partner=self.partner_id,
-                defaults={
-                        "fleet": fleet,
-                        "driver_external_id": kwargs['driver_external_id'],
-                        "driver": self.get_or_create_driver(**kwargs),
-                        "pay_cash": kwargs['pay_cash'],
-                        "partner": Partner.get_partner(self.partner_id)})
-        if not created:
-            drivers.pay_cash = kwargs["pay_cash"]
-            drivers.save(update_fields=['pay_cash'])
+        driver = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
+                                                             driver_external_id=kwargs['driver_external_id'],
+                                                             partner=self.partner_id).first()
+        if not driver:
+            Fleets_drivers_vehicles_rate.objects.create(fleet=fleet,
+                                                        driver_external_id=kwargs['driver_external_id'],
+                                                        driver=self.get_or_create_driver(**kwargs),
+                                                        pay_cash=kwargs['pay_cash'],
+                                                        partner=Partner.get_partner(self.partner_id))
+        else:
+            driver.pay_cash = kwargs["pay_cash"]
+            driver.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
         partner = Partner.get_partner(self.partner_id)
