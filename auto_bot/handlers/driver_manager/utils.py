@@ -259,8 +259,12 @@ def calculate_efficiency_driver(driver, start, end):
             avg_price = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_orders']))
         if aggregations['total_distance']:
             efficiency = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_distance']))
+        total_seconds = int(aggregations['total_hours'].total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        total_hours_formatted = f"{hours:02}:{minutes:02}:{seconds:02}"
         return (efficiency, aggregations['total_orders'], accept_percent,
-                avg_price, aggregations['total_distance'], aggregations['total_hours'])
+                avg_price, aggregations['total_distance'], total_hours_formatted)
 
 
 def get_driver_efficiency_report(manager_id=None, start=None, end=None):

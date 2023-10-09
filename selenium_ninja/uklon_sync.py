@@ -209,8 +209,8 @@ class UklonRequest(Synchronizer):
 
             drivers.append({
                 'fleet_name': self.fleet,
-                'name': driver['first_name'],
-                'second_name': driver['last_name'],
+                'name': driver['first_name'].split()[0],
+                'second_name': driver['last_name'].split()[0],
                 'email': email.get('email'),
                 'phone_number': f"+{driver['phone']}",
                 'driver_external_id': driver['id'],
