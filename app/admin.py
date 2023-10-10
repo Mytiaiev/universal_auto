@@ -1145,7 +1145,7 @@ class ParkSettingsAdmin(admin.ModelAdmin):
     def get_list_display(self, request):
         if request.user.groups.filter(name='Partner').exists():
             return ['description', 'value']
-        return super().get_list_display(request)
+        return [f.name for f in self.model._meta.fields]
 
     def get_fieldsets(self, request, obj=None):
         if request.user.groups.filter(name='Partner').exists():

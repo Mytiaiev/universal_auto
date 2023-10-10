@@ -196,6 +196,10 @@ class BoltRequest(Synchronizer):
                         finish = timezone.make_aware(datetime.datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
                     except TypeError:
                         finish = None
+                    try:
+                        price = order['total_price']
+                    except KeyError:
+                        price = 0
                     data = {"order_id": order['order_id'],
                             "fleet": self.fleet,
                             "driver": driver,
@@ -206,7 +210,7 @@ class BoltRequest(Synchronizer):
                             "payment": PaymentTypes.map_payments(order['payment_method']),
                             "destination": order['order_stops'][-1]['address'],
                             "vehicle": Vehicle.objects.get(licence_plate=order['car_reg_number']),
-                            "price": order['total_price'],
+                            "price": price,
                             "partner": Partner.get_partner(self.partner_id)
                             }
                     if driver.vehicle != data['vehicle']:

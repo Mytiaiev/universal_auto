@@ -10,7 +10,8 @@ from selenium_ninja.uklon_sync import UklonRequest
 
 
 def run(*args):
-    day = timezone.localtime() - timedelta(days=4)
-    print(FleetOrder.objects.filter(accepted_time__date=day.date(),
-                              partner=1).values('driver').annotate(time=Sum('distance')))
+    day = timezone.localtime() - timedelta(minutes=5)
+    drivers = Driver.objects.filter(partner=1)
+    for driver in drivers:
+        BoltRequest(1).get_fleet_orders(day, driver.pk)
 
