@@ -35,6 +35,7 @@ class Partner(models.Model):
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
     chat_id = models.CharField(blank=True, null=True, max_length=10, verbose_name='Ідентифікатор чата')
     calendar = models.CharField(max_length=255, verbose_name='Календар змін водіїв')
+    contacts = models.BooleanField(default=False, verbose_name='Доступ до контактів')
 
     @classmethod
     def get_partner(cls, pk):
@@ -73,11 +74,8 @@ class Schema(models.Model):
 
     @classmethod
     def get_half_schema_id(cls, title="HALF"):
-        try:
-            schema = cls.objects.get(schema=title)
-            return schema.pk
-        except ObjectDoesNotExist:
-            return None
+        schema = cls.objects.filter(schema=title, partner__isnull=True).first()
+        return schema
 
     def __str__(self):
         return self.title if self.title else ''
@@ -450,12 +448,20 @@ class Driver(User):
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
     salary_calculation = models.CharField(max_length=25, choices=SalaryCalculation.choices,
                                           default=SalaryCalculation.WEEK, verbose_name='Період розрахунку зарплати')
-    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, default=Schema.get_half_schema_id,
-                               verbose_name='Схема роботи')
+    schema = models.ForeignKey(Schema, on_delete=models.CASCADE, verbose_name='Схема роботи')
 
     class Meta:
         verbose_name = 'Водія'
         verbose_name_plural = 'Водії'
+
+    @staticmethod
+    def get_default_schema_id():
+        return Schema.get_half_schema_id()
+
+    def save(self, *args, **kwargs):
+        if not self.schema:
+            self.schema_id = self.get_default_schema_id()
+        super().save(*args, **kwargs)
 
     def get_driver_external_id(self, vendor: str):
         try:

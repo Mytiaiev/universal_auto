@@ -27,6 +27,7 @@ models = {
     'VehicleSpending':              {'view': True, 'add': True, 'change': True, 'delete': True},
     'DriverSchemaRate':             {'view': True, 'add': False, 'change': True, 'delete': False},
     'TransactionConversation':      {'view': True, 'add': False, 'change': False, 'delete': False},
+    'Fleets_drivers_vehicles_rate': {'view': True, 'add': False, 'change': True, 'delete': False},
 }
 
 investor_permissions = {
@@ -245,8 +246,17 @@ class SchemaAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             obj.rate = 1
         else:
             obj.rental = obj.plan * (1 - obj.rate)
-
+        if request.user.groups.filter(name='Partner').exists():
+            obj.partner = Partner.objects.get(user=request.user)
         super().save_model(request, obj, form, change)
+
+    def get_fieldsets(self, request, obj=None):
+        if request.user.groups.filter(name='Partner').exists():
+            fieldsets = [
+                ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental']}),
+            ]
+            return fieldsets
+        return super().get_fieldsets(request)
 
 
 @admin.register(DriverSchemaRate)
@@ -260,15 +270,12 @@ class DriverRateLevelsAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
         return self.readonly_fields if not request.user.is_superuser else tuple()
 
     def get_fieldsets(self, request, obj=None):
-        if request.user.is_superuser:
-            fieldsets = [
-                (None, {'fields': ['period', 'threshold', 'rate', 'partner']}),
-            ]
-        else:
+        if request.user.groups.filter(name='Partner').exists():
             fieldsets = [
                 (None, {'fields': ['period', 'threshold', 'rate']}),
             ]
-        return fieldsets
+            return fieldsets
+
 
 
 @admin.register(RawGPS)
@@ -710,11 +717,11 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'chat_id')
+    list_display = ('user', 'chat_id', 'contacts')
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['user', 'chat_id']}),
+        (None, {'fields': ['user', 'chat_id', 'contacts']}),
     ]
 
     def save_model(self, request, obj, form, change):
@@ -860,14 +867,12 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
         elif request.user.groups.filter(name='Partner').exists():
             return ['name', 'second_name',
                     'vehicle', 'manager', 'chat_id',
-                    'schema',
                     'driver_status',
                     'created_at',
                     ]
         else:
             return ['name', 'second_name',
                     'vehicle', 'chat_id',
-                    'schema',
                     'driver_status'
                     ]
 
@@ -1070,39 +1075,33 @@ class FleetOrderAdmin(admin.ModelAdmin):
 
 @admin.register(Fleets_drivers_vehicles_rate)
 class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
-    list_filter = ('driver', 'fleet')
+    list_filter = ('fleet',)
+    readonly_fields = ('fleet', 'driver_external_id')
 
     def get_list_display(self, request):
-        if request.user.is_superuser:
-            return [f.name for f in self.model._meta.fields]
-        else:
-            return ['fleet', 'driver',
+        if request.user.groups.filter(name__in=('Partner', 'Manager')).exists():
+            return ('fleet', 'driver',
                     'driver_external_id',
-                    'created_at',
-                    ]
+                    )
+        return [f.name for f in self.model._meta.fields]
 
     def get_fieldsets(self, request, obj=None):
-        if request.user.is_superuser:
-            fieldsets = [
-                ('Деталі',                      {'fields': ['fleet', 'driver',
-                                                            'driver_external_id',
-                                                            'partner',
-                                                            ]}),
-            ]
-        else:
+        if request.user.groups.filter(name__in=('Partner', 'Manager')).exists():
             fieldsets = [
                 ('Деталі',                      {'fields': ['fleet', 'driver',
                                                             'driver_external_id',
                                                             ]}),
-
             ]
 
-        return fieldsets
+            return fieldsets
+        return super().get_fieldsets(request)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if not request.user.is_superuser and db_field.name == "driver":
-            kwargs["queryset"] = Driver.objects.filter(partner__user=request.user)
-
+        if db_field.name == "driver":
+            if request.user.groups.filter(name='Partner').exists():
+                kwargs["queryset"] = Driver.objects.filter(partner__user=request.user, worked=True)
+            if request.user.groups.filter(name='Manager').exists():
+                kwargs["queryset"] = Driver.objects.filter(manager__user=request.user, worked=True)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
@@ -1144,25 +1143,17 @@ class ParkSettingsAdmin(admin.ModelAdmin):
         return qs
 
     def get_list_display(self, request):
-        if request.user.is_superuser:
-            return [f.name for f in self.model._meta.fields]
-        else:
-            return ['description', 'value',
-                    ]
+        if request.user.groups.filter(name='Partner').exists():
+            return ['description', 'value']
+        return super().get_list_display(request)
 
     def get_fieldsets(self, request, obj=None):
-        if request.user.is_superuser:
-            fieldsets = [
-                ('Деталі',                      {'fields': ['key', 'value',
-                                                            'description', 'partner',
-                                                            ]}),
-            ]
-        else:
+        if request.user.groups.filter(name='Partner').exists():
             fieldsets = [
                 ('Деталі',                      {'fields': ['description', 'value',
                                                             ]}),
 
             ]
 
-        return fieldsets
-
+            return fieldsets
+        return super().get_fieldsets(request)

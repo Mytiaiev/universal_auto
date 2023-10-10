@@ -60,7 +60,7 @@ def check_available_fleets(partner_pk):
                 Q(key="UBER_PASSWORD") |
                 Q(key="UAGPS_TOKEN"),
                 partner=partner_pk
-            )
+            ).order_by("-key")
     return settings
 
 
@@ -215,7 +215,7 @@ def get_car_efficiency(self, partner_pk, day=None):
                                                   vehicle=vehicle)
         if not efficiency:
             total_kasa = 0
-            clean_kasa = 0
+            clean_kasa = Decimal(0)
             total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
 
             total_spending = VehicleSpending.objects.filter(

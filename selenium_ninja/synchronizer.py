@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from scripts.redis_conn import redis_instance, get_logger
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner, \
-    DriverReshuffle
+    DriverReshuffle, Schema
 import datetime
 
 
@@ -49,22 +49,22 @@ class Synchronizer:
             fleet = Fleet.objects.get(name=kwargs['fleet_name'])
         except ObjectDoesNotExist:
             return
-        drivers, created = Fleets_drivers_vehicles_rate.objects.get_or_create(
-                fleet=fleet,
-                driver_external_id=kwargs['driver_external_id'],
-                partner=self.partner_id,
-                defaults={
-                        "fleet": fleet,
-                        "driver_external_id": kwargs['driver_external_id'],
-                        "driver": self.get_or_create_driver(**kwargs),
-                        "pay_cash": kwargs['pay_cash'],
-                        "partner": Partner.get_partner(self.partner_id)})
-
-        if not created:
-            drivers.pay_cash = kwargs["pay_cash"]
-            drivers.save(update_fields=['pay_cash'])
+        driver = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
+                                                             driver_external_id=kwargs['driver_external_id'],
+                                                             partner=self.partner_id).first()
+        if not driver:
+            Fleets_drivers_vehicles_rate.objects.create(fleet=fleet,
+                                                        driver_external_id=kwargs['driver_external_id'],
+                                                        driver=self.get_or_create_driver(**kwargs),
+                                                        pay_cash=kwargs['pay_cash'],
+                                                        partner=Partner.get_partner(self.partner_id))
+        else:
+            self.update_driver_fields(driver.driver, **kwargs)
+            driver.pay_cash = kwargs["pay_cash"]
+            driver.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
+        partner = Partner.get_partner(self.partner_id)
         driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
                                         Q(name=kwargs['second_name'], second_name=kwargs['name']) |
                                         Q(phone_number__icontains=kwargs['phone_number'][-10:])
@@ -72,14 +72,19 @@ class Synchronizer:
         if not driver and kwargs['email']:
             driver = Driver.objects.filter(email__icontains=kwargs['email']).first()
         if not driver:
-            driver = Driver.objects.create(name=kwargs['name'],
-                                           second_name=kwargs['second_name'],
-                                           phone_number=kwargs['phone_number']
-                                           if len(kwargs['phone_number']) <= 13 else None,
-                                           email=kwargs['email'],
-                                           vehicle=self.get_or_create_vehicle(**kwargs),
-                                           role=Role.DRIVER,
-                                           partner=Partner.get_partner(self.partner_id))
+            data = {"name": kwargs['name'],
+                    "second_name": kwargs['second_name'],
+                    "vehicle": self.get_or_create_vehicle(**kwargs),
+                    "role": Role.DRIVER,
+                    "schema": Schema.get_half_schema_id(),
+                    "partner": partner
+                    }
+            if partner.contacts:
+                phone_number = kwargs['phone_number'] if len(kwargs['phone_number']) <= 13 else None
+                data.update({"phone_number": phone_number,
+                             "email": kwargs['email']
+                             })
+            driver = Driver.objects.create(**data)
             try:
                 client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
                 driver.chat_id = client.chat_id
@@ -133,15 +138,12 @@ class Synchronizer:
                                                    swap_time__date=yesterday.date())
         if reshuffle:
             Driver.objects.filter(vehicle=swap_vehicle).update(vehicle=None)
-        else:
-            vehicle = self.get_or_create_vehicle(**kwargs)
-            if vehicle is not None:
-                driver.vehicle = vehicle
-        if phone_number and not driver.phone_number:
-            driver.phone_number = phone_number
+        if driver.partner.contacts:
+            if phone_number and not driver.phone_number:
+                driver.phone_number = phone_number
 
-        if email and driver.email != email:
-            driver.email = email
+            if email and driver.email != email:
+                driver.email = email
 
         driver.worked = worked
         driver.save()
