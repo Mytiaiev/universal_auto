@@ -74,7 +74,6 @@ class Synchronizer:
         if not driver:
             data = {"name": kwargs['name'],
                     "second_name": kwargs['second_name'],
-                    "vehicle": self.get_or_create_vehicle(**kwargs),
                     "role": Role.DRIVER,
                     "schema": Schema.get_half_schema_id(),
                     "partner": partner
@@ -133,11 +132,6 @@ class Synchronizer:
         phone_number = kwargs.get('phone_number')
         email = kwargs.get('email')
         worked = kwargs.get('worked')
-        swap_vehicle = Vehicle.objects.filter(licence_plate=kwargs['licence_plate']).first()
-        reshuffle = DriverReshuffle.objects.filter(swap_vehicle=swap_vehicle,
-                                                   swap_time__date=yesterday.date())
-        if reshuffle:
-            Driver.objects.filter(vehicle=swap_vehicle).update(vehicle=None)
         if driver.partner.contacts:
             if phone_number and not driver.phone_number:
                 driver.phone_number = phone_number

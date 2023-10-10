@@ -30,6 +30,24 @@ class SalaryCalculation(models.TextChoices):
     DAY = 'DAY', 'Денний'
 
 
+class PaymentTypes(models.TextChoices):
+    CASH = 'cash', 'Готівка'
+    CARD = 'card', 'Картка'
+
+    @classmethod
+    def map_payments(cls, payment):
+
+        payment_type_mapping = {
+            'apple': cls.CARD,
+            'google': cls.CARD,
+            'card': cls.CARD,
+            'cash': cls.CASH,
+            'corporatewallet': cls.CARD,
+        }
+
+        return payment_type_mapping.get(payment, cls.CARD)
+
+
 class Partner(models.Model):
     role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
@@ -1000,13 +1018,16 @@ class FleetOrder(models.Model):
 
     order_id = models.CharField(max_length=50, verbose_name='Ідентифікатор замовлення')
     fleet = models.CharField(max_length=20, verbose_name='Агрегатор замовлення')
-    driver = models.CharField(max_length=255, verbose_name='Водій')
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Водій')
     from_address = models.CharField(max_length=255, null=True, verbose_name='Місце посадки')
     destination = models.CharField(max_length=255, blank=True, null=True, verbose_name='Місце висадки')
     accepted_time = models.DateTimeField(blank=True, null=True, verbose_name='Час прийняття замовленя')
     finish_time = models.DateTimeField(blank=True, null=True, verbose_name='Час завершення замовлення')
     distance = models.DecimalField(null=True, decimal_places=2, max_digits=6, verbose_name="Відстань за маршрутом")
     state = models.CharField(max_length=255, blank=True, null=True, verbose_name='Статус замовлення')
+    payment = models.CharField(max_length=25, choices=PaymentTypes.choices, null=True, verbose_name="Тип оплати")
+    price = models.IntegerField(null=True, verbose_name="Вартість")
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     created_at = models.DateTimeField(editable=False, auto_now_add=True, verbose_name='Cтворено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 

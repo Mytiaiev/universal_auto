@@ -2,8 +2,6 @@ app = "workers"
 kill_signal = "SIGINT"
 primary_region = "otp"
 kill_timeout = 5
-[env]
-  DEBUG = false
 [experimental]
   auto_rollback = true
 [processes]

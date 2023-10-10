@@ -16,7 +16,8 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, CredentialPartner
+    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, CredentialPartner, \
+    PaymentTypes
 from django.db.models import Sum, IntegerField, FloatField, Q, DecimalField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_report, \
@@ -179,6 +180,62 @@ def get_orders_from_fleets(self, partner_pk, day=None):
 
 
 @app.task(bind=True, queue='beat_tasks')
+def get_today_orders(self, partner_pk):
+    settings = check_available_fleets(partner_pk)
+    day = timezone.localtime() - timedelta(minutes=5)
+    drivers = Driver.objects.filter(partner=partner_pk)
+    for setting in settings:
+        request_class = fleets.get(setting.key)
+        if request_class and not isinstance(request_class(partner_pk), UberRequest):
+            for driver in drivers:
+                request_class(partner_pk).get_fleet_orders(day, driver.pk)
+
+
+@app.task(bind=True, queue='beat_tasks')
+def check_card_cash_value(self, partner_pk):
+    orders = FleetOrder.objects.filter(accepted_time__date=timezone.localtime().date(),
+                                       partner=partner_pk)
+    kasa_qs = orders.values('driver').annotate(kasa=Sum('price'))
+    for driver in kasa_qs:
+        driver_obj = Driver.objects.get(pk=driver['driver'])
+        if driver['kasa'] > int(ParkSettings.get_value("START_CHECK_CASH", partner=partner_pk)):
+            card = orders.filter(payment=PaymentTypes.CARD,
+                                 driver=driver['driver']).aggregate(card_kasa=Sum('price'))['card_kasa']
+            try:
+                if driver['kasa'] != 0:
+                    ratio = card/driver['kasa']
+                    if driver_obj.schema.schema == "RENT":
+                        rate = float(ParkSettings.get_value("RENT_CASH_RATE", partner=partner_pk))
+                    else:
+                        rate = driver_obj.schema.rate
+                    enable = 'false' if ratio < rate else 'true'
+                else:
+                    return
+            except TypeError:
+                enable = 'false'
+            bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
+                             text=f"Готівка {enable} у {driver_obj}")
+            # fleets_cash_trips.delay(partner_pk, driver, enable)
+
+
+@app.task(bind=True, queue='beat_tasks')
+def send_notify_to_check_car(self, partner_pk):
+    if redis_instance().exists(f"wrong_vehicle_{partner_pk}"):
+        wrong_cars = redis_instance().hgetall(f"wrong_vehicle_{partner_pk}")
+        for driver, car in wrong_cars.items():
+            driver_obj = Driver.objects.get(pk=int(driver))
+            chat_id = driver_obj.manager.chat_id if driver_obj.manager else driver_obj.partner.chat_id
+            try:
+                bot.send_message(chat_id=chat_id, text=f"Водій {driver_obj} працює на {car},"
+                                                       f" перевірте машину яка закріплена за водієм")
+            except BadRequest:
+                bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
+                                 text=f"Не відправилось повідомлення про зміну авто для водія {driver_obj},"
+                                      f" партнер {driver_obj.partner}(неправильний чат ід?)")
+        redis_instance().delete(f"wrong_vehicle_{partner_pk}")
+
+
+@app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
     day = get_day_for_task(day)
     settings = check_available_fleets(partner_pk)
@@ -230,10 +287,14 @@ def get_car_efficiency(self, partner_pk, day=None):
                     report = SummaryReport.objects.filter(report_from=day,
                                                           full_name=driver).first()
                     if report:
-                        total_kasa += report.total_amount_without_fee
-                        clean_kasa += report.total_amount_without_fee * (1 - driver.schema.rate) if \
-                            driver.schema.schema in ("HALF", "CUSTOM") else driver.schema.rental / 7
-
+                        try:
+                            total_kasa += report.total_amount_without_fee
+                            clean_kasa += report.total_amount_without_fee * (1 - driver.schema.rate) if \
+                                driver.schema.schema in ("HALF", "CUSTOM") else Decimal(driver.schema.rental / 7)
+                        except TypeError:
+                            bot.send_message(chat_id=515224934,
+                                             text=f"{report.total_amount_without_fee}{type(report.total_amount_without_fee)}"
+                                                  f"{clean_kasa}{type(clean_kasa)}")
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,
@@ -964,6 +1025,9 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))
     sender.add_periodic_task(crontab(minute="30", hour='3'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour='*/4'), get_today_orders.s(partner_id))
+    sender.add_periodic_task(crontab(minute="5", hour='*/4'), send_notify_to_check_car.s(partner_id))
+    sender.add_periodic_task(crontab(minute="5", hour='*/4'), check_card_cash_value.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
