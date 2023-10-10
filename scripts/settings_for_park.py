@@ -44,5 +44,6 @@ standard_rates = {
 }
 
 settings_for_partner = {
-    "START_CHECK_CASH": ('1000', 'Сума для початку перевірки готівки')
+    "START_CHECK_CASH": ('1000', 'Сума для початку перевірки готівки'),
+    "RENT_CASH_RATE": ('0.5', 'Відсоток оплат на карту при оренді')
 }

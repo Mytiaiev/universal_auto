@@ -198,13 +198,17 @@ def check_card_cash_value(self, partner_pk):
     kasa_qs = orders.values('driver').annotate(kasa=Sum('price'))
     for driver in kasa_qs:
         driver_obj = Driver.objects.get(pk=driver['driver'])
-        if driver['kasa'] > int(ParkSettings.get_value("START_CHECK_CASH")):
+        if driver['kasa'] > int(ParkSettings.get_value("START_CHECK_CASH", partner=partner_pk)):
             card = orders.filter(payment=PaymentTypes.CARD,
                                  driver=driver['driver']).aggregate(card_kasa=Sum('price'))['card_kasa']
             try:
                 if driver['kasa'] != 0:
                     ratio = card/driver['kasa']
-                    enable = 'false' if ratio < driver_obj.schema.rate else 'true'
+                    if driver_obj.schema.schema == "RENT":
+                        rate = float(ParkSettings.get_value("RENT_CASH_RATE", partner=partner_pk))
+                    else:
+                        rate = driver_obj.schema.rate
+                    enable = 'false' if ratio < rate else 'true'
                 else:
                     return
             except TypeError:

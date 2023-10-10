@@ -18,7 +18,7 @@ def migrate_data(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('app', '0055_credentialpartner_driverpayments_driverschemarate_and_more'),
+        ('app', '0056_partner_contacts_alter_driver_schema'),
     ]
 
     operations = [
