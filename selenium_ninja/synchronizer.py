@@ -59,6 +59,7 @@ class Synchronizer:
                                                         pay_cash=kwargs['pay_cash'],
                                                         partner=Partner.get_partner(self.partner_id))
         else:
+            self.update_driver_fields(driver.driver, **kwargs)
             driver.pay_cash = kwargs["pay_cash"]
             driver.save(update_fields=['pay_cash'])
 
