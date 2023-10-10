@@ -247,7 +247,7 @@ class SchemaAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         else:
             obj.rental = obj.plan * (1 - obj.rate)
         if request.user.groups.filter(name='Partner').exists():
-            obj.partner = request.user
+            obj.partner = Partner.objects.get(user=request.user)
         super().save_model(request, obj, form, change)
 
     def get_fieldsets(self, request, obj=None):
@@ -256,6 +256,7 @@ class SchemaAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                 ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental']}),
             ]
             return fieldsets
+        return super().get_fieldsets(request)
 
 
 @admin.register(DriverSchemaRate)
@@ -1082,6 +1083,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
             return ('fleet', 'driver',
                     'driver_external_id',
                     )
+        return [f.name for f in self.model._meta.fields]
 
     def get_fieldsets(self, request, obj=None):
         if request.user.groups.filter(name__in=('Partner', 'Manager')).exists():
@@ -1092,6 +1094,7 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admi
             ]
 
             return fieldsets
+        return super().get_fieldsets(request)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "driver":

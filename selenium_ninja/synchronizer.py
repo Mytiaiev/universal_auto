@@ -75,6 +75,7 @@ class Synchronizer:
                     "second_name": kwargs['second_name'],
                     "vehicle": self.get_or_create_vehicle(**kwargs),
                     "role": Role.DRIVER,
+                    "schema": Schema.get_half_schema_id(),
                     "partner": partner
                     }
             if partner.contacts:

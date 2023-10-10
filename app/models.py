@@ -74,11 +74,8 @@ class Schema(models.Model):
 
     @classmethod
     def get_half_schema_id(cls, title="HALF"):
-        try:
-            schema = cls.objects.get(schema=title, partner__isnull=True)
-            return schema
-        except ObjectDoesNotExist:
-            return None
+        schema = cls.objects.filter(schema=title, partner__isnull=True).first()
+        return schema
 
     def __str__(self):
         return self.title if self.title else ''
