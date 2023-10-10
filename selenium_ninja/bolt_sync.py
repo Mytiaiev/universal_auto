@@ -7,10 +7,12 @@ import pendulum
 import requests
 from django.db import IntegrityError
 from django.utils import timezone
+from telegram.error import BadRequest
 
 from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
-    CredentialPartner
+    CredentialPartner, Vehicle, PaymentTypes
 from auto import settings
+from auto_bot.main import bot
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from taxi_service.utils import login_in
 
@@ -158,7 +160,7 @@ class BoltRequest(Synchronizer):
             time.sleep(0.5)
         return driver_list
 
-    def get_fleet_orders(self, day, pk):
+    def get_fleet_orders(self, day, pk, save=True):
         bolt_states = {
             "client_did_not_show": FleetOrder.CLIENT_CANCEL,
             "finished": FleetOrder.COMPLETED,
@@ -201,9 +203,14 @@ class BoltRequest(Synchronizer):
                             "accepted_time": timezone.make_aware(datetime.datetime.fromtimestamp(order['accepted_time'])),
                             "state": bolt_states.get(order['order_try_state']),
                             "finish_time": finish,
+                            "payment": PaymentTypes.map_payments(order['payment_method']),
                             "destination": order['order_stops'][-1]['address'],
+                            "vehicle": Vehicle.objects.get(licence_plate=order['car_reg_number']),
+                            "price": order['total_price'],
                             "partner": Partner.get_partner(self.partner_id)
                             }
+                    if driver.vehicle != data['vehicle']:
+                        self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['car_reg_number'])
                     FleetOrder.objects.create(**data)
 
     def get_drivers_status(self):

@@ -8,7 +8,7 @@ import requests
 from django.utils import timezone
 
 from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
-    CredentialPartner
+    CredentialPartner, Vehicle, PaymentTypes
 from scripts.redis_conn import redis_instance
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from django.db import IntegrityError
@@ -243,7 +243,7 @@ class UklonRequest(Synchronizer):
                       }
             orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
             for order in orders['items']:
-                if FleetOrder.objects.filter(order_id=order['id']):
+                if FleetOrder.objects.filter(order_id=order['id']) or order['status'] == "running":
                     continue
                 detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
                                             params={"driverId": str_driver_id})
@@ -268,8 +268,13 @@ class UklonRequest(Synchronizer):
                         "state": states.get(state),
                         "finish_time": finish_time,
                         "destination": order['route']['points'][-1]["address"],
+                        "vehicle": Vehicle.objects.get(licence_plate=order['vehicle']['licencePlate']),
+                        "payment": PaymentTypes.map_payments(order['payment']['paymentType']),
+                        "price": order['payment']['cost'],
                         "partner": Partner.get_partner(self.partner_id)
                         }
+                if driver.vehicle != order['vehicle']['licencePlate']:
+                    self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['vehicle']['licencePlate'])
                 FleetOrder.objects.create(**data)
 
     def disable_cash(self, pk, enable):

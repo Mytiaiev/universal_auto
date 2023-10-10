@@ -13,7 +13,7 @@ from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from django.contrib.auth.models import User as AuUser
 from scripts.google_calendar import datetime_with_timezone, GoogleCalendar
-from scripts.settings_for_park import standard_rates
+from scripts.settings_for_park import standard_rates, settings_for_partner
 
 
 # @receiver(post_save, sender=AuUser)
@@ -26,6 +26,8 @@ from scripts.settings_for_park import standard_rates
 def create_park_settings(sender, instance, created, **kwargs):
     if created:
         setup_periodic_tasks(instance)
+        for key, value in settings_for_partner.items():
+            ParkSettings.objects.create(key=key, value=value[0], description=value[1], partner=instance)
         for key, values in standard_rates.items():
             for value in values:
                 DriverSchemaRate.objects.create(period=key, threshold=value[0], rate=value[1], partner=instance)

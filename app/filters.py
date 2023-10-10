@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from app.models import CarEfficiency, Vehicle, DriverEfficiency, Driver, RentInformation, \
-    TransactionsConversation, SummaryReport, Payments
+    TransactionsConversation, SummaryReport, Payments, FleetOrder
 
 
 class VehicleEfficiencyUserFilter(admin.SimpleListFilter):
@@ -103,6 +103,11 @@ class DriverEfficiencyUserFilter(DriverRelatedFilter):
 class RentInformationUserFilter(DriverRelatedFilter):
     parameter_name = 'rent_information_user'
     model_class = RentInformation
+
+
+class FleetOrderFilter(DriverRelatedFilter):
+    parameter_name = 'fleet_order_user'
+    model_class = FleetOrder
 
 
 class PaymentsRelatedFilter(admin.SimpleListFilter):
