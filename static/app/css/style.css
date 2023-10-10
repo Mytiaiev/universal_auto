@@ -387,7 +387,7 @@ label[for="showPassword"] {
 
 /*END BLOCK-1*/
 
-/*BLOCK-2*/
+/*BLOCK-2 about*/
 
 .about_section {
 	margin-top: 200px;
@@ -434,7 +434,10 @@ label[for="showPassword"] {
 	z-index: 2;
 }
 
-/*BLOCK-3*/
+
+/*END BLOCK-2 about*/
+
+/*BLOCK-3 services*/
 
 .services {
 	margin-top: 60px;
@@ -523,9 +526,9 @@ label[for="showPassword"] {
 	line-height: normal;
 }
 
-/*END BLOCK-3*/
+/*END BLOCK-3 services*/
 
-/*BLOCK-4*/
+/*BLOCK-4 app*/
 
 .app_section {
 	margin-top: 80px;
@@ -635,10 +638,10 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	z-index: -1;
 }
 
-/*END BLOCK-4*/
+/*END BLOCK-4 app*/
 
 
-/*BLOCK-5*/
+/*BLOCK-5 investment*/
 
 .investment-section-index {
 	margin-top: -565px;
@@ -677,7 +680,72 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	line-height: normal;
 }
 
-/*END BLOCK-5*/
+/*END BLOCK-5 investment*/
+
+/*BLOCK-6 automation*/
+
+.automation-section {
+	margin-top: 100px;
+}
+
+.automation-img img {
+	float: left;
+	border-radius: 25px;
+	max-width: 100%;
+	max-height: 315px;
+	width: auto;
+	height: auto;
+}
+
+.block-detail {
+	float: right;
+	width: 50%;
+}
+
+.block-detail h2 {
+	margin-left: 20px;
+	margin-top: 30px;
+	color: #313A34;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.block-detail p {
+	margin-left: 20px;
+	color: #53785E;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+/* Кнопка */
+.block-detail .button {
+	margin-left: 20px;
+	background-color: #EC6323;
+	color: #fff;
+	padding: 10px 55px;
+	border: none;
+	border-radius: 25px;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+.automation-deckor-image img {
+	position: relative;
+	bottom: 300px;
+	right: 30px;
+	z-index: -1;
+}
+
+/*END BLOCK-6 automation*/
 
 
 /*#timer {*/
