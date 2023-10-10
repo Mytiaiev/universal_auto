@@ -296,7 +296,7 @@ label[for="showPassword"] {
 
 .image-map {
 	position: absolute;
-	left: 500px;
+	left: 510px;
 	top: 95px;
 }
 
@@ -315,7 +315,7 @@ label[for="showPassword"] {
 .right_content img {
 	width: 50%;
 	height: auto;
-	right: -20px;
+	right: -35px;
 	top: -320px;
 	position: absolute;
 	z-index: 1021;
@@ -380,6 +380,9 @@ label[for="showPassword"] {
 	font-size: 16px;
 	text-decoration: none;
 	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
 }
 
 /*END BLOCK-1*/
@@ -455,7 +458,7 @@ label[for="showPassword"] {
 
 .image-services img {
 	width: 260px;
-	height: 235px;
+	height: 190px;
 	flex-shrink: 0;
 	border-radius: 61px;
 }
@@ -487,6 +490,9 @@ label[for="showPassword"] {
 	font-size: 16px;
 	text-decoration: none;
 	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
 }
 
 
@@ -564,6 +570,11 @@ label[for="showPassword"] {
 	margin-right: 10px;
 	position: relative;
 	cursor: pointer;
+	color: #38423B;
+	font-size: 20px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
 }
 
 input[type="radio"]#detailsRadio:checked + label::before,
@@ -574,7 +585,24 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	left: 0;
 	width: 100%;
 	height: 2px;
-	background-color: green;
+	background-color: #38423B;
+}
+
+.detail-radio-1 p {
+	color: #38423B;
+	font-size: 24px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+.detail-radio-1 ul li,
+.detail-radio-2 ul li {
+	color: #53785E;
+	font-size: 24px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
 }
 
 
@@ -591,21 +619,65 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	vertical-align: middle;
 }
 
-
 .app-image img {
+	display: flex;
+	position: relative;
 	float: left;
-	margin-left: 25px;
+	margin-left: 100px;
+	top: -92px;
 }
 
 .container-app .app-deckor-image {
 	display: flex;
 	position: relative;
-	top: -400px;
-	right: 120px;
+	top: -450px;
+	right: 50px;
 	z-index: -1;
 }
 
 /*END BLOCK-4*/
+
+
+/*BLOCK-5*/
+
+.investment-section-index {
+	margin-top: -565px;
+	padding-top: 20px;
+}
+
+.investment-section-index .row {
+	margin-top: 24px;
+	margin-left: 0;
+}
+
+.investment-section-index .detail-box p {
+	color: #53785E;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+	text-align: left;
+}
+
+.button-container {
+	text-align: left;
+}
+
+.button-container a {
+	background-color: #EC6323;
+	color: #fff;
+	padding: 10px 55px;
+	border: none;
+	border-radius: 25px;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+/*END BLOCK-5*/
 
 
 /*#timer {*/
