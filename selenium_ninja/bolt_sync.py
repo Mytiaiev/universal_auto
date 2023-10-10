@@ -200,6 +200,7 @@ class BoltRequest(Synchronizer):
                         price = order['total_price']
                     except KeyError:
                         price = 0
+                    vehicle = Vehicle.objects.get(licence_plate=order['car_reg_number'])
                     data = {"order_id": order['order_id'],
                             "fleet": self.fleet,
                             "driver": driver,
@@ -209,11 +210,11 @@ class BoltRequest(Synchronizer):
                             "finish_time": finish,
                             "payment": PaymentTypes.map_payments(order['payment_method']),
                             "destination": order['order_stops'][-1]['address'],
-                            "vehicle": Vehicle.objects.get(licence_plate=order['car_reg_number']),
+                            "vehicle": vehicle,
                             "price": price,
                             "partner": Partner.get_partner(self.partner_id)
                             }
-                    if driver.vehicle != data['vehicle']:
+                    if driver.vehicle != vehicle:
                         self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['car_reg_number'])
                     FleetOrder.objects.create(**data)
 

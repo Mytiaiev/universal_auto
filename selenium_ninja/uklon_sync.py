@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes
+from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from django.db import IntegrityError
@@ -242,40 +243,43 @@ class UklonRequest(Synchronizer):
                       "to": self.report_interval(day)
                       }
             orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
-            for order in orders['items']:
-                if FleetOrder.objects.filter(order_id=order['id']) or order['status'] == "running":
-                    continue
-                detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
-                                            params={"driverId": str_driver_id})
-                try:
-                    finish_time = timezone.make_aware(datetime.fromtimestamp(detail["completedAt"]))
-                except KeyError:
-                    finish_time = None
-                try:
-                    start_time = timezone.make_aware(datetime.fromtimestamp(detail["createdAt"]))
-                except KeyError:
-                    start_time = None
-                if order['status'] != "completed":
-                    state = order["cancellation"]["initiator"]
-                else:
-                    state = order['status']
-
-                data = {"order_id": order['id'],
-                        "fleet": self.fleet,
-                        "driver": driver,
-                        "from_address": order['route']['points'][0]["address"],
-                        "accepted_time": start_time,
-                        "state": states.get(state),
-                        "finish_time": finish_time,
-                        "destination": order['route']['points'][-1]["address"],
-                        "vehicle": Vehicle.objects.get(licence_plate=order['vehicle']['licencePlate']),
-                        "payment": PaymentTypes.map_payments(order['payment']['paymentType']),
-                        "price": order['payment']['cost'],
-                        "partner": Partner.get_partner(self.partner_id)
-                        }
-                if driver.vehicle != order['vehicle']['licencePlate']:
-                    self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['vehicle']['licencePlate'])
-                FleetOrder.objects.create(**data)
+            try:
+                for order in orders['items']:
+                    if FleetOrder.objects.filter(order_id=order['id']) or order['status'] in ("running", "accepted"):
+                        continue
+                    detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
+                                                params={"driverId": str_driver_id})
+                    try:
+                        finish_time = timezone.make_aware(datetime.fromtimestamp(detail["completedAt"]))
+                    except KeyError:
+                        finish_time = None
+                    try:
+                        start_time = timezone.make_aware(datetime.fromtimestamp(detail["createdAt"]))
+                    except KeyError:
+                        start_time = None
+                    if order['status'] != "completed":
+                        state = order["cancellation"]["initiator"]
+                    else:
+                        state = order['status']
+                    vehicle = Vehicle.objects.get(licence_plate=order['vehicle']['licencePlate'])
+                    data = {"order_id": order['id'],
+                            "fleet": self.fleet,
+                            "driver": driver,
+                            "from_address": order['route']['points'][0]["address"],
+                            "accepted_time": start_time,
+                            "state": states.get(state),
+                            "finish_time": finish_time,
+                            "destination": order['route']['points'][-1]["address"],
+                            "vehicle": vehicle,
+                            "payment": PaymentTypes.map_payments(order['payment']['paymentType']),
+                            "price": order['payment']['cost'],
+                            "partner": Partner.get_partner(self.partner_id)
+                            }
+                    if driver.vehicle != vehicle:
+                        self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['vehicle']['licencePlate'])
+                    FleetOrder.objects.create(**data)
+            except KeyError:
+                bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"), text=f"{orders}")
 
     def disable_cash(self, pk, enable):
         url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"

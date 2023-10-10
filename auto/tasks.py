@@ -287,10 +287,14 @@ def get_car_efficiency(self, partner_pk, day=None):
                     report = SummaryReport.objects.filter(report_from=day,
                                                           full_name=driver).first()
                     if report:
-                        total_kasa += report.total_amount_without_fee
-                        clean_kasa += report.total_amount_without_fee * (1 - driver.schema.rate) if \
-                            driver.schema.schema in ("HALF", "CUSTOM") else driver.schema.rental / 7
-
+                        try:
+                            total_kasa += report.total_amount_without_fee
+                            clean_kasa += report.total_amount_without_fee * (1 - driver.schema.rate) if \
+                                driver.schema.schema in ("HALF", "CUSTOM") else Decimal(driver.schema.rental / 7)
+                        except TypeError:
+                            bot.send_message(chat_id=515224934,
+                                             text=f"{report.total_amount_without_fee}{type(report.total_amount_without_fee)}"
+                                                  f"{clean_kasa}{type(clean_kasa)}")
                 result = max(
                     Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
             CarEfficiency.objects.create(report_from=day,
