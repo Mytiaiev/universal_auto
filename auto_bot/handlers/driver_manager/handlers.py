@@ -21,6 +21,7 @@ from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, f
     update_driver_data, send_daily_statistic, send_efficiency_report, send_driver_report, send_driver_efficiency
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
+from auto_bot.utils import send_long_message
 from scripts.redis_conn import redis_instance
 from auto_bot.handlers.main.keyboards import back_to_main_menu
 
@@ -150,8 +151,11 @@ def get_efficiency_for_drivers(update, context):
                 message += f"{k}\n" + "".join(v) + "\n"
         else:
             message += no_drivers_text
-        query.edit_message_text(message)
-        query.edit_message_reply_markup(reply_markup=inline_manager_kb())
+        try:
+            query.edit_message_text(message)
+            query.edit_message_reply_markup(reply_markup=inline_manager_kb())
+        except BadRequest:
+            send_long_message(update.effective_chat.id, message, inline_manager_kb())
 
 
 def get_period_driver_eff(update, context):

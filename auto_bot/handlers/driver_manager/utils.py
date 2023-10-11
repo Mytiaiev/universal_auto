@@ -281,6 +281,10 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
     for driver in drivers:
         effect = calculate_efficiency_driver(driver, start, end)
         if effect:
+            daily_report = calculate_daily_reports(end, end, driver)
+            day_kasa, rent_daily = daily_report if daily_report else 0, 0
+            total_report = calculate_daily_reports(start, end, driver)
+            total_kasa, total_rent = total_report if total_report else 0, 0
             if end == yesterday:
                 efficiency = 0
                 orders = 0
@@ -297,23 +301,29 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
                     average_price = yesterday_efficiency.average_price
                     distance = yesterday_efficiency.mileage
                     road_time = yesterday_efficiency.road_time
-                effective_driver[driver] = {'Ефективність(грн/км)': f"{effect[0]} (+{efficiency})",
-                                            'Кількість замовлень': f"{effect[1]} (+{orders})",
-                                            'Прийнято замовлень %': f"{effect[2]} ({accept_percent})",
-                                            'Cередній чек грн': f"{effect[3]} ({average_price})",
-                                            'Пробіг, км': f"{effect[4]} ({distance})",
-                                            'Час в дорозі': f"{effect[5]}({road_time})"
+                effective_driver[driver] = {
+                    'Каса': f"{total_kasa} (+{day_kasa}) грн",
+                    'Оренда': f"{total_rent} (+{rent_daily}) км",
+                    'Ефективність': f"{effect[0]} (+{efficiency}) грн/км",
+                    'Кількість замовлень': f"{effect[1]} (+{orders})",
+                    'Прийнято замовлень': f"{effect[2]} ({accept_percent}) %",
+                    'Cередній чек': f"{effect[3]} ({average_price}) грн",
+                    'Пробіг': f"{effect[4]} (+{distance}) км",
+                    'Час в дорозі': f"{effect[5]}(+{road_time})"
                                             }
             else:
-                effective_driver[driver] = {'Ефективність(грн/км)': f"{effect[0]}",
-                                            'Кількість замовлень': f"{effect[1]}",
-                                            'Прийнято замовлень %': f"{effect[2]}",
-                                            'Cередній чек грн': f"{effect[3]}",
-                                            'Пробіг, км': f"{effect[4]}",
-                                            'Час в дорозі': f"{effect[5]}"
+                effective_driver[driver] = {
+                    'Каса': f"{total_kasa} грн",
+                    'Оренда': f"{total_rent} км",
+                    'Ефективність': f"{effect[0]} грн/км",
+                    'Кількість замовлень': f"{effect[1]}",
+                    'Прийнято замовлень': f"{effect[2]}%",
+                    'Cередній чек': f"{effect[3]} грн",
+                    'Пробіг': f"{effect[4]} км",
+                    'Час в дорозі': f"{effect[5]}"
                                             }
     sorted_effective_driver = dict(sorted(effective_driver.items(),
-                                   key=lambda x: float(x[1]['Ефективність(грн/км)'].split()[0]),
+                                   key=lambda x: float(x[1]['Каса'].split()[0]),
                                    reverse=True))
     for k, v in sorted_effective_driver.items():
         report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]

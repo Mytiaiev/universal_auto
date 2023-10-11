@@ -12,6 +12,7 @@ from telegram.error import BadRequest
 from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes
 from auto import settings
+from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from taxi_service.utils import login_in
@@ -105,6 +106,8 @@ class BoltRequest(Synchronizer):
         param['limit'] = 25
         rides = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', param)
         for driver in reports['data']['drivers']:
+            db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=driver['id']).driver
+            vehicle = check_reshuffle(db_driver)[0]
             order = Payments(
                 report_from=day,
                 vendor_name=self.fleet,
@@ -120,6 +123,7 @@ class BoltRequest(Synchronizer):
                 total_amount_without_fee=driver['net_earnings'],
                 compensations=driver['compensations'],
                 refunds=driver['expense_refunds'],
+                vehicle=vehicle
             )
             for rider in rides['data']['rows']:
                 if driver['id'] == rider['id']:

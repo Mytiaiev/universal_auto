@@ -484,11 +484,11 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         else:
             return ['report_from', 'vehicle', 'total_kasa',
-                    'clean_kasa', 'total_spending', 'efficiency', 'mileage']
+                    'total_spending', 'efficiency', 'mileage']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
-            ('Інформація по авто',          {'fields': ['report_from', 'vehicle', 'clean_kasa', 'total_kasa',
+            ('Інформація по авто',          {'fields': ['report_from', 'vehicle', 'total_kasa',
                                                         'total_spending', 'efficiency',
                                                         'mileage']}),
         ]
@@ -659,7 +659,7 @@ class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 @admin.register(SummaryReport)
 class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = (SummaryReportUserFilter,)
-    ordering = ('-report_from', 'full_name')
+    ordering = ('-report_from', 'driver')
     list_per_page = 25
 
     def get_list_display(self, request):
@@ -667,7 +667,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         else:
             return ['report_from',
-                    'full_name', 'total_amount_without_fee', 'total_amount_cash',
+                    'driver', 'total_amount_without_fee', 'total_amount_cash',
                     'total_amount_on_card', 'total_distance', 'total_rides',
                     ]
 
@@ -676,7 +676,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Інформація про звіт',         {'fields': ['report_from',
                                                             ]}),
-                ('Інформація про водія',        {'fields': ['full_name',
+                ('Інформація про водія',        {'fields': ['driver',
                                                             ]}),
                 ('Інформація про кошти',        {'fields': ['total_amount_cash',
                                                             'total_amount_on_card', 'total_amount',
@@ -693,7 +693,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Інформація про звіт',         {'fields': ['report_from',
                                                             ]}),
-                ('Інформація про водія',        {'fields': ['full_name',
+                ('Інформація про водія',        {'fields': ['driver',
                                                             ]}),
                 ('Інформація про кошти',        {'fields': ['total_amount_cash',
                                                             'total_amount_on_card', 'total_amount',
@@ -710,8 +710,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='Manager').exists():
             manager_drivers = Driver.objects.filter(manager__user=request.user)
-            full_names = [f"{driver.name} {driver.second_name}" for driver in manager_drivers]
-            return qs.filter(full_name__in=full_names)
+            return qs.filter(driver__in=manager_drivers)
         return qs
 
 
@@ -867,12 +866,12 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
         elif request.user.groups.filter(name='Partner').exists():
             return ['name', 'second_name',
                     'vehicle', 'manager', 'chat_id',
-                    'driver_status',
+                    'driver_status', 'schema',
                     'created_at',
                     ]
         else:
             return ['name', 'second_name',
-                    'vehicle', 'chat_id',
+                    'vehicle', 'chat_id', 'schema',
                     'driver_status'
                     ]
 
