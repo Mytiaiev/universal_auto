@@ -484,7 +484,8 @@ label[for="showPassword"] {
 	margin-top: 10px;
 }
 
-.btn-read-more {
+.btn-read-more,
+.block-detail .button {
 	background-color: #EC6323;
 	color: #fff;
 	padding: 10px 55px;
@@ -531,6 +532,7 @@ label[for="showPassword"] {
 /*BLOCK-4 app*/
 
 .app_section {
+	height: 725px;
 	margin-top: 80px;
 }
 
@@ -644,7 +646,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 /*BLOCK-5 investment*/
 
 .investment-section-index {
-	margin-top: -565px;
+	margin-top: -105px;
 	padding-top: 20px;
 }
 
@@ -684,8 +686,9 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 
 /*BLOCK-6 automation*/
 
-.automation-section {
+.automation-section-index {
 	margin-top: 100px;
+	height: 380px;
 }
 
 .automation-img img {
@@ -722,31 +725,94 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	line-height: normal;
 }
 
-/* Кнопка */
-.block-detail .button {
-	margin-left: 20px;
-	background-color: #EC6323;
-	color: #fff;
-	padding: 10px 55px;
-	border: none;
-	border-radius: 25px;
-	font-size: 16px;
-	text-decoration: none;
-	cursor: pointer;
-	font-style: normal;
-	font-weight: 700;
-	line-height: normal;
+.automation-deckor-image {
+	height: 0;
 }
 
 .automation-deckor-image img {
 	position: relative;
-	bottom: 300px;
+	bottom: 455px;
 	right: 30px;
 	z-index: -1;
 }
 
 /*END BLOCK-6 automation*/
 
+/*BLOCK-7 blog*/
+
+.blog-selection {
+	margin-top: 80px;
+}
+
+.blog-selection .title-block {
+	color: #141E17;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.blog-cards {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	grid-gap: 40px;
+}
+
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.blog-card img {
+	margin-top: 100px;
+	height: 174px;
+	width: 353px;
+	max-height: 200px;
+	object-fit: cover;
+	object-position: center;
+}
+
+.blog-card .title-blog {
+	margin-top: 70px;
+	color: #38423B;
+	text-align: center;
+	font-size: 24px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+.blog-card .description-blog {
+	margin-top: 15px;
+	height: -webkit-fill-available;
+	color: #53785E;
+	text-align: center;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+
+.btn-blog {
+  background-color: #EC6323;
+  color: #fff;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+}
+
+
+/*END BLOCK-7 blog*/
 
 /*#timer {*/
 /*	font-size: 18px;*/
@@ -2300,13 +2366,13 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	color: #fff;
 }
 
-.btn-blog {
-	justify-content: flex-end !important;
-	margin-left: auto !important;
-	display: flex !important;
-	flex: 0 0 auto;
-	width: 42.66666667%;
-}
+/*.btn-blog {*/
+/*	justify-content: flex-end !important;*/
+/*	margin-left: auto !important;*/
+/*	display: flex !important;*/
+/*	flex: 0 0 auto;*/
+/*	width: 42.66666667%;*/
+/*}*/
 
 body .btn-one {
 	line-height: 48px;
