@@ -1209,6 +1209,7 @@ class DriverPayments(models.Model):
     kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Заробіток за період')
     cash = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Готівка')
     rent_distance = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Орендована дистанція')
+    rent_price = models.IntegerField(default=6, verbose_name='Ціна оренди')
     rent = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Оренда авто')
     salary = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Виплачено водію')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, verbose_name="Партнер")

@@ -48,6 +48,11 @@ class Migration(migrations.Migration):
             field=models.IntegerField(default=400, verbose_name='Ліміт пробігу за період'),
         ),
         migrations.AddField(
+            model_name='driverpayments',
+            name='rent_price',
+            field=models.IntegerField(default=6, verbose_name='Ціна оренди'),
+        ),
+        migrations.AddField(
             model_name='schema',
             name='rent_price',
             field=models.IntegerField(default=6, verbose_name='Вартість холостого пробігу'),

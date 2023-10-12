@@ -2,7 +2,6 @@ import json
 import secrets
 import uuid
 from datetime import datetime
-from pprint import pprint
 
 import requests
 from django.utils import timezone

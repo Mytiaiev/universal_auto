@@ -503,6 +503,14 @@ def get_rent_information(self, partner_pk, delta=1):
         logger.error(e)
 
 
+@app.task(bind=True, queue='beat_tasks')
+def get_today_rent(self, partner_pk):
+    try:
+        UaGpsSynchronizer(partner_pk).check_today_rent()
+    except Exception as e:
+        logger.error(e)
+
+
 @app.task(bind=True, queue='bot_tasks')
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
@@ -1066,6 +1074,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
+    sender.add_periodic_task(crontab(minute="10", hour='*/4'), get_today_rent.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))
     sender.add_periodic_task(crontab(minute="2", hour='*/4'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))

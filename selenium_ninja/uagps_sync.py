@@ -5,7 +5,8 @@ from _decimal import Decimal
 from django.db.models import Q
 from django.utils import timezone
 from app.models import UaGpsService, Driver, Vehicle, RentInformation, Partner, FleetOrder, \
-    DriverEfficiency, DriverReshuffle, CredentialPartner
+    DriverEfficiency, DriverReshuffle, CredentialPartner, ParkSettings
+from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 
 
@@ -98,7 +99,7 @@ class UaGpsSynchronizer:
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
 
-    def get_road_distance(self, partner_id, delta=None):
+    def get_road_distance(self, partner_id, delta=0):
         day = timezone.localtime() - datetime.timedelta(days=delta)
         road_dict = {}
         for _driver in Driver.objects.filter(partner=partner_id):
@@ -117,7 +118,7 @@ class UaGpsSynchronizer:
                                                       accepted_time__lt=end).order_by('accepted_time')
                 previous_finish_time = None
                 for order in completed:
-                    end_report = order.finish_time if order.finish_time < end else end
+                    end_report = order.finish_time if order.finish_time < end and delta else end
                     if previous_finish_time is None or order.accepted_time >= previous_finish_time:
                         report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
                                                       self.get_timestamp(timezone.localtime(end_report)),
@@ -164,7 +165,10 @@ class UaGpsSynchronizer:
                                                   gps_id)
                     road_distance += report[0]
                     road_time += report[1]
-                road_dict[_driver] = (road_distance, road_time, reshuffle)
+                if delta:
+                    road_dict[_driver] = (road_distance, road_time, reshuffle)
+                else:
+                    road_dict[_driver] = (road_distance, road_time, reshuffle, previous_finish_time)
         return road_dict
 
     def total_per_day(self, gps_id, day, driver=None, reshuffle=None):
@@ -192,3 +196,29 @@ class UaGpsSynchronizer:
                                            driver=driver,
                                            partner=Partner.get_partner(self.partner_id),
                                            rent_distance=rent_distance)
+
+    def check_today_rent(self):
+        start = timezone.make_aware(datetime.datetime.combine(timezone.localtime(), datetime.time.min))
+        in_road = self.get_road_distance(self.partner_id)
+        for driver, result in in_road.items():
+            distance, road_time, reshuffle, end_time = result
+            total_km = 0
+            if not end_time:
+                end_time = timezone.localtime()
+                if reshuffle:
+                    if driver == reshuffle.driver_start:
+                        start = timezone.localtime(reshuffle.swap_time)
+                    if driver == reshuffle.driver_finish:
+                        end = timezone.localtime(reshuffle.swap_time)
+                        end_time = end if end_time > end else end_time
+
+                    total_km = self.generate_report(self.get_timestamp(start),
+                                                    self.get_timestamp(end_time),
+                                                    reshuffle.swap_vehicle.gps_id)[0]
+                elif driver.vehicle:
+                    total_km = self.generate_report(self.get_timestamp(start),
+                                                    self.get_timestamp(end_time),
+                                                    driver.vehicle.gps_id)[0]
+            rent_distance = total_km - distance
+            bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
+                             text=f"Орендовано сьогодні {driver} - {rent_distance}")
