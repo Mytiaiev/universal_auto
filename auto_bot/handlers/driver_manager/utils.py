@@ -59,13 +59,15 @@ def calculate_rent(start, end, driver):
 
 
 def calculate_daily_reports(start, end, driver):
+    kasa = 0
+    rent = 0
     driver_report = SummaryReport.objects.filter(report_from__range=(start, end),
-                                                 full_name=driver)
+                                                 driver=driver)
     if driver_report:
         kasa = driver_report.aggregate(
             kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
         rent = calculate_rent(start, end, driver)
-        return kasa, rent
+    return kasa, rent
 
 
 def calculate_by_rate(driver, kasa):
@@ -278,10 +280,8 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
     for driver in drivers:
         effect = calculate_efficiency_driver(driver, start, end)
         if effect:
-            daily_report = calculate_daily_reports(end, end, driver)
-            day_kasa, rent_daily = daily_report if daily_report else 0, 0
-            total_report = calculate_daily_reports(start, end, driver)
-            total_kasa, total_rent = total_report if total_report else 0, 0
+            day_kasa, rent_daily = calculate_daily_reports(end, end, driver)
+            total_kasa, total_rent = calculate_daily_reports(start, end, driver)
             if end == yesterday:
                 efficiency = 0
                 orders = 0

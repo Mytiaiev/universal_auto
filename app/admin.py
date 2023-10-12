@@ -514,7 +514,7 @@ class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
         else:
             return ['report_from', 'driver', 'total_kasa',
                     'efficiency', 'average_price', 'mileage',
-                    'total_orders', 'accept_percent']
+                    'total_orders', 'accept_percent', 'road_time']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
@@ -522,7 +522,7 @@ class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
                                                         ]}),
             ('Інформація по водію',          {'fields': ['total_kasa', 'average_price', 'efficiency',
                                                          'mileage']}),
-            ('Додатково',                   {'fields': ['total_orders', 'accept_percent'
+            ('Додатково',                   {'fields': ['total_orders', 'accept_percent', 'road_time'
                                                         ]}),
         ]
 
@@ -1075,7 +1075,7 @@ class FleetOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(Fleets_drivers_vehicles_rate)
-class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(admin.ModelAdmin)):
+class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner', field_to_filter='driver__worked')(admin.ModelAdmin)):
     list_filter = ('fleet',)
     readonly_fields = ('fleet', 'driver_external_id')
 

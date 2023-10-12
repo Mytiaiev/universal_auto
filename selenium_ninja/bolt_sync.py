@@ -106,7 +106,8 @@ class BoltRequest(Synchronizer):
         param['limit'] = 25
         rides = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', param)
         for driver in reports['data']['drivers']:
-            db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=driver['id']).driver
+            db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=driver['id'],
+                                                                 partner=self.partner_id).driver
             vehicle = check_reshuffle(db_driver)[0]
             order = Payments(
                 report_from=day,

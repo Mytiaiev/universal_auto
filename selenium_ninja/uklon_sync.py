@@ -141,7 +141,8 @@ class UklonRequest(Synchronizer):
         data = self.response_data(url=url, params=param)['items']
         if data:
             for i in data:
-                db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id']).driver
+                db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id'],
+                                                                     partner=self.partner_id).driver
                 vehicle = check_reshuffle(db_driver)[0]
                 order = Payments(
                     report_from=day.date(),

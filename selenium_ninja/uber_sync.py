@@ -190,7 +190,8 @@ class UberRequest(Synchronizer):
             if response.status_code == 200 and response.json()['data']:
                 for report in response.json()['data']['getPerformanceReport']:
                     if report['totalEarnings']:
-                        driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid']).driver
+                        driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid'],
+                                                                          partner=self.partner_id).driver
                         vehicle = check_reshuffle(driver)[0]
                         order = Payments(
                             report_from=day,

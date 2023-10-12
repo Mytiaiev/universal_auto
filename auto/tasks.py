@@ -185,7 +185,7 @@ def check_orders_for_vehicle(self, partner_pk):
     orders = FleetOrder.objects.filter(accepted_time__date=day.date(), partner=partner_pk)
     for driver in Driver.objects.filter(partner=partner_pk):
         driver_orders = orders.filter(driver=driver)
-        vehicle, reshuffle = check_reshuffle(driver, date=day.date())[0]
+        vehicle, reshuffle = check_reshuffle(driver, date=day.date())
         vehicle_orders = orders.filter(vehicle=vehicle)
         if all((not driver_orders, vehicle_orders, not reshuffle)):
             driver.vehicle = None
@@ -237,8 +237,8 @@ def send_notify_to_check_car(self, partner_pk):
         wrong_cars = redis_instance().hgetall(f"wrong_vehicle_{partner_pk}")
         for driver, car in wrong_cars.items():
             driver_obj = Driver.objects.get(pk=int(driver))
-            vehicle = check_reshuffle(driver)[0]
-            if vehicle.licence_plate != car:
+            vehicle = check_reshuffle(driver_obj)[0]
+            if not vehicle or vehicle.licence_plate != car:
                 chat_id = driver_obj.manager.chat_id if driver_obj.manager else driver_obj.partner.chat_id
                 try:
                     bot.send_message(chat_id=chat_id, text=f"Водій {driver_obj} працює на {car},"
@@ -267,7 +267,7 @@ def download_daily_report(self, partner_pk, day=None):
                 report = SummaryReport(report_from=day,
                                        driver=driver,
                                        vehicle=driver.vehicle,
-                                       partner=partner_pk)
+                                       partner=Partner.get_partner(partner_pk))
                 fields = ("total_rides", "total_distance", "total_amount_cash",
                           "total_amount_on_card", "total_amount", "tips",
                           "bonuses", "fee", "total_amount_without_fee", "fares",

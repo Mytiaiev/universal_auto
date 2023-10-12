@@ -261,22 +261,21 @@ def get_car_data(cars, investor=None):
     for car in cars:
         purchase_price = car.purchase_price
         car_efficiencies = CarEfficiency.objects.filter(vehicle=car)
-        clean_kasa = round(sum(efficiency.clean_kasa for efficiency in car_efficiencies), 2)
         total_kasa = round(sum(efficiency.total_kasa for efficiency in car_efficiencies), 2)
         total_spent = sum(efficiency.total_spending for efficiency in car_efficiencies)
         percentage = car.investor_percentage if investor and hasattr(car, 'investor_percentage') else None
         if percentage is not None:
-            clean_kasa = total_kasa * percentage
-            progress_percentage = round((clean_kasa / purchase_price) * 100) if purchase_price > 0 else 0
+            total_kasa *= percentage
+            progress_percentage = round((total_kasa / purchase_price) * 100) if purchase_price > 0 else 0
         else:
-            progress_percentage = round(((clean_kasa - total_spent) / purchase_price) * 100) \
+            progress_percentage = round(((total_kasa - total_spent) / purchase_price) * 100) \
                 if purchase_price > 0 else 0
 
         cars_data.append({
             'licence_plate': car.licence_plate,
             'purchase_price': purchase_price,
             'total_spent': total_spent,
-            'total_kasa': round(clean_kasa, 2),
+            'total_kasa': round(total_kasa, 2),
             'progress_percentage': progress_percentage
         })
 
