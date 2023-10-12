@@ -4,30 +4,39 @@
 {% include 'header.html' %}
 
 {% block content %}
-  <div class="content">
-    <div class="hero_area">
-      <!-- one section -->
-      <section class="one_section">
+  <div class="hero_area">
+
+    <!-- one section -->
+
+    <section class="one_section">
+      <div class="container">
         <div class="left_images">
-          <img class="image-map" src="{% static 'app/images/index-one-block-1.png' %}" alt="one image">
+          <div class="one-background-img">
+            <img class="image-map" src="{% static 'app/images/index-one-block-1.png' %}" alt="one image">
+          </div>
           <div class="overlay-image">
             <img src="{% static 'app/images/index-one-block-2.png' %}" alt="two image">
           </div>
         </div>
         <div class="right_content">
-          <img src="{% static 'app/images/index-one-block-3.png' %}" alt="three image">
-          <h2>ПЕРСОНАЛЬНЕ<br>ЕЛЕКТРО-ТАКСІ</h2>
-          <p class="phone"><i class="fas fa-phone"></i> +38(093) 753 10 57</p>
-          <p class="text-1">Довірте себе та дитину<br>екологічному та<br>безпечному оператору<br>таксі України</p>
+          <div class="decorate-img">
+            <img src="{% static 'app/images/index-one-block-3.png' %}" alt="three image">
+          </div>
+          <div class="one-info">
+            <h2>ПЕРСОНАЛЬНЕ<br>ЕЛЕКТРО-ТАКСІ</h2>
+            <p class="phone"><i class="fas fa-phone"></i> +38(093) 753 10 57</p>
+            <p class="text-1">Довірте себе та дитину<br>екологічному та<br>безпечному оператору<br>таксі України</p>
+            <div class="telegram-button button-block-1">
+              <a href="{% url 'send_to_telegram' %}">
+                <button>{% trans "Перейти у Ninja бот" %}</button>
+              </a>
+            </div>
+          </div>
         </div>
-        <div class="telegram-button button-block-1">
-          <a href="{% url 'send_to_telegram' %}">
-            <button>{% trans "Перейти у Ninja бот" %}</button>
-          </a>
-        </div>
-      </section>
-      <!-- end one section -->
-    </div>
+      </div>
+    </section>
+
+    <!-- end one section -->
 
     <!-- about section -->
 
@@ -240,19 +249,19 @@
         <h2 class="title-block">{% trans "Ninja блог" %}</h2>
         <div class="blog-cards">
           <div class="blog-card">
-            <img src="{% static 'app/images/blog-img-1.png' %}" alt="img-blog">
+            <img src="{% static 'app/images/blog-img-1.jpg' %}" alt="img-blog">
             <h2 class="title-blog">{% trans "Дизайн майбутнього: інноваційні концепції в електротаксі" %}</h2>
             <p class="description-blog">{% trans "У світі, де екологічні питання стають все більш актуальними, електротаксі не просто є перевізниками, вони - це майбутнє транспорту." %}</p>
             <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
           </div>
           <div class="blog-card">
-            <img src="{% static 'app/images/blog-img-2.png' %}" alt="img-blog">
+            <img src="{% static 'app/images/blog-img-2.jpg' %}" alt="img-blog">
             <h2 class="title-blog">{% trans "Технології в дії: як електротаксі змінюють правила гри" %}</h2>
             <p class="description-blog">{% trans "Електро таксі - це новий вимір мобільності, який змінює правила гри в транспортній індустрії." %}</p>
             <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
           </div>
           <div class="blog-card">
-            <img src="{% static 'app/images/blog-img-3.png' %}" alt="img-blog">
+            <img src="{% static 'app/images/blog-img-3.jpg' %}" alt="img-blog">
             <h2 class="title-blog">{% trans "Поруч і завжди доступні: Важливість ефективної підтримки в електротаксі" %}</h2>
             <p class="description-blog">{% trans "Електротаксі - це не просто транспортний засіб; це мобільний сервіс, який змінює наше сприйняття громадського транспорту." %}</p>
             <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
