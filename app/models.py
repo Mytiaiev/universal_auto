@@ -88,6 +88,8 @@ class Schema(models.Model):
     plan = models.IntegerField(default=12000, verbose_name='План водія')
     rental = models.IntegerField(default=6000, verbose_name='Вартість прокату')
     rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
+    rent_price = models.IntegerField(default=6, verbose_name='Вартість холостого пробігу')
+    limit_distance = models.IntegerField(default=400, verbose_name='Ліміт пробігу за період')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     @classmethod
@@ -391,10 +393,6 @@ class Driver(User):
     class Meta:
         verbose_name = 'Водія'
         verbose_name_plural = 'Водії'
-
-    @property
-    def full_name(self):
-        return f"{self.name} {self.second_name}"
 
     @staticmethod
     def get_default_schema_id():

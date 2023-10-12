@@ -80,14 +80,14 @@ class DriverRelatedFilter(admin.SimpleListFilter):
     def lookups(self, request, model_admin):
         user = request.user
         queryset = self.model_class.objects.exclude(driver__isnull=True)
-        driver_list = []
         if user.groups.filter(name='Manager').exists():
             drivers = Driver.objects.filter(manager__user=user)
             queryset = queryset.filter(driver__in=drivers)
         if user.groups.filter(name='Partner').exists():
             queryset = queryset.filter(partner__user=user)
-        driver_list.extend(queryset.values_list('driver_id', 'driver__full_name'))
-        return sorted(set(driver_list), key=lambda x: x[1])
+        driver_ids = queryset.values_list('driver_id', flat=True)
+        driver_labels = [f'{item.driver.name} {item.driver.second_name}' for item in queryset]
+        return set(zip(driver_ids, driver_labels))
 
     def queryset(self, request, queryset):
         value = self.value()
@@ -95,14 +95,14 @@ class DriverRelatedFilter(admin.SimpleListFilter):
             return queryset.filter(driver__id=value)
 
 
-class SummaryReportUserFilter(DriverRelatedFilter):
-    parameter_name = 'summary_report_user'
-    model_class = SummaryReport
-
-
 class DriverEfficiencyUserFilter(DriverRelatedFilter):
     parameter_name = 'driver_efficiency_user'
     model_class = DriverEfficiency
+
+
+class SummaryReportUserFilter(DriverRelatedFilter):
+    parameter_name = 'summary_report_user'
+    model_class = SummaryReport
 
 
 class RentInformationUserFilter(DriverRelatedFilter):

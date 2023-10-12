@@ -32,29 +32,25 @@ def validate_sum(sum_str):
 
 def get_drivers_vehicles_list(chat_id, cls):
     objects = []
-    rent = 0
     user = Manager.get_by_chat_id(chat_id)
     if not user:
         user = Partner.get_by_chat_id(chat_id)
     if user:
         if user.role == Role.DRIVER_MANAGER:
             objects = cls.objects.filter(manager=user.pk)
-            rent = int(ParkSettings.get_value('RENT_PRICE', 15, partner=user.partner.pk))
         elif user.role == Role.OWNER:
             objects = cls.objects.filter(partner=user.pk)
-            rent = int(ParkSettings.get_value('RENT_PRICE', 15, partner=user.pk))
-    return objects, rent, user
+    return objects, user
 
 
 def calculate_rent(start, end, driver):
     end_time = datetime.combine(end, datetime.max.time())
     rent_report = RentInformation.objects.filter(
-        rent_distance__gt=int(ParkSettings.get_value("FREE_RENT", 15, partner=driver.partner.pk)),
+        rent_distance__gt=driver.schema.limit_distance,
         report_from__range=(start, end_time),
         driver=driver)
     if rent_report:
-        overall_rent = ExpressionWrapper(F('rent_distance')
-                                         - int(ParkSettings.get_value("FREE_RENT", 15, partner=driver.partner.pk)),
+        overall_rent = ExpressionWrapper(F('rent_distance') - driver.schema.limit_distance,
                                          output_field=DecimalField())
         total_rent = rent_report.aggregate(distance=Sum(overall_rent))['distance']
     else:
@@ -123,7 +119,7 @@ def generate_message_report(chat_id, daily=False):
     message = ''
     drivers_dict = {}
     balance = 0
-    drivers, rent, user = get_drivers_vehicles_list(chat_id, Driver)
+    drivers, user = get_drivers_vehicles_list(chat_id, Driver)
     for driver in drivers.filter(salary_calculation=calculation):
         payment = DriverPayments.objects.filter(report_from=start, report_to=end, driver=driver).first()
         driver_message = ''
@@ -131,7 +127,8 @@ def generate_message_report(chat_id, daily=False):
         if payment:
             driver_message += f"{driver} каса: {payment.kasa}\n"
             if payment.rent:
-                driver_message += "Оренда авто: {0} * {1} = {2}\n".format(payment.rent_distance, rent, payment.rent)
+                driver_message += "Оренда авто: {0} * {1} = {2}\n".format(
+                    payment.rent_distance, payment.rent_price, payment.rent)
             if driver.schema.schema in ("HALF", "CUSTOM"):
                 driver_message += 'Зарплата {0} * {1} - Готівка {2}'.format(
                     payment.kasa, driver.schema.rate, payment.cash)
@@ -164,7 +161,7 @@ def generate_report_period(chat_id, start, end):
     message = ''
     balance = 0
 
-    drivers, rent, user = get_drivers_vehicles_list(chat_id, Driver)
+    drivers, user = get_drivers_vehicles_list(chat_id, Driver)
     for driver in drivers:
         payment = DriverPayments.objects.filter(report_to__range=(start, end),
                                                 driver=driver).values('driver_id').annotate(

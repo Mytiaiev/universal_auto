@@ -6,7 +6,7 @@ from django.core.exceptions import FieldError
 
 from scripts.google_calendar import GoogleCalendar
 from .filters import VehicleEfficiencyUserFilter, DriverEfficiencyUserFilter, RentInformationUserFilter, \
-    TransactionInvestorUserFilter, SummaryReportUserFilter, ReportUserFilter, VehicleManagerFilter
+    TransactionInvestorUserFilter, ReportUserFilter, VehicleManagerFilter, SummaryReportUserFilter
 from .models import *
 
 
@@ -90,6 +90,8 @@ def filter_queryset_by_group(*groups, field_to_filter=None):
                 if request.user.groups.filter(name='Manager').exists():
                     try:
                         queryset = queryset.filter(manager__user=request.user)
+                        if field_to_filter is not None:
+                            queryset = queryset.filter(**{field_to_filter: True})
                     except FieldError:
                         pass
 
@@ -253,7 +255,7 @@ class SchemaAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_fieldsets(self, request, obj=None):
         if request.user.groups.filter(name='Partner').exists():
             fieldsets = [
-                ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental']}),
+                ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental', 'rent_price', 'limit_distance']}),
             ]
             return fieldsets
         return super().get_fieldsets(request)
@@ -1073,7 +1075,7 @@ class FleetOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(Fleets_drivers_vehicles_rate)
-class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(admin.ModelAdmin)):
     list_filter = ('fleet',)
     readonly_fields = ('fleet', 'driver_external_id')
 
