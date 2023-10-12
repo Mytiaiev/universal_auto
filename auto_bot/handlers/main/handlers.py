@@ -99,7 +99,7 @@ def update_phone_number(update, context):
         user = Manager.objects.filter(chat_id=chat_id).first()
 
     if user is None:
-        user = Client.objects.filter(chat_id=chat_id).first()
+        user = User.objects.filter(chat_id=chat_id).first()
     phone_number = update.message.contact.phone_number
     if phone_number and user:
         if len(phone_number) == 12:

@@ -1,6 +1,5 @@
-from auto.tasks import get_driver_reshuffles, check_available_fleets
-from selenium_ninja.bolt_sync import BoltRequest
-
+from auto.tasks import get_car_efficiency
 
 def run(*args):
-    print(check_available_fleets(4))
+    get_car_efficiency.delay(1)
+

@@ -44,6 +44,12 @@ class GoogleCalendar:
         }
         return self.service.calendarList().insert(body=calendar_list).execute()
 
+    def delete_calendar(self, calendar_id):
+        calendar_list = {
+            "id": calendar_id
+        }
+        return self.service.calendarList().delete(body=calendar_list).execute()
+
     def create_event(self, summary, description, s_date, e_date,
                      calendar_id, driver1: dict = None, driver2: dict = None):
         """

@@ -6,7 +6,8 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from app.models import CarEfficiency, Driver, SummaryReport, Manager, \
-    Vehicle, RentInformation, ParkSettings, DriverEfficiency, Partner, Role
+    Vehicle, RentInformation, ParkSettings, DriverEfficiency, Partner, Role, DriverSchemaRate, SalaryCalculation, \
+    DriverPayments
 
 
 def validate_date(date_str):
@@ -71,56 +72,37 @@ def calculate_daily_reports(start, end, driver):
         return kasa, rent
 
 
-def calculate_weekly_reports(start, end, driver):
-    incomplete = 0
-    driver_report = SummaryReport.objects.filter(report_from__range=(start, end),
-                                                 full_name=driver)
-    if driver_report:
-        kasa = driver_report.aggregate(
-            kasa=Coalesce(Sum('total_amount_without_fee'), 0, output_field=DecimalField()))['kasa']
-        cash = driver_report.aggregate(
-            cash=Coalesce(Sum('total_amount_cash'), 0, output_field=DecimalField()))['cash']
-        if kasa:
-            if driver.schema in ("HALF", "CUSTOM"):
-                rent = calculate_rent(start, end, driver)
-                rent_value = rent * int(ParkSettings.get_value('RENT_PRICE', 15, partner=driver.partner.pk))
-                if kasa < driver.plan:
-                    balance = driver.rental + rent_value
-                    incomplete = (driver.plan - kasa) * Decimal(1 - driver.rate)
-                    salary = '%.2f' % (kasa * driver.rate - cash - incomplete - rent_value)
-                else:
-                    balance = kasa * driver.rate + rent_value
-                    salary = '%.2f' % (kasa * driver.rate - cash - rent_value)
-            else:
-                rent = 0
-                efficiency_obj = DriverEfficiency.objects.filter(report_from__range=(start, end),
-                                                                 driver=driver)
-                overall_distance = efficiency_obj.aggregate(
-                    distance=Coalesce(Sum('mileage'), 0, output_field=DecimalField()))['distance']
-                driver_overall = overall_distance - int(ParkSettings.get_value(
-                    "TOTAL_KM_PER_WEEK", 2000, partner=driver.partner.pk))
-                rent_value = max(driver_overall * int(ParkSettings.get_value(
-                    "OVERALL_KM_PRICE", 6, partner=driver.partner.pk)), 0)
-                balance = driver.rental + rent_value
-                salary = '%.2f' % (kasa * driver.rate - cash - driver.rental - rent_value)
-            return balance, kasa, cash, salary, incomplete, rent, rent_value
-
-
-def get_daily_report(manager_id=None, start=None, end=None):
-    yesterday = timezone.localtime().date() - timedelta(days=1)
-    if not start and not end:
-        if timezone.localtime().weekday():
-            start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+def calculate_by_rate(driver, kasa):
+    rate_tiers = DriverSchemaRate.get_rate_tier(period=driver.salary_calculation)
+    driver_spending = 0
+    tier = 0
+    rates = rate_tiers[2:] if kasa >= driver.schema.plan else rate_tiers
+    for tier_kasa, rate in rates:
+        tier_kasa -= tier
+        if kasa > tier_kasa:
+            driver_spending += tier_kasa * rate
+            kasa -= tier_kasa
+            tier += tier_kasa
         else:
-            start = timezone.localtime().date() - timedelta(weeks=1)
-        end = yesterday
+            driver_spending += kasa * rate
+            break
+    return driver_spending
+
+
+def get_daily_report(manager_id):
+    end = timezone.localtime().date() - timedelta(days=1)
+    if timezone.localtime().weekday():
+        start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
+    else:
+        start = timezone.localtime().date() - timedelta(weeks=1)
+
     total_values = {}
     day_values = {}
     rent_daily = {}
     total_rent = {}
     drivers = get_drivers_vehicles_list(manager_id, Driver)[0]
     for driver in drivers:
-        daily_report = calculate_daily_reports(yesterday, yesterday, driver)
+        daily_report = calculate_daily_reports(end, end, driver)
         if daily_report:
             day_values[driver],  rent_daily[driver] = daily_report
         total_report = calculate_daily_reports(start, end, driver)
@@ -130,44 +112,82 @@ def get_daily_report(manager_id=None, start=None, end=None):
     return sort_report, day_values, total_rent, rent_daily
 
 
-def generate_message_weekly(chat_id):
-    end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
-    start = end - timedelta(days=6)
+def generate_message_report(chat_id, daily=False):
+    if daily:
+        start = end = timezone.localtime().date() - timedelta(days=1)
+        calculation = SalaryCalculation.DAY
+    else:
+        end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
+        start = end - timedelta(days=6)
+        calculation = SalaryCalculation.WEEK
     message = ''
     drivers_dict = {}
     balance = 0
     drivers, rent, user = get_drivers_vehicles_list(chat_id, Driver)
-    for driver in drivers:
+    for driver in drivers.filter(salary_calculation=calculation):
+        payment = DriverPayments.objects.filter(report_from=start, report_to=end, driver=driver).first()
         driver_message = ''
-        result = calculate_weekly_reports(start, end, driver)
-        if result:
-            balance += result[0]
-            driver_message += f"{driver} каса: {result[1]}\n"
-            if result[5]:
-                driver_message += "Оренда авто: {0} * {1} = {2}\n".format(result[5], rent, result[6])
-            if driver.schema in ("HALF", "CUSTOM"):
-                driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2}'.format(
-                    result[1], driver.rate, result[2])
-                if result[4]:
-                    driver_message += " - План {:.2f}".format(result[4])
-            elif driver.schema == "RENT":
-                driver_message += 'Зарплата за тиждень {0} * {1} - Готівка {2} - Абонплата {3}'.format(
-                    result[1], driver.rate, result[2], driver.rental)
+
+        if payment:
+            driver_message += f"{driver} каса: {payment.kasa}\n"
+            if payment.rent:
+                driver_message += "Оренда авто: {0} * {1} = {2}\n".format(payment.rent_distance, rent, payment.rent)
+            if driver.schema.schema in ("HALF", "CUSTOM"):
+                driver_message += 'Зарплата {0} * {1} - Готівка {2}'.format(
+                    payment.kasa, driver.schema.rate, payment.cash)
+                if payment.kasa < driver.schema.plan:
+                    incomplete = (driver.schema.plan - payment.kasa) * Decimal(1 - driver.schema.rate)
+                    driver_message += " - План {:.2f}".format(incomplete)
+            elif driver.schema.schema == "DYNAMIC":
+                driver_message += 'Зарплата {0} - Готівка {1}'.format(
+                    payment.salary + payment.cash + payment.rent,  payment.cash)
             else:
-                pass
-            if result[6]:
-                driver_message += f" - Оренда {result[6]}"
-            driver_message += f" = {result[3]}\n"
+                driver_message += 'Зарплата {0} * {1} - Готівка {2} - Абонплата {3}'.format(
+                    payment.kasa, driver.schema.rate, payment.cash, driver.schema.rental)
+            if payment.rent:
+                driver_message += f" - Оренда {payment.rent}"
+            driver_message += f" = {payment.salary}\n"
+            balance += payment.kasa - payment.salary - payment.cash
             if driver.chat_id:
                 drivers_dict[driver.chat_id] = driver_message
             message += driver_message
         if driver_message:
             message += "*" * 39 + '\n'
-    manager_message = f'Ваш баланс за минулий тиждень:%.2f\n' % balance
+    manager_message = f'Ваш баланс:%.2f\n' % balance
     manager_message += message
     if user:
         drivers_dict[user.chat_id] = manager_message
     return drivers_dict
+
+
+def generate_report_period(chat_id, start, end):
+    message = ''
+    balance = 0
+
+    drivers, rent, user = get_drivers_vehicles_list(chat_id, Driver)
+    for driver in drivers:
+        payment = DriverPayments.objects.filter(report_to__range=(start, end),
+                                                driver=driver).values('driver_id').annotate(
+            period_kasa=Sum('kasa') or 0,
+            period_cash=Sum('cash') or 0,
+            period_rent_distance=Sum('rent_distance') or 0,
+            period_salary=Sum('salary') or 0,
+            period_rent=Sum('rent') or 0
+        )
+        if payment:
+            payment = payment[0]
+            driver_message = f"{driver}\n" \
+                             f"Каса: {payment['period_kasa']}\n" \
+                             f"Готівка: {payment['period_cash']}\n" \
+                             f"Оренда авто: {payment['period_rent_distance']}км, {payment['period_rent']}грн\n" \
+                             f"Зарплата: {payment['period_salary']}\n\n"
+            balance += payment['period_kasa'] - payment['period_salary'] - payment['period_cash']
+            message += driver_message
+    manager_message = "Звіт з {0} по {1}\n".format(start.date(), end.date())
+    manager_message += f'Ваш баланс: %.2f\n' % balance
+    manager_message += message
+
+    return manager_message
 
 
 def calculate_efficiency(vehicle, start, end):
@@ -239,8 +259,12 @@ def calculate_efficiency_driver(driver, start, end):
             avg_price = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_orders']))
         if aggregations['total_distance']:
             efficiency = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_distance']))
+        total_seconds = int(aggregations['total_hours'].total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        total_hours_formatted = f"{hours:02}:{minutes:02}:{seconds:02}"
         return (efficiency, aggregations['total_orders'], accept_percent,
-                avg_price, aggregations['total_distance'], aggregations['total_hours'])
+                avg_price, aggregations['total_distance'], total_hours_formatted)
 
 
 def get_driver_efficiency_report(manager_id=None, start=None, end=None):

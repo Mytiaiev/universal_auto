@@ -4,13 +4,25 @@ from django.utils import timezone
 
 from scripts.redis_conn import redis_instance, get_logger
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner, \
-    DriverReshuffle
+    DriverReshuffle, Schema
 import datetime
+
+
+class AuthenticationError(Exception):
+    def __init__(self, message="Authentication error"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class InfinityTokenError(Exception):
+    def __init__(self, message="No infinity gps token"):
+        self.message = message
+        super().__init__(self.message)
 
 
 class Synchronizer:
 
-    def __init__(self, partner_id, fleet='Uklon'):
+    def __init__(self, partner_id, fleet):
         self.partner_id = partner_id
         self.fleet = fleet
         self.redis = redis_instance()
@@ -37,39 +49,41 @@ class Synchronizer:
             fleet = Fleet.objects.get(name=kwargs['fleet_name'])
         except ObjectDoesNotExist:
             return
-        drivers, created = Fleets_drivers_vehicles_rate.objects.get_or_create(
-                fleet=fleet,
-                driver_external_id=kwargs['driver_external_id'],
-                partner=self.partner_id,
-                defaults={
-                        "fleet": fleet,
-                        "driver_external_id": kwargs['driver_external_id'],
-                        "driver": self.get_or_create_driver(**kwargs),
-                        "pay_cash": kwargs['pay_cash'],
-                        "partner": Partner.get_partner(self.partner_id)})
-
-        if not created:
-            drivers.pay_cash = kwargs["pay_cash"]
-            drivers.save(update_fields=['pay_cash'])
+        driver = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
+                                                             driver_external_id=kwargs['driver_external_id'],
+                                                             partner=self.partner_id).first()
+        if not driver:
+            Fleets_drivers_vehicles_rate.objects.create(fleet=fleet,
+                                                        driver_external_id=kwargs['driver_external_id'],
+                                                        driver=self.get_or_create_driver(**kwargs),
+                                                        pay_cash=kwargs['pay_cash'],
+                                                        partner=Partner.get_partner(self.partner_id))
+        else:
+            self.update_driver_fields(driver.driver, **kwargs)
+            driver.pay_cash = kwargs["pay_cash"]
+            driver.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
-        name = self.r_dup(kwargs['name'])
-        second_name = self.r_dup(kwargs['second_name'])
-        driver = Driver.objects.filter((Q(name=name, second_name=second_name) |
-                                        Q(name=second_name, second_name=name) |
+        partner = Partner.get_partner(self.partner_id)
+        driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
+                                        Q(name=kwargs['second_name'], second_name=kwargs['name']) |
                                         Q(phone_number__icontains=kwargs['phone_number'][-10:])
                                         ) & Q(partner=self.partner_id)).first()
         if not driver and kwargs['email']:
             driver = Driver.objects.filter(email__icontains=kwargs['email']).first()
-            if not driver:
-                driver = Driver.objects.create(name=name,
-                                               second_name=second_name,
-                                               phone_number=kwargs['phone_number']
-                                               if len(kwargs['phone_number']) <= 13 else None,
-                                               email=kwargs['email'],
-                                               vehicle=self.get_or_create_vehicle(**kwargs),
-                                               role=Role.DRIVER,
-                                               partner=Partner.get_partner(self.partner_id))
+        if not driver:
+            data = {"name": kwargs['name'],
+                    "second_name": kwargs['second_name'],
+                    "role": Role.DRIVER,
+                    "schema": Schema.get_half_schema_id(),
+                    "partner": partner
+                    }
+            if partner.contacts:
+                phone_number = kwargs['phone_number'] if len(kwargs['phone_number']) <= 13 else None
+                data.update({"phone_number": phone_number,
+                             "email": kwargs['email']
+                             })
+            driver = Driver.objects.create(**data)
             try:
                 client = JobApplication.objects.get(first_name=kwargs['name'], last_name=kwargs['second_name'])
                 driver.chat_id = client.chat_id
@@ -118,39 +132,17 @@ class Synchronizer:
         phone_number = kwargs.get('phone_number')
         email = kwargs.get('email')
         worked = kwargs.get('worked')
-        swap_vehicle = Vehicle.objects.filter(licence_plate=kwargs['licence_plate']).first()
-        reshuffle = DriverReshuffle.objects.filter(swap_vehicle=swap_vehicle,
-                                                   swap_time__date=yesterday.date())
-        vehicle = None if reshuffle else self.get_or_create_vehicle(**kwargs)
-        if reshuffle or (driver.vehicle != vehicle and vehicle is not None):
-            driver.vehicle = vehicle
-        if phone_number and not driver.phone_number:
-            driver.phone_number = phone_number
+        if driver.partner.contacts:
+            if phone_number and not driver.phone_number:
+                driver.phone_number = phone_number
 
-        if email and driver.email != email:
-            driver.email = email
+            if email and driver.email != email:
+                driver.email = email
 
         driver.worked = worked
         driver.save()
 
     @staticmethod
-    def start_report_interval(day):
-        return datetime.datetime.combine(day, datetime.time.min)
-
-    @staticmethod
-    def end_report_interval(day):
-        return datetime.datetime.combine(day, datetime.time.max)
-
-    @staticmethod
-    def parameters() -> dict:
-        params = {
-            'limit': '50',
-            'offset': '0',
-        }
-        return params
-
-    @staticmethod
-    def r_dup(text):
-        if 'DUP' in text:
-            text = text[:-3]
-        return text
+    def report_interval(day, start=None):
+        report_time = datetime.time.min if start else datetime.time.max
+        return int(datetime.datetime.combine(day, report_time).timestamp())

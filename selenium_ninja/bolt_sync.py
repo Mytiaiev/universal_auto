@@ -7,22 +7,29 @@ import pendulum
 import requests
 from django.db import IntegrityError
 from django.utils import timezone
+from telegram.error import BadRequest
 
-from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder
+from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
+    CredentialPartner, Vehicle, PaymentTypes
 from auto import settings
-from selenium_ninja.synchronizer import Synchronizer
+from auto_bot.main import bot
+from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
+from taxi_service.utils import login_in
 
 
 class BoltRequest(Synchronizer):
     def __init__(self, partner_id=None, fleet="Bolt"):
         super().__init__(partner_id, fleet)
         self.base_url = BoltService.get_value('REQUEST_BOLT_LOGIN_URL')
-        self.param = {"language": "uk-ua", "version": "FO.2.61"}
+        self.param = {"language": "uk-ua", "version": "FO.3.03"}
 
-    def get_login_token(self):
+    def get_login_token(self, login=None, password=None):
+        if not (login and password):
+            login = CredentialPartner.get_value("BOLT_NAME", partner=self.partner_id)
+            password = CredentialPartner.get_value("BOLT_PASSWORD", partner=self.partner_id)
         payload = {
-            'username': ParkSettings.get_value("BOLT_NAME", partner=self.partner_id),
-            'password': ParkSettings.get_value("BOLT_PASSWORD", partner=self.partner_id),
+            'username': login,
+            'password': password,
             'device_name': "Chrome",
             'device_os_version': "NT 10.0",
             "device_uid": "6439b6c1-37c2-4736-b898-cb2a8608e6e2"
@@ -30,30 +37,46 @@ class BoltRequest(Synchronizer):
         response = requests.post(url=f'{self.base_url}startAuthentication',
                                  params=self.param,
                                  json=payload)
-        self.redis.set(f"{self.partner_id}_{self.fleet}_refresh", response.json()["data"]["refresh_token"])
-
-        return response.json()["data"]["refresh_token"]
+        if response.json()["code"] == 66610:
+            raise AuthenticationError(f"{self.fleet} login or password incorrect.")
+        else:
+            refresh_token = response.json()["data"]["refresh_token"]
+            self.redis.set(f"{self.partner_id}_{self.fleet}_refresh", refresh_token)
 
     def get_access_token(self):
         token = self.redis.get(f"{self.partner_id}_{self.fleet}_refresh")
-        if token:
-            while True:
-                access_payload = {
-                    "refresh_token": token,
-                    "company": {"company_id": ParkSettings.get_value("BOLT_URL_ID_PARK", partner=self.partner_id),
-                                "company_type": "fleet_company"}
-                }
-
-                response = requests.post(url=f'{self.base_url}getAccessToken',
-                                         params=self.param,
-                                         json=access_payload)
+        park_id = self.redis.get(f"{self.partner_id}_{self.fleet}_park_id")
+        if token and park_id:
+            access_payload = {
+                "refresh_token": token,
+                "company": {"company_id": park_id,
+                            "company_type": "fleet_company"}
+            }
+            response = requests.post(url=f'{self.base_url}getAccessToken',
+                                     params=self.param,
+                                     json=access_payload)
+            if not response.json()['code']:
+                return response.json()["data"]["access_token"]
+        elif token:
+            access_payload = {
+                "refresh_token": token
+            }
+            response = requests.post(url=f'{self.base_url}getAccessToken',
+                                     params=self.param,
+                                     json=access_payload)
+            if not response.json()['code']:
+                first_token = response.json()["data"]["access_token"]
+                headers = {'Authorization': f'Bearer {first_token}'}
+                response = requests.get(url=f'{self.base_url}getProfile',
+                                        params=self.param,
+                                        headers=headers)
                 if not response.json()['code']:
-                    return response.json()["data"]["access_token"]
-                else:
-                    token = self.get_login_token()
-        else:
-            self.get_login_token()
-            self.get_access_token()
+                    park_id = response.json()["data"]["companies"][0]["id"]
+                    self.redis.set(f"{self.partner_id}_{self.fleet}_park_id", park_id)
+                    self.get_access_token()
+            else:
+                self.get_login_token()
+                self.get_access_token()
 
     def get_target_url(self, url, params):
         new_token = self.get_access_token()
@@ -137,7 +160,7 @@ class BoltRequest(Synchronizer):
             time.sleep(0.5)
         return driver_list
 
-    def get_fleet_orders(self, day, pk):
+    def get_fleet_orders(self, day, pk, save=True):
         bolt_states = {
             "client_did_not_show": FleetOrder.CLIENT_CANCEL,
             "finished": FleetOrder.COMPLETED,
@@ -173,6 +196,11 @@ class BoltRequest(Synchronizer):
                         finish = timezone.make_aware(datetime.datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
                     except TypeError:
                         finish = None
+                    try:
+                        price = order['total_price']
+                    except KeyError:
+                        price = 0
+                    vehicle = Vehicle.objects.get(licence_plate=order['car_reg_number'])
                     data = {"order_id": order['order_id'],
                             "fleet": self.fleet,
                             "driver": driver,
@@ -180,9 +208,14 @@ class BoltRequest(Synchronizer):
                             "accepted_time": timezone.make_aware(datetime.datetime.fromtimestamp(order['accepted_time'])),
                             "state": bolt_states.get(order['order_try_state']),
                             "finish_time": finish,
+                            "payment": PaymentTypes.map_payments(order['payment_method']),
                             "destination": order['order_stops'][-1]['address'],
+                            "vehicle": vehicle,
+                            "price": price,
                             "partner": Partner.get_partner(self.partner_id)
                             }
+                    if driver.vehicle != vehicle:
+                        self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['car_reg_number'])
                     FleetOrder.objects.create(**data)
 
     def get_drivers_status(self):
