@@ -138,13 +138,11 @@ iframe {
 	text-decoration: none;
 	transition: background-color 0.3s;
 	cursor: pointer;
-	margin-right: 58px;
 }
 
 .nav-connect {
 	display: block;
-	position: absolute;
-	right: 20px;
+	position: relative;
 	z-index: 1023;
 }
 
@@ -156,7 +154,6 @@ iframe {
 }
 
 .nav-link.fa.fa-user {
-	top: 5px;
 	width: 35px;
 	height: 35px;
 	display: flex;
@@ -172,7 +169,7 @@ iframe {
 }
 
 .social-icons {
-	top: 45px;
+	top: 35px;
 	display: none;
 	flex-direction: column;
 	justify-content: space-between;
@@ -184,7 +181,7 @@ iframe {
 	background-color: #fff;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 	border-radius: 25px;
-	right: 80px;
+	right: 5px;
 	transform: translateX(-50%);
 }
 
@@ -272,8 +269,23 @@ input[type="radio"]#forgotPasswordRadio {
 }
 
 label[for="showPassword"] {
-	margin-right: 60px;
+	margin-right: 40px;
 }
+
+.nav-item-social {
+	position: relative;
+	right: 40px;
+}
+
+.nav-item:hover .sub-menu,
+.nav-item-social:hover .social-icons {
+	display: block;
+}
+
+.sub-menu, .social-icons {
+	display: none;
+}
+
 
 /*End Header*/
 
@@ -369,24 +381,24 @@ label[for="showPassword"] {
 }
 
 .icon-social-network a {
-  display: inline-block;
-  background-color: #EC6323;
-  border-radius: 50%;
-  margin: 5px;
-  padding: 10px;
-  text-align: center;
-  width: 40px;
-  height: 40px;
-  line-height: 30px;
-  font-size: 20px;
-  text-decoration: none;
+	display: inline-block;
+	background-color: #EC6323;
+	border-radius: 50%;
+	margin: 5px;
+	padding: 10px;
+	text-align: center;
+	width: 40px;
+	height: 40px;
+	line-height: 30px;
+	font-size: 20px;
+	text-decoration: none;
 }
 
 .icon-social-network a i {
-  color: #A1E8B9;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+	color: #A1E8B9;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 /*End Footer*/
@@ -396,6 +408,7 @@ label[for="showPassword"] {
 /*BLOCK-1*/
 
 .one_section {
+	height: 500px;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -403,14 +416,14 @@ label[for="showPassword"] {
 }
 
 .image-map {
-	position: absolute;
-	left: 510px;
-	top: 95px;
+	position: relative;
+	left: 505px;
+	bottom: -25px;
 }
 
 .overlay-image {
-	position: absolute;
-	top: 255px;
+	position: relative;
+	bottom: 115px;
 	left: 300px;
 }
 
@@ -421,21 +434,22 @@ label[for="showPassword"] {
 }
 
 .right_content img {
-	width: 50%;
+	width: 73%;
 	height: auto;
-	right: -35px;
-	top: -320px;
-	position: absolute;
+	right: -205px;
+	top: 35px;
+	position: relative;
 	z-index: 1021;
 }
 
 .one_section .right_content h2 {
+	width: 350px;
 	color: white;
 	font-size: 36px;
 	margin: 0;
-	position: absolute;
-	bottom: 99px;
-	left: 630px;
+	position: relative;
+	bottom: 450px;
+	left: 540px;
 	right: 0;
 	padding: 10px;
 	z-index: 1022;
@@ -447,24 +461,26 @@ label[for="showPassword"] {
 }
 
 .one_section .right_content .phone {
+	width: 360px;
 	font-size: 32px;
 	color: #EC6323;
 	margin: 0;
-	position: absolute;
-	left: 670px;
-	bottom: 40px;
+	position: relative;
+	left: 543px;
+	bottom: 455px;
 	right: 0;
 	padding: 10px;
 	z-index: 1022;
 }
 
 .one_section .right_content .text-1 {
+	width: 372px;
 	color: #fff;
 	font-size: 30px;
 	margin: 0;
 	position: absolute;
-	top: -60px;
-	left: 688px;
+	top: 300px;
+	left: 550px;
 	right: 0;
 	padding: 10px;
 	z-index: 1022;
@@ -474,8 +490,8 @@ label[for="showPassword"] {
 	display: flex;
 	justify-content: center;
 	position: absolute;
-	top: 450px;
-	right: 400px;
+	top: 480px;
+	right: 319px;
 	z-index: 1022;
 }
 
@@ -498,7 +514,7 @@ label[for="showPassword"] {
 /*BLOCK-2 about*/
 
 .about_section {
-	margin-top: 200px;
+	margin-top: 100px;
 }
 
 .heading_container h2 {

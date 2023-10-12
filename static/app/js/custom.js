@@ -1062,12 +1062,6 @@ $(document).ready(function () {
 
 	// js for header
 
-	$(".nav-item:has(.sub-menu), .nav-item:has(.social-icons)").hover(function () {
-		$(this).children(".sub-menu, .social-icons").slideDown("fast");
-	}, function () {
-		$(this).children(".sub-menu, .social-icons").slideUp("fast");
-	});
-
 	$.ajax({
 		url: ajaxGetUrl,
 		type: "GET",

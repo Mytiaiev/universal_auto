@@ -30,8 +30,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-			href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
-			rel="stylesheet">
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet">
   <!-- Custom styles for this template -->
   <link href="{% static 'app/css/style.css' %}" rel="stylesheet"/>
   <!-- responsive style -->
@@ -98,7 +98,7 @@
       </div>
       <div class="nav-item connect">
         <ul class="navbar-nav">
-          <li class="nav-item">
+          <li class="nav-item-social">
             <span class="nav-connect">Приєднатися</span>
             <ul class="social-icons">
               <li class="icon"><a href="#"><i class="fa-brands fa-instagram"></i></a></li>
@@ -149,7 +149,8 @@
       </div>
       <div id="forgotPasswordForm" class="forgot-password-form" style="display: none;">
         <span id="closeForm" class="close-btn">&times;</span>
-        <p>Введіть електрону адресу, на яку ви реєструвалися, і ми надішлемо вам новий пароль для відновлення аккаунту :</p>
+        <p>Введіть електрону адресу, на яку ви реєструвалися, і ми надішлемо вам новий пароль для відновлення аккаунту
+          :</p>
         <form id="forgotPasswordFields">
           {% csrf_token %}
           <input type="email" id="forgotEmail" placeholder="Електронна адреса">
