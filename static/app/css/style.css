@@ -35,7 +35,7 @@ iframe {
 	font-family: 'Source Sans 3', sans-serif;
 	font-weight: 700;
 	font-style: italic;
-	background-color: #a8c465;
+	background-color: #A1E8B9;
 	margin: 0;
 	height: 100vh;
 	width: 100vw;
@@ -236,7 +236,6 @@ iframe {
 }
 
 .sub-menu li:hover {
-	background-color: #f0f0f0;
 	color: #000;
 }
 
@@ -284,6 +283,99 @@ label[for="showPassword"] {
 
 .sub-menu, .social-icons {
 	display: none;
+}
+
+.nav-item-adaptive-phone {
+	display: none;
+}
+
+
+@media screen and (max-width: 767px) {
+	.header_section .navbar-nav,
+	.header_section .connect {
+		display: none;
+	}
+
+	.nav-item-adaptive-phone {
+		display: flex;
+	}
+
+	.nav-item-adaptive-phone .nav-link.fa.fa-user {
+		width: 36px;
+		height: 36px;
+	}
+
+	.navbar-brand img {
+		width: 104px;
+		height: 27px;
+	}
+
+	.nav-item-adaptive .nav-link {
+		color: #141E17;
+		font-size: 12px;
+		font-style: normal;
+		font-weight: 400;
+		line-height: normal;
+		margin-right: 15px;
+	}
+
+	.sub-menu {
+		width: 310px;
+		left: -10px;
+		text-align: center;
+		background: rgba(0, 0, 0, 0.50);
+		padding: 10px;
+		border-radius: 5px;
+	}
+
+	.sub-menu li a {
+		color: #FFF;
+		text-align: center;
+		font-size: 15px;
+		font-style: normal;
+		font-weight: 500;
+		line-height: normal;
+	}
+
+	.sub-menu .icon a {
+		width: 30px;
+		height: 30px;
+	}
+
+	#pagesList .icon {
+		display: inline-block;
+		margin-right: 10px;
+		width: 30px;
+		height: 30px;
+		text-align: center;
+		line-height: 30px;
+		border-radius: 50%;
+		background-color: white;
+	}
+
+	#pagesList .icon i {
+		display: block;
+		margin: -5px -5px;
+		color: black;
+		font-size: 20px;
+	}
+
+	.login-form {
+		width: 95% !important;
+	}
+
+	.login-form h2 {
+		font-size: 24px;
+	}
+
+	#loginFormFields button {
+		padding: 1px 45px;
+	}
+
+	label[for="showPassword"] {
+		margin-right: 20px;
+	}
+
 }
 
 /*End Header*/

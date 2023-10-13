@@ -1062,6 +1062,17 @@ $(document).ready(function () {
 
 	// js for header
 
+	let pagesLink = $("#pagesLink");
+	let pagesList = $("#pagesList");
+
+	pagesLink.click(function () {
+		if (pagesList.is(":visible")) {
+			pagesList.hide();
+		} else {
+			pagesList.show();
+		}
+	});
+
 	$.ajax({
 		url: ajaxGetUrl,
 		type: "GET",
@@ -1069,7 +1080,7 @@ $(document).ready(function () {
 			action: "is_logged_in"
 		},
 		success: function (data) {
-			var userLink = $(".nav-link.fa.fa-user");
+			let userLink = $(".nav-link.fa.fa-user");
 
 			if (data.is_logged_in === true) {
 				userLink.css("background-color", "#A1E8B9");
