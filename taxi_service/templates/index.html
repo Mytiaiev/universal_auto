@@ -43,7 +43,7 @@
     <section class="about_section layout_padding">
       <div class="container">
         <div class="row">
-          <div class="col-md-6">
+          <div class="col-md-6 row-detail-box">
             <div class="detail-box">
               <div class="heading_container">
                 <h2>{% trans "Що таке Ninja Taxi?" %}</h2>
@@ -58,14 +58,14 @@
                 {% trans "Наші професійні водії гарантують вашу безпеку та зручність." %}<br>
                 {% trans "Ninja Taxi - це ваш партнер у кращих подорожах." %}
               </p>
-              <div class="telegram-button">
+              <div class="telegram-button-about">
                 <a href="{% url 'send_to_telegram' %}">
                   <button>{% trans "Замовити послугу" %}</button>
                 </a>
               </div>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6 row-detail-img">
             <div class="img-box">
               <img src="{% static 'app/images/index-one-block-5.png' %}" alt="" loading="lazy">
             </div>
@@ -136,18 +136,18 @@
 
     <section class="app_section">
       <div class="container container-app">
-        <div class="heading_container">
-          <h5>
-            {% trans "Замовити послуги від Ninja taxi" %}
-          </h5>
-        </div>
-        <div class="app-radio-btn">
-          <input type="radio" id="detailsRadio" name="radioGroup" value="details" checked>
-          <label for="detailsRadio">Деталі</label><br>
-          <input type="radio" id="howItWorksRadio" name="radioGroup" value="howItWorks">
-          <label for="howItWorksRadio">Як це працює</label><br>
-        </div>
         <div class="detail-box">
+          <div class="heading_container">
+            <h5>
+              {% trans "Замовити послуги від Ninja taxi" %}
+            </h5>
+          </div>
+          <div class="app-radio-btn">
+            <input type="radio" id="detailsRadio" name="radioGroup" value="details" checked>
+            <label for="detailsRadio">Деталі</label><br>
+            <input type="radio" id="howItWorksRadio" name="radioGroup" value="howItWorks">
+            <label for="howItWorksRadio">Як це працює</label><br>
+          </div>
           <div class="detail-blocks">
             <div class="detail-radio-1" id="detail-radio-1">
               <p>
@@ -171,7 +171,7 @@
                 <li>{% trans "Оцініть роботу водія" %}</li>
               </ul>
             </div>
-            <div class="telegram-button">
+            <div class="app-telegram-button">
               <a href="{% url 'send_to_telegram' %}">
                 <button>{% trans "Перейти у Ninja Taxi бот" %}</button>
               </a>
@@ -195,20 +195,16 @@
       <div class="container">
         <div class="heading_container">
           <h2>{% trans "Інвестиція в екологічне майбутнє" %}</h2>
+          <p class="investment">
+            {% trans "Розкрийте потенціал інвестицій у світі електромобілів." %}
+            {% trans "Вас чекає неймовірна можливість стати частиною нашої революційної служби та заробити на екологічно орієнтованому бізнесі." %}
+            {% trans "Ninja Taxi запрошує вас приєднатися до нашої високоперспективної команди і вкласти кошти у стійку транспортну систему." %}
+          </p>
+          <div class="button-container">
+            <a href="{% url 'investment' %}" class="btn btn-primary">{% trans "Дізнатися більше" %}</a>
+          </div>
         </div>
         <div class="row">
-          <div class="col-md-6 text-center">
-            <div class="detail-box">
-              <p class="investment">
-                {% trans "Розкрийте потенціал інвестицій у світі електромобілів." %}
-                {% trans "Вас чекає неймовірна можливість стати частиною нашої революційної служби та заробити на екологічно орієнтованому бізнесі." %}
-                {% trans "Ninja Taxi запрошує вас приєднатися до нашої високоперспективної команди і вкласти кошти у стійку транспортну систему." %}
-              </p>
-              <div class="button-container">
-                <a href="{% url 'investment' %}" class="btn btn-primary">{% trans "Дізнатися більше" %}</a>
-              </div>
-            </div>
-          </div>
           <div class="col-md-6">
             <div class="video-box">
               <a data-youtube href="https://www.youtube.com/watch?v=GCf8iURnec8" title="investor-1"></a>
@@ -281,7 +277,7 @@
           <div class="client-card">
             <div class="client-card-header">
               <div class="rounded-image-container">
-                <img src="{% static 'app/images/client-Ganna.webp' %}" class="client-img rounded-image">
+                <img src="{% static 'app/images/client-Ganna.webp' %}" class="client-img rounded-image" alt="">
               </div>
               <div class="client-name">
                 <h2>{% trans "Ганна" %}</h2>
@@ -298,7 +294,7 @@
           <div class="client-card">
             <div class="client-card-header">
               <div class="rounded-image-container">
-                <img src="{% static 'app/images/client-Vasil.webp' %}" class="client-img rounded-image">
+                <img src="{% static 'app/images/client-Vasil.webp' %}" class="client-img rounded-image" alt="">
               </div>
               <div class="client-name">
                 <h2>{% trans "Василь" %}</h2>
@@ -315,7 +311,7 @@
           <div class="client-card">
             <div class="client-card-header">
               <div class="rounded-image-container">
-                <img src="{% static 'app/images/client-Alina.webp' %}" class="client-img rounded-image">
+                <img src="{% static 'app/images/client-Alina.webp' %}" class="client-img rounded-image" alt="">
               </div>
               <div class="client-name">
                 <h2>{% trans "Аліна" %}</h2>
@@ -343,18 +339,13 @@
 {% include 'footer.html' %}
 
 <script>
-	let parkSettings = {};
-	{% if parkSettings %}
-		parkSettings = JSON.parse('{{ parkSettings | safe }}');
-	{% endif %}
-	let apiGoogle = '{{ google_api }}';
 	let ajaxPostUrl = "{% url 'post_request' %}";
 	let ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
-        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"
-        async defer></script>
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script src="{% static 'app/js/defer-google-maps.js' %}" defer></script>
