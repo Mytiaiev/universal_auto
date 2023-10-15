@@ -557,9 +557,9 @@ label[for="showPassword"] {
 	}
 
 	.footer-about a {
-    font-size: 12px;
-    margin-top: 5px;
-}
+		font-size: 12px;
+		margin-top: 5px;
+	}
 
 	.footer-logo button {
 		width: 100%;
@@ -985,7 +985,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	text-align: left;
 }
 
-.video-box{
+.video-box {
 	position: relative;
 	width: 552px;
 	height: 310px;
@@ -1205,7 +1205,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	flex-direction: column;
 	align-items: center;
 	background: #FFF;
-	box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
 	border-radius: 52px;
 	width: 360px;
 }
@@ -1551,6 +1551,14 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 
 	.investment-section-index .heading_container {
 		width: 100%;
+	}
+
+	.video-box {
+		position: relative;
+		width: 100%;
+		height: auto;
+		top: 0;
+    left: 0;
 	}
 
 	.video-box a img {
@@ -2512,23 +2520,6 @@ body .btn-one {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-}
-
-
-/* binotel hack */
-a#bingc-phone-button {
-	left: auto !important;
-	right: 2%;
-}
-
-#bingc-phone-button div.bingc-phone-button-tooltip {
-	right: 5px !important;
-	left: auto !important;
-}
-
-#bingc-phone-button div.bingc-phone-button-tooltip svg.bingc-phone-button-arrow {
-	left: auto !important;
-	right: 29px;
 }
 
 
