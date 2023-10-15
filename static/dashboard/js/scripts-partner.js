@@ -589,14 +589,6 @@ $(document).ready(function () {
 		$("#settingsWindow").fadeIn();
 	}
 
-	if (localStorage.getItem('uber')) {
-		$("#partnerLogin").hide()
-		$("#partnerPassword").hide()
-		$(".opt-partnerForm").hide()
-		$(".login-ok").show()
-		$("#loginErrorMessage").hide()
-	}
-
 	$("#settingBtnContainer").click(function () {
 		sessionStorage.setItem('settings', 'true');
 		$("#settingsWindow").fadeIn();
