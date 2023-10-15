@@ -23,9 +23,9 @@
             <img src="{% static 'app/images/index-one-block-3.png' %}" alt="three image">
           </div>
           <div class="one-info">
-            <h2>ПЕРСОНАЛЬНЕ<br>ЕЛЕКТРО-ТАКСІ</h2>
+            <h2>{% trans "ПЕРСОНАЛЬНЕ" %}<br>{% trans "ЕЛЕКТРО-ТАКСІ" %}</h2>
             <p class="phone"><i class="fas fa-phone"></i> +38(093) 753 10 57</p>
-            <p class="text-1">Довірте себе та дитину<br>екологічному та<br>безпечному оператору<br>таксі України</p>
+            <p class="text-1">{% trans "Довірте себе та дитину" %}<br>{% trans "екологічному та" %}<br>{% trans "безпечному оператору" %}<br>{% trans "таксі України" %}</p>
             <div class="telegram-button button-block-1">
               <a href="{% url 'send_to_telegram' %}">
                 <button>{% trans "Перейти у Ninja бот" %}</button>
@@ -144,9 +144,9 @@
           </div>
           <div class="app-radio-btn">
             <input type="radio" id="detailsRadio" name="radioGroup" value="details" checked>
-            <label for="detailsRadio">Деталі</label><br>
+            <label for="detailsRadio">{% trans "Деталі" %}</label><br>
             <input type="radio" id="howItWorksRadio" name="radioGroup" value="howItWorks">
-            <label for="howItWorksRadio">Як це працює</label><br>
+            <label for="howItWorksRadio">{% trans "Як це працює" %}</label><br>
           </div>
           <div class="detail-blocks">
             <div class="detail-radio-1" id="detail-radio-1">
