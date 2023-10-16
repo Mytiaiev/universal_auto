@@ -307,13 +307,13 @@ label[for="showPassword"] {
 	}
 
 	.navbar-brand img {
-		width: 104px;
-		height: 27px;
+		width: 114px;
+		height: 36px;
 	}
 
 	.nav-item-adaptive .nav-link {
 		color: #141E17;
-		font-size: 12px;
+		font-size: 15px;
 		font-style: normal;
 		font-weight: 400;
 		line-height: normal;
@@ -321,8 +321,8 @@ label[for="showPassword"] {
 	}
 
 	.sub-menu {
-		width: 310px;
-		left: -10px;
+		width: 100%;
+		left: 0;
 		text-align: center;
 		background: rgba(0, 0, 0, 0.50);
 		padding: 10px;
@@ -1198,6 +1198,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	width: 54px;
 	height: 54px;
 	object-fit: cover;
+	border-radius: 50%;
 }
 
 .client-card {
@@ -1309,7 +1310,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 		position: relative;
 		padding: 10px;
 		z-index: 1022;
-		margin-top: -260px;
+		margin-top: -245px;
 		right: -23px;
 	}
 
@@ -1319,9 +1320,11 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 
 	.right_content .one-info .phone {
 		font-size: 15px;
+		margin-top: 10px;
 	}
 
 	.right_content .one-info .text-1 {
+		margin-bottom: 10px;
 		font-size: 15px;
 	}
 
@@ -1475,7 +1478,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	}
 
 	.detail-blocks {
-		margin-top: 17px;
+		margin-top: -5px;
 		order: 4;
 	}
 
@@ -1499,6 +1502,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	}
 
 	.detail-radio-1 p {
+		margin-top: 8px;
 		width: 345px;
 		font-size: 15px;
 	}
@@ -1558,7 +1562,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 		width: 100%;
 		height: auto;
 		top: 0;
-    left: 0;
+		left: 0;
 	}
 
 	.video-box a img {
@@ -1696,6 +1700,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	}
 
 	.client-card-header .client-name h2 {
+		margin-top: 27px;
 		font-size: 15px;
 	}
 
@@ -1704,7 +1709,10 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	}
 
 	.client-description {
+		margin-top: 0;
 		font-size: 15px;
+		text-align: center;
+		padding-top: 3px;
 	}
 
 }
