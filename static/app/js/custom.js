@@ -1062,23 +1062,6 @@ $(window).on('load', function () {
 
 $(document).ready(function () {
 
-	$.ajax({
-		url: ajaxGetUrl,
-		type: "GET",
-		data: {
-			action: "is_logged_in"
-		},
-		success: function (data) {
-			if (data.is_logged_in === true) {
-				$("#loginBtn").hide();
-				$("#loggedInUser").text('Особистий кабінет').show();
-			} else {
-				$("#loginBtn").show();
-				$("#loggedInUser").hide();
-			}
-		}
-	})
-
 	$("#showPassword").click(function () {
 		let $checkbox = $(this);
 		let $passwordField = $checkbox.closest('#loginForm').find('#password');
@@ -1086,27 +1069,6 @@ $(document).ready(function () {
 		$passwordField.prop('type', change);
 	});
 
-	$("#loggedInUser").click(function () {
-		$.ajax({
-			url: ajaxGetUrl,
-			type: "GET",
-			data: {
-				action: "get_role"
-			},
-			success: function (response) {
-				console.log(response.role);
-				if (response.role === 'Investor') {
-					window.location.href = "/dashboard-investor/";
-				}
-				if (response.role === 'Manager') {
-					window.location.href = "/dashboard-manager/";
-				}
-				if (response.role === 'Partner') {
-					window.location.href = "/dashboard-partner/";
-				}
-			}
-		});
-	});
 
 	$("#loginBtn").click(function () {
 		$("#loginForm").fadeIn();
@@ -1134,29 +1096,13 @@ $(document).ready(function () {
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
 			},
 			success: function (response) {
-				console.log(response.data['role']);
 				if (response.data['success'] === true) {
-					if (response.data['role'] === 'Investor') {
-						$("#loginBtn").hide();
-						$("#loggedInUser").text('Особистий кабінет').show();
-						$("#loginForm").fadeOut();
-						window.location.href = "/dashboard-investor/";
-					}
-
-					if (response.data['role'] === 'Manager') {
-						$("#loginBtn").hide();
-						$("#loggedInUser").text('Кабінет Менеджера').show();
-						$("#loginForm").fadeOut();
-						localStorage.setItem('role', 'manager');
-						window.location.href = "/dashboard-manager/";
-					}
+				    $("#loginBtn").hide();
+				    window.location.href = "/dashboard/";
+				    $("#loginForm").fadeOut();
 
 					if (response.data['role'] === 'Partner') {
-						$("#loginBtn").hide();
-						$("#loggedInUser").text('Кабінет Партнера').show();
-						$("#loginForm").fadeOut();
 						localStorage.setItem('role', 'partner');
-						window.location.href = "/dashboard-partner/";
 					}
 
 				} else {

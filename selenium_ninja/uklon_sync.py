@@ -248,7 +248,7 @@ class UklonRequest(Synchronizer):
             orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
             try:
                 for order in orders['items']:
-                    if FleetOrder.objects.filter(order_id=order['id']) or order['status'] in ("running", "accepted"):
+                    if FleetOrder.objects.filter(order_id=order['id']) or order['status'] in ("running", "accepted", "arrived"):
                         continue
                     detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
                                                 params={"driverId": str_driver_id})

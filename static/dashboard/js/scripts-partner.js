@@ -26,7 +26,7 @@ function toggleSidebar() {
 let barChartOptions = {
 	series: [{
 		data: [],
-		name: gettext("Дохід: "),
+		name: gettext("Заробіток "),
 	}],
 	chart: {
 		type: "bar",
@@ -281,25 +281,24 @@ function fetchSummaryReportData(period, start, end) {
         let endDate = data[0]['end'];
         let totalDistance = data[0]['total_rent'];
         		if (data[0]['drivers'].length !== 0) {
-        			$("#noDataMessage-1").hide();
-							$('#bar-chart').show();
-							const driversData = data[0]['drivers'];
-							const categories = driversData.map(driver => driver.full_name);
-              const values = driversData.map(driver => driver.total_kasa);
-
-							barChartOptions.series[0].data = values;
-              barChartOptions.xaxis.categories = categories;
-              barChart.updateOptions(barChartOptions);
-						} else {
-								$("#noDataMessage-1").show();
-								$('#bar-chart').hide();
-						};
-						if (period === 'yesterday') {
-							$('.weekly-income-dates').text(startDate);
-						} else {
-							$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
-						};
-						$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+        			$(".noDataMessage1").hide();
+					$('#bar-chart').show();
+					const driversData = data[0]['drivers'];
+					const categories = driversData.map(driver => driver.full_name);
+                    const values = driversData.map(driver => driver.total_kasa);
+					barChartOptions.series[0].data = values;
+                    barChartOptions.xaxis.categories = categories;
+                    barChart.updateOptions(barChartOptions);
+				} else {
+					$(".noDataMessage1").show();
+					$('#bar-chart').hide();
+				};
+                if (period === 'yesterday') {
+                    $('.weekly-income-dates').text(startDate);
+                } else {
+                    $('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+                };
+                $('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
 				},
         error: function (error) {
             console.error(error);
@@ -329,7 +328,7 @@ function fetchCarEfficiencyData(period, start, end) {
          };
 
         if (data['efficiency'].length !== 0) {
-        	$("#noDataMessage-2").hide();
+        	$(".noDataMessage2").hide();
 					$('#area-chart').show();
 					const seriesData = [];
 					const dates = [];
@@ -355,7 +354,7 @@ function fetchCarEfficiencyData(period, start, end) {
 					areaChartOptions.labels = dates;
 					areaChart.updateOptions(areaChartOptions);
         } else {
-        	$("#noDataMessage-2").show();
+        	$(".noDataMessage2").show();
 					$('#area-chart').hide();
         };
 				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
@@ -380,171 +379,82 @@ function fetchDriverEfficiencyData(period, start, end) {
         type: 'GET',
         dataType: 'json',
         success: function (data) {
-        console.log(data)
-        console.log(data[0])
-					$(".apply-filter-button").prop("disabled", false);
-					let table = $('.info-driver table');
-					let driverBlock = $('.driver-block');
-					let startDate = data[0]['start'];
-					let endDate = data[0]['end'];
-					table.find('tr:gt(0)').remove();
-					if (data[0]['drivers_efficiency'].length !== 0){
-						data[0]['drivers_efficiency'].forEach(function (item) {
-							let row = $('<tr></tr>');
-							let time = item.road_time
-							let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+            $(".apply-filter-button").prop("disabled", false);
+            let table = $('.info-driver table');
+            let driverBlock = $('.driver-block');
+            let startDate = data[0]['start'];
+            let endDate = data[0]['end'];
+            table.find('tr:gt(0)').remove();
+            if (data[0]['drivers_efficiency'].length !== 0){
+                data[0]['drivers_efficiency'].forEach(function (item) {
+                    let row = $('<tr></tr>');
+                    let time = item.road_time
+                    let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
 
-							if (!parts) {
-								time = time
-							} else {
-								let days = parseInt(parts[1]);
-								let hours = parseInt(parts[2]);
-								let minutes = parseInt(parts[3]);
-								let seconds = parseInt(parts[4]);
+                    if (!parts) {
+                        time = time
+                    } else {
+                        let days = parseInt(parts[1]);
+                        let hours = parseInt(parts[2]);
+                        let minutes = parseInt(parts[3]);
+                        let seconds = parseInt(parts[4]);
 
-								hours += days * 24;
+                        hours += days * 24;
 
-								// Форматувати рядок у вигляді HH:mm:ss
-								let formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        // Форматувати рядок у вигляді HH:mm:ss
+                        let formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-								time = formattedTime
-							}
+                        time = formattedTime
+                    }
 
-							row.append('<td>' + item.full_name + '</td>');
-							row.append('<td>' + item.total_kasa + '</td>');
-							row.append('<td>' + item.orders + '</td>');
-							row.append('<td>' + item.accept_percent + " %" + '</td>');
-							row.append('<td>' + item.average_price + '</td>');
-							row.append('<td>' + item.mileage + '</td>');
-							row.append('<td>' + item.efficiency + '</td>');
-							row.append('<td>' + time + '</td>');
+                    row.append('<td>' + item.full_name + '</td>');
+                    row.append('<td>' + item.total_kasa + '</td>');
+                    row.append('<td>' + item.orders + '</td>');
+                    row.append('<td>' + item.accept_percent + " %" + '</td>');
+                    row.append('<td>' + item.average_price + '</td>');
+                    row.append('<td>' + item.mileage + '</td>');
+                    row.append('<td>' + item.efficiency + '</td>');
+                    row.append('<td>' + time + '</td>');
 
-							table.append(row);
+                    table.append(row);
 
-						});
+                });
 
-						$('.driver-container').empty();
+                $('.driver-container').empty();
 
-						data[0]['drivers_efficiency'].forEach(function (driver) {
-							let driverBlock = $('<div class="driver-block"></div>');
-							let driverName = $('<div class="driver-name"></div>');
-							let driverInfo = $('<div class="driver-info"></div>');
+                data[0]['drivers_efficiency'].forEach(function (driver) {
+                    let driverBlock = $('<div class="driver-block"></div>');
+                    let driverName = $('<div class="driver-name"></div>');
+                    let driverInfo = $('<div class="driver-info"></div>');
 
-							driverName.append('<h3>' + driver.full_name + '</h3>');
-							driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+                    driverName.append('<h3>' + driver.full_name + '</h3>');
+                    driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
 
-							driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
-							driverInfo.append('<p>Кількість замовлень: ' + driver.orders + '</p>');
-							driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
-							driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
-							driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
-							driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
-							driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
+                    driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
+                    driverInfo.append('<p>Кількість замовлень: ' + driver.orders + '</p>');
+                    driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
+                    driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
+                    driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
+                    driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
+                    driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
 
-							driverBlock.append(driverName);
-							driverBlock.append(driverInfo);
+                    driverBlock.append(driverName);
+                    driverBlock.append(driverInfo);
 
-							// Додати блок водія до контейнера
-							$('.driver-container').append(driverBlock);
-						});
-					}
-					if (period === 'yesterday') {
-							$('.income-drivers-date').text(startDate);
-						} else {
-							$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
-						}
-				},
+                    // Додати блок водія до контейнера
+                    $('.driver-container').append(driverBlock);
+                });
+            }
+            if (period === 'yesterday') {
+                    $('.income-drivers-date').text(startDate);
+                } else {
+                    $('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+                }
+        },
         error: function (error) {
             console.error(error);
         }
 		});
-}
-
-
-function loadDefaultDriver(period, startDate, endDate) {
-	$.ajax({
-		type: "GET",
-		url: ajaxGetUrl,
-		data: {
-			action: 'get_drivers_partner',
-			period: period,
-			start_date: startDate,
-			end_date: endDate,
-
-		},
-		success: function (response) {
-			$(".apply-filter-button").prop("disabled", false);
-			let table = $('.info-driver table');
-			let driverBlock = $('.driver-block');
-			let startDate = response.data[1];
-			let endDate = response.data[2];
-			table.find('tr:gt(0)').remove();
-
-			response.data[0].forEach(function (item) {
-				let row = $('<tr></tr>');
-				let time = item.road_time
-				let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
-
-				if (!parts) {
-					time = time
-				} else {
-					let days = parseInt(parts[1]);
-					let hours = parseInt(parts[2]);
-					let minutes = parseInt(parts[3]);
-					let seconds = parseInt(parts[4]);
-
-					hours += days * 24;
-
-					// Форматувати рядок у вигляді HH:mm:ss
-					let formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-					time = formattedTime
-				}
-
-				row.append('<td>' + item.driver + '</td>');
-				row.append('<td>' + item.total_kasa + '</td>');
-				row.append('<td>' + item.total_orders + '</td>');
-				row.append('<td>' + item.accept_percent + " %" + '</td>');
-				row.append('<td>' + item.average_price + '</td>');
-				row.append('<td>' + item.mileage + '</td>');
-				row.append('<td>' + item.efficiency + '</td>');
-				row.append('<td>' + time + '</td>');
-
-				table.append(row);
-
-				if (period === 'yesterday') {
-					$('.income-drivers-date').text(startDate);
-				} else {
-					$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
-				}
-			});
-
-			$('.driver-container').empty();
-
-			response.data[0].forEach(function (driver) {
-				let driverBlock = $('<div class="driver-block"></div>');
-				let driverName = $('<div class="driver-name"></div>');
-				let driverInfo = $('<div class="driver-info"></div>');
-
-				driverName.append('<h3>' + driver.driver + '</h3>');
-				driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
-
-				driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
-				driverInfo.append('<p>Кількість замовлень: ' + driver.total_orders + '</p>');
-				driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
-				driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
-				driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
-				driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
-				driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
-
-				driverBlock.append(driverName);
-				driverBlock.append(driverInfo);
-
-				// Додати блок водія до контейнера
-				$('.driver-container').append(driverBlock);
-			});
-		}
-	});
 }
 
 const commonPeriodSelect = $('#period-common');
@@ -614,72 +524,7 @@ function applyCustomDateRange() {
 
 
 $(document).ready(function () {
-	$.ajax({
-		url: ajaxGetUrl,
-		type: "GET",
-		data: {
-			action: "aggregators"
-		},
-		success: function (response) {
-			let aggregators = response.data;
-
-			for (let aggregator in aggregators) {
-				if (aggregators.hasOwnProperty(aggregator)) {
-					localStorage.setItem(aggregator, aggregators[aggregator] ? 'success' : 'false');
-				}
-			}
-		}
-	});
-
-	const partnerForm = $("#partnerForm");
-	const partnerLoginField = $("#partnerLogin");
-	const partnerRadioButtons = $("input[name='partner']");
-
-	let uklonStatus = localStorage.getItem('uklon');
-	let boltStatus = localStorage.getItem('bolt');
-	let uberStatus = localStorage.getItem('uber');
-
-	// Перевірка умови, коли показувати або ховати елемент
-	if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
-		// Показуємо елемент
-		$("#updateDatabaseContainer").show();
-	} else {
-		// Ховаємо елемент
-		$("#updateDatabaseContainer").hide();
-	}
-
-	partnerRadioButtons.change(function () {
-		const selectedPartner = $("input[name='partner']:checked").val();
-		updateLoginField(selectedPartner);
-	});
-
-	function updateLoginField(partner) {
-		if (partner === 'uklon') {
-			partnerLoginField.val('+380');
-		} else {
-			partnerLoginField.val('');
-			$("#partnerPassword").val("");
-		}
-	}
-
-	if (sessionStorage.getItem('settings') === 'true') {
-		$("#settingsWindow").fadeIn();
-	}
-
-	if (localStorage.getItem('uber')) {
-		$("#partnerLogin").hide()
-		$("#partnerPassword").hide()
-		$(".opt-partnerForm").hide()
-		$(".login-ok").show()
-		$("#loginErrorMessage").hide()
-	}
-
-	$("#settingBtnContainer").click(function () {
-		sessionStorage.setItem('settings', 'true');
-		$("#settingsWindow").fadeIn();
-	});
-
-	$(".sidebar-list-item.admin").on("click", function () {
+    $(".sidebar-list-item.admin").on("click", function () {
 
 		let adminPanelURL = $(this).data("url");
 
@@ -687,142 +532,6 @@ $(document).ready(function () {
 			window.open(adminPanelURL, "_blank");
 		}
 	});
-
-	$(".close-btn").click(function () {
-		$("#settingsWindow").fadeOut();
-		sessionStorage.setItem('settings', 'false');
-		location.reload();
-	});
-
-	$(".login-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		const partnerLogin = partnerForm.find("#partnerLogin").val();
-		const partnerPassword = partnerForm.find("#partnerPassword").val();
-
-		if (partnerForm[0].checkValidity() && selectedPartner) {
-			showLoader(partnerForm);
-			sendLoginDataToServer(selectedPartner, partnerLogin, partnerPassword);
-		}
-	});
-
-	$(".logout-btn").click(function () {
-		const selectedPartner = partnerForm.find("input[name='partner']:checked").val();
-		sendLogautDataToServer(selectedPartner);
-		localStorage.removeItem(selectedPartner);
-		$("#partnerLogin").show()
-		$("#partnerPassword").show()
-		$(".opt-partnerForm").show()
-		$(".login-ok").hide()
-		$("#loginErrorMessage").hide()
-	});
-
-	// Show/hide password functionality
-	$("#showPasswordPartner").click(function () {
-		let $checkbox = $(this);
-		let $passwordField = $checkbox.closest('.settings-content').find('.partnerPassword');
-		let change = $checkbox.is(":checked") ? "text" : "password";
-		$passwordField.prop('type', change);
-	});
-
-	function showLoader(form) {
-		$(".opt-partnerForm").hide();
-		form.find(".loader-login").show();
-		$("input[name='partner']").prop("disabled", true);
-	}
-
-	function hideLoader(form) {
-		form.find(".loader-login").hide();
-		$("input[name='partner']").prop("disabled", false);
-	}
-
-
-	$('[name="partner"]').change(function () {
-		let partner = $(this).val()
-		let login = localStorage.getItem(partner)
-
-		if (login === "success") {
-			$("#partnerLogin").hide()
-			$("#partnerPassword").hide()
-			$(".opt-partnerForm").hide()
-			$(".login-ok").show()
-			$("#loginErrorMessage").hide()
-		} else {
-			$("#partnerLogin").show()
-			$("#partnerPassword").show()
-			$(".opt-partnerForm").show()
-			$(".login-ok").hide()
-			$("#loginErrorMessage").hide()
-		}
-	})
-
-	function sendLoginDataToServer(partner, login, password) {
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner,
-				login: login,
-				password: password,
-			},
-			success: function (response) {
-				let task_id = response.task_id;
-				let interval = setInterval(function () {
-					$.ajax({
-						type: "GET",
-						url: ajaxGetUrl,
-						data: {
-							action: "check_task",
-							task_id: task_id,
-						},
-						success: function (response) {
-							if (response.data === true) {
-								localStorage.setItem(partner, 'success');
-								$("#partnerLogin").hide();
-								$("#partnerPassword").hide().val('');
-								$(".opt-partnerForm").hide();
-								$(".login-ok").show();
-								$("#loginErrorMessage").hide();
-								hideLoader(partnerForm);
-								clearInterval(interval); // Очистити інтервал після отримання "true"
-							}
-							if (response.data === false) {
-								$(".opt-partnerForm").show();
-								$("#loginErrorMessage").show();
-								$("#partnerLogin").val("").addClass("error-border");
-								$("#partnerPassword").val("").addClass("error-border");
-								hideLoader(partnerForm);
-								clearInterval(interval); // Очистити інтервал після отримання "false"
-							}
-						},
-					});
-				}, 5000);
-			},
-		});
-	}
-
-
-	function sendLogautDataToServer(partner) {
-		$("#partnerLogin").val("")
-		$("#partnerPassword").val("")
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: {
-				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner + "_logout",
-			},
-			success: function (response) {
-				if (response.data === true) {
-					localStorage.setItem(partner, 'false');
-					$("#partnerLogin").show()
-					$("#partnerPassword").show()
-					$(".opt-partnerForm").show()
-					$(".login-ok").hide()
-				}
-			}
-		});
-	}
 
 	$("#updateDatabaseContainer").click(function () {
 
@@ -863,24 +572,6 @@ $(document).ready(function () {
 			}
 		});
 	});
-});
-
-$(document).ready(function () {
-
-	$.ajax({
-		url: ajaxGetUrl,
-		type: "GET",
-		data: {
-			action: "is_logged_in"
-		},
-		success: function (data) {
-			if (data.is_logged_in === true) {
-				let userName = data.user_name;
-				$("#account_circle").text(userName).show();
-				$("#logout-dashboard").show();
-			}
-		}
-	})
 
 	$("#logout-dashboard").click(function () {
 		$.ajax({
@@ -933,12 +624,19 @@ $(document).ready(function () {
 			});
 		}
 	});
+
+	$(".close-btn").click(function () {
+		$("#settingsWindow").fadeOut();
+		sessionStorage.setItem('settings', 'false');
+		location.reload();
+	});
+
 	// burger-menu
 	$('.burger-menu').click(function () {
 		$('.burger-menu').toggleClass('open');
 	});
 
-	$('#partnerVehicleBtnContainer').click(function () {
+	$('#VehicleBtnContainer').click(function () {
 		$('.payback-car').css('display', 'flex');
 		$('.charts').hide();
 		$('.main-cards').hide();
@@ -949,7 +647,7 @@ $(document).ready(function () {
 		$('#sidebar').removeClass('sidebar-responsive');
 	});
 
-	$('#partnerDriverBtnContainer').click(function () {
+	$('#DriverBtnContainer').click(function () {
 		$('.info-driver').show();
 		$('.payback-car').hide();
 		$('.charts').hide();
@@ -960,12 +658,6 @@ $(document).ready(function () {
 		if (window.innerWidth <= 900) {
 			$('.driver-container').css('display', 'block');
 		}
-	});
-
-	$(".close-btn").click(function () {
-		$("#settingsWindow").fadeOut();
-		sessionStorage.setItem('settings', 'false');
-		location.reload();
 	});
 
 	const resetButton = $("#reset-button");

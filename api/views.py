@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from _decimal import Decimal
 from django.db.models import Sum, F, OuterRef, Subquery, DecimalField, Avg, Value, CharField, ExpressionWrapper, Case, \
     When
 from django.db.models.functions import Concat, Round, Coalesce
@@ -8,7 +9,7 @@ from rest_framework.response import Response
 
 from api.mixins import CombinedPermissionsMixin, PartnerFilterMixin, ManagerFilterMixin, InvestorFilterMixin
 from api.serializers import SummaryReportSerializer, CarEfficiencySerializer, CarDetailSerializer, \
-    DriverEfficiencyRentSerializer
+    DriverEfficiencyRentSerializer, InvestorCarsSerializer
 from app.models import SummaryReport, CarEfficiency, Vehicle, DriverEfficiency, RentInformation
 from taxi_service.utils import get_dates
 
@@ -58,6 +59,37 @@ class SummaryReportListView(CombinedPermissionsMixin,
         queryset = queryset.exclude(total_kasa=0).order_by('full_name')
 
         return [{'total_rent': total_rent, 'start': format_start, 'end': format_end, 'drivers': queryset}]
+
+
+class InvestorCarsEarningsView(CombinedPermissionsMixin,
+                               generics.ListAPIView):
+    serializer_class = InvestorCarsSerializer
+
+    def get_queryset(self):
+        if self.kwargs['period'] in ('yesterday', 'current_week', 'current_month', 'current_quarter',
+                                     'last_week', 'last_month', 'last_quarter'):
+            start, end = get_dates(self.kwargs['period'])
+            format_start = start.strftime("%d.%m.%Y")
+            format_end = end.strftime("%d.%m.%Y")
+        else:
+            start, end = self.kwargs['period'].split('&')
+            format_start = ".".join(start.split("-")[::-1])
+            format_end = ".".join(end.split("-")[::-1])
+
+        queryset = CarEfficiency.objects.none()
+        investor_queryset = InvestorFilterMixin.get_queryset(self, CarEfficiency)
+        if investor_queryset:
+            queryset = investor_queryset
+        filtered_qs = queryset.filter(report_from__range=(start, end))
+        qs = filtered_qs.values('vehicle__licence_plate').annotate(
+            licence_plate=F('vehicle__licence_plate'),
+            earnings=Sum(F('total_kasa') * F('vehicle__investor_percentage')),
+            mileage=Sum('mileage'))
+        total_qs = filtered_qs.aggregate(
+            total_earnings=Coalesce(Sum(F('total_kasa') * F('vehicle__investor_percentage')), Decimal(0)),
+            total_mileage=Coalesce(Sum('mileage'), Decimal(0)),
+            total_spending=Coalesce(Sum('total_spending'), Decimal(0)))
+        return [{'start': format_start, 'end': format_end, 'car_earnings': qs, 'totals': total_qs}]
 
 
 class CarEfficiencyListView(CombinedPermissionsMixin,
@@ -160,12 +192,16 @@ class CarsInformationListView(CombinedPermissionsMixin,
             queryset = investor_queryset
             queryset = queryset.values('licence_plate').annotate(
                 price=F('purchase_price'),
-                kasa=ExpressionWrapper(Sum('carefficiency__total_kasa') * F('investor_percentage'),
+                kasa=ExpressionWrapper(Round(Sum('carefficiency__total_kasa') * F('investor_percentage'), 2),
                                        output_field=DecimalField(decimal_places=2, max_digits=10)),
                 spending=Sum('carefficiency__total_spending')
             ).annotate(
                 progress_percentage=ExpressionWrapper(
-                    Round((F('kasa') / F('purchase_price')) * 100),
+                    Case(
+                        When(purchase_price__gt=0, then=Round((F('kasa') / F('purchase_price')) * 100)),
+                        default=Value(0),
+                        output_field=DecimalField(max_digits=5, decimal_places=2)
+                    ),
                     output_field=DecimalField(max_digits=5, decimal_places=2)
                 )
             )
