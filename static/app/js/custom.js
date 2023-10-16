@@ -39,7 +39,14 @@ $(document).ready(function () {
 		let $passwordField = $checkbox.closest('#loginForm').find('#password');
 		let change = $checkbox.is(":checked") ? "text" : "password";
 		$passwordField.prop('type', change);
+		})
 	// js for header
+
+	$("#loginBtn").click(function () {
+            $("#loginForm").fadeIn();
+            $("#loginRadio").hide();
+            $("label[for='loginRadio']").hide();
+        });
 
 	let pagesLink = $("#pagesLink");
 	let pagesList = $("#pagesList");
@@ -51,36 +58,6 @@ $(document).ready(function () {
 			pagesList.show();
 		}
 	});
-
-	$.ajax({
-		url: ajaxGetUrl,
-		type: "GET",
-		data: {
-			action: "is_logged_in"
-		},
-		success: function (data) {
-			let userLink = $(".nav-link.fa.fa-user");
-
-			if (data.is_logged_in === true) {
-				userLink.css("background-color", "#A1E8B9");
-				userLink.click(function () {
-					getUserRoleAndRedirect();
-				});
-			} else {
-				userLink.css("background-color", "#f0f0f0");
-				userLink.click(function () {
-					showLoginForm();
-				});
-			}
-		}
-	});
-
-
-	function showLoginForm() {
-		$("#loginForm").fadeIn();
-		$("#loginRadio").hide();
-		$("label[for='loginRadio']").hide();
-	}
 
 	$(".close-btn").click(function () {
 		$("#loginForm").fadeOut();
@@ -280,3 +257,4 @@ $(document).ready(function () {
 
 	$(document).on('click', 'a[data-youtube]', clickHandler);
 });
+
