@@ -95,6 +95,9 @@
 					</span>
 				</li>
 			</div>
+			<li class="sidebar-list-item admin" data-url="{% url 'admin:index' %}">
+				<span class="material-icons-outlined"></span>{% trans 'Керування автопарком' %}
+			</li>
 			<div id="settingBtnContainer">
 				<li class="sidebar-list-item">
 					<span id="settingBtn" class="clickable">
@@ -102,9 +105,6 @@
 					</span>
 				</li>
 			</div>
-			<li class="sidebar-list-item admin" data-url="{% url 'admin:index' %}">
-				<span class="material-icons-outlined"></span>{% trans 'Керування автопарком' %}
-			</li>
 			<div id="updateDatabaseContainer">
 				<li class="sidebar-list-item">
 					<span id="updateDatabase" class="clickable">
@@ -185,9 +185,9 @@
 		</div>
 		<div id="datePicker" style="display: none;">
 			<label for="start_date">{% trans 'Початкова дата:' %}</label>
-			<input type="date" id="start_date" name="start_date">
+			<input type="date" id="start_report" name="start_date">
 			<label for="end_date">{% trans 'Кінцева дата:' %}</label>
-			<input type="date" id="end_date" name="end_date">
+			<input type="date" id="end_report" name="end_date">
 			<input class="apply-filter-button" type="button" onclick="applyCustomDateRange()" value={% trans 'Фільтрувати' %}>
 		</div>
 		<div class="main-cards">
@@ -240,14 +240,14 @@
 					</div>
 					<div class="car-details">
 						<p>{% trans 'Номер авто:' %}<br>{{ car.licence_plate }}</p>
-						<p>{% trans 'Заробіток:' %}<br>₴ {{ car.total_kasa }}</p>
-						<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
+						<p>{% trans 'Заробіток:' %}<br>₴ {{ car.kasa }}</p>
+						<p>{% trans 'Витрати:' %}<br>₴ {{ car.spending }}</p>
 						<div class="progress-bar">
 							<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
 								<div class="progress-label" style="color: #0a0a0a">{{ car.progress_percentage }}%</div>
 							</div>
 						</div>
-						<p>{% trans 'Вартість авто:' %}<br>₴ {{ car.purchase_price }}</p>
+						<p>{% trans 'Вартість авто:' %}<br>₴ {{ car.price }}</p>
 					</div>
 				</div>
 			</div>

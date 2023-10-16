@@ -206,7 +206,7 @@ def partner_total_earnings(period, user_id, start_date=None, end_date=None):
         report_from__range=(start_period, end_period), partner=partner).aggregate(
         total_distance=Sum('rent_distance'))['total_distance'] or 0
     for driver in Driver.objects.filter(partner=partner):
-        total[driver.full_name()] = reports.filter(full_name=driver).aggregate(
+        total[driver.full_name()] = reports.filter(driver=driver).aggregate(
             clean_kasa=Sum('total_amount_without_fee'))['clean_kasa'] or 0
         if total.get(driver.full_name()):
             total_amount += total[driver.full_name()]

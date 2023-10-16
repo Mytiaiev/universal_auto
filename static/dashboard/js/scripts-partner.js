@@ -188,7 +188,7 @@ let areaChartOptions = {
 		},
 		xaxis: {
 			lines: {
-				show: true,
+				show: false,
 			},
 		},
 	},
@@ -201,9 +201,9 @@ let areaChartOptions = {
 		horizontalAlign: 'left',
 	},
 	markers: {
-		size: 6,
+		size: 3,
 		strokeColors: "#1b2635",
-		strokeWidth: 3,
+		strokeWidth: 1,
 	},
 	stroke: {
 		curve: "smooth",
@@ -264,126 +264,202 @@ let areaChartOptions = {
 let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
 areaChart.render();
 
-// Обробка графіків
-function loadDefaultKasa(period, startDate, endDate) {
-	$.ajax({
-		type: "GET",
-		url: ajaxGetUrl,
-		data: {
-			action: 'get_cash_partner',
-			period: period,
-			start_date: startDate,
-			end_date: endDate,
-		},
-		success: function (response) {
-			$(".apply-filter-button").prop("disabled", false);
-			let isAllValuesZero = true;
-			for (let key in response.data[0]) {
-				if (parseFloat(response.data[0][key]) !== 0) {
-					isAllValuesZero = false;
-					break;
-				}
-			}
-			if (isAllValuesZero) {
-				$("#noDataMessage-1").show();
-				$('#bar-chart').hide();
-			} else {
-				$("#noDataMessage-1").hide();
-				$('#bar-chart').show();
-				let data = response.data[0];
-				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let totalDistance = parseFloat(response.data[2]).toFixed(2);
-				let startDate = response.data[3];
-				let endDate = response.data[4];
-				let efficiency = parseFloat(response.data[5]).toFixed(2);
-				let formattedData = {};
+function fetchSummaryReportData(period, start, end) {
+		let apiUrl;
+		if (period === 'custom') {
+		apiUrl = `/api/reports/${start}&${end}/`;
+		} else {
+    	apiUrl = `/api/reports/${period}/`;
+    	};
+    $.ajax({
+        url: apiUrl,
+        type: 'GET',
+        dataType: 'json',
+        success: function (data) {
+        $(".apply-filter-button").prop("disabled", false);
+        let startDate = data[0]['start'];
+        let endDate = data[0]['end'];
+        let totalDistance = data[0]['total_rent'];
+        		if (data[0]['drivers'].length !== 0) {
+        			$("#noDataMessage-1").hide();
+							$('#bar-chart').show();
+							const driversData = data[0]['drivers'];
+							const categories = driversData.map(driver => driver.full_name);
+              const values = driversData.map(driver => driver.total_kasa);
 
-				Object.keys(data).forEach(function (key) {
-					let value = parseFloat(data[key]).toFixed(2);
-					if (value > 0) {
-						let formattedKey = key;
-						formattedData[formattedKey] = value;
-					}
-				});
-
-				let sortedKeys = Object.keys(formattedData).sort();
-				let sortedFormattedData = {};
-				sortedKeys.forEach(function (key) {
-					sortedFormattedData[key] = formattedData[key];
-				});
-
-				barChartOptions.series[0].data = Object.values(sortedFormattedData);
-				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-				barChart.updateOptions(barChartOptions);
-
-				if (period === 'yesterday') {
-					$('.weekly-income-dates').text(startDate);
-					$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
-				} else {
-					$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
-					$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-					$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-					$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
-				}
-			}
-		}
-	});
-}
-
-function loadEffectiveChart(period, startDate, endDate) {
-	$.ajax({
-		type: "GET",
-		url: ajaxGetUrl,
-		data: {
-			action: 'partner',
-			period: period,
-			start_date: startDate,
-			end_date: endDate,
-		},
-		success: function (response) {
-			let dataObject = response.data;
-			if (Object.keys(response.data).length === 0) {
-				$("#noDataMessage-2").show();
-				$('#area-chart').hide();
-			} else {
-				$("#noDataMessage-2").hide();
-				$('#area-chart').show();
-				let carData = {};
-
-				// Проходимося по кожному ідентифікатору автомобіля
-				Object.keys(dataObject).forEach(function (carNumber) {
-					carData[carNumber] = dataObject[carNumber].map(function (item) {
-						return {
-							date: new Date(item.date_effective),
-							efficiency: parseFloat(item.efficiency)
+							barChartOptions.series[0].data = values;
+              barChartOptions.xaxis.categories = categories;
+              barChart.updateOptions(barChartOptions);
+						} else {
+								$("#noDataMessage-1").show();
+								$('#bar-chart').hide();
 						};
-					});
-				});
-
-				let mileageSeries = Object.keys(carData).map(function (carNumber) {
-					return {
-						name: carNumber,
-						data: carData[carNumber].map(function (entry) {
-							return entry.efficiency;
-						})
-					};
-				});
-
-				let dates = carData[Object.keys(carData)[0]].map(function (entry) {
-					return `${entry.date.getDate()}-${entry.date.getMonth() + 1}-${entry.date.getFullYear()}`;
-				});
-
-				// Оновити опції графіка з новими даними
-				areaChartOptions.series = mileageSeries;
-				areaChartOptions.labels = dates;
-
-				areaChart.updateOptions(areaChartOptions);
-			}
-		}
-	});
+						if (period === 'yesterday') {
+							$('.weekly-income-dates').text(startDate);
+						} else {
+							$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+						};
+						$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+				},
+        error: function (error) {
+            console.error(error);
+        }
+    });
 }
+
+function fetchCarEfficiencyData(period, start, end) {
+		let apiUrl;
+		if (period === 'custom') {
+		apiUrl = `/api/car_efficiencies/${start}&${end}/`;
+		} else {
+    	apiUrl = `/api/car_efficiencies/${period}/`;
+    	};
+    $.ajax({
+        url: apiUrl,
+        type: 'GET',
+        dataType: 'json',
+        success: function (data) {
+        let totalAmount = data['kasa'];
+        let mileage = data['total_mileage'];
+        let efficiency;
+        if (mileage !== 0) {
+        	 efficiency = parseFloat(totalAmount/mileage).toFixed(2);
+        } else {
+        	efficiency = 0
+         };
+
+        if (data['efficiency'].length !== 0) {
+        	$("#noDataMessage-2").hide();
+					$('#area-chart').show();
+					const seriesData = [];
+					const dates = [];
+					data.efficiency.forEach(dateData => {
+                    const date = Object.keys(dateData)[0];
+                    const vehicleEfficiencies = dateData[date];
+                    vehicleEfficiencies.forEach(entry => {
+                        const vehicleName = entry.licence_plate;
+                        const efficiencyValue = parseFloat(entry.efficiency);
+                        let series = seriesData.find(series => series.name === vehicleName);
+                        if (!series) {
+                            series = {
+                                name: vehicleName,
+                                data: [],
+                            };
+                            seriesData.push(series);
+                        }
+                        series.data.push(efficiencyValue);
+                    });
+                    dates.push(date);
+                });
+					areaChartOptions.series = seriesData;
+					areaChartOptions.labels = dates;
+					areaChart.updateOptions(areaChartOptions);
+        } else {
+        	$("#noDataMessage-2").show();
+					$('#area-chart').hide();
+        };
+				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+        },
+        error: function (error) {
+            console.error(error);
+        }
+		});
+}
+
+
+function fetchDriverEfficiencyData(period, start, end) {
+		let apiUrl;
+		if (period === 'custom') {
+		apiUrl = `/api/drivers_info/${start}&${end}/`;
+		} else {
+    	apiUrl = `/api/drivers_info/${period}/`;
+    	};
+    $.ajax({
+        url: apiUrl,
+        type: 'GET',
+        dataType: 'json',
+        success: function (data) {
+        console.log(data)
+        console.log(data[0])
+					$(".apply-filter-button").prop("disabled", false);
+					let table = $('.info-driver table');
+					let driverBlock = $('.driver-block');
+					let startDate = data[0]['start'];
+					let endDate = data[0]['end'];
+					table.find('tr:gt(0)').remove();
+					if (data[0]['drivers_efficiency'].length !== 0){
+						data[0]['drivers_efficiency'].forEach(function (item) {
+							let row = $('<tr></tr>');
+							let time = item.road_time
+							let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+
+							if (!parts) {
+								time = time
+							} else {
+								let days = parseInt(parts[1]);
+								let hours = parseInt(parts[2]);
+								let minutes = parseInt(parts[3]);
+								let seconds = parseInt(parts[4]);
+
+								hours += days * 24;
+
+								// Форматувати рядок у вигляді HH:mm:ss
+								let formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+								time = formattedTime
+							}
+
+							row.append('<td>' + item.full_name + '</td>');
+							row.append('<td>' + item.total_kasa + '</td>');
+							row.append('<td>' + item.orders + '</td>');
+							row.append('<td>' + item.accept_percent + " %" + '</td>');
+							row.append('<td>' + item.average_price + '</td>');
+							row.append('<td>' + item.mileage + '</td>');
+							row.append('<td>' + item.efficiency + '</td>');
+							row.append('<td>' + time + '</td>');
+
+							table.append(row);
+
+						});
+
+						$('.driver-container').empty();
+
+						data[0]['drivers_efficiency'].forEach(function (driver) {
+							let driverBlock = $('<div class="driver-block"></div>');
+							let driverName = $('<div class="driver-name"></div>');
+							let driverInfo = $('<div class="driver-info"></div>');
+
+							driverName.append('<h3>' + driver.full_name + '</h3>');
+							driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+
+							driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
+							driverInfo.append('<p>Кількість замовлень: ' + driver.orders + '</p>');
+							driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
+							driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
+							driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
+							driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
+							driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
+
+							driverBlock.append(driverName);
+							driverBlock.append(driverInfo);
+
+							// Додати блок водія до контейнера
+							$('.driver-container').append(driverBlock);
+						});
+					}
+					if (period === 'yesterday') {
+							$('.income-drivers-date').text(startDate);
+						} else {
+							$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+						}
+				},
+        error: function (error) {
+            console.error(error);
+        }
+		});
+}
+
 
 function loadDefaultDriver(period, startDate, endDate) {
 	$.ajax({
@@ -477,8 +553,8 @@ const periodSelect = $('#period');
 commonPeriodSelect.on('change', function () {
 	const selectedPeriod = commonPeriodSelect.val();
 	if (selectedPeriod !== "custom") {
-		loadDefaultKasa(selectedPeriod);
-		loadEffectiveChart(selectedPeriod);
+		fetchSummaryReportData(selectedPeriod);
+		fetchCarEfficiencyData(selectedPeriod);
 	}
 	if (selectedPeriod === "custom") {
 		$("#datePicker").css("display", "block");
@@ -490,7 +566,7 @@ commonPeriodSelect.on('change', function () {
 periodSelect.on('change', function () {
 	const selectedPeriod = periodSelect.val();
 	if (selectedPeriod !== "custom") {
-		loadDefaultDriver(selectedPeriod);
+		fetchDriverEfficiencyData(selectedPeriod);
 	}
 	if (selectedPeriod === "custom") {
 		$("#datePickerDriver").css("display", "block");
@@ -499,9 +575,10 @@ periodSelect.on('change', function () {
 	}
 });
 
-loadDefaultKasa('yesterday');
-loadEffectiveChart('yesterday');
-loadDefaultDriver('yesterday');
+fetchSummaryReportData('yesterday');
+fetchCarEfficiencyData('yesterday');
+fetchDriverEfficiencyData('yesterday');
+
 
 function showDatePicker(periodSelectId, datePickerId) {
 	let periodSelect = $("#" + periodSelectId);
@@ -521,18 +598,18 @@ function customDateRange() {
 	let endDate = $("#end_date").val();
 
 	const selectedPeriod = periodSelect.val();
-	loadDefaultDriver(selectedPeriod, startDate, endDate);
+	fetchDriverEfficiencyData(selectedPeriod, startDate, endDate);
 }
 
 function applyCustomDateRange() {
 	$(".apply-filter-button").prop("disabled", true);
 
-	let startDate = $("#start_date").val();
-	let endDate = $("#end_date").val();
+	let startDate = $("#start_report").val();
+	let endDate = $("#end_report").val();
 
 	const selectedPeriod = commonPeriodSelect.val();
-	loadDefaultKasa(selectedPeriod, startDate, endDate);
-	loadEffectiveChart(selectedPeriod, startDate, endDate);
+	fetchSummaryReportData(selectedPeriod, startDate, endDate);
+	fetchCarEfficiencyData(selectedPeriod, startDate, endDate);
 }
 
 

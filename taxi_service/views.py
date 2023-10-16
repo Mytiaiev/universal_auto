@@ -13,6 +13,7 @@ from django.views.generic import View, TemplateView
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
+from api.views import CarsInformationListView
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.utils import average_effective_vehicle, \
@@ -160,9 +161,9 @@ class DashboardPartnerView(TemplateView):
 
         context = super().get_context_data(**kwargs)
 
-        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
-        context['average_effective_vehicle'] = average_effective_vehicle()
-        context['car_piggy_bank'] = partner_car_piggy_bank(self.request)
+        # context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
+        # context['average_effective_vehicle'] = average_effective_vehicle()
+        context['car_piggy_bank'] = CarsInformationListView.get_queryset(self)
 
         return context
 
