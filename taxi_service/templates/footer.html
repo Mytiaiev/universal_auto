@@ -1,73 +1,40 @@
 {% load static %}
 {% load i18n %}
-<!-- info section -->
-<section class="info_section">
-
-	<div class="container">
-		<div class="info_top ">
-			<div class="row ">
-				<div class="col-sm-6 col-md-4 col-lg-3">
-					<div class="info_detail">
-						<a href="{% url 'index' %}">
-							<h4>
-								Ninja Taxi
-							</h4>
-						</a>
-						<p>
-							{% trans "Хочете бути екологічно свідомими та зручно подорожувати містом? Спробуйте електротаксі!" %}
-						</p>
-					</div>
-				</div>
-				<div class="col-sm-6 col-md-4 col-lg-3 mx-auto">
-					<h4>
-						{% trans "Наші Контакти" %}
-					</h4>
-					<div class="contact_nav">
-						<div>
-							<i class="fa fa-map-marker" aria-hidden="true"></i>
-							<span class="location">
-								{% trans "Дніпровська набережна, 13" %}
-							</span>
-						</div>
-						<div>
-							<i class="fa fa-phone" aria-hidden="true"></i>
-							<span class="phone">
-								{% trans "Телефон" %}: +380681373335
-							</span>
-						</div>
-						<a href="mailto:office@ninja-taxi.kyiv.ua">
-							<i class="email-icon" aria-hidden="true"></i>
-							<span class="envelope">office@ninja-taxi.kyiv.ua</span>
-						</a>
-					</div>
-					{% include '_social_box.html' %}
-				</div>
-				<div class="col-md-4">
-					<div class="info_form">
-						<h4>
-							{% trans "Підписатись на розсилку" %}
-						</h4>
-						{% include '_subscribe_form.html' with button=_("Підписатись") form='2' %}
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+<!-- footer section -->
+<section class="footer_section">
+  <div class="container">
+    <div class="footer-logo">
+      <a class="navbar-brand" href="{% url 'index' %}">
+        <img src="{% static 'app/images/logo.svg' %}" width="142" height="50" alt="Ninja Taxi">
+      </a>
+      <p>{% trans 'Особистий водій на відстані виклику' %}</p>
+      <a href="{% url 'send_to_telegram' %}">
+        <button>{% trans "Замовити послугу" %}</button>
+      </a>
+    </div>
+    <div class="footer-about">
+      <h2>{% trans "Про" %}</h2>
+      <a href="#">{% trans "Нас" %}</a>
+      <a href="#">{% trans "Працевлаштування" %}</a>
+      <a href="#">{% trans "Соц.мережі" %}</a>
+    </div>
+    <div class="footer-quick-links">
+      <h2>{% trans "Швидкі посилання" %}</h2>
+      <a href="#">{% trans "Колл-центр" %}</a>
+      <a href="#">{% trans "Політика конфеденційності" %}</a>
+      <a href="#">{% trans "Сервіс" %}</a>
+    </div>
+    <div class="footer-contact">
+      <h2>{% trans "Контакти" %}</h2>
+      <p>taxi.ninja.ua@gmail.com</p>
+      <p>+380937531057</p>
+      <div class="icon-social-network">
+        <a href="https://www.instagram.com/ninja.taxi/"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.facebook.com/profile.php?id=100090958383203"><i class="fa-brands fa-facebook"></i></a>
+        <a href="https://www.tiktok.com/@ninja.taxi?_t=8gRmG4idFNl"><i class="fa-brands fa-tiktok"></i></a>
+        <a href="https://www.linkedin.com/company/ninja-taxi/"><i class="fa-brands fa-linkedin"></i></a>
+      </div>
+    </div>
+  </div>
 </section>
-<!-- end info_section -->
-
-
-<!-- footer section -->
-<footer class="footer_section">
-	<div class="container">
-		<p>
-			<img src="{% static 'app/images/layer1.svg' %}" width="33" height="20" alt="" loading="lazy">
-			<img src="{% static 'app/images/layer2.svg' %}" width="33" height="20" alt="" loading="lazy">
-			<img src="{% static 'app/images/visa1.svg' %}" width="33" height="20" alt="" loading="lazy">
-			<img src="{% static 'app/images/Visa_Inc._logo.svg' %}" width="50" height="60" alt="" loading="lazy">
-			&copy; <span>{% now 'Y' %}</span> All Rights Reserved By
-			<a href="https://ninja-taxi.kyiv.ua/">Ninja Taxi</a>
-		</p>
-	</div>
-</footer>
-<!-- footer section -->
+<!-- end footer section -->

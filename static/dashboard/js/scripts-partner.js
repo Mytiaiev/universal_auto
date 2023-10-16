@@ -430,13 +430,13 @@ function fetchDriverEfficiencyData(period, start, end) {
                     driverName.append('<h3>' + driver.full_name + '</h3>');
                     driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
 
-                    driverInfo.append('<p>Каса: ' + driver.total_kasa + ' грн' + '</p>');
-                    driverInfo.append('<p>Кількість замовлень: ' + driver.orders + '</p>');
-                    driverInfo.append('<p>Відсоток прийнятих замовлень: ' + driver.accept_percent + ' %</p>');
-                    driverInfo.append('<p>Середній чек, грн: ' + driver.average_price + '</p>');
-                    driverInfo.append('<p>Пробіг, км: ' + driver.mileage + '</p>');
-                    driverInfo.append('<p>Ефективність, грн/км: ' + driver.efficiency + '</p>');
-                    driverInfo.append('<p>Час в дорозі: ' + formatTime(driver.road_time) + '</p>');
+				driverInfo.append('<p>gettext("Каса: ") + driver.total_kasa + gettext(" грн")</p>');
+				driverInfo.append('<p>gettext("Кількість замовлень: ") + driver.total_orders</p>');
+				driverInfo.append('<p>gettext("Відсоток прийнятих замовлень: ") + driver.accept_percent + %</p>');
+				driverInfo.append('<p>gettext("Середній чек, грн: ") + driver.average_price</p>');
+				driverInfo.append('<p>gettext("Пробіг, км: ") + driver.mileage</p>');
+				driverInfo.append('<p>gettext("Ефективність, грн/км: ") + driver.efficiency</p>');
+				driverInfo.append('<p>gettext("Час в дорозі: ") + formatTime(driver.road_time)</p>');
 
                     driverBlock.append(driverName);
                     driverBlock.append(driverInfo);
