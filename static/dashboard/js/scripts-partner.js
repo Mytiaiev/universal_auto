@@ -389,8 +389,7 @@ function fetchDriverEfficiencyData(period, start, end) {
                 data[0]['drivers_efficiency'].forEach(function (item) {
                     let row = $('<tr></tr>');
                     let time = item.road_time
-                    let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
-
+                    let parts = time.match(/(\d+) (\d+):(\d+):(\d+)/);
                     if (!parts) {
                         time = time
                     } else {
@@ -407,14 +406,14 @@ function fetchDriverEfficiencyData(period, start, end) {
                         time = formattedTime
                     }
 
-                    row.append('<td>' + item.full_name + '</td>');
-                    row.append('<td>' + item.total_kasa + '</td>');
-                    row.append('<td>' + item.orders + '</td>');
-                    row.append('<td>' + item.accept_percent + " %" + '</td>');
-                    row.append('<td>' + item.average_price + '</td>');
-                    row.append('<td>' + item.mileage + '</td>');
-                    row.append('<td>' + item.efficiency + '</td>');
-                    row.append('<td>' + time + '</td>');
+                    row.append('<td class="driver">' + item.full_name + '</td>');
+                    row.append('<td class="kasa">' + item.total_kasa + '</td>');
+                    row.append('<td class="orders">' + item.orders + '</td>');
+                    row.append('<td class="accept">' + item.accept_percent + " %" + '</td>');
+                    row.append('<td class="price">' + item.average_price + '</td>');
+                    row.append('<td class="mileage">' + item.mileage + '</td>');
+                    row.append('<td class="efficiency">' + item.efficiency + '</td>');
+                    row.append('<td class="road">' + time + '</td>');
 
                     table.append(row);
 
@@ -524,6 +523,47 @@ function applyCustomDateRange() {
 
 
 $(document).ready(function () {
+    let $table = $('.driver-table');
+    let $tbody = $table.find('tbody');
+
+    // Function to sort the table by a specific column
+    function sortTable(column, order) {
+    let rows = $tbody.find('tr').toArray();
+
+    let collator = new Intl.Collator(undefined, { sensitivity: 'base' });
+
+    rows.sort(function (a, b) {
+        let valueA = $(a).find(`td.${column}`).text();
+        let valueB = $(b).find(`td.${column}`).text();
+
+        if (order === 'asc') {
+            return collator.compare(valueA, valueB);
+        } else {
+            return collator.compare(valueB, valueA);
+        }
+    });
+
+    $tbody.empty().append(rows);
+}
+
+    // Attach click event handlers to the table headers for sorting
+    $table.find('th.sortable').click(function () {
+
+        let column = $(this).data('sort');
+        let sortOrder = $(this).hasClass('sorted-asc') ? 'desc' : 'asc';
+
+        // Reset sorting indicators
+        $table.find('th.sortable').removeClass('sorted-asc sorted-desc');
+
+        if (sortOrder === 'asc') {
+            $(this).addClass('sorted-asc');
+        } else {
+            $(this).addClass('sorted-desc');
+        }
+
+        sortTable(column, sortOrder);
+    });
+
     $(".sidebar-list-item.admin").on("click", function () {
 
 		let adminPanelURL = $(this).data("url");

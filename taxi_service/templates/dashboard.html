@@ -314,16 +314,18 @@
 				<input class="apply-filter-button" type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
 			</div>
 			<table class="driver-table">
-				<tr>
-					<th>{% trans 'Водій' %}</th>
-					<th>{% trans 'Каса' %}</th>
-					<th>{% trans 'Кількість замовлень' %}</th>
-					<th>{% trans 'Відсоток прийнятих замовлень' %}</th>
-					<th>{% trans 'Середній чек, грн' %}</th>
-					<th>{% trans 'Пробіг, км' %}</th>
-					<th>{% trans 'Ефективність, грн/км' %}</th>
-					<th>{% trans 'Час в дорозі' %}</th>
-				</tr>
+				<thead>
+					<tr>
+						<th class="sortable" data-sort="driver">{% trans 'Водій' %}</th>
+						<th class="sortable" data-sort="kasa">{% trans 'Каса' %}</th>
+						<th class="sortable" data-sort="orders">{% trans 'Кількість замовлень' %}</th>
+						<th class="sortable" data-sort="accept">{% trans 'Відсоток прийнятих замовлень' %}</th>
+						<th class="sortable" data-sort="price">{% trans 'Середній чек, грн' %}</th>
+						<th class="sortable" data-sort="mileage">{% trans 'Пробіг, км' %}</th>
+						<th class="sortable" data-sort="efficiency">{% trans 'Ефективність, грн/км' %}</th>
+						<th class="sortable" data-sort="road">{% trans 'Час в дорозі' %}</th>
+					</tr>
+				</thead>
 				<tr>
 					<td></td>
 					<td></td>
