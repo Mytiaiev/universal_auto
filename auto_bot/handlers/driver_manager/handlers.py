@@ -184,7 +184,7 @@ def create_driver_eff(update, context):
         message = ''
         if result:
             for k, v in result.items():
-                message += f"{k}\n" + "".join(v)
+                message += f"{k}\n" + "".join(v) + "\n"
         else:
             message += no_drivers_text
         bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
