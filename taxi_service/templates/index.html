@@ -21,15 +21,16 @@
         <div class="right_content">
           <div class="decorate-img">
             <img src="{% static 'app/images/index-one-block-3.png' %}" alt="three image">
-          </div>
-          <div class="one-info">
-            <h2>{% trans "ПЕРСОНАЛЬНЕ" %}<br>{% trans "ЕЛЕКТРО-ТАКСІ" %}</h2>
-            <p class="phone"><i class="fas fa-phone"></i> +38(093) 753 10 57</p>
-            <p class="text-1">{% trans "Довірте себе та дитину" %}<br>{% trans "екологічному та" %}<br>{% trans "безпечному оператору" %}<br>{% trans "таксі України" %}</p>
-            <div class="telegram-button button-block-1">
-              <a href="{% url 'send_to_telegram' %}">
-                <button>{% trans "Перейти у Ninja бот" %}</button>
-              </a>
+            <div class="one-info">
+              <h2>{% trans "ПЕРСОНАЛЬНЕ" %}<br>{% trans "ЕЛЕКТРО-ТАКСІ" %}</h2>
+              <p class="phone"><i class="fas fa-phone"></i> +38(093) 753 10 57</p>
+              <p class="text-1">{% trans "Довірте себе та дитину" %}<br>{% trans "екологічному та" %}<br>{% trans "безпечному оператору" %}<br>{% trans "таксі України" %}
+              </p>
+              <div class="telegram-button button-block-1">
+                <a href="{% url 'send_to_telegram' %}">
+                  <button>{% trans "Перейти у Ninja бот" %}</button>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -87,41 +88,49 @@
             <div class="image-services">
               <img src="{% static 'app/images/services-1.webp' %}" alt="" loading="lazy">
             </div>
-            <h4 class="services-title-index">{% trans "Персональний водій" %}</h4>
-            <p class="service-text limited-lines">
-              {% trans "Наші водії – експерти з водіння. Швидко і зручно доправлять вас у пункт призначення. " %}
-            </p>
-            <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            <div class="text-content">
+              <h4 class="services-title-index">{% trans "Персональний водій" %}</h4>
+              <p class="service-text limited-lines">
+                {% trans "Наші водії – експерти з водіння. Швидко і зручно доправлять вас у пункт призначення. " %}
+              </p>
+              <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            </div>
           </div>
           <div class="services-grid__item col-md-6 col-lg-4">
             <div class="image-services">
               <img src="{% static 'app/images/services-2.webp' %}" alt="" loading="lazy">
             </div>
-            <h4 class="services-title-index">{% trans "Персональний водій для Вашої дитини" %}</h4>
-            <p class="service-text limited-lines">
-              {% trans "Дитячний транспорт безпечно та своєчасно. Наші професіонали - ninja водії з досвідом та навичками. " %}
-            </p>
-            <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            <div class="text-content">
+              <h4 class="services-title-index">{% trans "Персональний водій для Вашої дитини" %}</h4>
+              <p class="service-text limited-lines">
+                {% trans "Дитячний транспорт безпечно та своєчасно. Наші професіонали - ninja водії з досвідом та навичками. " %}
+              </p>
+              <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            </div>
           </div>
           <div class="services-grid__item col-md-6 col-lg-4">
             <div class="image-services">
               <img src="{% static 'app/images/services-3.webp' %}" alt="" loading="lazy">
             </div>
-            <h4 class="services-title-index">{% trans "Доставка цінних речей в сейфі машини" %}</h4>
-            <p class="service-text limited-lines">
-              {% trans "Наші автомобільні сейфи - надійний захист для грошей, коштовностей та документів." %}
-            </p>
-            <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            <div class="text-content">
+              <h4 class="services-title-index">{% trans "Доставка цінних речей в сейфі машини" %}</h4>
+              <p class="service-text limited-lines">
+                {% trans "Наші автомобільні сейфи - надійний захист для грошей, коштовностей та документів." %}
+              </p>
+              <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            </div>
           </div>
           <div class="services-grid__item col-md-6 col-lg-4">
             <div class="image-services">
               <img src="{% static 'app/images/services-4.webp' %}" alt="" loading="lazy">
             </div>
-            <h4 class="services-title-index">{% trans "Передзамовлення машини на певний час" %}</h4>
-            <p class="service-text limited-lines">
-              {% trans "Замовте авто на потрібний Вам час з впевненістю. Комфорт та розклад - в вашому контролі. " %}
-            </p>
-            <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            <div class="text-content">
+              <h4 class="services-title-index">{% trans "Передзамовлення машини на певний час" %}</h4>
+              <p class="service-text limited-lines">
+                {% trans "Замовте авто на потрібний Вам час з впевненістю. Комфорт та розклад - в вашому контролі. " %}
+              </p>
+              <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+            </div>
           </div>
           <div class="fon-image">
             <img src="{% static 'app/images/index-deckor-img-1.png' %}" alt="" loading="lazy">
