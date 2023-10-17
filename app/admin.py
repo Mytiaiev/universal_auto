@@ -6,7 +6,7 @@ from django.core.exceptions import FieldError
 
 from scripts.google_calendar import GoogleCalendar
 from .filters import VehicleEfficiencyUserFilter, DriverEfficiencyUserFilter, RentInformationUserFilter, \
-    TransactionInvestorUserFilter, SummaryReportUserFilter, ReportUserFilter, VehicleManagerFilter
+    TransactionInvestorUserFilter, ReportUserFilter, VehicleManagerFilter, SummaryReportUserFilter
 from .models import *
 
 
@@ -90,6 +90,8 @@ def filter_queryset_by_group(*groups, field_to_filter=None):
                 if request.user.groups.filter(name='Manager').exists():
                     try:
                         queryset = queryset.filter(manager__user=request.user)
+                        if field_to_filter is not None:
+                            queryset = queryset.filter(**{field_to_filter: True})
                     except FieldError:
                         pass
 
@@ -253,7 +255,7 @@ class SchemaAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_fieldsets(self, request, obj=None):
         if request.user.groups.filter(name='Partner').exists():
             fieldsets = [
-                ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental']}),
+                ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental', 'rent_price', 'limit_distance']}),
             ]
             return fieldsets
         return super().get_fieldsets(request)
@@ -484,11 +486,11 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         else:
             return ['report_from', 'vehicle', 'total_kasa',
-                    'clean_kasa', 'total_spending', 'efficiency', 'mileage']
+                    'total_spending', 'efficiency', 'mileage']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
-            ('Інформація по авто',          {'fields': ['report_from', 'vehicle', 'clean_kasa', 'total_kasa',
+            ('Інформація по авто',          {'fields': ['report_from', 'vehicle', 'total_kasa',
                                                         'total_spending', 'efficiency',
                                                         'mileage']}),
         ]
@@ -512,7 +514,7 @@ class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
         else:
             return ['report_from', 'driver', 'total_kasa',
                     'efficiency', 'average_price', 'mileage',
-                    'total_orders', 'accept_percent']
+                    'total_orders', 'accept_percent', 'road_time']
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = [
@@ -520,7 +522,7 @@ class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
                                                         ]}),
             ('Інформація по водію',          {'fields': ['total_kasa', 'average_price', 'efficiency',
                                                          'mileage']}),
-            ('Додатково',                   {'fields': ['total_orders', 'accept_percent'
+            ('Додатково',                   {'fields': ['total_orders', 'accept_percent', 'road_time'
                                                         ]}),
         ]
 
@@ -659,7 +661,7 @@ class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 @admin.register(SummaryReport)
 class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = (SummaryReportUserFilter,)
-    ordering = ('-report_from', 'full_name')
+    ordering = ('-report_from', 'driver')
     list_per_page = 25
 
     def get_list_display(self, request):
@@ -667,7 +669,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         else:
             return ['report_from',
-                    'full_name', 'total_amount_without_fee', 'total_amount_cash',
+                    'driver', 'total_amount_without_fee', 'total_amount_cash',
                     'total_amount_on_card', 'total_distance', 'total_rides',
                     ]
 
@@ -676,7 +678,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Інформація про звіт',         {'fields': ['report_from',
                                                             ]}),
-                ('Інформація про водія',        {'fields': ['full_name',
+                ('Інформація про водія',        {'fields': ['driver',
                                                             ]}),
                 ('Інформація про кошти',        {'fields': ['total_amount_cash',
                                                             'total_amount_on_card', 'total_amount',
@@ -693,7 +695,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             fieldsets = [
                 ('Інформація про звіт',         {'fields': ['report_from',
                                                             ]}),
-                ('Інформація про водія',        {'fields': ['full_name',
+                ('Інформація про водія',        {'fields': ['driver',
                                                             ]}),
                 ('Інформація про кошти',        {'fields': ['total_amount_cash',
                                                             'total_amount_on_card', 'total_amount',
@@ -710,8 +712,7 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         qs = super().get_queryset(request)
         if request.user.groups.filter(name='Manager').exists():
             manager_drivers = Driver.objects.filter(manager__user=request.user)
-            full_names = [f"{driver.name} {driver.second_name}" for driver in manager_drivers]
-            return qs.filter(full_name__in=full_names)
+            return qs.filter(driver__in=manager_drivers)
         return qs
 
 
@@ -867,12 +868,12 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
         elif request.user.groups.filter(name='Partner').exists():
             return ['name', 'second_name',
                     'vehicle', 'manager', 'chat_id',
-                    'driver_status',
+                    'driver_status', 'schema',
                     'created_at',
                     ]
         else:
             return ['name', 'second_name',
-                    'vehicle', 'chat_id',
+                    'vehicle', 'chat_id', 'schema',
                     'driver_status'
                     ]
 
@@ -911,12 +912,15 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if not request.user.is_superuser:
+        if request.user.groups.filter(name='Partner').exists():
             if db_field.name in ('manager', 'vehicle', 'schema'):
-                if request.user.groups.filter(name='Partner').exists():
-                    kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
-                if request.user.groups.filter(name='Manager').exists():
-                    kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+        if request.user.groups.filter(name='Manager').exists():
+            if db_field.name == 'vehicle':
+                kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
+            if db_field.name == 'schema':
+                partner = Manager.objects.get(user=request.user).partner.pk
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner=partner)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
@@ -1074,7 +1078,7 @@ class FleetOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(Fleets_drivers_vehicles_rate)
-class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
+class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner', field_to_filter='driver__worked')(admin.ModelAdmin)):
     list_filter = ('fleet',)
     readonly_fields = ('fleet', 'driver_external_id')
 

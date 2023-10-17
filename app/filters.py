@@ -100,6 +100,11 @@ class DriverEfficiencyUserFilter(DriverRelatedFilter):
     model_class = DriverEfficiency
 
 
+class SummaryReportUserFilter(DriverRelatedFilter):
+    parameter_name = 'summary_report_user'
+    model_class = SummaryReport
+
+
 class RentInformationUserFilter(DriverRelatedFilter):
     parameter_name = 'rent_information_user'
     model_class = RentInformation
@@ -134,9 +139,7 @@ class PaymentsRelatedFilter(admin.SimpleListFilter):
             return queryset.filter(full_name=value)
 
 
-class SummaryReportUserFilter(PaymentsRelatedFilter):
-    parameter_name = 'summary_report_user'
-    model_class = SummaryReport
+
 
 
 class ReportUserFilter(PaymentsRelatedFilter):

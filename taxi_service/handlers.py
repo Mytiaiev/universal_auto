@@ -7,16 +7,15 @@ from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.contrib.auth import logout
 
-from app.models import Manager, Partner
+from app.models import Partner, Manager
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import (update_order_sum_or_status, restart_order,
-                                login_in, partner_logout, login_in_investor,
+                                partner_logout, login_in_investor,
                                 change_password_investor, send_reset_code,
-                                active_vehicles_gps, order_confirm, effective_vehicle,
-                                investor_cash_car, get_driver_info, partner_total_earnings,
-                                manager_total_earnings, check_aggregators)
+                                active_vehicles_gps, order_confirm,
+                                check_aggregators)
 
-from auto.tasks import update_driver_data, get_uber_session, get_bolt_session, get_uklon_session, get_gps_session
+from auto.tasks import update_driver_data
 
 
 class PostRequestHandler:
@@ -142,8 +141,11 @@ class PostRequestHandler:
                 return response
 
     def handler_update_database(self, request):
-        partner = Partner.objects.get(user=request.user.pk)
-        upd = update_driver_data.delay(partner.pk)
+        if request.user.groups.filter(name="Partner").exists():
+            partner = Partner.objects.get(user=request.user.pk).pk
+        else:
+            partner = Manager.objects.get(user=request.user.pk).partner.pk
+        upd = update_driver_data.delay(partner)
         json_data = JsonResponse({'task_id': upd.id}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
@@ -165,81 +167,6 @@ class GetRequestHandler:
         json_data = JsonResponse({'data': driver}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
-
-    def handle_get_investor_cash(self, request):
-        period = request.GET.get('period')
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-        investor_id = request.user.pk
-
-        get_cash = investor_cash_car(period, investor_id, start_date, end_date)
-        json_data = JsonResponse({'data': get_cash}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
-
-    def handle_get_manager_cash(self, request):
-        period = request.GET.get('period')
-        user_id = request.user.pk
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-
-        get_cash = manager_total_earnings(period, user_id, start_date, end_date)
-        json_data = JsonResponse({'data': get_cash}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
-
-    def handle_get_partner_cash(self, request):
-        period = request.GET.get('period')
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-
-        get_cash = partner_total_earnings(period, request.user.pk, start_date, end_date)
-        json_data = JsonResponse({'data': get_cash}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
-
-    def handle_get_drivers_manager(self, request):
-        action = request.GET.get('action')
-        period = request.GET.get('period')
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-
-        driver_info = get_driver_info(request, period, request.user.pk, action, start_date, end_date)
-        json_data = JsonResponse({'data': driver_info}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
-
-    def handle_get_drivers_partner(self, request):
-        action = request.GET.get('action')
-        period = request.GET.get('period')
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-
-        driver_info = get_driver_info(request, period, request.user.pk, action, start_date, end_date)
-        json_data = JsonResponse({'data': driver_info}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
-
-    def handle_effective_vehicle(self, request):
-        period = request.GET.get('period')
-        action = request.GET.get('action')
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-        user_id = request.user.pk
-
-        get_efficiency_vehicle = effective_vehicle(period, user_id, action, start_date, end_date)
-        json_data = JsonResponse({'data': get_efficiency_vehicle}, safe=False)
-        response = HttpResponse(json_data, content_type='application/json')
-        return response
-
-    def handle_is_logged_in(self, request):
-        if request.user.is_authenticated:
-            user_name = request.user.first_name + " " + request.user.last_name
-
-            response_data = {'is_logged_in': True, 'user_name': user_name}
-        else:
-            response_data = {'is_logged_in': False}
-        return JsonResponse(response_data, safe=False)
 
     def handle_get_role(self, request):
         if request.user.is_authenticated:

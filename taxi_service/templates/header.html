@@ -83,7 +83,13 @@
             <li class="icon"><a href="https://www.linkedin.com/company/ninja-taxi/"><i class="fa-brands fa-linkedin"></i></a></li>
           </ul>
         </div>
-        <span class="clickable nav-link fa fa-user" id="loginBtn"></span>
+        {% if user.is_authenticated %}
+          <a href="{% url 'dashboard' %}">
+            <span class="clickable nav-link fa fa-user" style="background-color:#A1E8B9"></span>
+          </a>
+        {% else %}
+        <span id="loginBtn2" class="clickable nav-link fa fa-user" style="background-color:#f0f0f0"></span>
+        {% endif %}
       </div>
       <div class="collapse navbar-collapse ml-auto" id="navbarSupportedContent">
         <ul class="navbar-nav">
@@ -125,7 +131,14 @@
             </ul>
           </li>
         </ul>
-        <span class="clickable nav-link fa fa-user" id="loginBtn"></span>
+        </a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'dashboard' %}">
+            <span class="clickable nav-link fa fa-user" style="background-color:#A1E8B9"></span>
+          </a>
+        {% else %}
+        <span id="loginBtn" class="clickable nav-link fa fa-user" style="background-color:#f0f0f0"></span>
+        {% endif %}
       </div>
       <div id="loginForm" class="login-form">
         <span id="closeLoginForm" class="close-btn">&times;</span>

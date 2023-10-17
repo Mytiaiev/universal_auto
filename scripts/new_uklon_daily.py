@@ -1,5 +1,6 @@
-from auto.tasks import get_car_efficiency
+from selenium_ninja.bolt_sync import BoltRequest
+
 
 def run(*args):
-    get_car_efficiency.delay(1)
+    BoltRequest(1).get_login_token()
 

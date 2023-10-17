@@ -13,11 +13,10 @@ from django.views.generic import View, TemplateView
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
+from api.views import CarsInformationListView
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
-from taxi_service.utils import average_effective_vehicle, \
-    car_piggy_bank, manager_car_piggy_bank, partner_car_piggy_bank
-from app.models import ParkSettings, Driver, Vehicle, Investor
+from app.models import ParkSettings, Driver
 from auto_bot.main import bot
 
 
@@ -97,15 +96,6 @@ class GetRequestView(View):
         method = {
             'active_vehicles_locations': handler.handle_active_vehicles_locations,
             'order_confirm': handler.handle_order_confirm,
-            'get_cash_investor': handler.handle_get_investor_cash,
-            'get_cash_manager': handler.handle_get_manager_cash,
-            'get_cash_partner': handler.handle_get_partner_cash,
-            'get_drivers_manager': handler.handle_get_drivers_manager,
-            'get_drivers_partner': handler.handle_get_drivers_partner,
-            'investor': handler.handle_effective_vehicle,
-            'manager': handler.handle_effective_vehicle,
-            'partner': handler.handle_effective_vehicle,
-            'is_logged_in': handler.handle_is_logged_in,
             'get_role': handler.handle_get_role,
             'aggregators': handler.handle_check_aggregators,
             'check_task': handler.handle_check_task,
@@ -137,44 +127,17 @@ class DriversView(TemplateView):
         return context
 
 
-class DashboardInvestorView(TemplateView):
-    template_name = 'dashboard/dashboard-investor.html'
+class DashboardView(TemplateView):
+    template_name = 'dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        user_id = self.request.user.id
-        investor = Investor.objects.get(user_id=user_id)
-        investor_cars = Vehicle.objects.filter(investor_car=investor)
-
-        context['get_all_vehicle'] = investor_cars
-        context['car_piggy_bank'] = car_piggy_bank(self.request)
-
-        return context
-
-
-class DashboardPartnerView(TemplateView):
-    template_name = 'dashboard/dashboard-partner.html'
-
-    def get_context_data(self, **kwargs):
-
-        context = super().get_context_data(**kwargs)
-
-        context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
-        context['average_effective_vehicle'] = average_effective_vehicle()
-        context['car_piggy_bank'] = partner_car_piggy_bank(self.request)
-
-        return context
-
-
-class DashboardManagerView(TemplateView):
-    template_name = 'dashboard/dashboard-manager.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        context['average_effective_vehicle'] = average_effective_vehicle()
-        context['car_piggy_bank'] = manager_car_piggy_bank(self.request)
+        context['investor_group'] = self.request.user.groups.filter(name='Investor').exists()
+        context['partner_group'] = self.request.user.groups.filter(name='Partner').exists()
+        context['manager_group'] = self.request.user.groups.filter(name='Manager').exists()
+        # context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
+        # context['average_effective_vehicle'] = average_effective_vehicle()
+        context['car_piggy_bank'] = CarsInformationListView.get_queryset(self)
 
         return context
 
@@ -195,12 +158,7 @@ class GoogleAuthView(View):
             if user:
                 user.backend = 'django.contrib.auth.backends.ModelBackend'
                 login(request, user)
-                if hasattr(user, 'partner'):
-                    redirect_url = reverse('dashboard_partner')
-                elif hasattr(user, 'manager'):
-                    redirect_url = reverse('dashboard_manager')
-                elif hasattr(user, 'investor'):
-                    redirect_url = reverse('dashboard_investor')
+                redirect_url = reverse('dashboard')
             else:
 
                 return redirect(reverse('index') + "?signed_in=false")
