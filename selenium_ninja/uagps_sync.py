@@ -89,10 +89,8 @@ class UaGpsSynchronizer:
         start = timezone.make_aware(datetime.datetime.combine(day, datetime.time.min))
         end = timezone.make_aware(datetime.datetime.combine(day, datetime.time.max))
         if reshuffle:
-            if driver == reshuffle.driver_start:
-                start = timezone.localtime(reshuffle.swap_time)
-            if driver == reshuffle.driver_finish:
-                end = timezone.localtime(reshuffle.swap_time)
+            start = timezone.localtime(reshuffle.swap_time)
+            end = timezone.localtime(reshuffle.end_time)
         return start, end
 
     @staticmethod

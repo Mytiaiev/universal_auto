@@ -30,7 +30,7 @@ from auto_bot.handlers.order.static_text import decline_order, order_info, searc
     search_driver_2, no_driver_in_radius, driver_arrived, driver_complete_text, \
     order_customer_text, search_driver, personal_time_route_end, personal_order_info, \
     pd_order_not_accepted, driver_text_personal_end, client_text_personal_end, payment_text
-from auto_bot.handlers.order.utils import text_to_client, check_reshuffle
+from auto_bot.handlers.order.utils import text_to_client, check_reshuffle, check_vehicle
 from auto_bot.main import bot
 from scripts.conversion import convertion, haversine, get_location_from_db
 from auto.celery import app
@@ -185,11 +185,13 @@ def check_orders_for_vehicle(self, partner_pk):
     orders = FleetOrder.objects.filter(accepted_time__date=day.date(), partner=partner_pk)
     for driver in Driver.objects.filter(partner=partner_pk):
         driver_orders = orders.filter(driver=driver)
-        vehicle, reshuffle = check_reshuffle(driver, date=day.date())
-        vehicle_orders = orders.filter(vehicle=vehicle)
-        if all((not driver_orders, vehicle_orders, not reshuffle)):
-            driver.vehicle = None
-            driver.save()
+        vehicles = check_reshuffle(driver, date=day.date())
+        for vehicle, reshuffle in vehicles.items():
+            if not reshuffle:
+                vehicle_orders = orders.filter(vehicle=vehicle)
+                if not driver_orders and vehicle_orders:
+                    driver.vehicle = None
+                    driver.save()
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -237,7 +239,7 @@ def send_notify_to_check_car(self, partner_pk):
         wrong_cars = redis_instance().hgetall(f"wrong_vehicle_{partner_pk}")
         for driver, car in wrong_cars.items():
             driver_obj = Driver.objects.get(pk=int(driver))
-            vehicle = check_reshuffle(driver_obj)[0]
+            vehicle = check_vehicle(driver_obj)[0]
             if not vehicle or vehicle.licence_plate != car:
                 chat_id = driver_obj.manager.chat_id if driver_obj.manager else driver_obj.partner.chat_id
                 try:
@@ -363,16 +365,17 @@ def get_driver_efficiency(self, partner_pk, day=None):
         efficiency = DriverEfficiency.objects.filter(report_from=day,
                                                      partner=partner_pk,
                                                      driver=driver)
-        vehicle, reshuffle = check_reshuffle(driver, day)
-        if not efficiency and vehicle:
+        if not efficiency:
+            vehicles = check_reshuffle(driver, day)
             accept = 0
             avg_price = 0
             total_km = 0
-            if reshuffle:
-                total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id,
-                                                                       day, driver, reshuffle)
-            elif vehicle:
-                total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
+            for vehicle, reshuffle in vehicles.items():
+                if reshuffle:
+                    total_km += UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id,
+                                                                            day, driver, reshuffle)
+                else:
+                    total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
             report = SummaryReport.objects.filter(report_from=day, driver=driver).first()
             total_kasa = report.total_amount_without_fee if report else 0
             result = Decimal(total_kasa)/Decimal(total_km) if total_km else 0
@@ -439,7 +442,7 @@ def update_driver_status(self, partner_pk):
             driver.driver_status = current_status
             driver.save()
             if current_status != Driver.OFFLINE:
-                vehicle = check_reshuffle(driver)[0]
+                vehicle = check_vehicle(driver)[0]
                 if not work_ninja and vehicle and driver.chat_id:
                     UseOfCars.objects.create(user_vehicle=driver,
                                              partner=Partner.get_partner(partner_pk),
@@ -639,7 +642,7 @@ def check_personal_orders(self):
         distance = int(order.payment_hours) * int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR'))
         notify_min = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_MIN'))
         notify_km = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_KM'))
-        vehicle = check_reshuffle(order.driver)[0]
+        vehicle = check_vehicle(order.driver)[0]
         gps = UaGpsSynchronizer(order.driver.partner)
         route = gps.generate_report(gps.get_timestamp(order.order_time),
                                     gps.get_timestamp(finish_time), vehicle.gps_id)[0]
@@ -745,7 +748,7 @@ def send_time_order(self):
             order.status_order, order.accepted_time = Order.IN_PROGRESS, timezone.localtime()
             order.save()
             if order.chat_id_client:
-                vehicle = check_reshuffle(driver)[0]
+                vehicle = check_vehicle(driver)[0]
                 lat, long = get_location_from_db(vehicle.licence_plate)
                 message = bot.sendLocation(order.chat_id_client, latitude=lat, longitude=long, live_period=1800)
                 send_map_to_client.delay(order.id, vehicle.licence_plate, message.message_id, message.chat_id)
@@ -801,7 +804,7 @@ def search_driver_for_order(self, order_pk):
                            button=inline_reject_order(order.pk))
         drivers = Driver.objects.filter(chat_id__isnull=False)
         for driver in drivers:
-            vehicle = check_reshuffle(driver)[0]
+            vehicle = check_vehicle(driver)[0]
             if driver.driver_status == Driver.ACTIVE and vehicle:
                 driver_lat, driver_long = get_location_from_db(vehicle.licence_plate)
                 distance = haversine(float(driver_lat), float(driver_long),
@@ -927,30 +930,23 @@ def get_driver_reshuffles(self, partner, delta=0):
                 calendar_event_id = event['id']
                 list_events.append(calendar_event_id)
                 event_summary = event['summary'].split(',')
-                if len(event_summary) == 2:
-                    licence_plate, driver = event_summary
-                    name, second_name = driver.split()
-                    driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
-                                                         Q(name=second_name, second_name=name)).first()
-                    driver_finish = None
-                    vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
+                licence_plate, driver = event_summary
+                name, second_name = driver.split()
+                driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
+                                                     Q(name=second_name, second_name=name)).first()
+                vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
+                try:
                     swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))
-                else:
+                    end_time = datetime.combine(swap_time, time.max)
+                except KeyError:
                     swap_time = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z").astimezone()
-                    licence_plate, first_driver, second_driver = event_summary
-                    name, second_name = first_driver.split()
-                    other_name, other_second_name = second_driver.split()
-                    driver_start = Driver.objects.filter(Q(name=name, second_name=second_name) |
-                                                         Q(name=second_name, second_name=name)).first()
-                    driver_finish = Driver.objects.filter(Q(name=other_name, second_name=other_second_name) |
-                                                          Q(name=other_second_name, second_name=other_name)).first()
-                    vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
+                    end_time = datetime.strptime(event['end']['dateTime'], "%Y-%m-%dT%H:%M:%S%z").astimezone()
                 obj_data = {
                     "calendar_event_id": calendar_event_id,
                     "swap_vehicle": vehicle,
                     "driver_start": driver_start,
-                    "driver_finish": driver_finish,
-                    "swap_time": swap_time
+                    "swap_time": swap_time,
+                    "end_time": end_time
                 }
                 reshuffle = DriverReshuffle.objects.filter(calendar_event_id=calendar_event_id)
                 reshuffle.update(**obj_data) if reshuffle else DriverReshuffle.objects.create(**obj_data)
@@ -966,7 +962,7 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=fleet_name, partner=partner_pk)
     if reports:
         return reports
-    # Pulling notes for the rest of the week and grouping behind the chat_id field
+
     for driver in Driver.objects.exclude(chat_id=''):
         records = Order.objects.filter(driver__chat_id=driver.chat_id,
                                        status_order=Order.COMPLETED,
