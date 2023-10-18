@@ -366,6 +366,7 @@ def get_driver_efficiency(self, partner_pk, day=None):
                                                      partner=partner_pk,
                                                      driver=driver)
         if not efficiency:
+            driver_vehicles = []
             vehicles = check_reshuffle(driver, day)
             accept = 0
             avg_price = 0
@@ -373,48 +374,52 @@ def get_driver_efficiency(self, partner_pk, day=None):
             for vehicle, reshuffles in vehicles.items():
                 if reshuffles:
                     for reshuffle in reshuffles:
+                        driver_vehicles.append(reshuffle.swap_vehicle)
                         total_km += UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day, reshuffle)
                 elif vehicle:
+                    driver_vehicles.append(vehicle)
                     total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
                 else:
                     continue
-            report = SummaryReport.objects.filter(report_from=day, driver=driver).first()
-            total_kasa = report.total_amount_without_fee if report else 0
-            result = Decimal(total_kasa) / Decimal(total_km) if total_km else 0
-            orders = FleetOrder.objects.filter(driver=driver, accepted_time__date=day)
-            total_orders = orders.count()
-            if total_orders:
-                canceled = orders.filter(state=FleetOrder.DRIVER_CANCEL).count()
-                accept = int((total_orders - canceled) / total_orders * 100) if canceled else 100
-                avg_price = Decimal(total_kasa) / Decimal(total_orders)
-            hours_online = timedelta()
-            using_info = UseOfCars.objects.filter(created_at__date=day, user_vehicle=driver)
-            start = timezone.datetime.combine(day, datetime.min.time()).astimezone()
-            end = timezone.datetime.combine(day, datetime.max.time()).astimezone()
-            yesterday = day - timedelta(days=1)
-            for report in using_info:
-                if report.end_at:
-                    if report.end_at.date() == day:
-                        hours_online += report.end_at - report.created_at
-                else:
-                    hours_online += end - report.created_at
+            if driver_vehicles:
+                report = SummaryReport.objects.filter(report_from=day, driver=driver).first()
+                total_kasa = report.total_amount_without_fee if report else 0
+                result = Decimal(total_kasa) / Decimal(total_km) if total_km else 0
+                orders = FleetOrder.objects.filter(driver=driver, accepted_time__date=day)
+                total_orders = orders.count()
+                if total_orders:
+                    canceled = orders.filter(state=FleetOrder.DRIVER_CANCEL).count()
+                    accept = int((total_orders - canceled) / total_orders * 100) if canceled else 100
+                    avg_price = Decimal(total_kasa) / Decimal(total_orders)
+                hours_online = timedelta()
+                using_info = UseOfCars.objects.filter(created_at__date=day, user_vehicle=driver)
+                start = timezone.datetime.combine(day, datetime.min.time()).astimezone()
+                end = timezone.datetime.combine(day, datetime.max.time()).astimezone()
+                yesterday = day - timedelta(days=1)
+                for report in using_info:
+                    if report.end_at:
+                        if report.end_at.date() == day:
+                            hours_online += report.end_at - report.created_at
+                    else:
+                        hours_online += end - report.created_at
 
-            last_using = UseOfCars.objects.filter(created_at__date=yesterday,
-                                                  user_vehicle=driver,
-                                                  end_at__date=day).first()
-            if last_using:
-                hours_online += last_using.end_at - start
+                last_using = UseOfCars.objects.filter(created_at__date=yesterday,
+                                                      user_vehicle=driver,
+                                                      end_at__date=day).first()
+                if last_using:
+                    hours_online += last_using.end_at - start
 
-            DriverEfficiency.objects.create(report_from=day,
-                                            driver=driver,
-                                            total_kasa=total_kasa,
-                                            total_orders=total_orders,
-                                            accept_percent=accept,
-                                            average_price=avg_price,
-                                            mileage=total_km or 0,
-                                            online_time=hours_online,
-                                            efficiency=result,
-                                            partner=Partner.get_partner(partner_pk))
+                driver_efficiency = DriverEfficiency.objects.create(report_from=day,
+                                                                    driver=driver,
+                                                                    total_kasa=total_kasa,
+                                                                    total_orders=total_orders,
+                                                                    accept_percent=accept,
+                                                                    average_price=avg_price,
+                                                                    mileage=total_km or 0,
+                                                                    online_time=hours_online,
+                                                                    efficiency=result,
+                                                                    partner=Partner.get_partner(partner_pk))
+                driver_efficiency.vehicles.add(*driver_vehicles)
 
 
 @app.task(bind=True, queue='beat_tasks')
