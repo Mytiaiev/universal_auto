@@ -675,7 +675,7 @@ def check_personal_orders(self):
 @app.task(bind=True, queue='beat_tasks')
 def add_money_to_vehicle(self, partner_pk):
     day = timezone.localtime() - timedelta(days=1)
-    car_efficiency_records = CarEfficiency.objects.filter(report_from__date=day.date(), partner=partner_pk)
+    car_efficiency_records = CarEfficiency.objects.filter(report_from=day.date(), partner=partner_pk)
     sum_by_plate = car_efficiency_records.values('vehicle__licence_plate').annotate(total_sum=Sum('total_kasa'))
     for result in sum_by_plate:
         vehicle = Vehicle.objects.filter(licence_plate=result['vehicle__licence_plate'],
@@ -1038,8 +1038,8 @@ def calculate_driver_reports(self, partner_pk, daily=False):
                                                                      driver=driver)
                     overall_distance = efficiency_obj.aggregate(
                         distance=Coalesce(Sum('mileage'), 0, output_field=DecimalField()))['distance']
-                    rent = overall_distance - driver.schema.limit_distance
-                    rent_value = max((rent * driver.schema.rent_price), 0)
+                    rent = max((overall_distance - driver.schema.limit_distance), 0)
+                    rent_value = rent * driver.schema.rent_price
                     salary = '%.2f' % (kasa * driver.schema.rate - cash - driver.schema.rental - rent_value)
 
                 DriverPayments.objects.create(report_from=start,

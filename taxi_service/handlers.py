@@ -15,7 +15,7 @@ from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 active_vehicles_gps, order_confirm,
                                 check_aggregators)
 
-from auto.tasks import update_driver_data
+from auto.tasks import update_driver_data, get_gps_session, get_uber_session, get_bolt_session, get_uklon_session
 
 
 class PostRequestHandler:

@@ -199,7 +199,7 @@ def calculate_efficiency(vehicle, start, end):
         if total_distance:
             efficiency = float('{:.2f}'.format(total_kasa/total_distance))
         formatted_distance = float('{:.2f}'.format(total_distance)) if total_distance is not None else 0.00
-        return efficiency, formatted_distance
+        return efficiency, formatted_distance, total_kasa
 
 
 def get_efficiency(manager_id=None, start=None, end=None):
@@ -221,13 +221,18 @@ def get_efficiency(manager_id=None, start=None, end=None):
                                                                     vehicle=vehicle).first()
                 efficiency = float(yesterday_efficiency.efficiency) if yesterday_efficiency else 0
                 distance = float(yesterday_efficiency.mileage) if yesterday_efficiency else 0
+                amount = float(yesterday_efficiency.total_kasa) if yesterday_efficiency else 0
                 effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
                                                             'Ефективність(грн/км)': efficiency,
                                                             'КМ всього': effect[1],
-                                                            'КМ учора': distance}
+                                                            'КМ учора': distance,
+                                                            'Загальна каса': effect[2],
+                                                            'Каса вчора': amount
+                                                            }
             else:
                 effective_vehicle[vehicle.licence_plate] = {'Середня ефективність(грн/км)': effect[0],
-                                                            'КМ всього': effect[1]}
+                                                            'КМ всього': effect[1],
+                                                            'Загальна каса': effect[2]}
     try:
         sorted_effective_driver = dict(sorted(effective_vehicle.items(),
                                        key=lambda x: x[1]['Середня ефективність(грн/км)'],
