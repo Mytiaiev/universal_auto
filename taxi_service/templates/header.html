@@ -157,7 +157,7 @@
                  data-client_id="300126065073-tic8iuc9vactfjcej4tttiakbpdf1bg2.apps.googleusercontent.com"
                  data-context="signin"
                  data-ux_mode="redirect"
-                 data-callback="zbsCallback"
+                 data-callback="Callback"
                  data-auto_prompt="false"
                  data-login_uri="sign-in/">
             </div>
@@ -200,3 +200,9 @@
     </nav>
   </div>
 </header>
+
+<script>
+	function Callback(response) {
+		console.log(response);
+	}
+</script>
