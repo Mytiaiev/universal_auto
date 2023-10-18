@@ -7,15 +7,12 @@ import pendulum
 import requests
 from django.db import IntegrityError
 from django.utils import timezone
-from telegram.error import BadRequest
 
-from app.models import ParkSettings, BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
+from app.models import BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes
 from auto import settings
-from auto_bot.handlers.order.utils import check_reshuffle
-from auto_bot.main import bot
+from auto_bot.handlers.order.utils import check_vehicle
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
-from taxi_service.utils import login_in
 
 
 class BoltRequest(Synchronizer):
@@ -108,7 +105,7 @@ class BoltRequest(Synchronizer):
         for driver in reports['data']['drivers']:
             db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=driver['id'],
                                                                  partner=self.partner_id).driver
-            vehicle = check_reshuffle(db_driver)[0]
+            vehicle = check_vehicle(db_driver, day, max_time=True)[0]
             order = Payments(
                 report_from=day,
                 vendor_name=self.fleet,
@@ -165,7 +162,7 @@ class BoltRequest(Synchronizer):
             time.sleep(0.5)
         return driver_list
 
-    def get_fleet_orders(self, day, pk, save=True):
+    def get_fleet_orders(self, day, pk):
         bolt_states = {
             "client_did_not_show": FleetOrder.CLIENT_CANCEL,
             "finished": FleetOrder.COMPLETED,
@@ -198,7 +195,8 @@ class BoltRequest(Synchronizer):
                     if FleetOrder.objects.filter(order_id=order['order_id']):
                         continue
                     try:
-                        finish = timezone.make_aware(datetime.datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
+                        finish = timezone.make_aware(
+                            datetime.datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
                     except TypeError:
                         finish = None
                     try:
@@ -210,7 +208,8 @@ class BoltRequest(Synchronizer):
                             "fleet": self.fleet,
                             "driver": driver,
                             "from_address": order['pickup_address'],
-                            "accepted_time": timezone.make_aware(datetime.datetime.fromtimestamp(order['accepted_time'])),
+                            "accepted_time": timezone.make_aware(
+                                datetime.datetime.fromtimestamp(order['accepted_time'])),
                             "state": bolt_states.get(order['order_try_state']),
                             "finish_time": finish,
                             "payment": PaymentTypes.map_payments(order['payment_method']),

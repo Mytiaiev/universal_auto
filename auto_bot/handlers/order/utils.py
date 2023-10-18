@@ -1,7 +1,7 @@
 import json
+from datetime import datetime, time
 
 import requests
-from django.db.models import Q
 from django.utils import timezone
 from telegram.error import BadRequest
 
@@ -16,19 +16,24 @@ def validate_text(text):
         return True
 
 
-def check_reshuffle(driver, date=timezone.localtime().date()):
+def check_reshuffle(driver, date=timezone.localtime()):
     vehicles = {}
-    reshuffles = DriverReshuffle.objects.filter(swap_time__lte=date,
-                                                swap_time__date=date, driver_start=driver)
-    for reshuffle in reshuffles:
-        vehicle = reshuffle.swap_vehicle
-        vehicles[vehicle] = reshuffle
+    reshuffles = DriverReshuffle.objects.filter(swap_time__date=date.date(), driver_start=driver)
+    if reshuffles:
+        for reshuffle in reshuffles:
+            vehicle = reshuffle.swap_vehicle
+            if not vehicles.get(vehicle):
+                vehicles[vehicle] = [reshuffle]
+            else:
+                vehicles[vehicle].append(reshuffle)
     else:
         vehicles[driver.vehicle] = None
     return vehicles
 
 
-def check_vehicle(driver, date_time=timezone.localtime()):
+def check_vehicle(driver, date_time=timezone.localtime(), max_time=False):
+    if max_time:
+        date_time = datetime.combine(date_time.date(), time.max)
     reshuffle = DriverReshuffle.objects.filter(swap_time__lte=date_time,
                                                swap_time__date=date_time.date(),
                                                driver_start=driver).order_by("-swap_time").first()

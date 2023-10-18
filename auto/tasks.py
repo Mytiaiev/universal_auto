@@ -48,20 +48,20 @@ from taxi_service.utils import login_in
 logger = get_task_logger(__name__)
 
 fleets = {
-        "BOLT_PASSWORD": BoltRequest,
-        "UKLON_PASSWORD": UklonRequest,
-        "UBER_PASSWORD": UberRequest,
-    }
+    "BOLT_PASSWORD": BoltRequest,
+    "UKLON_PASSWORD": UklonRequest,
+    "UBER_PASSWORD": UberRequest,
+}
 
 
 def check_available_fleets(partner_pk):
     settings = CredentialPartner.objects.filter(
-                Q(key="BOLT_PASSWORD") |
-                Q(key="UKLON_PASSWORD") |
-                Q(key="UBER_PASSWORD") |
-                Q(key="UAGPS_TOKEN"),
-                partner=partner_pk
-            ).order_by("-key")
+        Q(key="BOLT_PASSWORD") |
+        Q(key="UKLON_PASSWORD") |
+        Q(key="UBER_PASSWORD") |
+        Q(key="UAGPS_TOKEN"),
+        partner=partner_pk
+    ).order_by("-key")
     return settings
 
 
@@ -185,7 +185,7 @@ def check_orders_for_vehicle(self, partner_pk):
     orders = FleetOrder.objects.filter(accepted_time__date=day.date(), partner=partner_pk)
     for driver in Driver.objects.filter(partner=partner_pk):
         driver_orders = orders.filter(driver=driver)
-        vehicles = check_reshuffle(driver, date=day.date())
+        vehicles = check_reshuffle(driver, date=day)
         for vehicle, reshuffle in vehicles.items():
             if not reshuffle:
                 vehicle_orders = orders.filter(vehicle=vehicle)
@@ -218,7 +218,7 @@ def check_card_cash_value(self, partner_pk):
                                  driver=driver['driver']).aggregate(card_kasa=Sum('price'))['card_kasa']
             try:
                 if driver['kasa'] != 0:
-                    ratio = card/driver['kasa']
+                    ratio = card / driver['kasa']
                     if driver_obj.schema.schema == "RENT":
                         rate = float(ParkSettings.get_value("RENT_CASH_RATE", partner=partner_pk))
                     else:
@@ -262,7 +262,7 @@ def download_daily_report(self, partner_pk, day=None):
             request_class(partner_pk).save_report(day)
     save_report_to_ninja_payment(day, partner_pk)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
-    for driver in Driver.objects.filter(partner=partner_pk, worked=True):
+    for driver in Driver.objects.filter(partner=partner_pk):
         payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
         if payments:
             if not SummaryReport.objects.filter(report_from=day, driver=driver, partner=partner_pk):
@@ -338,8 +338,8 @@ def get_car_efficiency(self, partner_pk, day=None):
             total_spending = VehicleSpending.objects.filter(
                 vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
             if total_km:
-                reshuffle = DriverReshuffle.objects.filter(swap_time__date=day, swap_vehicle=vehicle).first()
-                drivers = [reshuffle.driver_start, reshuffle.driver_finish] if reshuffle \
+                reshuffles = DriverReshuffle.objects.filter(swap_time__date=day, swap_vehicle=vehicle)
+                drivers = [reshuffle.driver_start for reshuffle in reshuffles] if reshuffles \
                     else Driver.objects.filter(vehicle=vehicle)
 
                 for driver in drivers:
@@ -370,20 +370,22 @@ def get_driver_efficiency(self, partner_pk, day=None):
             accept = 0
             avg_price = 0
             total_km = 0
-            for vehicle, reshuffle in vehicles.items():
-                if reshuffle:
-                    total_km += UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id,
-                                                                            day, driver, reshuffle)
-                else:
+            for vehicle, reshuffles in vehicles.items():
+                if reshuffles:
+                    for reshuffle in reshuffles:
+                        total_km += UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day, reshuffle)
+                elif vehicle:
                     total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
+                else:
+                    continue
             report = SummaryReport.objects.filter(report_from=day, driver=driver).first()
             total_kasa = report.total_amount_without_fee if report else 0
-            result = Decimal(total_kasa)/Decimal(total_km) if total_km else 0
+            result = Decimal(total_kasa) / Decimal(total_km) if total_km else 0
             orders = FleetOrder.objects.filter(driver=driver, accepted_time__date=day)
             total_orders = orders.count()
             if total_orders:
                 canceled = orders.filter(state=FleetOrder.DRIVER_CANCEL).count()
-                accept = int((total_orders-canceled)/total_orders * 100) if canceled else 100
+                accept = int((total_orders - canceled) / total_orders * 100) if canceled else 100
                 avg_price = Decimal(total_kasa) / Decimal(total_orders)
             hours_online = timedelta()
             using_info = UseOfCars.objects.filter(created_at__date=day, user_vehicle=driver)
@@ -665,7 +667,7 @@ def check_personal_orders(self):
                 redis_instance().hset(str(order.driver.chat_id), "driver_msg", driver_msg.message_id)
                 redis_instance().hset(str(order.chat_id_client), "client_msg", client_msg)
         elif timezone.localtime() + timedelta(minutes=notify_min) > finish_time or distance < route - notify_km:
-            pre_finish_text = personal_time_route_end(finish_time, distance-route)
+            pre_finish_text = personal_time_route_end(finish_time, distance - route)
             pc_message = bot.send_message(chat_id=order.chat_id_client,
                                           text=pre_finish_text,
                                           reply_markup=personal_order_end_kb(order.id, pre_finish=True))
@@ -678,7 +680,7 @@ def check_personal_orders(self):
 @app.task(bind=True, queue='beat_tasks')
 def add_money_to_vehicle(self, partner_pk):
     day = timezone.localtime() - timedelta(days=1)
-    car_efficiency_records = CarEfficiency.objects.filter(report_from__date=day.date(), partner=partner_pk)
+    car_efficiency_records = CarEfficiency.objects.filter(report_from=day.date(), partner=partner_pk)
     sum_by_plate = car_efficiency_records.values('vehicle__licence_plate').annotate(total_sum=Sum('total_kasa'))
     for result in sum_by_plate:
         vehicle = Vehicle.objects.filter(licence_plate=result['vehicle__licence_plate'],
@@ -810,7 +812,7 @@ def search_driver_for_order(self, order_pk):
                 distance = haversine(float(driver_lat), float(driver_long),
                                      float(order.latitude), float(order.longitude))
                 radius = int(ParkSettings.get_value('FREE_CAR_SENDING_DISTANCE')) + \
-                         order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
+                    order.car_delivery_price / int(ParkSettings.get_value('TARIFF_CAR_DISPATCH'))
                 if distance <= radius:
                     accept_message = bot.send_message(chat_id=driver.chat_id,
                                                       text=order_info(order),
@@ -886,7 +888,7 @@ def fleet_order(instance, state=FleetOrder.COMPLETED):
 
 
 @app.task(bind=True, queue='bot_tasks')
-def get_distance_trip(self, order, query, start_trip_with_client, end, gps_id):
+def get_distance_trip(self, order, start_trip_with_client, end, gps_id):
     start = datetime.fromtimestamp(start_trip_with_client)
     format_end = datetime.fromtimestamp(end)
     delta = format_end - start
@@ -937,7 +939,7 @@ def get_driver_reshuffles(self, partner, delta=0):
                 vehicle = Vehicle.objects.filter(licence_plate=licence_plate.split()[0]).first()
                 try:
                     swap_time = timezone.make_aware(datetime.strptime(event['start']['date'], "%Y-%m-%d"))
-                    end_time = datetime.combine(swap_time, time.max)
+                    end_time = timezone.make_aware(datetime.combine(swap_time, time.max))
                 except KeyError:
                     swap_time = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S%z").astimezone()
                     end_time = datetime.strptime(event['end']['dateTime'], "%Y-%m-%dT%H:%M:%S%z").astimezone()
@@ -1091,7 +1093,7 @@ def setup_periodic_tasks(partner, sender=None):
                              send_driver_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="56", hour="8"), send_driver_report.s(partner_id, daily=True))
     # sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
-                             # manager_paid_weekly.s(partner_id))
+    # manager_paid_weekly.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="9", day_of_week="1"),
                              get_uber_session.s(partner_id))
 

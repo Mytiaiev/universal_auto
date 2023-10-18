@@ -1,7 +1,7 @@
 import requests
 
 from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder
-from auto_bot.handlers.order.utils import check_reshuffle
+from auto_bot.handlers.order.utils import check_vehicle
 from selenium_ninja.driver import SeleniumTools
 
 from selenium_ninja.synchronizer import Synchronizer
@@ -192,7 +192,7 @@ class UberRequest(Synchronizer):
                     if report['totalEarnings']:
                         driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid'],
                                                                           partner=self.partner_id).driver
-                        vehicle = check_reshuffle(driver)[0]
+                        vehicle = check_vehicle(driver, day, max_time=True)[0]
                         order = Payments(
                             report_from=day,
                             vendor_name=self.fleet,

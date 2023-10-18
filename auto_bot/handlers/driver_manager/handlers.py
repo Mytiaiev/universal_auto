@@ -1,5 +1,5 @@
 # Create driver and other
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from celery.signals import task_postrun
 from django.utils import timezone
 from telegram import ReplyKeyboardRemove
@@ -19,7 +19,7 @@ from auto_bot.handlers.driver_manager.utils import get_daily_report, validate_da
 from auto_bot.handlers.main.keyboards import markup_keyboard, markup_keyboard_onetime, inline_manager_kb
 from auto.tasks import send_on_job_application_on_driver, manager_paid_weekly, fleets_cash_trips, \
     update_driver_data, send_daily_statistic, send_efficiency_report, send_driver_report, send_driver_efficiency
-from auto_bot.handlers.order.utils import check_reshuffle, check_vehicle
+from auto_bot.handlers.order.utils import check_vehicle
 from auto_bot.main import bot
 from auto_bot.utils import send_long_message
 from scripts.redis_conn import redis_instance
@@ -324,7 +324,7 @@ def send_into_group(sender=None, **kwargs):
                     pass
         for pk, message in drivers_messages.items():
             driver = Driver.objects.get(pk=pk)
-            vehicle = check_vehicle(driver, yesterday.date())[0]
+            vehicle = check_vehicle(driver, yesterday, max_time=True)[0]
             if vehicle:
                 if vehicle.chat_id and message:
                     bot.send_message(chat_id=vehicle.chat_id, text=message)

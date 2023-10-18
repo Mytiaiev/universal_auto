@@ -284,7 +284,8 @@ class Vehicle(models.Model):
     car_earnings = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name="Заробіток авто")
     currency_back = models.CharField(max_length=4, default=Currency.USD, choices=Currency.choices,
                                      verbose_name='Валюта повернення коштів')
-    investor_car = models.ForeignKey(Investor, blank=True, null=True, on_delete=models.SET_NULL, verbose_name='Машина інвестора')
+    investor_car = models.ForeignKey(Investor, blank=True, null=True, on_delete=models.SET_NULL,
+                                     verbose_name='Машина інвестора')
     investor_percentage = models.DecimalField(decimal_places=2, max_digits=10, default=0.35,
                                               verbose_name="Відсоток інвестора")
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -382,7 +383,8 @@ class Driver(User):
     RENT = 'Орендую авто'
 
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-    manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Менеджер водіїв')
+    manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True,
+                                verbose_name='Менеджер водіїв')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     worked = models.BooleanField(default=True, verbose_name='Працює')
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
@@ -425,11 +427,9 @@ class Driver(User):
 class DriverReshuffle(models.Model):
     calendar_event_id = models.CharField(max_length=100)
     swap_vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, verbose_name="Автомобіль")
-    driver_start = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True,
-                                     verbose_name="Водій, що приймає авто", related_name="driver_start")
-    driver_finish = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True,
-                                      verbose_name="Водій, що віддає авто", related_name="driver_finish")
-    swap_time = models.DateTimeField(verbose_name="Час початку/завершення зміни")
+    driver_start = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name="Водій")
+    swap_time = models.DateTimeField(verbose_name="Час початку зміни")
+    end_time = models.DateTimeField(verbose_name="Час завершення зміни")
 
 
 class RentInformation(models.Model):
@@ -532,15 +532,6 @@ class Payments(models.Model):
         def filter_by_driver_external_id(self, driver_external_id):
             return self.filter(driver_id=driver_external_id)
 
-    def report_text(self, name=None, rate=0.35):
-        return f'{self.vendor_name} {name}: Касса({"%.2f" % self.kassa()}) * {"%.0f" % (rate * 100)}% = {"%.2f" % (self.kassa() * rate)} - Наличные(-{"%.2f" % float(self.total_amount_cash)}) = {"%.2f" % self.total_drivers_amount(rate)}'
-
-    def total_drivers_amount(self, rate):
-        return self.kassa() * rate + float(self.total_amount_cash)
-
-    def kassa(self):
-        return float(self.total_amount_without_fee)
-
 
 class SummaryReport(models.Model):
     report_from = models.DateField(verbose_name='Дата звіту')
@@ -568,12 +559,6 @@ class SummaryReport(models.Model):
     class Meta:
         verbose_name = 'Зведений звіт'
         verbose_name_plural = 'Зведені звіти'
-
-    def total_drivers_amount(self, rate):
-        return self.get_kasa() * rate + float(self.total_amount_cash)
-
-    def get_kasa(self):
-        return float(self.total_amount_without_fee)
 
 
 class BoltFleet(Fleet):
@@ -1156,7 +1141,7 @@ class JobApplication(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 
-def admin_image_preview(image, default_image=None):
+def admin_image_preview(image):
     if image:
         url = image.url
         return mark_safe(f'<a href="{url}"><img src="{url}" width="200" height="150"></a>')
@@ -1183,6 +1168,7 @@ class CarEfficiency(models.Model):
 class DriverEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
     driver = models.ForeignKey(Driver, null=True, on_delete=models.SET_NULL, verbose_name='Водій', db_index=True)
+    vehicles = models.ManyToManyField(Vehicle, verbose_name="Автомобілі", db_index=True)
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Каса')
     total_orders = models.IntegerField(default=0, verbose_name="Замовлень за день")
     accept_percent = models.IntegerField(default=0, verbose_name="Відсоток прийнятих замовлень")
@@ -1389,9 +1375,11 @@ class UberPaymentsOrder(models.Model):
     first_name = models.CharField(max_length=24, verbose_name='Імя водія')
     last_name = models.CharField(max_length=24, verbose_name='Прізвище водія')
     total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід')
-    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід - Чистий тариф')
+    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10,
+                                            verbose_name='Загальна дохід - Чистий тариф')
     total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Виплати')
-    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Перераховано на банківський рахунок')
+    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10,
+                                             verbose_name='Перераховано на банківський рахунок')
     returns = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Відшкодування та витрати')
     tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -1409,9 +1397,6 @@ class UserBank(models.Model):
         verbose_name = 'Банк боргів'
         verbose_name_plural = 'Банк боргів'
 
-
     @staticmethod
     def get_duty(chat_id):
         return UserBank.objects.filter(chat_id=chat_id).first()
-
-
