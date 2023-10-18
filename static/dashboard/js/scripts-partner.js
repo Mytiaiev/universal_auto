@@ -535,12 +535,21 @@ $(document).ready(function () {
     rows.sort(function (a, b) {
         let valueA = $(a).find(`td.${column}`).text();
         let valueB = $(b).find(`td.${column}`).text();
-
-        if (order === 'asc') {
-            return collator.compare(valueA, valueB);
-        } else {
+        if (column === 'driver') {
+        	if (order === 'asc') {
+        	   return collator.compare(valueA, valueB);
+        	} else {
             return collator.compare(valueB, valueA);
-        }
+        	};
+        } else {
+        	let floatA = parseFloat(valueA);
+        	let floatB = parseFloat(valueB);
+        	if (order === 'asc') {
+						return floatA - floatB;
+					} else {
+						return floatB - floatA;
+    			};
+    		}
     });
 
     $tbody.empty().append(rows);

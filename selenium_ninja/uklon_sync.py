@@ -177,17 +177,16 @@ class UklonRequest(Synchronizer):
         url = f"{Service.get_value('UKLON_5')}{self.uklon_id()}"
         url += Service.get_value('UKLON_6')
         data = self.response_data(url, params=self.parameters)
-        if data.get('drivers'):
-            for driver in data['drivers']:
-                first_data = (driver['last_name'], driver['first_name'])
-                second_data = (driver['first_name'], driver['last_name'])
-                if driver['status'] == 'Active':
-                    drivers[f'{second_key}'].append(first_data)
-                    drivers[f'{second_key}'].append(second_data)
-                elif driver['status'] == 'OrderExecution':
-                    drivers[f'{first_key}'].append(first_data)
-                    drivers[f'{first_key}'].append(second_data)
-            return drivers
+        for driver in data['data']:
+            first_data = (driver['last_name'], driver['first_name'])
+            second_data = (driver['first_name'], driver['last_name'])
+            if driver['status'] == 'Active':
+                drivers[f'{second_key}'].append(first_data)
+                drivers[f'{second_key}'].append(second_data)
+            elif driver['status'] == 'OrderExecution':
+                drivers[f'{first_key}'].append(first_data)
+                drivers[f'{first_key}'].append(second_data)
+        return drivers
 
     def get_drivers_table(self):
         drivers = []
