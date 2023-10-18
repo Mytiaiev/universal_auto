@@ -177,8 +177,7 @@ class UklonRequest(Synchronizer):
         url = f"{Service.get_value('UKLON_5')}{self.uklon_id()}"
         url += Service.get_value('UKLON_6')
         data = self.response_data(url, params=self.parameters)
-
-        for driver in data['drivers']:
+        for driver in data['data']:
             first_data = (driver['last_name'], driver['first_name'])
             second_data = (driver['first_name'], driver['last_name'])
             if driver['status'] == 'Active':

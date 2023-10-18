@@ -912,12 +912,15 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if not request.user.is_superuser:
+        if request.user.groups.filter(name='Partner').exists():
             if db_field.name in ('manager', 'vehicle', 'schema'):
-                if request.user.groups.filter(name='Partner').exists():
-                    kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
-                if request.user.groups.filter(name='Manager').exists():
-                    kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+        if request.user.groups.filter(name='Manager').exists():
+            if db_field.name == 'vehicle':
+                kwargs['queryset'] = db_field.related_model.objects.filter(manager__user=request.user)
+            if db_field.name == 'schema':
+                partner = Manager.objects.get(user=request.user).partner.pk
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner=partner)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
