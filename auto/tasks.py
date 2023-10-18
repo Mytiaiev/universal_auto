@@ -1038,8 +1038,8 @@ def calculate_driver_reports(self, partner_pk, daily=False):
                                                                      driver=driver)
                     overall_distance = efficiency_obj.aggregate(
                         distance=Coalesce(Sum('mileage'), 0, output_field=DecimalField()))['distance']
-                    rent = overall_distance - driver.schema.limit_distance
-                    rent_value = max((rent * driver.schema.rent_price), 0)
+                    rent = max((overall_distance - driver.schema.limit_distance), 0)
+                    rent_value = rent * driver.schema.rent_price
                     salary = '%.2f' % (kasa * driver.schema.rate - cash - driver.schema.rental - rent_value)
 
                 DriverPayments.objects.create(report_from=start,

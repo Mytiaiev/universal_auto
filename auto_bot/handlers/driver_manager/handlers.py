@@ -213,14 +213,15 @@ def get_report(update, context):
     else:
         query.edit_message_text(generate_text)
         result = get_daily_report(manager_id=query.from_user.id)
-        if result[0]:
-            for key in result[0]:
-                if result[0][key]:
-                    message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n".format(
-                        key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
-        else:
-            message = no_drivers_text
-        query.edit_message_text(message)
+        for key in result[0]:
+            if result[0][key]:
+                message += "{}\nКаса: {:.2f} (+{:.2f})\nОренда: {:.2f}км (+{:.2f})\n\n".format(
+                    key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
+        try:
+            query.edit_message_text(message)
+        except BadRequest as e:
+            if "Message text is empty" in str(e):
+                query.edit_message_text(no_drivers_text)
         query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
 
@@ -264,12 +265,13 @@ def get_efficiency_auto(update, context):
     else:
         query.edit_message_text(generate_text)
         result = get_efficiency(manager_id=query.from_user.id)
-        if result:
-            for k, v in result.items():
-                message += f"{k}\n" + "".join(v)
-        else:
-            message = no_vehicles_text
-        query.edit_message_text(message)
+        for k, v in result.items():
+            message += f"{k}\n" + "".join(v) + "\n"
+        try:
+            query.edit_message_text(message)
+        except BadRequest as e:
+            if "Message text is empty" in str(e):
+                query.edit_message_text(no_vehicles_text)
         query.edit_message_reply_markup(reply_markup=inline_manager_kb())
 
 
@@ -297,13 +299,15 @@ def create_period_efficiency(update, context):
         msg = update.message.reply_text(generate_text)
         result = get_efficiency(update.message.chat_id, start, end)
         message = ''
-        if result:
-            for k, v in result.items():
-                message += f"{k}\n" + "".join(v)
-        else:
-            message = no_vehicles_text
-        context.bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
-                                      message_id=msg.message_id, reply_markup=inline_manager_kb())
+        for k, v in result.items():
+            message += f"{k}\n" + "".join(v) + "\n"
+        try:
+            context.bot.edit_message_text(chat_id=update.effective_chat.id, text=message,
+                                          message_id=msg.message_id, reply_markup=inline_manager_kb())
+        except BadRequest as e:
+            if "Message text is empty" in str(e):
+                context.bot.edit_message_text(chat_id=update.effective_chat.id, text=no_vehicles_text,
+                                              message_id=msg.message_id, reply_markup=inline_manager_kb())
     else:
         redis_instance().hset(str(update.effective_chat.id), 'state', END_EFFICIENCY)
         context.bot.send_message(chat_id=update.message.chat_id, text=invalid_end_data_text)
