@@ -34,12 +34,6 @@ $(window).on('load', function () {
 
 $(document).ready(function () {
 
-	$("#showPassword").click(function () {
-		let $checkbox = $(this);
-		let $passwordField = $checkbox.closest('#loginForm').find('#password');
-		let change = $checkbox.is(":checked") ? "text" : "password";
-		$passwordField.prop('type', change);
-	})
 	// js for header
 
 	$("#loginBtn").click(function () {
