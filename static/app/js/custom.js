@@ -51,24 +51,8 @@ $(document).ready(function () {
 		}
 	});
 
-	const subMenu = $('.sub-menu');
-
-	$('.nav-item-adaptive').click(function (event) {
-		event.stopPropagation();
-
-		if (subMenu.is(':visible')) {
-			subMenu.hide();
-		} else {
-			subMenu.show();
-		}
-	});
-
-	$(document).click(function () {
-		subMenu.hide();
-	});
-
-	subMenu.click(function (event) {
-		event.stopPropagation();
+	$('.stripes').click(function () {
+		$('.sub-menu').slideToggle();
 	});
 
 	let pagesLink = $("#pagesLink");

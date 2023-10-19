@@ -1490,10 +1490,13 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	line-height: normal;
 }
 
+.client-name {
+	margin-top: 5px;
+}
+
 .client-description {
-	margin: 20px;
+	margin: 0 20px 20px;
 	border-top: 1px solid red;
-	padding-top: 20px;
 	color: #53785E;
 	font-size: 25px;
 	font-style: normal;
