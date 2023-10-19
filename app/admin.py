@@ -883,7 +883,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number',   'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('schema', 'salary_calculation',
+                ('Тарифний план',               {'fields': ('schema',
                                                             )}),
                 ('Додатково',                   {'fields': ['partner', 'manager', 'vehicle', 'driver_status'
                                                             ]}),
@@ -894,7 +894,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number', 'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('salary_calculation', 'schema'
+                ('Тарифний план',               {'fields': ('schema'
                                                             )}),
                 ('Додатково',                   {'fields': ['driver_status', 'manager',  'vehicle'
                                                             ]}),
@@ -904,7 +904,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                 ('Інформація про водія',        {'fields': ['name', 'second_name', 'email',
                                                             'phone_number', 'chat_id',
                                                             ]}),
-                ('Тарифний план',               {'fields': ('salary_calculation', 'schema'
+                ('Тарифний план',               {'fields': ('schema'
                                                             )}),
                 ('Додатково',                   {'fields': ['driver_status', 'vehicle'
                                                             ]}),
