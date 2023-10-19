@@ -228,3 +228,17 @@ def why(request):
 
 def agreement(request):
     return render(request, 'agreement.html', {'subscribe_form': SubscriberForm()})
+
+
+class RobotsView(TemplateView):
+    template_name = 'robots.txt'
+    content_type = 'text/plain'
+
+
+class SitemapView(TemplateView):
+    template_name = 'sitemap.xml'
+    content_type = 'application/xml'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
