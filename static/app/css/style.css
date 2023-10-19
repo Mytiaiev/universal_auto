@@ -276,8 +276,7 @@ label[for="showPassword"] {
 	right: 40px;
 }
 
-.nav-item:hover .sub-menu,
-.nav-item-social:hover .social-icons {
+.nav-item:hover .sub-menu {
 	display: block;
 }
 
@@ -300,6 +299,38 @@ label[for="showPassword"] {
 	.nav-item-adaptive-phone {
 		display: flex;
 	}
+
+	.stripes {
+		margin-top: 5px;
+		margin-right: 40px;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		width: 35px;
+		height: 22px;
+	}
+
+	.top-stripe {
+		width: 35px;
+		height: 8px;
+		border-radius: 25%;
+		background-color: #EC6323;
+	}
+
+	.middle-stripe {
+		width: 31px;
+		height: 8px;
+		border-radius: 25%;
+		background-color: #EC6323;
+	}
+
+	.bottom-stripe {
+		width: 25px;
+		height: 8px;
+		border-radius: 25%;
+		background-color: #EC6323;
+	}
+
 
 	.nav-item-adaptive-phone .nav-link.fa.fa-user {
 		width: 36px;
@@ -424,6 +455,37 @@ label[for="showPassword"] {
 
 	.nav-item-adaptive-phone {
 		display: flex;
+	}
+
+	.stripes {
+		margin-top: 5px;
+		margin-right: 60px;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		width: 35px;
+		height: 22px;
+	}
+
+	.top-stripe {
+		width: 35px;
+		height: 8px;
+		border-radius: 25%;
+		background-color: #EC6323;
+	}
+
+	.middle-stripe {
+		width: 31px;
+		height: 8px;
+		border-radius: 25%;
+		background-color: #EC6323;
+	}
+
+	.bottom-stripe {
+		width: 25px;
+		height: 8px;
+		border-radius: 25%;
+		background-color: #EC6323;
 	}
 
 	.nav-item-adaptive .nav-link {

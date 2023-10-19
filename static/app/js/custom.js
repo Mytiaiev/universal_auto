@@ -36,6 +36,41 @@ $(document).ready(function () {
 
 	// js for header
 
+	$('.nav-item-social').click(function (event) {
+		if ($('.social-icons').is(':visible')) {
+			$('.social-icons').hide();
+		} else {
+			$('.social-icons').show();
+		}
+		event.stopPropagation();
+	});
+
+	$(document).click(function (event) {
+		if (!$(event.target).closest('.nav-item-social').length) {
+			$('.social-icons').hide();
+		}
+	});
+
+	const subMenu = $('.sub-menu');
+
+	$('.nav-item-adaptive').click(function (event) {
+		event.stopPropagation();
+
+		if (subMenu.is(':visible')) {
+			subMenu.hide();
+		} else {
+			subMenu.show();
+		}
+	});
+
+	$(document).click(function () {
+		subMenu.hide();
+	});
+
+	subMenu.click(function (event) {
+		event.stopPropagation();
+	});
+
 	let pagesLink = $("#pagesLink");
 	let pagesList = $("#pagesList");
 

@@ -23,7 +23,7 @@
   <meta name="description"
         content="Ninja Taxi - надійний та швидкий сервіс таксі з комфортабельними автомобілями та професійними водіями. Замовляйте таксі в будь-який час та за доступними цінами.">
   <meta name="author" content=""/>
-  <meta name="google-site-verification" content="nD0I_mPzF0Q_5ZD7oVU7B_Rd205kQSMw998yAp94wpA" />
+  <meta name="google-site-verification" content="nD0I_mPzF0Q_5ZD7oVU7B_Rd205kQSMw998yAp94wpA"/>
   <link rel="shortcut icon" href="{% static 'app/images/favicon.webp' %}"/>
   <title>{% trans "Ninja Taxi" %}</title>
   <!-- slider stylesheet -->
@@ -76,7 +76,11 @@
       </a>
       <div class="nav-item-adaptive-phone">
         <div class="nav-item-adaptive">
-          <span class="nav-link" id="pagesLink">{% trans "Сторінки" %}</span>
+          <div class="stripes">
+            <div class="stripe top-stripe"></div>
+            <div class="stripe middle-stripe"></div>
+            <div class="stripe bottom-stripe"></div>
+          </div>
           <ul class="sub-menu" id="pagesList">
             <li><a href="#">{% trans "Персональний водій" %}</a></li>
             <li><a href="#">{% trans "Персональний водій для дитини" %}</a></li>
@@ -121,7 +125,7 @@
           </li>
         </ul>
       </div>
-      <div class="nav-item connect">
+      <div class="nav-item connect" tabindex="0">
         <ul class="navbar-nav">
           <li class="nav-item-social">
             <div class="stripes">

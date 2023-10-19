@@ -879,7 +879,7 @@ msgstr "Hanna"
 
 #: taxi_service/templates/index.html:284 taxi_service/templates/index.html:301
 #: taxi_service/templates/index.html:318
-msgid "Постійний скієнт"
+msgid "Постійний клієнт"
 msgstr "Permanent client"
 
 #: taxi_service/templates/index.html:289
