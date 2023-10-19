@@ -2,13 +2,13 @@ import json
 import secrets
 import uuid
 from datetime import datetime
-from pprint import pprint
 
 import requests
 from django.utils import timezone
 
 from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes
+from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
@@ -139,9 +139,11 @@ class UklonRequest(Synchronizer):
         url = f"{Service.get_value('UKLON_3')}{self.uklon_id()}"
         url += Service.get_value('UKLON_4')
         data = self.response_data(url=url, params=param)['items']
-        pprint(data)
         if data:
             for i in data:
+                db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id'],
+                                                                     partner=self.partner_id).driver
+                vehicle = check_reshuffle(db_driver)[0]
                 order = Payments(
                     report_from=day.date(),
                     vendor_name=self.fleet,
@@ -159,6 +161,7 @@ class UklonRequest(Synchronizer):
                     fee=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
                     total_amount_without_fee=self.find_value(i, *('profit', 'total', 'amount')),
                     partner=Partner.get_partner(self.partner_id),
+                    vehicle=vehicle
                 )
                 try:
                     order.save()
@@ -174,8 +177,7 @@ class UklonRequest(Synchronizer):
         url = f"{Service.get_value('UKLON_5')}{self.uklon_id()}"
         url += Service.get_value('UKLON_6')
         data = self.response_data(url, params=self.parameters)
-
-        for driver in data['drivers']:
+        for driver in data['data']:
             first_data = (driver['last_name'], driver['first_name'])
             second_data = (driver['first_name'], driver['last_name'])
             if driver['status'] == 'Active':
@@ -245,7 +247,7 @@ class UklonRequest(Synchronizer):
             orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
             try:
                 for order in orders['items']:
-                    if FleetOrder.objects.filter(order_id=order['id']) or order['status'] in ("running", "accepted"):
+                    if FleetOrder.objects.filter(order_id=order['id']) or order['status'] in ("running", "accepted", "arrived"):
                         continue
                     detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
                                                 params={"driverId": str_driver_id})

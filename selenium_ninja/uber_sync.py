@@ -1,6 +1,7 @@
 import requests
 
 from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder
+from auto_bot.handlers.order.utils import check_reshuffle
 from selenium_ninja.driver import SeleniumTools
 
 from selenium_ninja.synchronizer import Synchronizer
@@ -189,7 +190,9 @@ class UberRequest(Synchronizer):
             if response.status_code == 200 and response.json()['data']:
                 for report in response.json()['data']['getPerformanceReport']:
                     if report['totalEarnings']:
-                        driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid']).driver
+                        driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid'],
+                                                                          partner=self.partner_id).driver
+                        vehicle = check_reshuffle(driver)[0]
                         order = Payments(
                             report_from=day,
                             vendor_name=self.fleet,
@@ -199,7 +202,8 @@ class UberRequest(Synchronizer):
                             total_amount_without_fee=round(report['totalEarnings'], 2),
                             total_amount_cash=round(report['cashEarnings'], 2),
                             total_rides=report['totalTrips'],
-                            partner=Partner.get_partner(self.partner_id))
+                            partner=Partner.get_partner(self.partner_id),
+                            vehicle=vehicle)
                         order.save()
             else:
                 self.logger.error(f"Failed save uber report {self.partner_id} {response}")

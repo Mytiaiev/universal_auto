@@ -34,7 +34,19 @@ $(window).on('load', function () {
 
 $(document).ready(function () {
 
+	$("#showPassword").click(function () {
+		let $checkbox = $(this);
+		let $passwordField = $checkbox.closest('#loginForm').find('#password');
+		let change = $checkbox.is(":checked") ? "text" : "password";
+		$passwordField.prop('type', change);
+	})
 	// js for header
+
+	$("#loginBtn").click(function () {
+		$("#loginForm").fadeIn();
+		$("#loginRadio").hide();
+		$("label[for='loginRadio']").hide();
+	});
 
 	$('.nav-item-social').click(function (event) {
 		if ($('.social-icons').is(':visible')) {
@@ -66,73 +78,10 @@ $(document).ready(function () {
 		}
 	});
 
-	$.ajax({
-		url: ajaxGetUrl,
-		type: "GET",
-		data: {
-			action: "is_logged_in"
-		},
-		success: function (data) {
-			let userLink = $(".nav-link.fa.fa-user");
-
-			if (data.is_logged_in === true) {
-				userLink.css("background-color", "#A1E8B9");
-				userLink.click(function () {
-					getUserRoleAndRedirect();
-				});
-			} else {
-				userLink.css("background-color", "#f0f0f0");
-				userLink.click(function () {
-					showLoginForm();
-				});
-			}
-		}
-	});
-
-	function getUserRoleAndRedirect() {
-		$.ajax({
-			url: ajaxGetUrl,
-			type: "GET",
-			data: {
-				action: "get_role"
-			},
-			success: function (response) {
-				console.log(response.role);
-				switch (response.role) {
-					case 'Investor':
-						window.location.href = "/dashboard-investor/";
-						break;
-					case 'Manager':
-						window.location.href = "/dashboard-manager/";
-						break;
-					case 'Partner':
-						window.location.href = "/dashboard-partner/";
-						break;
-					default:
-						// Handle other roles or errors
-						break;
-				}
-			}
-		});
-	}
-
-	function showLoginForm() {
-		$("#loginForm").fadeIn();
-		$("#loginRadio").hide();
-		$("label[for='loginRadio']").hide();
-	}
-
 	$(".close-btn").click(function () {
 		$("#loginForm").fadeOut();
 		$(".forgot-password-form").fadeOut();
 		window.location.reload();
-	});
-
-	$("#showPassword").click(function () {
-		let $checkbox = $(this);
-		let $passwordField = $checkbox.closest('#loginForm').find('#password');
-		let change = $checkbox.is(":checked") ? "text" : "password";
-		$passwordField.prop('type', change);
 	});
 
 	$("#login-invest").click(function () {
@@ -149,39 +98,23 @@ $(document).ready(function () {
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
 			},
 			success: function (response) {
-				console.log(response.data['role']);
 				if (response.data['success'] === true) {
-					handleSuccessfulLogin(response.data['role']);
+					$("#loginBtn").hide();
+					window.location.href = "/dashboard/";
+					$("#loginForm").fadeOut();
+
+					if (response.data['role'] === 'Partner') {
+						localStorage.setItem('role', 'partner');
+					}
+
 				} else {
-					handleFailedLogin();
+					$("#loginErrorMessage").show();
+					$("#login").val("")
+					$("#password").val("");
 				}
 			}
 		});
 	});
-
-	function handleSuccessfulLogin(role) {
-		$("#loginBtn").hide();
-		$("#loginForm").fadeOut();
-		if (role === 'Investor') {
-			$("#loggedInUser").text('Особистий кабінет').show();
-			window.location.href = "/dashboard-investor/";
-		} else if (role === 'Manager') {
-			$("#loggedInUser").text('Кабінет Менеджера').show();
-			localStorage.setItem('role', 'manager');
-			window.location.href = "/dashboard-manager/";
-		} else if (role === 'Partner') {
-			$("#loggedInUser").text('Кабінет Партнера').show();
-			localStorage.setItem('role', 'partner');
-			window.location.href = "/dashboard-partner/";
-		}
-	}
-
-	function handleFailedLogin() {
-		$("#loginErrorMessage").show();
-		$("#login").val("");
-		$("#password").val("");
-	}
-
 
 	let urlParams = new URLSearchParams(window.location.search);
 	let signedIn = urlParams.get('signed_in');

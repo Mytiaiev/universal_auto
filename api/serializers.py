@@ -46,15 +46,38 @@ class DriverEfficiencySerializer(serializers.Serializer):
 
 
 class DriverEfficiencyRentSerializer(serializers.Serializer):
-    total_rent = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    start = serializers.CharField()
+    end = serializers.CharField()
     drivers_efficiency = DriverEfficiencySerializer(many=True)
 
 
 class CarEfficiencySerializer(serializers.Serializer):
     efficiency = CarEfficiencyDataSerializer(many=True)
     total_mileage = serializers.DecimalField(max_digits=10, decimal_places=2)
+    kasa = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class SummaryReportSerializer(serializers.Serializer):
     drivers = AggregateReportSerializer(many=True)
-    kasa = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_rent = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    start = serializers.CharField()
+    end = serializers.CharField()
+
+
+class CarEarningsSerializer(serializers.Serializer):
+    licence_plate = serializers.CharField()
+    earnings = serializers.DecimalField(max_digits=10, decimal_places=2)
+    mileage = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class TotalEarningsSerializer(serializers.Serializer):
+    total_earnings = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_mileage = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_spending = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class InvestorCarsSerializer(serializers.Serializer):
+    car_earnings = CarEarningsSerializer(many=True)
+    totals = TotalEarningsSerializer()
+    start = serializers.CharField()
+    end = serializers.CharField()

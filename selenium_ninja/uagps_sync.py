@@ -5,7 +5,8 @@ from _decimal import Decimal
 from django.db.models import Q
 from django.utils import timezone
 from app.models import UaGpsService, Driver, Vehicle, RentInformation, Partner, FleetOrder, \
-    DriverEfficiency, DriverReshuffle, CredentialPartner
+    DriverEfficiency, DriverReshuffle, CredentialPartner, ParkSettings
+from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 
 
@@ -98,20 +99,20 @@ class UaGpsSynchronizer:
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
 
-    def get_road_distance(self, partner_id, delta=None):
+    def get_road_distance(self, partner_id, delta=0):
         day = timezone.localtime() - datetime.timedelta(days=delta)
         road_dict = {}
-        for _driver in Driver.objects.filter(partner=partner_id):
-            if RentInformation.objects.filter(report_from=day, driver=_driver):
+        for driver in Driver.objects.filter(partner=partner_id):
+            if RentInformation.objects.filter(report_from=day, driver=driver):
                 continue
             reshuffle = DriverReshuffle.objects.filter(Q(swap_time__date=day) &
-                                                       (Q(driver_start=_driver) | Q(driver_finish=_driver))).first()
-            start, end = self.get_start_end(day, _driver, reshuffle)
-            if reshuffle or _driver.vehicle:
-                gps_id = reshuffle.swap_vehicle.gps_id if reshuffle else _driver.vehicle.gps_id
+                                                       (Q(driver_start=driver) | Q(driver_finish=driver))).first()
+            start, end = self.get_start_end(day, driver, reshuffle)
+            if reshuffle or driver.vehicle:
+                gps_id = reshuffle.swap_vehicle.gps_id if reshuffle else driver.vehicle.gps_id
                 road_distance = 0
                 road_time = datetime.timedelta()
-                completed = FleetOrder.objects.filter(driver=_driver,
+                completed = FleetOrder.objects.filter(driver=driver,
                                                       state=FleetOrder.COMPLETED,
                                                       accepted_time__gte=start,
                                                       accepted_time__lt=end).order_by('accepted_time')
@@ -155,7 +156,7 @@ class UaGpsSynchronizer:
                 #             road_distance += report[0]
                 #             road_time += report[1]
 
-                yesterday_order = FleetOrder.objects.filter(driver=_driver,
+                yesterday_order = FleetOrder.objects.filter(driver=driver,
                                                             finish_time__gt=start,
                                                             accepted_time__lte=start).first()
                 if yesterday_order:
@@ -164,7 +165,10 @@ class UaGpsSynchronizer:
                                                   gps_id)
                     road_distance += report[0]
                     road_time += report[1]
-                road_dict[_driver] = (road_distance, road_time, reshuffle)
+                if delta:
+                    road_dict[driver] = (road_distance, road_time, reshuffle)
+                else:
+                    road_dict[driver] = (road_distance, road_time, reshuffle, previous_finish_time)
         return road_dict
 
     def total_per_day(self, gps_id, day, driver=None, reshuffle=None):
@@ -192,3 +196,30 @@ class UaGpsSynchronizer:
                                            driver=driver,
                                            partner=Partner.get_partner(self.partner_id),
                                            rent_distance=rent_distance)
+
+    def check_today_rent(self):
+        start = timezone.make_aware(datetime.datetime.combine(timezone.localtime(), datetime.time.min))
+        in_road = self.get_road_distance(self.partner_id)
+        for driver, result in in_road.items():
+            distance, road_time, reshuffle, end_time = result
+            total_km = 0
+            if not end_time:
+                end_time = timezone.localtime()
+            if reshuffle:
+                if driver == reshuffle.driver_start:
+                    start = timezone.localtime(reshuffle.swap_time)
+                if driver == reshuffle.driver_finish:
+                    end = timezone.localtime(reshuffle.swap_time)
+                    end_time = end if end_time > end else end_time
+
+                total_km = self.generate_report(self.get_timestamp(start),
+                                                self.get_timestamp(end_time),
+                                                reshuffle.swap_vehicle.gps_id)[0]
+            elif driver.vehicle:
+                total_km = self.generate_report(self.get_timestamp(start),
+                                                self.get_timestamp(end_time),
+                                                driver.vehicle.gps_id)[0]
+            rent_distance = total_km - distance
+            time = end_time.strftime("%d.%m.%Y %H:%M")
+            bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
+                             text=f"Орендовано на {time} {driver} - {rent_distance}")

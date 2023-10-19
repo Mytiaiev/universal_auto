@@ -7,9 +7,10 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1.0">
 	<title>Admin Dashboard</title>
 	<!-- Montserrat Font -->
-	<link
-			href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
-			rel="stylesheet">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=Open+Sans&display=swap"
+				rel="stylesheet">
 	<!-- Material Icons -->
 	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
 				rel="stylesheet">
@@ -36,8 +37,11 @@
 		{#			<span class="material-icons-outlined">search</span>#}
 		{#		</div>#}
 		<div class="header-right">
-			<span id="account_circle"></span>
+			{% if user.is_authenticated %}
+			<span id="account_circle">{{user.first_name}} {{user.last_name}}</span>
+			{% endif %}
 		</div>
+		{% if user.is_authenticated %}
 		<div class="burger-menu">
 			<div class="burger-content">
 				<button id="changePassword" type="button">{% trans 'Змінити пароль' %}</button>
@@ -45,6 +49,7 @@
 			</div>
 			<div class="burger-icon"></div>
 		</div>
+		{% endif %}
 		<div id="passwordChangeForm" style="display: none;">
 			<span class="close-btn">&times;</span>
 			<h2>{% trans 'Після зміни пароля потрібно перезайти.' %}</h2>
@@ -58,9 +63,8 @@
 				<input type="password" id="newPassword" name="newPassword" required>
 				<p class="error-message" id="ChangeErrorMessage"
 					 style="display:none; color: red">{% trans 'Пароль не співпадає' %}</p>
-				<h4>{% trans 'Підтвердіть новий пароль:' %}</h4>
-				<input type="password" id="confirmPassword" name="confirmPassword"
-							 required>
+				<h4>{% trans 'Підтвердити новий пароль:' %}</h4>
+				<input type="password" id="confirmPassword" name="confirmPassword" required>
 
 				<button id="submitPassword" type="button">{% trans 'Змінити' %}</button>
 			</form>
@@ -78,19 +82,20 @@
 			</a>
 		</div>
 		<ul class="sidebar-list">
-			<li class="sidebar-list-item" onclick="window.location='{% url 'dashboard_manager' %}'">
+			<li class="sidebar-list-item" onclick="window.location='{% url 'dashboard' %}'">
 				<span class="material-icons-outlined"></span>{% trans 'Інформаційна панель' %}
 			</li>
-			<div id="managerVehicleBtnContainer">
+			<div id="VehicleBtnContainer">
 				<li class="sidebar-list-item">
-					<span id="managerVehicleBtn" class="clickable">
+					<span id="partnerVehicleBtn" class="clickable">
 						<span class="material-icons-outlined"></span>{% trans 'Автомобілі' %}
 					</span>
 				</li>
 			</div>
-			<div id="managerDriverBtnContainer">
+			{% if partner_group or manager_group %}
+			<div id="DriverBtnContainer">
 				<li class="sidebar-list-item">
-					<span id="managerDriverBtn" class="clickable">
+					<span id="partnerDriverBtn" class="clickable">
 						<span class="material-icons-outlined"></span>{% trans 'Водії' %}
 					</span>
 				</li>
@@ -98,11 +103,72 @@
 			<li class="sidebar-list-item admin" data-url="{% url 'admin:index' %}">
 				<span class="material-icons-outlined"></span>{% trans 'Керування автопарком' %}
 			</li>
-			{#			<li class="sidebar-list-item">#}
-			{#				<a href="#" target="_blank">#}
-			{#					<span class="material-icons-outlined"></span> Повідомлення#}
-			{#				</a>#}
-			{#			</li>#}
+			<div id="updateDatabaseContainer">
+				<li class="sidebar-list-item">
+					<span id="updateDatabase" class="clickable">
+						<span class="material-icons-outlined"></span>{% trans 'Оновлення бази даних' %}
+					</span>
+				</li>
+			</div>
+			<!-- Модальне вікно -->
+			<div id="loadingModal" class="modal">
+				<div class="modal-content">
+					<p id="loadingMessage">{% trans 'Зачекайте, будь ласка, поки оновлюється база даних...' %}</p>
+					<div id="loader" class="loader"></div>
+					<div id="checkmark" class="checkmark"></div>
+				</div>
+			</div>
+			{% endif %}
+			{% if partner_group %}
+			<div id="settingBtnContainer">
+				<li class="sidebar-list-item">
+					<span id="settingBtn" class="clickable">
+						<span class="material-icons-outlined"></span>{% trans 'Підключення агрегаторів' %}
+					</span>
+				</li>
+			</div>
+
+			<div id="settingsWindow" class="settings-window">
+				<div class="settings-content">
+					<span class="close-btn">&times;</span>
+					<h2>{% trans 'Компанії агрегаторів' %}</h2>
+
+					<form id="partnerForm">
+						{% csrf_token %}
+						<h3>{% trans 'Виберіть агрегатор:' %}</h3>
+						<div class="partner-options">
+							<input type="radio" id="uberOption" name="partner" value="uber" checked>
+							<label for="uberOption">Uber</label>
+
+							<input type="radio" id="boltOption" name="partner" value="bolt">
+							<label for="boltOption">Bolt</label>
+
+							<input type="radio" id="uklonOption" name="partner" value="uklon">
+							<label for="uklonOption">Uklon</label>
+
+							<input type="radio" id="gpsOption" name="partner" value="gps">
+							<label for="gpsOption">Gps</label>
+						</div>
+						<p class="error-message" id="loginErrorMessage"
+							 style="display:none; color: red">{% trans 'Вказано неправильний логін або пароль' %}</p>
+						<input type="text" id="partnerLogin" name="partnerLogin" placeholder={% trans 'Логін' %} required>
+						<input class="showPassword partnerPassword" type="password" id="partnerPassword" name="partnerPassword"
+									 placeholder={% trans 'Пароль' %} required>
+						<div class="loader-login"></div>
+					</form>
+
+					<p class="opt-partnerForm">
+						<input type="checkbox" class="showPasswordCheckbox" id="showPasswordPartner">
+						<label for="showPasswordPartner">{% trans 'Показати пароль' %}</label>
+						<button type="button" class="login-btn">{% trans 'Увійти' %}</button>
+					</p>
+					<div class="login-ok">
+						<span class='successful-message'>{% trans "Зв'язок встановлено!" %}</span>
+						<button class='logout-btn' data-form='logout'>{% trans "Розірвати зв'язок" %}</button>
+					</div>
+				</div>
+			</div>
+			{% endif %}
 		</ul>
 	</aside>
 	<!-- End Sidebar -->
@@ -110,7 +176,7 @@
 	<!-- Main Manager-->
 	<main class="main-container">
 		<div class="main-title">
-			<h2>{% trans 'Інформаційна панель Менеджера' %}</h2>
+			<h2>{% trans 'Інформаційна панель' %}</h2>
 		</div>
 		<div class="common-period">
 			<label for="period-common">{% trans 'Виберіть період:' %}</label>
@@ -128,10 +194,10 @@
 		</div>
 		<div id="datePicker" style="display: none;">
 			<label for="start_date">{% trans 'Початкова дата:' %}</label>
-			<input type="date" id="start_date" name="start_date">
+			<input type="date" id="start_report" name="start_date">
 			<label for="end_date">{% trans 'Кінцева дата:' %}</label>
-			<input type="date" id="end_date" name="end_date">
-			<input class="apply-filter-button" type="button" value={% trans 'Фільтрувати' %} onclick="applyCustomDateRange()">
+			<input type="date" id="end_report" name="end_date">
+			<input class="apply-filter-button" type="button" onclick="applyCustomDateRange()" value={% trans 'Фільтрувати' %}>
 		</div>
 		<div class="main-cards">
 			<div class="card">
@@ -140,8 +206,22 @@
 				<h2>{% trans 'Період' %}</h2>
 				<span class="weekly-income-dates"></span>
 			</div>
+			{% if investor_group %}
 			<div class="card">
-				<h2>{% trans 'Загльна оренда' %}</h2>
+				<h2>{% trans 'Загальний Пробіг' %}</h2>
+				<span class="income-km"></span>
+				<h2>{% trans 'Період' %}</h2>
+				<span class="weekly-income-dates"></span>
+			</div>
+			<div class="card">
+				<h2>{% trans 'Загальні витрати на авто' %}</h2>
+				<span class="spending-all"></span>
+				<h2>{% trans 'Період' %}</h2>
+				<span class="weekly-income-dates"></span>
+			</div>
+			{% else %}
+			<div class="card">
+				<h2>{% trans 'Загальна оренда' %}</h2>
 				<span class="weekly-income-rent"></span>
 				<h2>{% trans 'Період' %}</h2>
 				<span class="weekly-income-dates"></span>
@@ -152,6 +232,7 @@
 				<h2>{% trans 'Період' %}</h2>
 				<span class="weekly-income-dates"></span>
 			</div>
+			{% endif %}
 			{#			<div class="card">#}
 			{#				<div class="card-inner">#}
 			{#					<h2>Сповіщення</h2>#}
@@ -161,52 +242,48 @@
 			{#			</div>#}
 		</div>
 		<div class="charts">
-
+			{% if investor_group %}
 			<div class="charts-card">
-				<h2 class="chart-title">{% trans 'Каса' %}</h2>
-				<div id="noDataMessage-1" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
-				<div id="bar-chart"></div>
+				<h2 class="chart-title">{% trans 'Дохід' %}</h2>
+				<div class="noDataMessage1" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
+				<div id="investor-bar-chart"></div>
 			</div>
 
 			<div class="charts-card">
+				<h2 class="chart-title">{% trans 'Пробіг автомобіля' %}</h2>
+				<div class="noDataMessage2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
+				<div id="investor-area-chart"></div>
+			</div>
+			{% else %}
+			<div class="charts-card">
+				<h2 class="chart-title">{% trans 'Каса' %}</h2>
+				<div class="noDataMessage1" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
+				<div id="bar-chart"></div>
+			</div>
+			<div class="charts-card">
 				<h2 class="chart-title">{% trans 'Ефективність автомобіля' %}</h2>
-				<div id="noDataMessage-2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
-				{#				<div class="car-select">#}
-				{#					<select id="vehicle-select">#}
-				{#						{% for vehicle in get_all_vehicle %}#}
-				{#							<option>{{ vehicle.licence_plate }}</option>#}
-				{#						{% endfor %}#}
-				{#					</select>#}
-				{#				</div>#}
-				{#				<div class="car-select-2">#}
-				{#					<select id="vehicle-select-2">#}
-				{#						{% for vehicle in get_all_vehicle %}#}
-				{#							<option>{{ vehicle.licence_plate }}</option>#}
-				{#						{% endfor %}#}
-				{#					</select>#}
-				{#				</div>#}
+				<div class="noDataMessage2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
 				<div id="area-chart"></div>
 				<button type="button" id="reset-button">{% trans "Скинути zoom" %}</button>
 			</div>
+			{% endif %}
 		</div>
 		{% for car in car_piggy_bank %}
 			<div class="payback-car">
 				<div class="car-item">
 					<div class="car-image">
-						<img src="{% static 'app/images/slider-img-1.webp' %}"
-								 alt="Зображення авто">
+						<img src="{% static 'app/images/slider-img-1.webp' %}" alt="Зображення авто">
 					</div>
 					<div class="car-details">
 						<p>{% trans 'Номер авто:' %}<br>{{ car.licence_plate }}</p>
-						<p>{% trans 'Заробіток:' %}<br>₴ {{ car.total_kasa }}</p>
-						<p>{% trans 'Витрати:' %}<br>₴ {{ car.total_spent }}</p>
+						<p>{% trans 'Заробіток:' %}<br>₴ {{ car.kasa }}</p>
+						<p>{% trans 'Витрати:' %}<br>₴ {{ car.spending }}</p>
 						<div class="progress-bar">
-							<div class="progress"
-									 style="width: {{ car.progress_percentage }}%; max-width: 100%">
+							<div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
 								<div class="progress-label" style="color: #0a0a0a">{{ car.progress_percentage }}%</div>
 							</div>
 						</div>
-						<p>{% trans 'Вартість авто:' %}<br>₴ {{ car.purchase_price }}</p>
+						<p>{% trans 'Вартість авто:' %}<br>₴ {{ car.price }}</p>
 					</div>
 				</div>
 			</div>
@@ -214,12 +291,11 @@
 		<div class="info-driver">
 			<div class="title-driver">
 				<h2>{% trans 'Рейтинг Водіїв' %}</h2>
-				<h3 class="income-drivers-date"></h3>
+				<h2 class="income-drivers-date"></h2>
 			</div>
-			<div>
+			<div class="filter">
 				<label for="period">{% trans 'Виберіть період:' %}</label>
 				<select id="period" name="period">
-					{#				<option value="today">Сьогодні</option>#}
 					<option value="yesterday">{% trans 'Вчора' %}</option>
 					<option value="current_week">{% trans 'Поточний тиждень' %}</option>
 					<option value="last_week">{% trans 'Минулий тиждень' %}</option>
@@ -238,16 +314,18 @@
 				<input class="apply-filter-button" type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
 			</div>
 			<table class="driver-table">
-				<tr>
-					<th>{% trans 'Водій' %}</th>
-					<th>{% trans 'Каса' %}</th>
-					<th>{% trans 'Кількість замовлень' %}</th>
-					<th>{% trans 'Відсоток прийнятих замовлень' %}</th>
-					<th>{% trans 'Середній чек, грн' %}</th>
-					<th>{% trans 'Пробіг, км' %}</th>
-					<th>{% trans 'Ефективність, грн/км' %}</th>
-					<th>{% trans 'Час в дорозі' %}</th>
-				</tr>
+				<thead>
+					<tr>
+						<th class="sortable" data-sort="driver">{% trans 'Водій' %}</th>
+						<th class="sortable" data-sort="kasa">{% trans 'Каса' %}</th>
+						<th class="sortable" data-sort="orders">{% trans 'Кількість замовлень' %}</th>
+						<th class="sortable" data-sort="accept">{% trans 'Відсоток прийнятих замовлень' %}</th>
+						<th class="sortable" data-sort="price">{% trans 'Середній чек, грн' %}</th>
+						<th class="sortable" data-sort="mileage">{% trans 'Пробіг, км' %}</th>
+						<th class="sortable" data-sort="efficiency">{% trans 'Ефективність, грн/км' %}</th>
+						<th class="sortable" data-sort="road">{% trans 'Час в дорозі' %}</th>
+					</tr>
+				</thead>
 				<tr>
 					<td></td>
 					<td></td>
@@ -287,10 +365,17 @@
 	let ajaxGetUrl = "{% url 'get_request' %}";
 </script>
 <!-- ApexCharts -->
-<script
-		src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js"></script>
-<script
-		src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
-<script src="{% static 'dashboard/js/scripts-manager.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.41.0/dist/apexcharts.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" defer></script>
+{% if partner_group %}
+
+<script src="{% static 'dashboard/js/partner.js' %}" defer></script>
+{% endif %}
+{% if investor_group %}
+<script src="{% static 'dashboard/js/scripts-investor.js' %}" defer></script>
+{% else %}
+<script src="{% static 'dashboard/js/scripts-partner.js' %}" defer></script>
+
+{% endif %}
 </body>
 </html>

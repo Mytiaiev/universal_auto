@@ -23,7 +23,7 @@ function toggleSidebar() {
 // ---------- CHARTS ----------
 
 // BAR CHART
-let barChartOptions = {
+let investorBarChartOptions = {
 	series: [{
 		data: [],
 		name: gettext("Дохід: "),
@@ -37,13 +37,13 @@ let barChartOptions = {
 		},
 	},
 	colors: [
-		"#2962ff",
-		"#d50000",
-		"#2e7d32",
-		"#ff6d00",
-		"#583cb3",
-		"#c51162",
-		"#00bfa5",
+		"#89A632",
+		"#FDCA10",
+		"#18A64D",
+		"#1858A6",
+		"#79C8C5",
+		"#EC6323",
+		"#018B72"
 	],
 	plotOptions: {
 		bar: {
@@ -134,12 +134,12 @@ let barChartOptions = {
 	}
 };
 
-let barChart = new ApexCharts(document.querySelector("#bar-chart"), barChartOptions);
-barChart.render();
+let investorBarChart = new ApexCharts(document.querySelector("#investor-bar-chart"), investorBarChartOptions);
+investorBarChart.render();
 
 
 // AREA CHART
-let areaChartOptions = {
+let investorAreaChartOptions = {
 	series: [{
 		data: [],
 		name: gettext("Пробіг (км): "),
@@ -244,133 +244,75 @@ let areaChartOptions = {
 	}
 };
 
-let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
-areaChart.render();
+let investorAreaChart = new ApexCharts(document.querySelector("#investor-area-chart"), investorAreaChartOptions);
+investorAreaChart.render();
 
-// Обробка графіків
-function loadDefaultKasa(period, startDate, endDate) {
-	$.ajax({
-		type: "GET",
-		url: ajaxGetUrl,
-		data: {
-			action: 'get_cash_investor',
-			period: period,
-			start_date: startDate,
-			end_date: endDate,
-		},
-		success: function (response) {
-			$(".apply-filter-button").prop("disabled", false);
-			let isAllValuesZero = true;
-			for (let key in response.data[0]) {
-				if (parseFloat(response.data[0][key]) !== 0) {
-					isAllValuesZero = false;
-					break;
-				}
-			}
-			if (isAllValuesZero) {
-				$("#noDataMessage-1").show();
-				$('#bar-chart').hide();
-			} else {
-				$("#noDataMessage-1").hide();
-				$('#bar-chart').show();
-				let data = response.data[0];
-				let totalAmount = parseFloat(response.data[1]).toFixed(2);
-				let totalKm = parseFloat(response.data[2]).toFixed(2);
-				let spending = response.data[3];
-				let startDate = response.data[4];
-				let endDate = response.data[5];
-				let formattedData = {};
+function fetchInvestorData(period, start, end) {
+		let apiUrl;
+		if (period === 'custom') {
+		apiUrl = `/api/investor_info/${start}&${end}/`;
+		} else {
+    	apiUrl = `/api/investor_info/${period}/`;
+    	};
+    $.ajax({
+        url: apiUrl,
+        type: 'GET',
+        dataType: 'json',
+        success: function (data) {
+            $(".apply-filter-button").prop("disabled", false);
+            let totalEarnings = data[0]['totals']['total_earnings'];
+            let totalMileage = data[0]['totals']['total_mileage'];
+            let totalSpending = data[0]['totals']['total_spending'];
+            let startDate = data[0]['start'];
+            let endDate = data[0]['end'];
+            const vehiclesData = data[0]['car_earnings'];
+			const categories = vehiclesData.map(vehicle => vehicle.licence_plate);
+        if (totalEarnings !== "0.00") {
+        	$(".noDataMessage1").hide();
+			$('#investor-bar-chart').show();
 
-				Object.keys(data).forEach(function (key) {
-					let value = parseFloat(data[key]).toFixed(2);
-					if (value !== 0) {
-						let formattedKey = key;
-						formattedData[formattedKey] = value;
-					}
-				});
+            const values = vehiclesData.map(vehicle => vehicle.earnings);
+            investorBarChartOptions.series[0].data = values;
+            investorBarChartOptions.xaxis.categories = categories;
+            investorBarChart.updateOptions(investorBarChartOptions);
 
-				let sortedKeys = Object.keys(formattedData).sort();
-				let sortedFormattedData = {};
-				sortedKeys.forEach(function (key) {
-					sortedFormattedData[key] = formattedData[key];
-				});
+        } else {
+        	$(".noDataMessage1").show();
+			$('#investor-bar-chart').hide()
+        };
+        if (totalMileage !== "0.00"){
+            $(".noDataMessage2").hide();
+            $('#investor-area-chart').show();
 
-				barChartOptions.series[0].data = Object.values(sortedFormattedData);
-				barChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-				barChart.updateOptions(barChartOptions);
-
-				if (period === 'yesterday') {
-					$('.weekly-income-dates').text(startDate);
-					$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
-					$('.spending-all').text(spending + gettext(' грн'));
-					$('.income-km').text(totalKm + gettext(' км'));
-				} else {
-					$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
-					$('.weekly-income-amount').text(totalAmount + gettext(' грн'));
-					$('.spending-all').text(spending + gettext(' грн'));
-					$('.income-km').text(totalKm + gettext(' км'));
-				}
-			}
-		}
-	});
+            const carValue = vehiclesData.map(vehicle => vehicle.mileage);
+            investorAreaChartOptions.series[0].data = carValue;
+			investorAreaChartOptions.xaxis.categories = categories;
+			investorAreaChart.updateOptions(investorAreaChartOptions);
+        } else {
+            $(".noDataMessage2").show();
+		    $('#investor-area-chart').hide();
+        };
+        if (period === 'yesterday') {
+			$('.weekly-income-dates').text(startDate);
+		} else {
+			$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+			};
+		$('.weekly-income-amount').text(totalEarnings + gettext(' грн'));
+		$('.spending-all').text(totalSpending + gettext(' грн'));
+		$('.income-km').text(totalMileage + gettext(' км'));
+        },
+        error: function (error) {
+            console.error(error);
+        }
+		});
 }
-
-function loadEffectiveChart(period, startDate, endDate) {
-	$.ajax({
-		type: "GET",
-		url: ajaxGetUrl,
-		data: {
-			action: 'investor',
-			period: period,
-			start_date: startDate,
-			end_date: endDate,
-		},
-		success: function (response) {
-			let dataObject = response.data;
-			if (Object.keys(response.data).length === 0) {
-				$("#noDataMessage-2").show();
-				$('#area-chart').hide();
-			} else {
-				$("#noDataMessage-2").hide();
-				$('#area-chart').show();
-				let carData = {};
-
-				// Проходимося по кожному ідентифікатору автомобіля
-				Object.keys(dataObject).forEach(function (carNumber) {
-					carData[carNumber] = dataObject[carNumber].reduce(function (totalMileage, item) {
-						return totalMileage + parseFloat(item.mileage);
-					}, 0).toFixed(2);
-				});
-
-				// Сортуємо об'єкт за значеннями
-				let sortedKeys = Object.keys(carData).sort(function (a, b) {
-					return carData[a] - carData[b];
-				});
-
-				let sortedFormattedData = {};
-				sortedKeys.forEach(function (key) {
-					sortedFormattedData[key] = carData[key];
-				});
-
-				console.log(sortedFormattedData);
-
-
-				areaChartOptions.series[0].data = Object.values(sortedFormattedData);
-				areaChartOptions.xaxis.categories = Object.keys(sortedFormattedData);
-				areaChart.updateOptions(areaChartOptions);
-			}
-		}
-	});
-}
-
 
 const commonPeriodSelect = $('#period-common');
 
 commonPeriodSelect.on('change', function () {
 	const selectedPeriod = commonPeriodSelect.val();
 	if (selectedPeriod !== "custom") {
-		loadDefaultKasa(selectedPeriod);
-		loadEffectiveChart(selectedPeriod);
+		fetchInvestorData(selectedPeriod);
 	}
 	if (selectedPeriod === "custom") {
 		$("#datePicker").css("display", "block");
@@ -379,8 +321,8 @@ commonPeriodSelect.on('change', function () {
 	}
 });
 
-loadDefaultKasa('yesterday');
-loadEffectiveChart('yesterday');
+fetchInvestorData('yesterday');
+
 
 function showDatePicker(periodSelectId, datePickerId) {
 	let periodSelect = $("#" + periodSelectId);
@@ -393,33 +335,17 @@ function showDatePicker(periodSelectId, datePickerId) {
 	}
 }
 
-function applyCustomDate() {
+function applyCustomDateRange() {
 	$(".apply-filter-button").prop("disabled", true);
 
-	let startDate = $("#start_date").val();
-	let endDate = $("#end_date").val();
+	let startDate = $("#start_report").val();
+	let endDate = $("#end_report").val();
 
 	const selectedPeriod = commonPeriodSelect.val();
-	loadDefaultKasa(selectedPeriod, startDate, endDate);
-	loadEffectiveChart(selectedPeriod, startDate, endDate);
+	fetchInvestorData(selectedPeriod, startDate, endDate);
 }
 
 $(document).ready(function () {
-
-	$.ajax({
-		url: ajaxGetUrl,
-		type: "GET",
-		data: {
-			action: "is_logged_in"
-		},
-		success: function (data) {
-			if (data.is_logged_in === true) {
-				let userName = data.user_name;
-				$("#account_circle").text(userName).show();
-				$("#logout-dashboard").show();
-			}
-		}
-	})
 
 	$("#logout-dashboard").click(function () {
 		$.ajax({
@@ -472,23 +398,26 @@ $(document).ready(function () {
 			});
 		}
 	});
-	// burger-menu
-	$('.burger-menu').click(function () {
-		$('.burger-menu').toggleClass('open');
-	});
-
-	$('#investorVehicleBtnContainer').click(function () {
-		$('.payback-car').css('display', 'flex');
-		$('.charts').hide();
-		$('.main-cards').hide();
-		$('.common-period').hide();
-		$('#datePicker').hide();
-		$('#sidebar').removeClass('sidebar-responsive');
-	});
 
 	$(".close-btn").click(function () {
 		$("#settingsWindow").fadeOut();
 		sessionStorage.setItem('settings', 'false');
 		location.reload();
 	});
-});
+
+	// burger-menu
+	$('.burger-menu').click(function () {
+		$('.burger-menu').toggleClass('open');
+	});
+
+	$('#VehicleBtnContainer').click(function () {
+		$('.payback-car').css('display', 'flex');
+		$('.charts').hide();
+		$('.main-cards').hide();
+		$('.info-driver').hide();
+		$('.common-period').hide();
+		$('#datePicker').hide()
+		$('.driver-container').hide()
+		$('#sidebar').removeClass('sidebar-responsive');
+	});
+})
