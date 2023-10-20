@@ -30,6 +30,12 @@ class SalaryCalculation(models.TextChoices):
     DAY = 'DAY', 'Денний'
 
 
+class ShiftTypes(models.TextChoices):
+    ONE = 'ONE', 'Один день'
+    TWO = 'TWO', 'Два дні'
+    THREE = 'THREE', 'Три дні'
+
+
 class PaymentTypes(models.TextChoices):
     CASH = 'cash', 'Готівка'
     CARD = 'card', 'Картка'
@@ -38,6 +44,7 @@ class PaymentTypes(models.TextChoices):
     def map_payments(cls, payment):
 
         payment_type_mapping = {
+            'app_payment': cls.CARD,
             'apple': cls.CARD,
             'google': cls.CARD,
             'card': cls.CARD,
@@ -90,6 +97,10 @@ class Schema(models.Model):
     rate = models.DecimalField(decimal_places=2, max_digits=3, default=0.5, verbose_name='Відсоток водія')
     rent_price = models.IntegerField(default=6, verbose_name='Вартість холостого пробігу')
     limit_distance = models.IntegerField(default=400, verbose_name='Ліміт пробігу за період')
+    salary_calculation = models.CharField(max_length=25, choices=SalaryCalculation.choices,
+                                          default=SalaryCalculation.WEEK, verbose_name='Період розрахунку зарплати')
+    shift_time = models.TimeField(null=True, verbose_name="Час проведення розрахунку")
+    shift_period = models.IntegerField(null=True, choices=ShiftTypes.choices)
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     @classmethod
@@ -388,8 +399,6 @@ class Driver(User):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Автомобіль')
     worked = models.BooleanField(default=True, verbose_name='Працює')
     driver_status = models.CharField(max_length=35, null=False, default=OFFLINE, verbose_name='Статус водія')
-    salary_calculation = models.CharField(max_length=25, choices=SalaryCalculation.choices,
-                                          default=SalaryCalculation.WEEK, verbose_name='Період розрахунку зарплати')
     schema = models.ForeignKey(Schema, null=True, on_delete=models.CASCADE, verbose_name='Схема роботи')
 
     class Meta:
@@ -1150,6 +1159,7 @@ def admin_image_preview(image):
 
 class CarEfficiency(models.Model):
     report_from = models.DateField(verbose_name='Звіт за')
+    drivers = models.ManyToManyField(Driver, through="DriverEffVehicleKasa", verbose_name='Водії', db_index=True)
     vehicle = models.ForeignKey(Vehicle, null=True, on_delete=models.CASCADE, verbose_name='Автомобіль', db_index=True)
     total_kasa = models.DecimalField(decimal_places=2, max_digits=10, default=0, verbose_name='Каса')
     total_spending = models.DecimalField(null=True, decimal_places=2, max_digits=10, default=0, verbose_name='Витрати')
@@ -1163,6 +1173,12 @@ class CarEfficiency(models.Model):
 
     def __str__(self):
         return str(self.vehicle)
+
+
+class DriverEffVehicleKasa(models.Model):
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+    efficiency_car = models.ForeignKey(CarEfficiency, on_delete=models.CASCADE)
+    kasa = models.DecimalField(max_digits=10, decimal_places=2)
 
 
 class DriverEfficiency(models.Model):
