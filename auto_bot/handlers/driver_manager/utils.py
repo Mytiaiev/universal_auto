@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 from _decimal import Decimal
@@ -195,10 +196,13 @@ def calculate_efficiency(vehicle, start, end):
     vehicle_drivers = []
     for obj in efficiency_objects:
         drivers = obj.drivers.all().values_list('user_ptr__name', 'user_ptr__second_name', 'drivereffvehiclekasa__kasa')
-
+        driver_kasa_totals = defaultdict(float)
         if drivers:
-            driver_info = [f"{first_name} {second_name} ({str(kasa)})" for
-                           first_name, second_name, kasa in drivers]
+            for first_name, second_name, kasa in drivers:
+                driver_key = (first_name, second_name)
+                driver_kasa_totals[driver_key] += kasa
+            driver_info = [f"{first_name} {second_name} ({total_kasa})" for
+                           (first_name, second_name), total_kasa in driver_kasa_totals.items()]
             vehicle_drivers.extend(driver_info)
     if efficiency_objects:
         total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
@@ -263,7 +267,8 @@ def calculate_efficiency_driver(driver, start, end):
     driver_vehicles = []
     for obj in efficiency_objects:
         vehicles = obj.vehicles.all().values_list('licence_plate', flat=True)
-        driver_vehicles.extend(vehicles)
+        unique_vehicles = set(vehicles)
+        driver_vehicles.extend(unique_vehicles)
     if efficiency_objects:
         efficiency = 0
         accept_percent = 0
