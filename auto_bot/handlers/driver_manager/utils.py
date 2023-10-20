@@ -197,12 +197,9 @@ def calculate_efficiency(vehicle, start, end):
         drivers = obj.drivers.all().values_list('user_ptr__name', 'user_ptr__second_name', 'drivereffvehiclekasa__kasa')
 
         if drivers:
-            print(drivers) #<QuerySet [('Євген', 'Тіторчук', Decimal('2071.60'))]>
-            print(drivers[::2])
             driver_info = [f"{first_name} {second_name} ({str(kasa)})" for
-                           first_name, second_name, kasa in zip(drivers[::3], drivers[1::3], map(str, drivers[2::3]))]
-            print(driver_info)#[]
-            vehicle_drivers.extend(drivers)
+                           first_name, second_name, kasa in drivers]
+            vehicle_drivers.extend(driver_info)
     if efficiency_objects:
         total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
         total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
