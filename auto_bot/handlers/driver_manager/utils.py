@@ -201,7 +201,7 @@ def calculate_efficiency(vehicle, start, end):
         for first_name, second_name, kasa in drivers:
             driver_key = (first_name, second_name)
             driver_kasa_totals[driver_key] += float(kasa)
-    driver_info = [f"{first_name} {second_name} ({total_kasa})" for
+    driver_info = [f"{first_name} {second_name} ({total_kasa:.2f})" for
                    (first_name, second_name), total_kasa in driver_kasa_totals.items()]
     vehicle_drivers.extend(driver_info)
     if efficiency_objects:
