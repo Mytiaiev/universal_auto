@@ -2510,6 +2510,85 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 /*End Index*/
 
 
+/*Auto Park page*/
+
+/*block 1*/
+
+.auto-park-one-section .container {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.auto-park-left {
+	position: relative;
+	width: 100%;
+	height: auto;
+	left: -30px;
+}
+
+.auto-park-right .decorate-img {
+	margin-top: -130px;
+	right: 75px;
+	position: relative;
+	z-index: -1;
+}
+
+.auto-park-right .decorate-img img {
+	width: 190%;
+	height: auto;
+}
+
+.auto-park-right .one-info {
+	position: relative;
+	padding: 10px;
+	z-index: 1022;
+	margin-top: -450px;
+	right: -100px;
+}
+
+.auto-park-right .one-info h2 {
+	color: #EC6323;
+	text-align: center;
+	font-size: 36px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.auto-park-right .one-info p {
+	color: #FFF;
+	text-align: center;
+	font-size: 30px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+.free-access-btn button {
+	margin-top: 10px;
+	width: 100%;
+	background-color: #EC6323;
+	color: #fff;
+	padding: 15px 0;
+	border: none;
+	border-radius: 25px;
+	font-size: 15px;
+	text-decoration: none;
+	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+/*block 2*/
+
+
+
+/*End Auto Park page*/
+
+
 /*Invest page*/
 
 /* investment_section */

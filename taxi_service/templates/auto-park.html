@@ -1,0 +1,32 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load i18n %}
+<!-- autoparck section -->
+{% block content %}
+  <!-- auto park one section -->
+
+  <section class="auto-park-one-section">
+    <div class="container">
+      <div class="auto-park-left">
+        <img class="image-map" src="{% static 'app/images/auto-park-img/park-block-1.webp' %}" alt="one image">
+      </div>
+      <div class="auto-park-right">
+        <div class="decorate-img">
+          <img src="{% static 'app/images/index-one-block-3.webp' %}" alt="three image">
+          <div class="one-info">
+            <h2>{% trans "Переверніть свій автопарк на 360 градусів" %}</h2>
+            <p class="text-1">{% trans "Автоматизована система від Ninja Taxi- це ключ до ефективності, яка переверне ваш бізнес!" %}
+            </p>
+            <div class="free-access-btn">
+              <a href="#">
+                <button>{% trans "Отримати безкоштовнйи доступ на місяць " %}</button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- end auto park one section -->
+{% endblock %}
