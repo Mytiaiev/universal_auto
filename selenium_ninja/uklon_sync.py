@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes
-from auto_bot.handlers.order.utils import check_reshuffle
+from auto_bot.handlers.order.utils import check_vehicle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
@@ -143,7 +143,7 @@ class UklonRequest(Synchronizer):
             for i in data:
                 db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id'],
                                                                      partner=self.partner_id).driver
-                vehicle = check_reshuffle(db_driver)[0]
+                vehicle = check_vehicle(db_driver, day, max_time=True)[0]
                 order = Payments(
                     report_from=day.date(),
                     vendor_name=self.fleet,
@@ -247,7 +247,8 @@ class UklonRequest(Synchronizer):
             orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
             try:
                 for order in orders['items']:
-                    if FleetOrder.objects.filter(order_id=order['id']) or order['status'] in ("running", "accepted", "arrived"):
+                    if (FleetOrder.objects.filter(order_id=order['id']) or
+                            order['status'] in ("running", "accepted", "arrived")):
                         continue
                     detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
                                                 params={"driverId": str_driver_id})

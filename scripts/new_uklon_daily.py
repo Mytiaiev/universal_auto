@@ -7,5 +7,3 @@ def run(*args):
     for key in result:
         print(key)
         print(result[key])
-
-

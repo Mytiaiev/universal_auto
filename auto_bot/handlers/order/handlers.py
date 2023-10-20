@@ -16,7 +16,7 @@ from auto_bot.handlers.order.keyboards import inline_spot_keyboard, inline_route
     inline_add_info_kb, user_duty, personal_order_start_kb, personal_order_time_kb, \
     personal_order_end_kb, personal_order_back_kb
 from auto_bot.handlers.order.utils import buttons_addresses, text_to_client, validate_text, get_geocoding_address, \
-    save_location_to_redis, check_reshuffle
+    save_location_to_redis, check_vehicle
 from auto_bot.main import bot
 from scripts.conversion import get_address, get_location_from_db, get_route_price
 from auto_bot.handlers.order.static_text import *
@@ -530,7 +530,7 @@ def handle_callback_order(update, context):
     query = update.callback_query
     data = query.data.split(' ')
     driver = Driver.get_by_chat_id(chat_id=query.from_user.id)
-    vehicle = check_reshuffle(driver)[0]
+    vehicle = check_vehicle(driver)[0]
     order = Order.objects.filter(pk=int(data[1])).first()
     if order.status_order in (Order.COMPLETED, Order.IN_PROGRESS):
         query.edit_message_text(text=already_accepted)
@@ -647,7 +647,7 @@ def handle_order(update, context):
             query.edit_message_text(text=calc_price_text)
             start_route = redis_instance().hget(chat_id, 'start_route')
             s, e = int(start_route), int(timezone.localtime().timestamp())
-            vehicle = check_reshuffle(driver)[0]
+            vehicle = check_vehicle(driver)[0]
             get_distance_trip.delay(data[1], query.message.message_id, s, e, vehicle.gps_id)
         else:
             if redis_instance().hexists(chat_id, 'delivary_price_duty'):
