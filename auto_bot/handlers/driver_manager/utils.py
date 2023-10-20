@@ -194,16 +194,16 @@ def calculate_efficiency(vehicle, start, end):
     efficiency_objects = CarEfficiency.objects.filter(report_from__range=(start, end),
                                                       vehicle=vehicle)
     vehicle_drivers = []
+    driver_kasa_totals = defaultdict(float)
     for obj in efficiency_objects:
         drivers = obj.drivers.all().values_list('user_ptr__name', 'user_ptr__second_name', 'drivereffvehiclekasa__kasa')
-        driver_kasa_totals = defaultdict(float)
-        if drivers:
-            for first_name, second_name, kasa in drivers:
-                driver_key = (first_name, second_name)
-                driver_kasa_totals[driver_key] += kasa
-            driver_info = [f"{first_name} {second_name} ({total_kasa})" for
-                           (first_name, second_name), total_kasa in driver_kasa_totals.items()]
-            vehicle_drivers.extend(driver_info)
+
+        for first_name, second_name, kasa in drivers:
+            driver_key = (first_name, second_name)
+            driver_kasa_totals[driver_key] += float(kasa)
+    driver_info = [f"{first_name} {second_name} ({total_kasa})" for
+                   (first_name, second_name), total_kasa in driver_kasa_totals.items()]
+    vehicle_drivers.extend(driver_info)
     if efficiency_objects:
         total_kasa = efficiency_objects.aggregate(kasa=Sum('total_kasa'))['kasa']
         total_distance = efficiency_objects.aggregate(total_distance=Sum('mileage'))['total_distance']
@@ -264,11 +264,12 @@ def get_efficiency(manager_id=None, start=None, end=None):
 def calculate_efficiency_driver(driver, start, end):
     efficiency_objects = DriverEfficiency.objects.filter(report_from__range=(start, end),
                                                          driver=driver)
+    unique_vehicles = set()
     driver_vehicles = []
     for obj in efficiency_objects:
         vehicles = obj.vehicles.all().values_list('licence_plate', flat=True)
-        unique_vehicles = set(vehicles)
-        driver_vehicles.extend(unique_vehicles)
+        unique_vehicles.update(vehicles)
+    driver_vehicles.extend(unique_vehicles)
     if efficiency_objects:
         efficiency = 0
         accept_percent = 0
@@ -285,7 +286,7 @@ def calculate_efficiency_driver(driver, start, end):
             avg_price = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_orders']))
         if aggregations['total_distance']:
             efficiency = float('{:.2f}'.format(aggregations['total_kasa'] / aggregations['total_distance']))
-        total_seconds = int(aggregations['total_hours'].total_seconds())
+        total_seconds = int(aggregations['total_hours'].total_seconds()) if aggregations['total_hours'] else 0
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         total_hours_formatted = f"{hours:02}:{minutes:02}:{seconds:02}"
