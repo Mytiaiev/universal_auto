@@ -2703,8 +2703,168 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 /*block 4*/
 
 .auto-park-four-section {
-	margin-top: 80px;
+	margin-top: 120px;
 }
+
+.auto-park-four-section .container {
+	display: flex;
+	align-items: center;
+}
+
+.auto-park-four-section .container > div {
+	flex: 0 0 585px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.auto-park-four-section .img-box {
+	flex: 0 0 585px;
+}
+
+.auto-park-four-section .img-box .img-1 {
+	position: relative;
+	margin-bottom: 0;
+	right: 95px;
+}
+
+.auto-park-four-section .img-box .img-2 {
+	position: relative;
+	top: 335px;
+	right: 1540px;
+	margin-top: 0;
+	z-index: -1;
+}
+
+.spending-box {
+	flex-direction: column;
+}
+
+.spending-description h2 {
+	margin-top: 75px;
+	color: #141E17;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.spending-description p {
+	width: 75%;
+	margin-top: 15px;
+	color: #53785E;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+.spending-box .buttons-box button {
+	margin-right: 40px;
+	padding: 15px 20px;
+	border: none;
+	border-radius: 20px;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+.spending-box .buttons-box button {
+	color: #fff;
+	background-color: #EC6323;
+}
+
+.spending-box .buttons-box button {
+	margin-top: 15px;
+}
+
+/*block 5*/
+
+.auto-park-five-section {
+	margin-top: 10px;
+}
+
+.auto-park-five-section .container {
+	display: flex;
+	align-items: center;
+}
+
+.auto-park-five-section .control-box {
+	position: relative;
+	right: 135px;
+}
+
+.auto-park-five-section .control-box h2 {
+	width: 675px;
+	margin-top: 25px;
+	color: #141E17;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.auto-park-five-section .control-box ul {
+	list-style: none;
+	padding: 0;
+}
+
+.auto-park-five-section .control-box ul li {
+	margin-top: 15px;
+	color: #53785E;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+.auto-park-five-section .control-box ul li::before {
+	content: "";
+	display: inline-block;
+	width: 50px;
+	height: 50px;
+	background-image: url("/static/app/images/app-check-mark.webp");
+	background-size: cover;
+	margin-right: 5px;
+	vertical-align: middle;
+}
+
+.auto-park-five-section .img-box {
+	position: relative;
+	left: 35px;
+}
+
+.auto-park-five-section .control-box .buttons-box {
+	display: flex;
+	align-items: center;
+}
+
+.auto-park-five-section .control-box .buttons-box button {
+	margin-top: 15px;
+	margin-right: 130px;
+	background-color: #EC6323;
+	color: #fff;
+	padding: 15px 20px;
+	border: none;
+	border-radius: 20px;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+
+/*block 6*/
+
+
+
 
 /*End Auto Park page*/
 
