@@ -2863,7 +2863,60 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 
 /*block 6*/
 
+.auto-park-six-section {
+	margin-top: 80px;
+	height: 692px;
+	background: url("/static/app/images/auto-park-img/park-block-6-2.webp") no-repeat;
+}
 
+.auto-park-six-section .container {
+	display: flex;
+	align-items: center;
+}
+
+.auto-park-six-section .description p {
+	margin-top: 180px;
+	width: 400px;
+	color: #FFF;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.auto-park-six-section .description button {
+	margin-top: 15px;
+	background-color: #EC6323;
+	color: #fff;
+	padding: 15px 20px;
+	border: none;
+	border-radius: 20px;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+.auto-park-six-section .box-img img {
+	margin-top: 123px;
+	position: relative;
+	right: 65px;
+}
+
+/*block 7*/
+
+.auto-park-seven-section {
+	margin-top: 80px;
+}
+
+.auto-park-seven-section .blog-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 20px;
+}
 
 
 /*End Auto Park page*/
