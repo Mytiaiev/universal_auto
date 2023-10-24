@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from scripts.redis_conn import redis_instance, get_logger
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner, \
-    DriverReshuffle, Schema
+    DriverReshuffle, Schema, UberSession
 import datetime
 
 
@@ -25,6 +25,7 @@ class Synchronizer:
     def __init__(self, partner_id, fleet):
         self.partner_id = partner_id
         self.fleet = fleet
+        self.session = UberSession.objects.filter(partner=self.partner_id).latest('created_at')
         self.redis = redis_instance()
         self.logger = get_logger()
 
