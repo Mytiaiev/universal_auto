@@ -42,6 +42,12 @@ $(document).ready(function () {
 		$("label[for='loginRadio']").hide();
 	});
 
+	$("#loginBtn2").click(function () {
+		$("#loginForm").fadeIn();
+		$("#loginRadio").hide();
+		$("label[for='loginRadio']").hide();
+	});
+
 	$('.nav-item-social').click(function (event) {
 		if ($('.social-icons').is(':visible')) {
 			$('.social-icons').hide();
