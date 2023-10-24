@@ -218,7 +218,7 @@ class BoltRequest(Synchronizer):
                             "price": price,
                             "partner": Partner.get_partner(self.partner_id)
                             }
-                    if driver.vehicle != vehicle:
+                    if check_vehicle(driver)[0] != vehicle:
                         self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['car_reg_number'])
                     FleetOrder.objects.create(**data)
 
