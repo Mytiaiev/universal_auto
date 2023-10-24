@@ -2725,7 +2725,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 .auto-park-four-section .img-box .img-1 {
 	position: relative;
 	margin-bottom: 0;
-	right: 95px;
+	right: 100px;
 }
 
 .auto-park-four-section .img-box .img-2 {
@@ -2867,7 +2867,9 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	margin-top: 80px;
 	height: 692px;
 	background: url("/static/app/images/auto-park-img/park-block-6-2.webp") no-repeat;
+	background-size: 100% 100%;
 }
+
 
 .auto-park-six-section .container {
 	display: flex;
@@ -2913,9 +2915,64 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 }
 
 .auto-park-seven-section .blog-cards {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-gap: 20px;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	grid-gap: 20px;
+}
+
+.auto-park-seven-section .blog-cards .blog-card {
+	text-align: center;
+	position: relative;
+}
+
+.auto-park-seven-section .blog-cards .blog-card img {
+	display: block;
+	margin: 0 auto;
+	width: 100%;
+	height: auto;
+	max-height: max-content;
+}
+
+.auto-park-seven-section .blog-cards .blog-card h2,
+.auto-park-seven-section .blog-cards .blog-card p,
+.auto-park-seven-section .blog-cards .blog-card a {
+	width: 63%;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	margin: 0;
+	text-align: center;
+}
+
+.auto-park-seven-section .blog-cards .blog-card h2 {
+	top: 10%;
+	color: #141E17;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+.auto-park-seven-section .blog-cards .blog-card p {
+	top: 35%;
+	color: #53785E;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+.auto-park-seven-section .blog-cards .blog-card a {
+	width: 50%;
+	bottom: 35px;
+	text-decoration: none;
+	background-color: #EC6323;
+	color: #fff;
+}
+
+.auto-park-seven-section .blog-cards:nth-child(3) {
+	position: relative;
+	left: 75px;
 }
 
 
