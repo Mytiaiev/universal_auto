@@ -219,6 +219,6 @@ class UaGpsSynchronizer:
                                                     self.get_timestamp(end_time),
                                                     driver.vehicle.gps_id)[0]
             rent_distance = total_km - distance
-            time = end_time.strftime("%d.%m.%Y %H:%M")
+            time = timezone.localtime(end_time).strftime("%H:%M")
             bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
                              text=f"Орендовано на {time} {driver} - {rent_distance}")
