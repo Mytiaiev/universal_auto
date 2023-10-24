@@ -632,6 +632,8 @@ label[for="showPassword"] {
 	font-style: normal;
 	font-weight: 400;
 	line-height: normal;
+	-webkit-text-fill-color: rgba(255, 255, 255, 0.77);
+
 }
 
 .icon-social-network a {
@@ -897,6 +899,7 @@ label[for="showPassword"] {
 	font-style: normal;
 	font-weight: 400;
 	line-height: normal;
+	-webkit-text-fill-color: #EC6323;
 }
 
 .right_content .one-info .text-1 {
