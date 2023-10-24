@@ -1,0 +1,186 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load i18n %}
+<!-- autoparck section -->
+{% block content %}
+  <!-- auto park one section -->
+
+  <section class="auto-park-one-section">
+    <div class="container">
+      <div class="auto-park-left">
+        <img class="image-map" src="{% static 'app/images/auto-park-img/park-block-1.webp' %}" alt="one image">
+      </div>
+      <div class="auto-park-right">
+        <div class="decorate-img">
+          <img src="{% static 'app/images/index-one-block-3.webp' %}" alt="three image">
+          <div class="one-info">
+            <h2>{% trans "Переверніть свій автопарк на 360 градусів" %}</h2>
+            <p class="text-1">{% trans "Автоматизована система від Ninja Taxi- це ключ до ефективності, яка переверне ваш бізнес!" %}
+            </p>
+            <div class="free-access-btn">
+              <a href="#">
+                <button>{% trans "Отримати безкоштовнйи доступ на місяць " %}</button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- end auto park one section -->
+
+  <!-- auto park two section -->
+
+  <section class="auto-park-two-section">
+    <div class="container">
+      <div class="detail-box">
+        <p class="description-section">
+          {% trans "Приймайте рішення на основі даних, які виведуть ваш автопарк на новий рівень разом з Ninja Taxi" %}
+        </p>
+        <div class="contact-us">
+          <a href="#">
+            <button>{% trans "Зв’язатися з нами" %}</button>
+          </a>
+        </div>
+      </div>
+      <div class="img-box">
+        <img src="{% static 'app/images/auto-park-img/park-block-2.webp' %}" alt="" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- end auto park two section -->
+
+  <!-- auto park three section -->
+
+  <section class="auto-park-three-section">
+    <div class="container">
+      <div class="img-box">
+        <img class="img-1" src="{% static 'app/images/auto-park-img/park-block-3-1.webp' %}" alt="" loading="lazy">
+        <img class="img-2" src="{% static 'app/images/auto-park-img/park-block-3-2.webp' %}" alt="" loading="lazy">
+      </div>
+      <div class="analytics-box">
+        <div>
+          <h2>{% trans "Функція анатілика" %}</h2>
+          <ul>
+            <li>{% trans "Ціна кілометру" %}</li>
+            <li>{% trans "Каса" %}</li>
+            <li>{% trans "Кількість поїздок" %}</li>
+            <li>{% trans "% прийнятих замовлень" %}</li>
+            <li>{% trans "Час на лінії і т.д." %}</li>
+          </ul>
+        </div>
+        <div class="buttons-box">
+          <button>{% trans "Дізнатися вартість" %}</button>
+          <button>{% trans "Проконсультуватися" %}</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- end auto park three section -->
+
+  <!-- auto park four section -->
+
+  <section class="auto-park-four-section">
+    <div class="container">
+      <div class="spending-box">
+        <div class="spending-description">
+          <h2>{% trans "Всі витрати по автомобілю відразу в Дашборді" %}</h2>
+          <p>{% trans "ТО, ремонти, ДТП, страховки. Таким чином Ви завжди бачите прибуток свого автопарку" %}</p>
+        </div>
+        <div class="buttons-box">
+          <button>{% trans "Дізнатися вартість" %}</button>
+          <button>{% trans "Отримати безкоштовний доступ" %}</button>
+        </div>
+      </div>
+      <div class="img-box">
+        <img class="img-1" src="{% static 'app/images/auto-park-img/park-block-4-1.webp' %}" alt="" loading="lazy">
+        <img class="img-2" src="{% static 'app/images/auto-park-img/park-block-4-2.webp' %}" alt="" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- end auto park four section -->
+
+  <!-- auto park five section -->
+
+  <section class="auto-park-five-section">
+    <div class="container">
+      <div class="img-box">
+        <img class="img-1" src="{% static 'app/images/auto-park-img/park-block-5.webp' %}" alt="" loading="lazy">
+      </div>
+      <div class="control-box">
+        <div>
+          <h2>{% trans "Функція контролю гаманця водія " %}</h2>
+          <ul>
+            <li>{% trans "Автозняття грошей з гаманців водіїв" %}</li>
+            <li>{% trans "Обмеження на готівку під час роботи водієві" %}</li>
+          </ul>
+        </div>
+        <div class="buttons-box">
+          <button>{% trans "Дізнатися вартість" %}</button>
+          <button>{% trans "Проконсультуватися" %}</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- end auto park five section -->
+
+  <!-- auto park six section -->
+  <section class="auto-park-six-section">
+    <div class="container">
+      <div class="description">
+        <p>{% trans "Співпраця з нами = Скорочення часу на адміністративну роботу у 2 рази" %}</p>
+        <button>{% trans "Подивитись презентацію" %}</button>
+      </div>
+      <div class="box-img">
+        <img src="{% static 'app/images/auto-park-img/park-block-6-1.webp' %}" alt="" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- end auto park six section -->
+
+  <!-- auto park seven section -->
+
+  <section class="auto-park-seven-section">
+    <div class="container">
+      <h2 class="title-block">{% trans "Ninja блог" %}</h2>
+      <div class="blog-cards">
+        <div class="blog-card">
+          <img src="{% static 'app/images/auto-park-img/park-block-7-1.webp' %}" alt="img-blog">
+          <h2 class="title-blog">{% trans "Дизайн майбутнього: інноваційні концепції в електротаксі" %}</h2>
+          <p class="description-blog">{% trans "У світі, де екологічні питання стають все більш актуальними, електрокари не просто є перевізниками, вони - це майбутнє транспорту." %}</p>
+          <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
+        </div>
+        <div class="blog-card">
+          <img src="{% static 'app/images/auto-park-img/park-block-7-2.webp' %}" alt="img-blog">
+          <h2 class="title-blog">{% trans "Технології в дії: як електротаксі змінюють правила гри" %}</h2>
+          <p class="description-blog">{% trans "Електротаксі - це новий вимір мобільності, який змінює правила гри в транспортній індустрії." %}</p>
+          <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
+        </div>
+      </div>
+      <div class="blog-cards">
+        <div class="blog-card">
+          <img src="{% static 'app/images/auto-park-img/park-block-7-1.webp' %}" alt="img-blog">
+          <h2 class="title-blog">{% trans "Поруч і завжди доступні: Важливість ефективної підтримки в електротаксі" %}</h2>
+          <p class="description-blog">{% trans "Електротаксі - це не просто транспортний засіб; це мобільний сервіс, який змінює наше сприйняття громадського транспорту." %}</p>
+          <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
+        </div>
+        <div class="blog-card">
+          <img src="{% static 'app/images/auto-park-img/park-block-7-2.webp' %}" alt="img-blog">
+          <h2 class="title-blog">{% trans "Зарядні станції для електромобілів: Технологічна Революція " %}</h2>
+          <p class="description-blog">{% trans "Успіх електромобільної революції залежить від наявності надійної та зручної інфраструктури зарядних станцій." %}</p>
+          <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- end auto park seven section -->
+
+{% endblock %}
