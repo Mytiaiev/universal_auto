@@ -2600,7 +2600,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 .auto-park-right .one-info p {
 	color: #FFF;
 	text-align: center;
-	font-size: 30px;
+	font-size: 27px;
 	font-style: normal;
 	font-weight: 300;
 	line-height: normal;
@@ -2742,14 +2742,17 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	padding: 15px 20px;
 	border-radius: 20px;
 	border-color: #EC6323;
+	outline: 2px auto #EC6323;
 }
 
 .analytics-box .buttons-box .consult-button {
+	margin-left: 20px;
 	background-color: #fff;
 	color: #EC6323;
 	padding: 15px 20px;
 	border-color: #EC6323;
 	border-radius: 20px;
+	outline: 2px auto #EC6323;
 }
 
 
