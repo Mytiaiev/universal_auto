@@ -134,11 +134,20 @@ iframe {
 }
 
 .navbar-nav .nav-item:first-child .nav-link {
-	margin-left: 141px; /* Відстань між логотипом іншим елементом */
+	margin-left: 33px; /* Відстань між логотипом іншим елементом */
 }
 
 .navbar-nav .nav-item:not(:last-child) .nav-link {
 	margin-right: 33px; /* Відстань між елементами меню */
+}
+
+.nav-home span {
+	margin-left: 141px;
+	color: black;
+}
+
+.nav-home:hover {
+	text-decoration: none;
 }
 
 .nav-connect {
@@ -303,9 +312,11 @@ label[for="showPassword"] {
 
 @media screen and (max-width: 767px) {
 	.header_section .navbar-nav,
-	.header_section .connect {
+	.header_section .connect,
+	.header_section .nav-home {
 		display: none;
 	}
+
 
 	.nav-item-adaptive-phone {
 		display: flex;
@@ -429,12 +440,21 @@ label[for="showPassword"] {
 		width: 100%;
 	}
 
+	.header_section .navbar-nav,
+	.header_section .connect {
+		display: none;
+	}
+
+	.nav-home span {
+		margin-left: 20px;
+	}
+
 	.header_section .connect. .navbar-expand-lg {
 		display: flex;
 	}
 
 	.navbar-brand {
-		order: 1;
+		order: 0;
 	}
 
 	.navbar-collapse {
@@ -859,7 +879,7 @@ label[for="showPassword"] {
 }
 
 .left_images {
-    margin-top: 50px;
+	margin-top: 50px;
 }
 
 .left_images .one-background-img {
@@ -2544,18 +2564,18 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	position: relative;
 	width: 100%;
 	height: auto;
-	left: -30px;
+	left: -150px;
+	top: 65px;
 }
 
 .auto-park-right .decorate-img {
-	margin-top: -130px;
-	right: 75px;
+	right: 140px;
 	position: relative;
 	z-index: -1;
 }
 
 .auto-park-right .decorate-img img {
-	width: 190%;
+	width: 200%;
 	height: auto;
 }
 
@@ -2582,7 +2602,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	text-align: center;
 	font-size: 30px;
 	font-style: normal;
-	font-weight: 400;
+	font-weight: 300;
 	line-height: normal;
 }
 
@@ -2699,26 +2719,39 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	vertical-align: middle;
 }
 
-.analytics-box .buttons-box {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-}
+/*.analytics-box .buttons-box {*/
+/*	display: flex;*/
+/*	align-items: center;*/
+/*	justify-content: space-between;*/
+/*}*/
 
 .analytics-box .buttons-box button {
 	margin-top: 15px;
-	background-color: #EC6323;
-	color: #fff;
-	padding: 15px 20px;
-	border: none;
-	border-radius: 20px;
 	font-size: 16px;
+	text-align: left;
 	text-decoration: none;
 	cursor: pointer;
 	font-style: normal;
 	font-weight: 700;
 	line-height: normal;
 }
+
+.analytics-box .buttons-box .get-price-button {
+	background-color: #EC6323;
+	color: #fff;
+	padding: 15px 20px;
+	border-radius: 20px;
+	border-color: #EC6323;
+}
+
+.analytics-box .buttons-box .consult-button {
+	background-color: #fff;
+	color: #EC6323;
+	padding: 15px 20px;
+	border-color: #EC6323;
+	border-radius: 20px;
+}
+
 
 /*block 4*/
 
@@ -2794,13 +2827,36 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 }
 
 .spending-box .buttons-box button {
-	color: #fff;
-	background-color: #EC6323;
+	margin-top: 15px;
 }
 
 .spending-box .buttons-box button {
 	margin-top: 15px;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
 }
+
+.spending-box .buttons-box .get-price-button {
+	background-color: #EC6323;
+	color: #fff;
+	padding: 15px 20px;
+	border-radius: 20px;
+	border-color: #EC6323;
+}
+
+.spending-box .buttons-box .free-access-button {
+	background-color: #fff;
+	color: #EC6323;
+	padding: 15px 20px;
+	border-color: #EC6323;
+	border-radius: 20px;
+	outline: 2px auto;
+}
+
 
 /*block 5*/
 
@@ -2864,20 +2920,32 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	align-items: center;
 }
 
-.auto-park-five-section .control-box .buttons-box button {
+.control-box .buttons-box button {
 	margin-top: 15px;
-	margin-right: 130px;
-	background-color: #EC6323;
-	color: #fff;
-	padding: 15px 20px;
-	border: none;
-	border-radius: 20px;
+	margin-right: 50px;
 	font-size: 16px;
 	text-decoration: none;
 	cursor: pointer;
 	font-style: normal;
 	font-weight: 700;
 	line-height: normal;
+}
+
+.control-box .buttons-box .get-price-button {
+	background-color: #EC6323;
+	color: #fff;
+	padding: 15px 20px;
+	border: none;
+	border-radius: 20px;
+}
+
+.control-box .buttons-box .consult-button {
+	background-color: #fff;
+	color: #EC6323;
+	padding: 15px 20px;
+	border-color: #EC6323;
+	border-radius: 20px;
+	outline: 2px auto;
 }
 
 
