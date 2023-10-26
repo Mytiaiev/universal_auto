@@ -2978,6 +2978,75 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	left: 75px;
 }
 
+/*Form styles*/
+
+.free-access-section {
+	background-color: #A1E8B9;
+	padding: 20px;
+	text-align: center;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	border-radius: 62px;
+	width: 1070px;
+	height: 515px;
+}
+
+.free-access-section h2 {
+	margin-top: 55px;
+	color: #EC6323;
+	text-align: center;
+	font-size: 36px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.free-access-section p {
+	margin-top: 15px;
+	color: #38423B;
+	text-align: center;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+.free-access-section input[type="text"],
+.free-access-section input[type="tel"] {
+	margin-top: 15px;
+	width: 70%;
+	padding: 25px 20px;
+	border: 1px solid #ccc;
+	border-radius: 25px;
+}
+
+.free-access-section input[type="submit"] {
+	margin-top: 24px;
+	background-color: #EC6323;
+	color: #fff;
+	padding: 10px 20px;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.3s;
+	border-radius: 62px;
+}
+
+.free-access-section input[type="submit"]:hover {
+	background-color: #FF8C24;
+}
+
+.free-access-section .close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+}
 
 /*End Auto Park page*/
 

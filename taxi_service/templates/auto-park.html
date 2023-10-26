@@ -180,6 +180,23 @@
     </div>
   </section>
 
+  <section class="free-access-section">
+    <div class="container">
+      <button id="close-form" class="close-button">×</button>
+      <h2>{% trans "Отримати безкоштовний доступ на місяць" %}</h2>
+      <p>{% trans "Заповніть форму та наш менеджер зв'яжеться з Вами" %}</p>
+
+      <form action="" method="post">
+        {% csrf_token %}
+        <input type="text" id="name" name="name" placeholder="{% trans "Ваше ім'я*" %}" required><br>
+        <input type="tel" id="phone" name="phone" placeholder="{% trans 'Ваш номер телефону*' %}" required><br>
+
+        <input type="submit" value="{% trans 'Отримати безкоштовний доступ' %}">
+      </form>
+    </div>
+  </section>
+
+
 
   <!-- end auto park seven section -->
 
