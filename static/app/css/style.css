@@ -2583,7 +2583,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	position: relative;
 	padding: 10px;
 	z-index: 1022;
-	margin-top: -450px;
+	margin-top: -415px;
 	right: -100px;
 }
 

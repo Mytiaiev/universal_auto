@@ -434,7 +434,15 @@ function fetchDriverEfficiencyData(period, start, end) {
 					let driverInfo = $('<div class="driver-info"></div>');
 
 					driverName.append('<h3>' + driver.full_name + '</h3>');
-					driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+					driverName.append('<div class="arrow">▼</div>');
+
+					driverName.on('click', function () {
+						if (driverInfo.is(':hidden')) {
+							driverInfo.slideDown();
+						} else {
+							driverInfo.slideUp();
+						}
+					});
 
 					driverInfo.append('<p>' + gettext("Каса: ") + driver.total_kasa + gettext(" грн") + '</p>');
 					driverInfo.append('<p>' + gettext("Кількість замовлень: ") + driver.orders + '</p>');
@@ -724,12 +732,6 @@ $(document).ready(function () {
 		areaChart.resetSeries();
 	});
 });
-
-
-function toggleDriverInfo(arrow) {
-	const driverBlock = $(arrow).closest('.driver-block');
-	driverBlock.toggleClass('active');
-}
 
 function formatTime(time) {
 	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
