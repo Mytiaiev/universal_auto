@@ -1,3 +1,4 @@
+$.scrollTop=()=> Math.max(document.documentElement.scrollTop, document.body.scrollTop);
 $(document).ready(function () {
 	$('[id^="sub-form-"]').on('submit', function (event) {
 		event.preventDefault();
@@ -275,4 +276,13 @@ $(document).ready(function () {
 	}
 
 	$(document).on('click', 'a[data-youtube]', clickHandler);
+
+	$(window).scroll(function () {
+		var h = $(".header_section")
+		if ($.scrollTop() > 32) {
+			h.addClass("fx");
+		} else {
+			h.removeClass("fx");
+		}
+	});
 });

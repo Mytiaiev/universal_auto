@@ -265,195 +265,210 @@ let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartO
 areaChart.render();
 
 function fetchSummaryReportData(period, start, end) {
-		let apiUrl;
-		if (period === 'custom') {
+	let apiUrl;
+	if (period === 'custom') {
 		apiUrl = `/api/reports/${start}&${end}/`;
-		} else {
-    	apiUrl = `/api/reports/${period}/`;
-    	};
-    $.ajax({
-        url: apiUrl,
-        type: 'GET',
-        dataType: 'json',
-        success: function (data) {
-        $(".apply-filter-button").prop("disabled", false);
-        let startDate = data[0]['start'];
-        let endDate = data[0]['end'];
-        let totalDistance = data[0]['total_rent'];
-        		if (data[0]['drivers'].length !== 0) {
-        			$(".noDataMessage1").hide();
-					$('#bar-chart').show();
-					const driversData = data[0]['drivers'];
-					const categories = driversData.map(driver => driver.full_name);
-                    const values = driversData.map(driver => driver.total_kasa);
-					barChartOptions.series[0].data = values;
-                    barChartOptions.xaxis.categories = categories;
-                    barChart.updateOptions(barChartOptions);
-				} else {
-					$(".noDataMessage1").show();
-					$('#bar-chart').hide();
-				};
-                if (period === 'yesterday') {
-                    $('.weekly-income-dates').text(startDate);
-                } else {
-                    $('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
-                };
-                $('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
-				},
-        error: function (error) {
-            console.error(error);
-        }
-    });
+	} else {
+		apiUrl = `/api/reports/${period}/`;
+	}
+	;
+	$.ajax({
+		url: apiUrl,
+		type: 'GET',
+		dataType: 'json',
+		success: function (data) {
+			$(".apply-filter-button").prop("disabled", false);
+			let startDate = data[0]['start'];
+			let endDate = data[0]['end'];
+			let totalDistance = data[0]['total_rent'];
+			if (data[0]['drivers'].length !== 0) {
+				$(".noDataMessage1").hide();
+				$('#bar-chart').show();
+				const driversData = data[0]['drivers'];
+				const categories = driversData.map(driver => driver.full_name);
+				const values = driversData.map(driver => driver.total_kasa);
+				barChartOptions.series[0].data = values;
+				barChartOptions.xaxis.categories = categories;
+				barChart.updateOptions(barChartOptions);
+			} else {
+				$(".noDataMessage1").show();
+				$('#bar-chart').hide();
+			}
+			;
+			if (period === 'yesterday') {
+				$('.weekly-income-dates').text(startDate);
+			} else {
+				$('.weekly-income-dates').text(gettext('З ') + startDate + ' ' + gettext('по') + ' ' + endDate);
+			}
+			;
+			$('.weekly-income-rent').text(totalDistance + ' ' + gettext('км'));
+		},
+		error: function (error) {
+			console.error(error);
+		}
+	});
 }
 
 function fetchCarEfficiencyData(period, start, end) {
-		let apiUrl;
-		if (period === 'custom') {
+	let apiUrl;
+	if (period === 'custom') {
 		apiUrl = `/api/car_efficiencies/${start}&${end}/`;
-		} else {
-    	apiUrl = `/api/car_efficiencies/${period}/`;
-    	};
-    $.ajax({
-        url: apiUrl,
-        type: 'GET',
-        dataType: 'json',
-        success: function (data) {
-        let totalAmount = data['kasa'];
-        let mileage = data['total_mileage'];
-        let efficiency;
-        if (mileage !== 0) {
-        	 efficiency = parseFloat(totalAmount/mileage).toFixed(2);
-        } else {
-        	efficiency = 0
-         };
+	} else {
+		apiUrl = `/api/car_efficiencies/${period}/`;
+	}
+	;
+	$.ajax({
+		url: apiUrl,
+		type: 'GET',
+		dataType: 'json',
+		success: function (data) {
+			let totalAmount = data['kasa'];
+			let mileage = data['total_mileage'];
+			let efficiency;
+			if (mileage !== 0) {
+				efficiency = parseFloat(totalAmount / mileage).toFixed(2);
+			} else {
+				efficiency = 0
+			}
+			;
 
-        if (data['efficiency'].length !== 0) {
-        	$(".noDataMessage2").hide();
-					$('#area-chart').show();
-					const seriesData = [];
-					const dates = [];
-					data.efficiency.forEach(dateData => {
-                    const date = Object.keys(dateData)[0];
-                    const vehicleEfficiencies = dateData[date];
-                    vehicleEfficiencies.forEach(entry => {
-                        const vehicleName = entry.licence_plate;
-                        const efficiencyValue = parseFloat(entry.efficiency);
-                        let series = seriesData.find(series => series.name === vehicleName);
-                        if (!series) {
-                            series = {
-                                name: vehicleName,
-                                data: [],
-                            };
-                            seriesData.push(series);
-                        }
-                        series.data.push(efficiencyValue);
-                    });
-                    dates.push(date);
-                });
-					areaChartOptions.series = seriesData;
-					areaChartOptions.labels = dates;
-					areaChart.updateOptions(areaChartOptions);
-        } else {
-        	$(".noDataMessage2").show();
-					$('#area-chart').hide();
-        };
-				$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-				$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
-        },
-        error: function (error) {
-            console.error(error);
-        }
-		});
+			if (data['efficiency'].length !== 0) {
+				$(".noDataMessage2").hide();
+				$('#area-chart').show();
+				const seriesData = [];
+				const dates = [];
+				data.efficiency.forEach(dateData => {
+					const date = Object.keys(dateData)[0];
+					const vehicleEfficiencies = dateData[date];
+					vehicleEfficiencies.forEach(entry => {
+						const vehicleName = entry.licence_plate;
+						const efficiencyValue = parseFloat(entry.efficiency);
+						let series = seriesData.find(series => series.name === vehicleName);
+						if (!series) {
+							series = {
+								name: vehicleName,
+								data: [],
+							};
+							seriesData.push(series);
+						}
+						series.data.push(efficiencyValue);
+					});
+					dates.push(date);
+				});
+				areaChartOptions.series = seriesData;
+				areaChartOptions.labels = dates;
+				areaChart.updateOptions(areaChartOptions);
+			} else {
+				$(".noDataMessage2").show();
+				$('#area-chart').hide();
+			}
+			;
+			$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
+			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+		},
+		error: function (error) {
+			console.error(error);
+		}
+	});
 }
 
 
 function fetchDriverEfficiencyData(period, start, end) {
-		let apiUrl;
-		if (period === 'custom') {
+	let apiUrl;
+	if (period === 'custom') {
 		apiUrl = `/api/drivers_info/${start}&${end}/`;
-		} else {
-    	apiUrl = `/api/drivers_info/${period}/`;
-    	};
-    $.ajax({
-        url: apiUrl,
-        type: 'GET',
-        dataType: 'json',
-        success: function (data) {
-            $(".apply-filter-button").prop("disabled", false);
-            let table = $('.info-driver table');
-            let driverBlock = $('.driver-block');
-            let startDate = data[0]['start'];
-            let endDate = data[0]['end'];
-            table.find('tr:gt(0)').remove();
-            if (data[0]['drivers_efficiency'].length !== 0){
-                data[0]['drivers_efficiency'].forEach(function (item) {
-                    let row = $('<tr></tr>');
-                    let time = item.road_time
-                    let parts = time.match(/(\d+) (\d+):(\d+):(\d+)/);
-                    if (!parts) {
-                        time = time
-                    } else {
-                        let days = parseInt(parts[1]);
-                        let hours = parseInt(parts[2]);
-                        let minutes = parseInt(parts[3]);
-                        let seconds = parseInt(parts[4]);
+	} else {
+		apiUrl = `/api/drivers_info/${period}/`;
+	}
+	;
+	$.ajax({
+		url: apiUrl,
+		type: 'GET',
+		dataType: 'json',
+		success: function (data) {
+			$(".apply-filter-button").prop("disabled", false);
+			let table = $('.info-driver table');
+			let driverBlock = $('.driver-block');
+			let startDate = data[0]['start'];
+			let endDate = data[0]['end'];
+			table.find('tr:gt(0)').remove();
+			if (data[0]['drivers_efficiency'].length !== 0) {
+				data[0]['drivers_efficiency'].forEach(function (item) {
+					let row = $('<tr></tr>');
+					let time = item.road_time
+					let parts = time.match(/(\d+) (\d+):(\d+):(\d+)/);
+					if (!parts) {
+						time = time
+					} else {
+						let days = parseInt(parts[1]);
+						let hours = parseInt(parts[2]);
+						let minutes = parseInt(parts[3]);
+						let seconds = parseInt(parts[4]);
 
-                        hours += days * 24;
+						hours += days * 24;
 
-                        // Форматувати рядок у вигляді HH:mm:ss
-                        let formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+						// Форматувати рядок у вигляді HH:mm:ss
+						let formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-                        time = formattedTime
-                    }
+						time = formattedTime
+					}
 
-                    row.append('<td class="driver">' + item.full_name + '</td>');
-                    row.append('<td class="kasa">' + item.total_kasa + '</td>');
-                    row.append('<td class="orders">' + item.orders + '</td>');
-                    row.append('<td class="accept">' + item.accept_percent + " %" + '</td>');
-                    row.append('<td class="price">' + item.average_price + '</td>');
-                    row.append('<td class="mileage">' + item.mileage + '</td>');
-                    row.append('<td class="efficiency">' + item.efficiency + '</td>');
-                    row.append('<td class="road">' + time + '</td>');
+					row.append('<td class="driver">' + item.full_name + '</td>');
+					row.append('<td class="kasa">' + item.total_kasa + '</td>');
+					row.append('<td class="orders">' + item.orders + '</td>');
+					row.append('<td class="accept">' + item.accept_percent + " %" + '</td>');
+					row.append('<td class="price">' + item.average_price + '</td>');
+					row.append('<td class="mileage">' + item.mileage + '</td>');
+					row.append('<td class="efficiency">' + item.efficiency + '</td>');
+					row.append('<td class="road">' + time + '</td>');
 
-                    table.append(row);
+					table.append(row);
 
-                });
+				});
 
-                $('.driver-container').empty();
+				$('.driver-container').empty();
 
-                data[0]['drivers_efficiency'].forEach(function (driver) {
-                    let driverBlock = $('<div class="driver-block"></div>');
-                    let driverName = $('<div class="driver-name"></div>');
-                    let driverInfo = $('<div class="driver-info"></div>');
+				data[0]['drivers_efficiency'].forEach(function (driver) {
+					let driverBlock = $('<div class="driver-block"></div>');
+					let driverName = $('<div class="driver-name"></div>');
+					let driverInfo = $('<div class="driver-info"></div>');
 
-                    driverName.append('<h3>' + driver.full_name + '</h3>');
-                    driverName.append('<div class="arrow" onclick="toggleDriverInfo(this)">▼</div>');
+					driverName.append('<h3>' + driver.full_name + '</h3>');
+					driverName.append('<div class="arrow">▼</div>');
 
-				driverInfo.append('<p>gettext("Каса: ") + driver.total_kasa + gettext(" грн")</p>');
-				driverInfo.append('<p>gettext("Кількість замовлень: ") + driver.total_orders</p>');
-				driverInfo.append('<p>gettext("Відсоток прийнятих замовлень: ") + driver.accept_percent + %</p>');
-				driverInfo.append('<p>gettext("Середній чек, грн: ") + driver.average_price</p>');
-				driverInfo.append('<p>gettext("Пробіг, км: ") + driver.mileage</p>');
-				driverInfo.append('<p>gettext("Ефективність, грн/км: ") + driver.efficiency</p>');
-				driverInfo.append('<p>gettext("Час в дорозі: ") + formatTime(driver.road_time)</p>');
+					driverName.on('click', function () {
+						if (driverInfo.is(':hidden')) {
+							driverInfo.slideDown();
+						} else {
+							driverInfo.slideUp();
+						}
+					});
 
-                    driverBlock.append(driverName);
-                    driverBlock.append(driverInfo);
+					driverInfo.append('<p>' + gettext("Каса: ") + driver.total_kasa + gettext(" грн") + '</p>');
+					driverInfo.append('<p>' + gettext("Кількість замовлень: ") + driver.orders + '</p>');
+					driverInfo.append('<p>' + gettext("Відсоток прийнятих замовлень: ") + driver.accept_percent + '%' + '</p>');
+					driverInfo.append('<p>' + gettext("Середній чек, грн: ") + driver.average_price + '</p>');
+					driverInfo.append('<p>' + gettext("Пробіг, км: ") + driver.mileage + '</p>');
+					driverInfo.append('<p>' + gettext("Ефективність, грн/км: ") + driver.efficiency + '</p>');
+					driverInfo.append('<p>' + gettext("Час в дорозі: ") + formatTime(driver.road_time) + '</p>');
 
-                    // Додати блок водія до контейнера
-                    $('.driver-container').append(driverBlock);
-                });
-            }
-            if (period === 'yesterday') {
-                    $('.income-drivers-date').text(startDate);
-                } else {
-                    $('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
-                }
-        },
-        error: function (error) {
-            console.error(error);
-        }
-		});
+					driverBlock.append(driverName);
+					driverBlock.append(driverInfo);
+
+					// Додати блок водія до контейнера
+					$('.driver-container').append(driverBlock);
+				});
+			}
+			if (period === 'yesterday') {
+				$('.income-drivers-date').text(startDate);
+			} else {
+				$('.income-drivers-date').text('З ' + startDate + ' ' + gettext('по') + ' ' + endDate);
+			}
+		},
+		error: function (error) {
+			console.error(error);
+		}
+	});
 }
 
 const commonPeriodSelect = $('#period-common');
@@ -523,57 +538,59 @@ function applyCustomDateRange() {
 
 
 $(document).ready(function () {
-    let $table = $('.driver-table');
-    let $tbody = $table.find('tbody');
+	let $table = $('.driver-table');
+	let $tbody = $table.find('tbody');
 
-    // Function to sort the table by a specific column
-    function sortTable(column, order) {
-    let rows = $tbody.find('tr').toArray();
+	// Function to sort the table by a specific column
+	function sortTable(column, order) {
+		let rows = $tbody.find('tr').toArray();
 
-    let collator = new Intl.Collator(undefined, { sensitivity: 'base' });
+		let collator = new Intl.Collator(undefined, {sensitivity: 'base'});
 
-    rows.sort(function (a, b) {
-        let valueA = $(a).find(`td.${column}`).text();
-        let valueB = $(b).find(`td.${column}`).text();
-        if (column === 'driver') {
-        	if (order === 'asc') {
-        	   return collator.compare(valueA, valueB);
-        	} else {
-            return collator.compare(valueB, valueA);
-        	};
-        } else {
-        	let floatA = parseFloat(valueA);
-        	let floatB = parseFloat(valueB);
-        	if (order === 'asc') {
-						return floatA - floatB;
-					} else {
-						return floatB - floatA;
-    			};
-    		}
-    });
+		rows.sort(function (a, b) {
+			let valueA = $(a).find(`td.${column}`).text();
+			let valueB = $(b).find(`td.${column}`).text();
+			if (column === 'driver') {
+				if (order === 'asc') {
+					return collator.compare(valueA, valueB);
+				} else {
+					return collator.compare(valueB, valueA);
+				}
+				;
+			} else {
+				let floatA = parseFloat(valueA);
+				let floatB = parseFloat(valueB);
+				if (order === 'asc') {
+					return floatA - floatB;
+				} else {
+					return floatB - floatA;
+				}
+				;
+			}
+		});
 
-    $tbody.empty().append(rows);
-}
+		$tbody.empty().append(rows);
+	}
 
-    // Attach click event handlers to the table headers for sorting
-    $table.find('th.sortable').click(function () {
+	// Attach click event handlers to the table headers for sorting
+	$table.find('th.sortable').click(function () {
 
-        let column = $(this).data('sort');
-        let sortOrder = $(this).hasClass('sorted-asc') ? 'desc' : 'asc';
+		let column = $(this).data('sort');
+		let sortOrder = $(this).hasClass('sorted-asc') ? 'desc' : 'asc';
 
-        // Reset sorting indicators
-        $table.find('th.sortable').removeClass('sorted-asc sorted-desc');
+		// Reset sorting indicators
+		$table.find('th.sortable').removeClass('sorted-asc sorted-desc');
 
-        if (sortOrder === 'asc') {
-            $(this).addClass('sorted-asc');
-        } else {
-            $(this).addClass('sorted-desc');
-        }
+		if (sortOrder === 'asc') {
+			$(this).addClass('sorted-asc');
+		} else {
+			$(this).addClass('sorted-desc');
+		}
 
-        sortTable(column, sortOrder);
-    });
+		sortTable(column, sortOrder);
+	});
 
-    $(".sidebar-list-item.admin").on("click", function () {
+	$(".sidebar-list-item.admin").on("click", function () {
 
 		let adminPanelURL = $(this).data("url");
 
@@ -715,12 +732,6 @@ $(document).ready(function () {
 		areaChart.resetSeries();
 	});
 });
-
-
-function toggleDriverInfo(arrow) {
-	const driverBlock = $(arrow).closest('.driver-block');
-	driverBlock.toggleClass('active');
-}
 
 function formatTime(time) {
 	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
