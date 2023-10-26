@@ -29,12 +29,31 @@ class SeleniumTools:
         self.partner = partner
         self.remote = remote
         self.sleep = sleep
+        self.uber_s = UberSession.objects.filter(partner=partner).latest('created_at')
         self.logger = get_logger()
         if driver:
             if self.remote:
                 self.driver = self.build_remote_driver()
             else:
                 self.driver = self.build_driver()
+
+    def get_cookies(self):
+        cookies = [
+            {
+                'name': 'sid',
+                'value': self.uber_s.session,
+                'domain': '.uber.com',
+                'path': '/',
+            },
+            {
+                'name': 'csid',
+                'value': self.uber_s.cook_session,
+                'domain': '.uber.com',
+                'path': '/',
+            },
+
+        ]
+        return cookies
 
     @staticmethod
     def build_driver():
@@ -117,7 +136,6 @@ class SeleniumTools:
             self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
             time.sleep(self.sleep)
             cookies = self.driver.get_cookies()
-            print(cookies)
         except (NoSuchElementException, InvalidArgumentException):
             return False
         for cookie in cookies:
@@ -212,21 +230,12 @@ class SeleniumTools:
         job_application.save()
         self.quit()
 
-    def uber_login(self, session=None, login=None, password=None, url=UberService.get_value('BASE_URL')):
-        if not (login and password):
-            login = CredentialPartner.get_value("UBER_NAME", partner=self.partner)
-            password = CredentialPartner.get_value("UBER_PASSWORD", partner=self.partner)
+    def uber_login(self, login, password, url=UberService.get_value('BASE_URL')):
         self.driver.get(UberService.get_value('UBER_LOGIN_URL'))
         time.sleep(self.sleep)
-        try:
-            input_login = WebDriverWait(self.driver, self.sleep).until(
-                ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
-            clickandclear(input_login)
-        except TimeoutException:
-            self.driver.refresh()
-            input_login = WebDriverWait(self.driver, self.sleep).until(
-                ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
-            clickandclear(input_login)
+        input_login = WebDriverWait(self.driver, self.sleep).until(
+            ec.presence_of_element_located((By.XPATH, UberService.get_value('UBER_LOGIN_1'))))
+        clickandclear(input_login)
         input_login.send_keys(login)
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
@@ -250,9 +259,8 @@ class SeleniumTools:
 
         self.driver.get(url)
         time.sleep(self.sleep)
-        if session:
-            self.save_uber()
-            self.quit()
+        self.save_uber()
+        self.quit()
 
     def save_uber(self):
         url = self.driver.current_url
@@ -383,7 +391,10 @@ class SeleniumTools:
     def generate_payments_order(self, fleet, day):
         url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}{self.get_uuid()}/reports"
         xpath = UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')
-        self.uber_login(url=url)
+        self.driver.get(UberService.get_value('BASE_URL'))
+        for cook in self.get_cookies():
+            self.driver.add_cookie(cook)
+        self.driver.get(url)
         WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
         try:
             xpath = UberService.get_value('UBER_GENERATE_TRIPS_1')
@@ -426,8 +437,9 @@ class SeleniumTools:
                   }
 
         self.logger.info(self.file_pattern(fleet, day))
-        if self.payments_order_file_name(fleet, day) is not None:
-            with open(self.payments_order_file_name(fleet, day), encoding="utf-8") as file:
+        file_path = self.payments_order_file_name(fleet, day)
+        if file_path is not None:
+            with open(file_path, encoding="utf-8") as file:
                 reader = csv.reader(file)
                 next(reader)
                 for row in reader:
@@ -451,6 +463,7 @@ class SeleniumTools:
                                  "vehicle": vehicle,
                                  "partner": Partner.get_partner(self.partner)}
                         FleetOrder.objects.create(**order)
+                os.remove(file_path)
 
 
 def clickandclear(element):
