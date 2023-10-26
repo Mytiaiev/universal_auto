@@ -414,6 +414,8 @@ class EventAdmin(admin.ModelAdmin):
 @admin.register(UseOfCars)
 class UseofCarsAdmin(admin.ModelAdmin):
     list_display = [f.name for f in UseOfCars._meta.fields]
+    list_per_page = 25
+
 
 
 @admin.register(JobApplication)
@@ -480,6 +482,9 @@ class TransactionsConversationAdmin(admin.ModelAdmin):
 @admin.register(CarEfficiency)
 class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = (VehicleEfficiencyUserFilter, )
+    list_per_page = 25
+    raw_id_fields = ['vehicle']
+    list_select_related = ['vehicle']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -507,7 +512,9 @@ class CarEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 @admin.register(DriverEfficiency)
 class DriverEfficiencyAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = [DriverEfficiencyUserFilter]
-
+    list_per_page = 25
+    raw_id_fields = ['driver', 'partner']
+    list_select_related = ['driver', 'partner']
     def get_list_display(self, request):
         if request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
@@ -563,6 +570,9 @@ class UberServiceAdmin(admin.ModelAdmin):
 @admin.register(RentInformation)
 class RentInformationAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = (RentInformationUserFilter, 'created_at')
+    list_per_page = 25
+    raw_id_fields = ['driver', 'partner']
+    list_select_related = ['partner', 'driver']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -605,6 +615,8 @@ class PaymentsOrderAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = ('vendor_name', ReportUserFilter)
     ordering = ('-report_from', 'full_name')
     list_per_page = 25
+    raw_id_fields = ['vehicle', 'partner']
+    list_select_related = ['vehicle', 'partner']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -663,6 +675,8 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     list_filter = (SummaryReportUserFilter,)
     ordering = ('-report_from', 'driver')
     list_per_page = 25
+    raw_id_fields = ['driver', 'partner', 'vehicle']
+    list_select_related = ['vehicle', 'driver', 'partner']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -1054,6 +1068,9 @@ class OrderAdmin(admin.ModelAdmin):
 @admin.register(FleetOrder)
 class FleetOrderAdmin(admin.ModelAdmin):
     list_filter = ('fleet', 'driver')
+    list_per_page = 25
+    raw_id_fields = ['vehicle', 'driver', 'partner']
+    list_select_related = ['vehicle', 'driver', 'partner']
 
     def get_list_display(self, request):
         if request.user.is_superuser:
@@ -1081,6 +1098,9 @@ class FleetOrderAdmin(admin.ModelAdmin):
 class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner', field_to_filter='driver__worked')(admin.ModelAdmin)):
     list_filter = ('fleet',)
     readonly_fields = ('fleet', 'driver_external_id')
+    list_per_page = 25
+    raw_id_fields = ['driver', 'partner']
+    list_select_related = ['driver', 'partner']
 
     def get_list_display(self, request):
         if request.user.groups.filter(name__in=('Partner', 'Manager')).exists():

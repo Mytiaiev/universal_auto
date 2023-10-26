@@ -116,7 +116,7 @@ def auto_send_task_bot(self):
 def get_uber_session(self, partner_pk, login=None, password=None):
     try:
         chrome = SeleniumTools(partner_pk)
-        chrome.uber_login(session=True, login=login, password=password)
+        chrome.uber_login(login=login, password=password)
         success = login_in(action='uber', user_id=partner_pk, login_name=login, password=password)
     except Exception as e:
         success = False
@@ -575,7 +575,7 @@ def send_daily_statistic(self, partner_pk):
         if result:
             for num, key in enumerate(result[0], 1):
                 if result[0][key]:
-                    driver_msg = "{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n".format(
+                    driver_msg = "{}\nКаса: {:.2f} (+{:.2f})\n Оренда: {:.2f}км (+{:.2f})\n\n".format(
                         key, result[0][key], result[1].get(key, 0), result[2].get(key, 0), result[3].get(key, 0))
                     driver_dict_msg[key.pk] = driver_msg
                     message += f"{num}.{driver_msg}"
