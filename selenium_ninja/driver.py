@@ -18,7 +18,7 @@ from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException, NoSuchElementException, InvalidArgumentException
 
 from app.models import ParkSettings, UberService, UberSession, Partner, NewUklonService, NewUklonFleet, \
-    FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService, CredentialPartner
+    FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService, CredentialPartner, Vehicle
 from auto import settings
 from scripts.redis_conn import redis_instance, get_logger
 from selenium_ninja.synchronizer import InfinityTokenError, AuthenticationError
@@ -451,6 +451,7 @@ class SeleniumTools:
                         finish = None
                     driver = Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=row[1]).first()
                     if driver:
+                        vehicle = Vehicle.objects.get(licence_plate=row[5])
                         order = {"order_id": row[0],
                                  "driver": driver.driver,
                                  "fleet": fleet,
@@ -459,6 +460,7 @@ class SeleniumTools:
                                  "accepted_time": timezone.make_aware(datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S")),
                                  "finish_time": finish,
                                  "state": states.get(row[12]),
+                                 "vehicle": vehicle,
                                  "partner": Partner.get_partner(self.partner)}
                         FleetOrder.objects.create(**order)
                 os.remove(file_path)

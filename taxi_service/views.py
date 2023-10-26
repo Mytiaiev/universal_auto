@@ -25,38 +25,8 @@ class IndexView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["parkSettings"] = self.get_park_settings()
-        context["google_api"] = self.get_google_api_key()
         context["subscribe_form"] = SubscriberForm()
-        context["order_form"] = MainOrderForm()
         return context
-
-    def get_park_settings(self):
-        park_settings = {}
-        specific_keys = [
-            "FREE_CAR_SENDING_DISTANCE",
-            "TARIFF_CAR_DISPATCH",
-            "TARIFF_CAR_OUTSIDE_DISPATCH",
-            "TARIFF_IN_THE_CITY",
-            "TARIFF_OUTSIDE_THE_CITY",
-            "CENTRE_CITY_LAT",
-            "CENTRE_CITY_LNG",
-            "CENTRE_CITY_RADIUS",
-            "SEND_TIME_ORDER_MIN",
-            "SEARCH_TIME",
-            "MINIMUM_PRICE_RADIUS",
-            "MAXIMUM_PRICE_RADIUS",
-        ]
-
-        park_setting_objects = ParkSettings.objects.filter(key__in=specific_keys)
-
-        for park_setting in park_setting_objects:
-            park_settings[park_setting.key] = park_setting.value
-
-        return json.dumps(park_settings)
-
-    def get_google_api_key(self):
-        return ParkSettings.get_value("GOOGLE_API_KEY")
 
 
 class PostRequestView(View):
