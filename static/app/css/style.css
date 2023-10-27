@@ -3166,7 +3166,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	transform: translate(-50%, -50%);
 	border-radius: 62px;
 	width: 940px;
-	height: 430px;
+	height: 650px;
 }
 
 .message-box {
@@ -3178,8 +3178,9 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 
 .message-box h2 {
 	color: #EC6323;
+	margin: 101px 104px;
 	text-align: center;
-	font-size: 32px;
+	font-size: 28px;
 	font-style: normal;
 	font-weight: 700;
 	line-height: normal;

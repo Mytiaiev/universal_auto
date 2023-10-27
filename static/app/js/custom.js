@@ -303,6 +303,7 @@ $(document).ready(function () {
 	function hideFormAndShowThankYou() {
 		formSectionFree.hide();
 		formSectionConsult.hide();
+		formSectionConnect.hide();
 		thankYouMessage.show();
 		setTimeout(function () {
 			thankYouMessage.hide();
