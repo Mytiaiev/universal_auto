@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.contrib.auth import logout
 
-from app.models import Partner, Manager
+from app.models import Partner, Manager,SubscribeUsers
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 partner_logout, login_in_investor,
@@ -149,6 +149,24 @@ class PostRequestHandler:
         json_data = JsonResponse({'task_id': upd.id}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
+
+    def handler_free_access(self, request):
+        name = request.POST.get('name')
+        phone = request.POST.get('phone')
+
+        if name and phone:
+            existing_subscriber = SubscribeUsers.objects.filter(phone_number=phone).first()
+
+            if existing_subscriber:
+                response_data = {'success': False, 'error': 'Ви вже підписались'}
+            else:
+                subscriber = SubscribeUsers.objects.create(name=name, phone_number=phone)
+                subscriber.save()
+                response_data = {'success': True}
+
+            json_data = JsonResponse(response_data, safe=False)
+            response = HttpResponse(json_data, content_type='application/json')
+            return response
 
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
