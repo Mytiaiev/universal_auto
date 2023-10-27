@@ -1,4 +1,4 @@
-$.scrollTop=()=> Math.max(document.documentElement.scrollTop, document.body.scrollTop);
+$.scrollTop = () => Math.max(document.documentElement.scrollTop, document.body.scrollTop);
 $(document).ready(function () {
 	$('[id^="sub-form-"]').on('submit', function (event) {
 		event.preventDefault();
@@ -285,4 +285,86 @@ $(document).ready(function () {
 			h.removeClass("fx");
 		}
 	});
+
+	// js for park page
+
+	const openButtonsFree = $(".free-access-button");
+	const openButtonsConsult = $(".consult-button");
+	const openButtonsConnect = $(".connect-button");
+	const formSectionFree = $("#free-access-form");
+	const formSectionConsult = $("#consult-form-selection");
+	const formSectionConnect = $("#connect-form-selection");
+	const closeButtonAccess = $("#close-form-access");
+	const closeButtonConsult = $("#close-form-consult");
+	const closeButtonConnect = $("#close-form-connect");
+	const accessForm = $("#access-form");
+	const thankYouMessage = $("#thank-you-message");
+
+	function hideFormAndShowThankYou() {
+		formSectionFree.hide();
+		formSectionConsult.hide();
+		thankYouMessage.show();
+		setTimeout(function () {
+			thankYouMessage.hide();
+		}, 5000);
+	}
+
+	function submitForm(formData) {
+		formData += "&action=free_access_or_consult";
+		$.ajax({
+			type: "POST",
+			url: ajaxPostUrl,
+			data: formData,
+			success: hideFormAndShowThankYou,
+			error: function () {
+				console("Помилка під час відправки форми.");
+			}
+		});
+	}
+
+	openButtonsFree.on("click", function () {
+		formSectionFree.show();
+		thankYouMessage.hide();
+	});
+
+	closeButtonAccess.on("click", function () {
+		formSectionFree.hide();
+	});
+
+	accessForm.on("submit", function (e) {
+		e.preventDefault();
+		let formData = accessForm.serialize();
+		submitForm(formData);
+	});
+
+	openButtonsConsult.on("click", function () {
+		formSectionConsult.show();
+		thankYouMessage.hide();
+	});
+
+	closeButtonConsult.on("click", function () {
+		formSectionConsult.hide();
+	});
+
+	formSectionConsult.find("#access-form").on("submit", function (e) {
+		e.preventDefault();
+		let formData = $(this).serialize();
+		submitForm(formData);
+	});
+
+	openButtonsConnect.on("click", function () {
+		formSectionConnect.show();
+		thankYouMessage.hide();
+	});
+
+	closeButtonConnect.on("click", function () {
+		formSectionConnect.hide();
+	});
+
+	formSectionConnect.find("#access-form").on("submit", function (e) {
+		e.preventDefault();
+		let formData = $(this).serialize();
+		submitForm(formData);
+	});
+
 });
