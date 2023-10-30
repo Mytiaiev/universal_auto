@@ -335,21 +335,24 @@ label[for="showPassword"] {
 	.top-stripe {
 		width: 35px;
 		height: 8px;
-		border-radius: 25%;
+		border-radius: 25px;
 		background-color: #EC6323;
 	}
 
 	.middle-stripe {
-		width: 31px;
+	  margin-top: 2px;
+	  margin-bottom: 2px;
+	  margin-left: 5px;
+		width: 25px;
 		height: 8px;
-		border-radius: 25%;
+		border-radius: 25px;
 		background-color: #EC6323;
 	}
 
 	.bottom-stripe {
-		width: 25px;
+		width: 35px;
 		height: 8px;
-		border-radius: 25%;
+		border-radius: 25px;
 		background-color: #EC6323;
 	}
 
@@ -2719,12 +2722,6 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	vertical-align: middle;
 }
 
-/*.analytics-box .buttons-box {*/
-/*	display: flex;*/
-/*	align-items: center;*/
-/*	justify-content: space-between;*/
-/*}*/
-
 .analytics-box .buttons-box button {
 	margin-top: 15px;
 	font-size: 16px;
@@ -3066,6 +3063,118 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	left: 75px;
 }
 
+/*adaptive for phone vertical*/
+
+@media screen and (max-width: 767px) {
+  /*block 1*/
+  .auto-park-one-section .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .auto-park-left {
+    position: relative;
+    width: 100%;
+    height: auto;
+    left: 0;
+    top: 0;
+  }
+
+  .auto-park-left img {
+    margin-top: 110px;
+    width: 100%;
+    height: auto;
+  }
+
+  .auto-park-right {
+    position: relative;
+    width: 109%;
+    height: auto;
+    left: 0;
+    top: 0;
+  }
+
+  .auto-park-right .decorate-img {
+    weight: 100%;
+    height: auto;
+    margin-top: 20px;
+    margin-bottom: 0;
+    right: 0;
+    position: relative;
+  }
+
+  .auto-park-right .decorate-img img {
+    width: 100%;
+    height: auto;
+  }
+
+  .auto-park-right .one-info {
+    width: 63%;
+    position: relative;
+    padding: 10px;
+    z-index: 1022;
+    margin-top: -250px;
+    margin-left: 85px;
+    right: 0;
+  }
+
+  .auto-park-right .one-info h2 {
+   font-size: 20px;
+  }
+
+  .auto-park-right .one-info p {
+    font-size: 15px;
+  }
+
+  .free-access-btn button,
+  .auto-park-two-section .contact-us a button {
+    width: 80%;
+    font-size: 10px;
+    padding: 10px 10px;
+    margin-left: 30px;
+    margin-top: 0;
+  }
+
+  /*block 2*/
+
+  .auto-park-two-section {
+    margin-top: 30px;
+  }
+
+  .auto-park-two-section .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .auto-park-two-section .container .img-box {
+      order: 1;
+  }
+
+  .auto-park-two-section .container .detail-box {
+      order: 2;
+  }
+
+  .auto-park-two-section .img-box {
+    width: 100%;
+    height: auto;
+    margin-top: 0;
+  }
+
+  .auto-park-two-section .detail-box p {
+    margin-top: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  /*block 3*/
+
+
+}
 
 /*End Auto Park page*/
 
