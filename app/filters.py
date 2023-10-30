@@ -79,7 +79,7 @@ class DriverRelatedFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         user = request.user
-        queryset = self.model_class.objects.exclude(driver__isnull=True)
+        queryset = self.model_class.objects.exclude(driver__isnull=True).select_related("driver")
         if user.groups.filter(name='Manager').exists():
             drivers = Driver.objects.filter(manager__user=user)
             queryset = queryset.filter(driver__in=drivers)

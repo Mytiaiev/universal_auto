@@ -17,10 +17,10 @@ class ManagerFilterMixin:
         user = self.request.user
 
         model_filter_map = {
-            SummaryReport: Q(driver__in=Driver.objects.filter(manager__user=user)),
-            CarEfficiency: Q(vehicle__manager__user=user),
-            DriverEfficiency: Q(driver__manager__user=user),
-            Vehicle: Q(manager__user=user),
+            SummaryReport: (Q(driver__in=Driver.objects.filter(manager__user=user)) | Q(partner__user=user)),
+            CarEfficiency: (Q(vehicle__manager__user=user) | Q(partner__user=user)),
+            DriverEfficiency: (Q(driver__manager__user=user) | Q(partner__user=user)),
+            Vehicle: (Q(manager__user=user) | Q(partner__user=user)),
         }
 
         filter_condition = model_filter_map.get(model)
