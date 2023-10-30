@@ -299,29 +299,42 @@ $(document).ready(function () {
 	const closeButtonConnect = $("#close-form-connect");
 	const accessForm = $("#access-form");
 	const thankYouMessage = $("#thank-you-message");
+	const existingYouMessage = $("#existing-you-message")
 
-	function hideFormAndShowThankYou() {
-		formSectionFree.hide();
-		formSectionConsult.hide();
-		formSectionConnect.hide();
-		thankYouMessage.show();
-		setTimeout(function () {
-			thankYouMessage.hide();
-		}, 5000);
-	}
+	function hideFormAndShowThankYou(success) {
+    formSectionFree.hide();
+    formSectionConsult.hide();
+    formSectionConnect.hide();
+
+    if (success) {
+        thankYouMessage.show();
+        setTimeout(function () {
+            thankYouMessage.hide();
+        }, 5000);
+    } else {
+        existingYouMessage.show();
+        setTimeout(function () {
+            existingYouMessage.hide();
+        }, 5000);
+    }
+  }
+
 
 	function submitForm(formData) {
-		formData += "&action=free_access_or_consult";
-		$.ajax({
-			type: "POST",
-			url: ajaxPostUrl,
-			data: formData,
-			success: hideFormAndShowThankYou,
-			error: function () {
-				console("Помилка під час відправки форми.");
-			}
-		});
-	}
+    formData += "&action=free_access_or_consult";
+    $.ajax({
+        type: "POST",
+        url: ajaxPostUrl,
+        data: formData,
+        success: function(response) {
+            hideFormAndShowThankYou(response.success);
+        },
+        error: function () {
+            console.log("Помилка під час відправки форми.");
+        }
+    });
+  }
+
 
 	openButtonsFree.on("click", function () {
 		formSectionFree.show();
