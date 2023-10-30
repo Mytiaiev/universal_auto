@@ -3172,7 +3172,142 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
   }
 
   /*block 3*/
+  .auto-park-three-section {
+    margin-top: 30px;
+  }
 
+  .auto-park-three-section .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .auto-park-three-section .img-box {
+    width: 75%;
+    height: auto;
+    margin-top: 0;
+  }
+
+  .auto-park-three-section .img-box .img-1 {
+    position: relative;
+    margin-bottom: 0;
+    right: 0;
+  }
+
+  .auto-park-three-section .img-box .img-2 {
+    width: 180% !important;
+    position: relative;
+    top: -440px;
+    margin-top: 0;
+    z-index: -1;
+  }
+
+  .analytics-box {
+    position: relative;
+    right: 0;
+    margin-top: -335px;
+  }
+
+  .analytics-box h2 {
+    margin-top: 0;
+    font-size: 20px;
+  }
+
+  .analytics-box ul li {
+    margin-top: 10px;
+    font-size: 15px;
+  }
+
+  .analytics-box .buttons-box button {
+    margin-top: 10px;
+    font-size: 10px;
+  }
+
+  /*block 4*/
+
+  .auto-park-four-section {
+    margin-top: 30px;
+  }
+
+  .auto-park-four-section .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .auto-park-four-section .container > div {
+    flex: 1;
+  }
+
+  .auto-park-four-section .container .img-box {
+      order: 1;
+  }
+
+  .auto-park-four-section .container .spending-box {
+      order: 2;
+  }
+
+  .auto-park-four-section .img-box {
+    width: 110%;
+    height: auto;
+    margin-top: 0;
+  }
+
+  .auto-park-four-section .img-box .img-1 {
+    position: relative;
+    margin-bottom: 0;
+    right: 0;
+  }
+
+  .auto-park-four-section .img-box .img-2 {
+    display: none;
+    position: relative;
+    top: 0;
+    right: 0;
+    margin-top: 0;
+    z-index: -1;
+  }
+
+  .spending-box {
+    flex-direction: column;
+  }
+
+  .spending-description h2 {
+    margin-top: 20px;
+    font-size: 20px;
+  }
+
+  .spending-description p {
+    width: 100%;
+    margin-top: 10px;
+    font-size: 15px;
+  }
+
+  .spending-box .buttons-box button {
+    margin-top: 10px;
+    font-size: 10px;
+  }
+
+  .spending-box .buttons-box .get-price-button {
+    width: 100%;
+    background-color: #EC6323;
+    color: #fff;
+    padding: 10px 10px;
+    border-radius: 20px;
+    border-color: #EC6323;
+  }
+
+  .spending-box .buttons-box .free-access-button {
+    width: 100%;
+    background-color: #fff;
+    color: #EC6323;
+    padding: 10px 10px;
+    border-color: #EC6323;
+    border-radius: 20px;
+    outline: 2px auto #EC6323;
+  }
 
 }
 
