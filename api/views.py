@@ -111,27 +111,23 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
         manager_queryset = ManagerFilterMixin.get_queryset(self, CarEfficiency)
         if manager_queryset:
             queryset = manager_queryset
-        filtered_qs = queryset.filter(report_from__range=(start, end))
+        filtered_qs = queryset.filter(report_from__range=(start, end)).select_related("vehicle")
         return filtered_qs
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        grouped_data = defaultdict(list)
         aggregated_data = queryset.aggregate(
             total_kasa=Sum('total_kasa'),
             total_mileage=Sum('mileage')
         )
         kasa = aggregated_data.get('total_kasa', 0)
-        total_mileage = aggregated_data.get('total_mileage',0)
-        for item in queryset:
-            report_from = item.report_from.strftime('%Y-%m-%d')
-            grouped_data[report_from].append({
+        total_mileage = aggregated_data.get('total_mileage', 0)
+        serialized_data = [{
+                "report_from": item.report_from.strftime('%Y-%m-%d'),
                 "licence_plate": item.vehicle.licence_plate,
                 "mileage": item.mileage,
                 "efficiency": item.efficiency
-            })
-
-        serialized_data = [{report_from: records} for report_from, records in grouped_data.items()]
+            } for item in queryset]
 
         response_data = {
             "efficiency": serialized_data,

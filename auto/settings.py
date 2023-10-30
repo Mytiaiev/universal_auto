@@ -163,7 +163,27 @@ CELERY_IMPORTS = [
 SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
 APPEND_SLASH = False
 
-
+LOGGING = {
+    'version': 1,
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+        }
+    },
+    'loggers': {
+        'django.db.backends': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        }
+    }
+}
 # Налаштування для відправки листів
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
