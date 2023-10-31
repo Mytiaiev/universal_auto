@@ -338,11 +338,9 @@ function fetchCarEfficiencyData(period, start, end) {
 				const seriesData = [];
 				const dates = [];
 				data.efficiency.forEach(dateData => {
-					const date = Object.keys(dateData)[0];
-					const vehicleEfficiencies = dateData[date];
-					vehicleEfficiencies.forEach(entry => {
-						const vehicleName = entry.licence_plate;
-						const efficiencyValue = parseFloat(entry.efficiency);
+					const date = dateData.report_from;
+					const vehicleName = dateData.licence_plate;;
+					const efficiencyValue = dateData.efficiency;
 						let series = seriesData.find(series => series.name === vehicleName);
 						if (!series) {
 							series = {
@@ -352,9 +350,9 @@ function fetchCarEfficiencyData(period, start, end) {
 							seriesData.push(series);
 						}
 						series.data.push(efficiencyValue);
+						dates.push(date);
 					});
-					dates.push(date);
-				});
+
 				areaChartOptions.series = seriesData;
 				areaChartOptions.labels = dates;
 				areaChart.updateOptions(areaChartOptions);

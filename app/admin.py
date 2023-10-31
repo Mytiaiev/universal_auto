@@ -255,7 +255,7 @@ class SchemaAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
     def get_fieldsets(self, request, obj=None):
         if request.user.groups.filter(name='Partner').exists():
             fieldsets = [
-                ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental', 'rent_price', 'limit_distance']}),
+                ('Деталі', {'fields': ['title', 'schema', 'rate', 'plan', 'rental', 'rent_price', 'limit_distance', 'shift_time', 'salary_calculation']}),
             ]
             return fieldsets
         return super().get_fieldsets(request)
@@ -272,12 +272,10 @@ class DriverRateLevelsAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
         return self.readonly_fields if not request.user.is_superuser else tuple()
 
     def get_fieldsets(self, request, obj=None):
-        if request.user.groups.filter(name='Partner').exists():
-            fieldsets = [
-                (None, {'fields': ['period', 'threshold', 'rate']}),
-            ]
-            return fieldsets
-
+        fieldsets = [
+            (None, {'fields': ['period', 'threshold', 'rate']}),
+        ]
+        return fieldsets
 
 
 @admin.register(RawGPS)
