@@ -310,12 +310,12 @@ $(document).ready(function () {
         thankYouMessage.show();
         setTimeout(function () {
             thankYouMessage.hide();
-        }, 5000);
+        }, 3000);
     } else {
         existingYouMessage.show();
         setTimeout(function () {
             existingYouMessage.hide();
-        }, 5000);
+        }, 3000);
     }
   }
 
@@ -346,9 +346,16 @@ $(document).ready(function () {
 	});
 
 	accessForm.on("submit", function (e) {
-		e.preventDefault();
-		let formData = accessForm.serialize();
-		submitForm(formData);
+    e.preventDefault();
+    let formData = accessForm.serialize();
+    let phoneInput = accessForm.find('#phone').val();
+    $(".error-message").hide();
+
+    if (!/^\+\d{1,3} \d{2,3} \d{2,3}-\d{2,3}-\d{2,3}$/.test(phoneInput)) {
+			$(".error-message").show();
+			return;
+		}
+    submitForm(formData);
 	});
 
 	openButtonsConsult.on("click", function () {
@@ -366,6 +373,18 @@ $(document).ready(function () {
 		submitForm(formData);
 	});
 
+	formSectionConsult.find("#consult-access-form").on("submit", function (e) {
+		e.preventDefault();
+		let formData = $(this).serialize();
+		submitForm(formData);
+	});
+
+	formSectionConsult.find("#connect-access-form").on("submit", function (e) {
+		e.preventDefault();
+		let formData = $(this).serialize();
+		submitForm(formData);
+	});
+
 	openButtonsConnect.on("click", function () {
 		formSectionConnect.show();
 		thankYouMessage.hide();
@@ -375,10 +394,21 @@ $(document).ready(function () {
 		formSectionConnect.hide();
 	});
 
-	formSectionConnect.find("#access-form").on("submit", function (e) {
-		e.preventDefault();
-		let formData = $(this).serialize();
-		submitForm(formData);
-	});
+});
 
+$.mask.definitions['9'] = '';
+$.mask.definitions['d'] = '[0-9]';
+
+function intlTelInit(phoneEl) {
+	let phoneSelector = $(phoneEl);
+
+	if (phoneSelector.length) {
+		phoneSelector.mask("+380 dd ddd-dd-dd");
+	}
+}
+
+$(document).ready(function() {
+  intlTelInit('#phone');
+  intlTelInit('#consult-phone');
+  intlTelInit('#connect-phone');
 });

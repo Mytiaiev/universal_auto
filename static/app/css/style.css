@@ -3153,6 +3153,14 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	cursor: pointer;
 }
 
+span.error-message {
+	display: none;
+	color: red;
+	font-size: 15px;
+	float: left;
+	margin-left: 170px;
+}
+
 /*///////////////*/
 
 .thank-you-message,

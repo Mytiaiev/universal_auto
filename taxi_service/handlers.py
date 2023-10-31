@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from celery.result import AsyncResult
 from django.core.serializers.json import DjangoJSONEncoder
@@ -155,9 +156,11 @@ class PostRequestHandler:
         phone = request.POST.get('phone')
 
         if name and phone:
+            phone = phone.replace(' ', '').replace('-', '')
             existing_subscriber = SubscribeUsers.objects.filter(phone_number=phone).first()
 
             if existing_subscriber:
+                existing_subscriber.created_at = datetime.now()
                 response_data = {'success': False, 'error': 'Ви вже підписались'}
             else:
                 subscriber = SubscribeUsers.objects.create(name=name, phone_number=phone)
