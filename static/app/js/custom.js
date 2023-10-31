@@ -1,4 +1,4 @@
-$.scrollTop=()=> Math.max(document.documentElement.scrollTop, document.body.scrollTop);
+$.scrollTop = () => Math.max(document.documentElement.scrollTop, document.body.scrollTop);
 $(document).ready(function () {
 	$('[id^="sub-form-"]').on('submit', function (event) {
 		event.preventDefault();
@@ -285,4 +285,108 @@ $(document).ready(function () {
 			h.removeClass("fx");
 		}
 	});
+
+	// js for park page
+
+	const openButtonsFree = $(".free-access-button");
+	const openButtonsConnect = $(".connect-button");
+	const openButtonsConsult = $(".consult-button");
+	const formSectionFree = $("#free-access-form");
+	const closeButtonAccess = $("#close-form-access");
+	const accessForm = $("#access-form");
+	const thankYouMessage = $("#thank-you-message");
+	const existingYouMessage = $("#existing-you-message")
+
+	function hideFormAndShowThankYou(success) {
+    formSectionFree.hide();
+
+    if (success) {
+        thankYouMessage.show();
+        setTimeout(function () {
+            thankYouMessage.hide();
+        }, 5000);
+    } else {
+        existingYouMessage.show();
+        setTimeout(function () {
+            existingYouMessage.hide();
+        }, 5000);
+    }
+  }
+
+
+	function submitForm(formData) {
+    formData += "&action=free_access_or_consult";
+    $.ajax({
+        type: "POST",
+        url: ajaxPostUrl,
+        data: formData,
+        success: function(response) {
+            hideFormAndShowThankYou(response.success);
+        },
+        error: function () {
+            console.log("Помилка під час відправки форми.");
+        }
+    });
+  }
+
+
+	openButtonsFree.on("click", function () {
+		$("#free-access-form h2").text("Отримати безкоштовний доступ на місяць");
+		$("#access-form input[type='submit']").val("Отримати безкоштовний доступ");
+		formSectionFree.show();
+		thankYouMessage.hide();
+	});
+
+	openButtonsConnect.on("click", function () {
+		$("#free-access-form h2").text("Зв’язатися з нами");
+    $("#access-form input[type='submit']").val("Зв’язатися з нами");
+		formSectionFree.show();
+		thankYouMessage.hide();
+	});
+
+	openButtonsConsult.on("click", function () {
+		$("#free-access-form h2").text("Проконсультуватися");
+		$("#access-form input[type='submit']").val("Проконсультуватися");
+		formSectionFree.show();
+		thankYouMessage.hide();
+	});
+
+	closeButtonAccess.on("click", function () {
+		formSectionFree.hide();
+	});
+
+	accessForm.on("submit", function (e) {
+    e.preventDefault();
+    let formData = accessForm.serialize();
+    let phoneInput = accessForm.find('#phone').val();
+    let nameInput = accessForm.find('#name').val();
+    $(".error-message").hide();
+
+    if (!/^\+\d{1,3} \d{2,3} \d{2,3}-\d{2,3}-\d{2,3}$/.test(phoneInput)) {
+			$(".error-message").show();
+			return;
+		}
+
+		if (nameInput.trim() === "") {
+			$(".error-name").show();
+			return;
+    }
+
+    submitForm(formData);
+	});
+});
+
+$.mask.definitions['9'] = '';
+$.mask.definitions['d'] = '[0-9]';
+
+function intlTelInit(phoneEl) {
+	let phoneSelector = $(phoneEl);
+
+	if (phoneSelector.length) {
+		phoneSelector.mask("+380 dd ddd-dd-dd");
+	}
+}
+
+$(document).ready(function() {
+  intlTelInit('#phone');
 });

@@ -56,6 +56,7 @@ class PostRequestView(View):
             "send_reset_code": handler.handler_change_password,
             "update_password": handler.handler_change_password,
             "upd_database": handler.handler_update_database,
+            "free_access_or_consult": handler.handler_free_access
         }
 
         if action in method:

@@ -17,12 +17,10 @@
             <h2>{% trans "Переверніть свій автопарк на 360 градусів" %}</h2>
             <p class="text-1">{% trans "Автоматизована система від Ninja Taxi- це ключ до ефективності, яка переверне ваш бізнес!" %}
             </p>
-            <div class="free-access-btn">
-              <a href="#">
-                <button>{% trans "Отримати безкоштовний доступ на місяць " %}</button>
-              </a>
-            </div>
           </div>
+        </div>
+        <div class="free-access-btn" id="open-form">
+          <button class="free-access-button">{% trans "Отримати безкоштовний доступ на місяць " %}</button>
         </div>
       </div>
     </div>
@@ -40,7 +38,7 @@
         </p>
         <div class="contact-us">
           <a href="#">
-            <button>{% trans "Зв’язатися з нами" %}</button>
+            <button class="connect-button">{% trans "Зв’язатися з нами" %}</button>
           </a>
         </div>
       </div>
@@ -73,7 +71,7 @@
         </div>
         <div class="buttons-box">
           <button class="get-price-button">{% trans "Дізнатися вартість" %}</button>
-          <button class="consult-button">{% trans "Проконсультуватися" %}</button>
+          <button type="submit" class="consult-button">{% trans "Проконсультуватися" %}</button>
         </div>
       </div>
     </div>
@@ -121,7 +119,7 @@
         </div>
         <div class="buttons-box">
           <button class="get-price-button">{% trans "Дізнатися вартість" %}</button>
-          <button class="consult-button">{% trans "Проконсультуватися" %}</button>
+          <button type="submit" class="consult-button">{% trans "Проконсультуватися" %}</button>
         </div>
       </div>
     </div>
@@ -180,6 +178,47 @@
     </div>
   </section>
 
+  <!-- free access form -->
+
+  <section class="free-access-section" id="free-access-form">
+    <div class="container">
+      <button id="close-form-access" class="close-button">×</button>
+      <h2>{% trans "Отримати безкоштовний доступ на місяць" %}</h2>
+      <p>{% trans "Заповніть форму та наш менеджер зв'яжеться з Вами" %}</p>
+      <form id="access-form">
+        {% csrf_token %}
+        <input type="text" id="name" name="name" placeholder="{% trans "Ваше ім'я*" %}"><br>
+        <span class="error-name">{% trans "Ім'я обовязкове!"%}</span><br>
+        <input type="tel" id="phone" name="phone" placeholder="{% trans 'Ваш номер телефону*' %}"><br>
+        <span class="error-message">{% trans "Не вірний формат номеру"%}</span><br>
+        <input type="submit" value="{% trans 'Отримати безкоштовний доступ' %}">
+      </form>
+    </div>
+  </section>
+
+  <!-- end free access form -->
+
+  <!-- thank you message -->
+
+  <section class="thank-you-message" id="thank-you-message">
+    <div class="container">
+      <div class="message-box">
+        <h2>{% trans "Дякуємо! Наш менеджер найближчим часом зв’яжеться з Вами та проконсультує Вас. Гарного дня!" %}</h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- end thank you message -->
+
+  <!--existing number message-->
+  <section class="existing-you-message" id="existing-you-message">
+    <div class="container">
+      <div class="message-box">
+        <h2>{% trans " Ви вже залишили заявку. Наш менеджер обов’язково з Вами зв’яжеться!" %}</h2>
+      </div>
+    </div>
+  </section>
+  <!--existing number message-->
 
   <!-- end auto park seven section -->
 

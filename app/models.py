@@ -1064,6 +1064,8 @@ class Event(models.Model):
 
 class SubscribeUsers(models.Model):
     email = models.EmailField(max_length=254, verbose_name='Електронна пошта')
+    name = models.CharField(max_length=100, verbose_name='Ім\'я')
+    phone_number = models.CharField(max_length=15, verbose_name='Номер телефону')
     created_at = models.DateTimeField(editable=False, auto_now=True, verbose_name='Створено')
 
     class Meta:
@@ -1081,9 +1083,8 @@ class SubscribeUsers(models.Model):
         try:
             subscriber = SubscribeUsers.objects.get(email=email)
             return subscriber
-        except ObjectDoesNotExist:
+        except SubscribeUsers.DoesNotExist:
             return None
-
 
 class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
