@@ -272,12 +272,10 @@ class DriverRateLevelsAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin
         return self.readonly_fields if not request.user.is_superuser else tuple()
 
     def get_fieldsets(self, request, obj=None):
-        if request.user.groups.filter(name='Partner').exists():
-            fieldsets = [
-                (None, {'fields': ['period', 'threshold', 'rate']}),
-            ]
-            return fieldsets
-
+        fieldsets = [
+            (None, {'fields': ['period', 'threshold', 'rate']}),
+        ]
+        return fieldsets
 
 
 @admin.register(RawGPS)
