@@ -188,6 +188,7 @@
       <form id="access-form">
         {% csrf_token %}
         <input type="text" id="name" name="name" placeholder="{% trans "Ваше ім'я*" %}"><br>
+        <span class="error-name">{% trans "Ім'я обовязкове!"%}</span><br>
         <input type="tel" id="phone" name="phone" placeholder="{% trans 'Ваш номер телефону*' %}"><br>
         <span class="error-message">{% trans "Не вірний формат номеру"%}</span><br>
         <input type="submit" value="{% trans 'Отримати безкоштовний доступ' %}">
@@ -213,7 +214,7 @@
   <section class="existing-you-message" id="existing-you-message">
     <div class="container">
       <div class="message-box">
-        <h2>{% trans "Ваш номер вже існує в нашій системі. Наш менеджер найближчим часом зв’яжеться з Вами та проконсультує Вас. Гарного дня!" %}</h2>
+        <h2>{% trans " Ви вже залишили заявку. Наш менеджер обов’язково з Вами зв’яжеться!" %}</h2>
       </div>
     </div>
   </section>

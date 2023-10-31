@@ -3153,7 +3153,8 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	cursor: pointer;
 }
 
-span.error-message {
+span.error-message,
+span.error-name {
 	display: none;
 	color: red;
 	font-size: 15px;

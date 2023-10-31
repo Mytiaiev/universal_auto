@@ -304,12 +304,12 @@ $(document).ready(function () {
         thankYouMessage.show();
         setTimeout(function () {
             thankYouMessage.hide();
-        }, 3000);
+        }, 5000);
     } else {
         existingYouMessage.show();
         setTimeout(function () {
             existingYouMessage.hide();
-        }, 3000);
+        }, 5000);
     }
   }
 
@@ -359,12 +359,19 @@ $(document).ready(function () {
     e.preventDefault();
     let formData = accessForm.serialize();
     let phoneInput = accessForm.find('#phone').val();
+    let nameInput = accessForm.find('#name').val();
     $(".error-message").hide();
 
     if (!/^\+\d{1,3} \d{2,3} \d{2,3}-\d{2,3}-\d{2,3}$/.test(phoneInput)) {
 			$(".error-message").show();
 			return;
 		}
+
+		if (nameInput.trim() === "") {
+			$(".error-name").show();
+			return;
+    }
+
     submitForm(formData);
 	});
 });
