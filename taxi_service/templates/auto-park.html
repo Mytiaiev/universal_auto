@@ -197,44 +197,6 @@
 
   <!-- end free access form -->
 
-  <!-- consult form -->
-
-  <section class="to-consult-section" id="consult-form-selection">
-    <div class="container">
-      <button id="close-form-consult" class="close-button">×</button>
-      <h2>{% trans "Проконсультуватися" %}</h2>
-      <p>{% trans "Заповніть форму та наш менеджер зв'яжеться з Вами" %}</p>
-      <form id="consult-access-form">
-        {% csrf_token %}
-        <input type="text" id="consult-name" name="name" placeholder="{% trans "Ваше ім'я*" %}"><br>
-        <input type="tel" id="consult-phone" name="phone" placeholder="{% trans 'Ваш номер телефону*' %}"><br>
-        <span class="error-message">{% trans "Не вірний формат номеру"%}</span><br>
-        <input type="submit" value="{% trans 'Проконсультуватися' %}">
-      </form>
-    </div>
-  </section>
-
-  <!-- end consult form -->
-
-  <!-- connect form -->
-
-  <section class="to-connect-section" id="connect-form-selection">
-    <div class="container">
-      <button id="close-form-connect" class="close-button">×</button>
-      <h2>{% trans "Зв’язатися з нами" %}</h2>
-      <p>{% trans "Заповніть форму та наш менеджер зв'яжеться з Вами" %}</p>
-      <form id="connect-access-form">
-        {% csrf_token %}
-        <input type="text" id="connect-name" name="name" placeholder="{% trans "Ваше ім'я*" %}"><br>
-        <input type="tel" id="connect-phone" name="phone" placeholder="{% trans 'Ваш номер телефону*' %}" inputmode="tel"><br>
-        <span class="error-message">{% trans "Не вірний формат номеру"%}</span><br>
-        <input type="submit" value="{% trans 'Зв’язатися з нами' %}">
-      </form>
-    </div>
-  </section>
-
-  <!-- end connect form -->
-
   <!-- thank you message -->
 
   <section class="thank-you-message" id="thank-you-message">

@@ -289,22 +289,16 @@ $(document).ready(function () {
 	// js for park page
 
 	const openButtonsFree = $(".free-access-button");
-	const openButtonsConsult = $(".consult-button");
 	const openButtonsConnect = $(".connect-button");
+	const openButtonsConsult = $(".consult-button");
 	const formSectionFree = $("#free-access-form");
-	const formSectionConsult = $("#consult-form-selection");
-	const formSectionConnect = $("#connect-form-selection");
 	const closeButtonAccess = $("#close-form-access");
-	const closeButtonConsult = $("#close-form-consult");
-	const closeButtonConnect = $("#close-form-connect");
 	const accessForm = $("#access-form");
 	const thankYouMessage = $("#thank-you-message");
 	const existingYouMessage = $("#existing-you-message")
 
 	function hideFormAndShowThankYou(success) {
     formSectionFree.hide();
-    formSectionConsult.hide();
-    formSectionConnect.hide();
 
     if (success) {
         thankYouMessage.show();
@@ -337,6 +331,22 @@ $(document).ready(function () {
 
 
 	openButtonsFree.on("click", function () {
+		$("#free-access-form h2").text("Отримати безкоштовний доступ на місяць");
+		$("#access-form input[type='submit']").val("Отримати безкоштовний доступ");
+		formSectionFree.show();
+		thankYouMessage.hide();
+	});
+
+	openButtonsConnect.on("click", function () {
+		$("#free-access-form h2").text("Зв’язатися з нами");
+    $("#access-form input[type='submit']").val("Зв’язатися з нами");
+		formSectionFree.show();
+		thankYouMessage.hide();
+	});
+
+	openButtonsConsult.on("click", function () {
+		$("#free-access-form h2").text("Проконсультуватися");
+		$("#access-form input[type='submit']").val("Проконсультуватися");
 		formSectionFree.show();
 		thankYouMessage.hide();
 	});
@@ -357,43 +367,6 @@ $(document).ready(function () {
 		}
     submitForm(formData);
 	});
-
-	openButtonsConsult.on("click", function () {
-		formSectionConsult.show();
-		thankYouMessage.hide();
-	});
-
-	closeButtonConsult.on("click", function () {
-		formSectionConsult.hide();
-	});
-
-	formSectionConsult.find("#access-form").on("submit", function (e) {
-		e.preventDefault();
-		let formData = $(this).serialize();
-		submitForm(formData);
-	});
-
-	formSectionConsult.find("#consult-access-form").on("submit", function (e) {
-		e.preventDefault();
-		let formData = $(this).serialize();
-		submitForm(formData);
-	});
-
-	formSectionConsult.find("#connect-access-form").on("submit", function (e) {
-		e.preventDefault();
-		let formData = $(this).serialize();
-		submitForm(formData);
-	});
-
-	openButtonsConnect.on("click", function () {
-		formSectionConnect.show();
-		thankYouMessage.hide();
-	});
-
-	closeButtonConnect.on("click", function () {
-		formSectionConnect.hide();
-	});
-
 });
 
 $.mask.definitions['9'] = '';
@@ -409,6 +382,4 @@ function intlTelInit(phoneEl) {
 
 $(document).ready(function() {
   intlTelInit('#phone');
-  intlTelInit('#consult-phone');
-  intlTelInit('#connect-phone');
 });
