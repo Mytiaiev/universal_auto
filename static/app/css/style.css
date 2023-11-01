@@ -2745,7 +2745,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	padding: 15px 20px;
 	border-radius: 20px;
 	border-color: #EC6323;
-	outline: 2px auto #EC6323;
+	outline: 2px auto #EC6323 !important
 }
 
 .analytics-box .buttons-box .consult-button {
@@ -2755,7 +2755,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	padding: 15px 20px;
 	border-color: #EC6323;
 	border-radius: 20px;
-	outline: 2px auto #EC6323;
+	outline: 2px auto #EC6323 !important;
 }
 
 
@@ -2923,6 +2923,10 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 .auto-park-five-section .img-box {
 	position: relative;
 	left: 35px;
+}
+
+.auto-park-five-section .img-box .img-2 {
+	display: none;
 }
 
 .auto-park-five-section .control-box .buttons-box {
@@ -3423,6 +3427,10 @@ span.error-name {
     right: 0;
   }
 
+	.auto-park-four-section .img-box .img-2 {
+		display: none;
+  }
+
   .spending-box {
     flex-direction: column;
   }
@@ -3526,6 +3534,22 @@ span.error-name {
 		margin-top: 0;
 	}
 
+	.auto-park-five-section .img-box .img-1 {
+		position: relative;
+		margin-bottom: 0;
+		right: 0;
+	}
+
+	.auto-park-five-section .img-box .img-2 {
+		position: absolute;
+    width: 110% !important;
+    height: 270px;
+    left: -15px;
+    top: 0;
+    margin-top: 35px;
+    z-index: -1;
+	}
+
 	.auto-park-five-section .control-box .buttons-box {
 		display: flex;
 		flex-direction: column;
@@ -3563,16 +3587,6 @@ span.error-name {
 	.control-box .buttons-box .get-price-button:hover {
 		background-color: #FF8C24;
 	}
-
-	.auto-park-four-section .img-box .img-2 {
-    width: 390px !important;
-    height: 270px;
-    position: absolute;
-    top: 2675px;
-    right: 0;
-    margin-top: 0;
-    z-index: -1;
-  }
 
 	/*block 6*/
 
