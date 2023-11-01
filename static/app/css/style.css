@@ -3186,6 +3186,10 @@ span.error-name {
 	height: 650px;
 }
 
+.existing-you-message {
+	height: 600px;
+}
+
 .message-box {
 	background-color: white;
 	padding: 20px;
@@ -3694,7 +3698,124 @@ span.error-name {
 		left: 0;
 	}
 
+	/*Form styles adaptive*/
 
+	.free-access-section{
+		display: none;
+		background-color: #A1E8B9;
+		padding: 20px;
+		text-align: center;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		border-radius: 62px;
+		width: 95%;
+		height: 65%;
+	}
+
+	.free-access-section h2 {
+		margin-top: 55px;
+		color: #EC6323;
+		text-align: center;
+		font-size: 20px;
+		font-style: normal;
+		font-weight: 700;
+		line-height: normal;
+		text-transform: uppercase;
+	}
+
+	.free-access-section p {
+		margin-top: 15px;
+		color: #38423B;
+		text-align: center;
+		font-size: 15px;
+		font-style: normal;
+		font-weight: 400;
+		line-height: normal;
+	}
+
+	.free-access-section input[type="text"],
+	.free-access-section input[type="tel"] {
+		font-size: 15px;
+		margin-top: 15px;
+		width: 70%;
+		padding: 25px 20px;
+		border: 1px solid #ccc;
+		border-radius: 25px;
+	}
+
+	.free-access-section input[type="submit"] {
+		margin-top: 24px;
+		background-color: #EC6323;
+		color: #fff;
+		padding: 10px 5px;
+		border: none;
+		cursor: pointer;
+		transition: background-color 0.3s;
+		border-radius: 62px;
+	}
+
+	.free-access-section input[type="submit"]:hover {
+		background-color: #FF8C24;
+	}
+
+	.free-access-section .close-button {
+		position: absolute;
+		top: 10px;
+		right: 20px;
+		background: transparent;
+		border: none;
+		font-size: 50px;
+		cursor: pointer;
+	}
+
+	span.error-message,
+	span.error-name {
+		display: none;
+		color: red;
+		font-size: 15px;
+		float: left;
+		margin-left: 170px;
+	}
+
+	/*///////////////*/
+
+	.thank-you-message,
+	.existing-you-message {
+		display: none;
+		background-color: #A1E8B9;
+		padding: 20px;
+		text-align: center;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		border-radius: 62px;
+		width: 95%;
+		height: 21%;
+	}
+
+	.thank-you-message {
+	height: 26% !important;
+	}
+
+	.message-box {
+		background-color: white;
+		padding: 0;
+		margin: 0;
+		border-radius: 62px;
+	}
+
+	.message-box h2 {
+		color: #EC6323;
+		margin: 20px 20px;
+		text-align: center;
+		font-size: 20px;
+		font-style: normal;
+		font-weight: 700;
+		line-height: normal;
+	}
 
 }
 
