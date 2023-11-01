@@ -2880,6 +2880,10 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	right: 135px;
 }
 
+.auto-park-adaptive {
+	display: none;
+}
+
 .auto-park-five-section .control-box h2 {
 	width: 675px;
 	margin-top: 25px;
@@ -3263,12 +3267,11 @@ span.error-name {
     font-size: 15px;
   }
 
-  .free-access-btn button,
-  .auto-park-two-section .contact-us a button {
+  .free-access-btn button {
     width: 80%;
     font-size: 10px;
     padding: 10px 10px;
-    margin-left: 30px;
+    margin-left: 90px;
     margin-top: 0;
   }
 
@@ -3306,6 +3309,14 @@ span.error-name {
     text-align: center;
   }
 
+  .auto-park-two-section .contact-us a button {
+    width: 100%;
+    font-size: 10px;
+    padding: 10px 10px;
+    margin-left:0;
+    margin-top: 0;
+  }
+
   /*block 3*/
   .auto-park-three-section {
     margin-top: 30px;
@@ -3339,6 +3350,7 @@ span.error-name {
   }
 
   .analytics-box {
+  	width: 100%;
     position: relative;
     right: 0;
     margin-top: -335px;
@@ -3354,10 +3366,21 @@ span.error-name {
     font-size: 15px;
   }
 
-  .analytics-box .buttons-box button {
-    margin-top: 10px;
-    font-size: 10px;
+  .analytics-box .buttons-box {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
   }
+
+ 	.analytics-box .buttons-box .get-price-button,
+ 	.analytics-box .buttons-box .consult-button {
+		width: 100%;
+		text-align: center;
+		font-size: 10px;
+		padding: 10px 10px;
+		margin-left: 0;
+		margin-top: 10px;
+	}
 
   /*block 4*/
 
@@ -3394,15 +3417,6 @@ span.error-name {
     position: relative;
     margin-bottom: 0;
     right: 0;
-  }
-
-  .auto-park-four-section .img-box .img-2 {
-    display: none;
-    position: relative;
-    top: 0;
-    right: 0;
-    margin-top: 0;
-    z-index: -1;
   }
 
   .spending-box {
@@ -3443,6 +3457,178 @@ span.error-name {
     border-radius: 20px;
     outline: 2px auto #EC6323;
   }
+
+  /*block 5*/
+
+  .auto-park-five-section {
+		margin-top: 30px;
+	}
+
+	.auto-park-five-section .container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.auto-park-five-section .control-box {
+		width: 100%;
+		position: relative;
+		right: 0;
+		margin-top: 0;
+	}
+
+	.auto-park-five-section .control-box h2 {
+		width: 100%;
+		margin-top: 25px;
+		font-size: 20px;
+	}
+
+	.auto-park-text {
+		display: none;
+	}
+
+	.auto-park-adaptive {
+		display: flex;
+    align-items: center;
+	}
+
+	.auto-park-adaptive-img {
+		margin-bottom: 35px;
+		display: flex;
+    flex-direction: column;
+    width: 50px;
+    height: 50px;
+	}
+
+	.auto-park-adaptive-text {
+		display: flex;
+    flex-direction: column;
+	}
+
+	.auto-park-adaptive-text span {
+		margin-top: 20px;
+		color: #53785E;
+		font-size: 15px;
+		font-style: normal;
+		font-weight: 400;
+		line-height: normal;
+	}
+
+	.auto-park-five-section .img-box {
+		width: 100%;
+		height: auto;
+		left: 0;
+		margin-top: 0;
+	}
+
+	.auto-park-five-section .control-box .buttons-box {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.control-box .buttons-box button {
+		margin-top: 10px;
+		font-size: 10px;
+	}
+
+	.control-box .buttons-box .get-price-button {
+		width: 100%;
+		background-color: #EC6323;
+		color: #fff;
+		padding: 10px 10px;
+		border: none;
+		cursor: pointer;
+		transition: background-color 0.3s;
+		border-radius: 62px;
+		margin-right: 0;
+	}
+
+	.control-box .buttons-box .consult-button {
+		width: 100%;
+		background-color: #fff;
+		color: #EC6323;
+		padding: 10px 10px;
+		border-color: #EC6323;
+		border-radius: 62px;
+		outline: 2px auto #EC6323;
+		margin-right: 0;
+	}
+
+	.control-box .buttons-box .get-price-button:hover {
+		background-color: #FF8C24;
+	}
+
+	.auto-park-four-section .img-box .img-2 {
+    width: 390px !important;
+    height: 270px;
+    position: absolute;
+    top: 2675px;
+    right: 0;
+    margin-top: 0;
+    z-index: -1;
+  }
+
+	/*block 6*/
+
+	.auto-park-six-section {
+		margin-top: 30px;
+		height: auto;
+		background: url("/static/app/images/auto-park-img/park-block-6-2.webp") no-repeat;
+		background-size: 100% 100%;
+	}
+
+	.auto-park-six-section .container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.auto-park-six-section .container .img-box {
+      order: 1;
+  }
+
+  .auto-park-six-section .container .description {
+      order: 2;
+  }
+
+	.auto-park-six-section .description p {
+		margin-top: 20px;
+		width: 90%;
+		color: #FFF;
+		font-size: 20px;
+		font-style: normal;
+		font-weight: 600;
+		line-height: normal;
+		text-transform: uppercase;
+	}
+
+	.auto-park-six-section .description button {
+    width: 100%;
+    font-size: 10px;
+    margin-top: 10px;
+    background-color: #EC6323;
+    color: #fff;
+    padding: 10px 10px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border-radius: 62px;
+    margin-right: 0;
+    margin-bottom: 20px;
+	}
+
+	.auto-park-six-section .box-img img {
+		width: 100%;
+		margin-top: 20px;
+		position: relative;
+		right: 0;
+	}
+
+	/*block 7*/
+
 
 }
 
