@@ -3629,6 +3629,72 @@ span.error-name {
 
 	/*block 7*/
 
+	.auto-park-seven-section {
+		margin-top: 30px;
+	}
+
+	.auto-park-seven-section .blog-cards {
+		display: grid;
+		grid-template-columns: repeat(1, 1fr);
+		grid-gap: 20px;
+	}
+
+	.auto-park-seven-section .blog-cards .blog-card {
+		text-align: center;
+		position: relative;
+	}
+
+	.auto-park-seven-section .blog-cards .blog-card img {
+		display: block;
+		margin: 0;
+		width: 110%;
+		height: auto;
+		max-height: max-content;
+	}
+
+	.auto-park-seven-section .blog-cards .blog-card h2,
+	.auto-park-seven-section .blog-cards .blog-card p {
+		width: 75%;
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		margin: 0;
+		text-align: center;
+	}
+
+	.auto-park-seven-section .blog-cards .blog-card h2 {
+		top: 10%;
+		color: #141E17;
+		font-size: 20px;
+		font-style: normal;
+		font-weight: 700;
+		line-height: normal;
+	}
+
+	.auto-park-seven-section .blog-cards .blog-card p {
+		top: 45%;
+		color: #53785E;
+		font-size: 15px;
+		font-style: normal;
+		font-weight: 400;
+		line-height: normal;
+	}
+
+	.auto-park-seven-section .blog-cards .blog-card a {
+		width: 85%;
+    bottom: 35px;
+    text-decoration: none;
+    background-color: #EC6323;
+    color: #fff;
+    margin-top: 0px;
+	}
+
+	.auto-park-seven-section .blog-cards:nth-child(3) {
+		position: relative;
+		left: 0;
+	}
+
+
 
 }
 
