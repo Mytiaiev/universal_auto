@@ -136,11 +136,12 @@ $(document).ready(function () {
 		};
 
 		let modalText = document.createElement('p');
-		modalText.innerHTML = 'Вхід не вдався:<br>' +
-			'<ol><li>Будь ласка, перевірте, чи ви використовуєте електронну адресу, яку вказували під час реєстрації.</li>' +
-			'<li>Також, переконайтеся, що ви є партнером компанії Ninja Taxi.</li>' +
-			'<li>Якщо ви впевнені в правильності введених даних, але не можете увійти в систему, зверніться до нашого менеджера для отримання допомоги.</li>' +
-			'</ol>';
+		modalText.innerHTML = gettext('Вхід не вдався:') + '<br>' +
+    '<ol><li>' + gettext('Будь ласка, перевірте, чи ви використовуєте електронну адресу, яку вказували під час реєстрації.') + '</li>' +
+    '<li>' + gettext('Також, переконайтеся, що ви є партнером компанії Ninja Taxi.') + '</li>' +
+    '<li>' + gettext('Якщо ви впевнені в правильності введених даних, але не можете увійти в систему, зверніться до нашого менеджера для отримання допомоги.') + '</li>' +
+    '</ol>';
+
 
 		modalContent.appendChild(closeBtn);
 		modalContent.appendChild(modalText);
@@ -192,13 +193,13 @@ $(document).ready(function () {
 
 		if (newPassword !== confirmPassword || activeCode !== resetCode) {
 			if (newPassword !== confirmPassword) {
-				$('#passwordError').text('Паролі не співпадають').addClass('error-message').show();
+				$('#passwordError').text(gettext('Паролі не співпадають')).addClass('error-message').show();
 			} else {
 				$('#passwordError').hide()
 			}
 
 			if (activeCode !== resetCode) {
-				$('#activationError').text('Невірний код активації').addClass('error-message').show();
+				$('#activationError').text(gettext('Невірний код активації')).addClass('error-message').show();
 			} else {
 				$('#activationError').hide()
 			}
@@ -330,22 +331,22 @@ $(document).ready(function () {
 
 
 	openButtonsFree.on("click", function () {
-		$("#free-access-form h2").text("Отримати безкоштовний доступ на місяць");
-		$("#access-form input[type='submit']").val("Отримати безкоштовний доступ");
+		$("#free-access-form h2").text(gettext("Отримати безкоштовний доступ на місяць"));
+		$("#access-form input[type='submit']").val(gettext("Отримати безкоштовний доступ"));
 		formSectionFree.show();
 		thankYouMessage.hide();
 	});
 
 	openButtonsConnect.on("click", function () {
-		$("#free-access-form h2").text("Зв’язатися з нами");
-    $("#access-form input[type='submit']").val("Зв’язатися з нами");
+		$("#free-access-form h2").text(gettext("Зв’язатися з нами"));
+    $("#access-form input[type='submit']").val(gettext("Зв’язатися з нами"));
 		formSectionFree.show();
 		thankYouMessage.hide();
 	});
 
 	openButtonsConsult.on("click", function () {
-		$("#free-access-form h2").text("Проконсультуватися");
-		$("#access-form input[type='submit']").val("Проконсультуватися");
+		$("#free-access-form h2").text(gettext("Проконсультуватися"));
+		$("#access-form input[type='submit']").val(gettext("Проконсультуватися"));
 		formSectionFree.show();
 		thankYouMessage.hide();
 	});
