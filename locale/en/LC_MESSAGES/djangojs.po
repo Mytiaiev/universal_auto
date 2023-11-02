@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-25 10:14+0300\n"
+"POT-Creation-Date: 2023-11-02 13:09+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,54 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: static/app/js/custom.js:139
+msgid "Вхід не вдався:"
+msgstr "Login failed:"
+
+#: static/app/js/custom.js:140
+msgid ""
+"Будь ласка, перевірте, чи ви використовуєте електронну адресу, яку вказували "
+"під час реєстрації."
+msgstr ""
+"Please check that you are using the email address you specified during "
+"registration."
+
+#: static/app/js/custom.js:141
+msgid "Також, переконайтеся, що ви є партнером компанії Ninja Taxi."
+msgstr "Also make sure that you are a partner of Ninja Taxi."
+
+#: static/app/js/custom.js:142
+msgid ""
+"Якщо ви впевнені в правильності введених даних, але не можете увійти в "
+"систему, зверніться до нашого менеджера для отримання допомоги."
+msgstr ""
+"If you are sure that the data you entered is correct, but you cannot log in, "
+"contact our manager for help."
+
+#: static/app/js/custom.js:196
+msgid "Паролі не співпадають"
+msgstr "Passwords do not match"
+
+#: static/app/js/custom.js:202
+msgid "Невірний код активації"
+msgstr "Invalid activation code"
+
+#: static/app/js/custom.js:334
+msgid "Отримати безкоштовний доступ на місяць"
+msgstr ""
+
+#: static/app/js/custom.js:335
+msgid "Отримати безкоштовний доступ"
+msgstr "Get free access"
+
+#: static/app/js/custom.js:341 static/app/js/custom.js:342
+msgid "Зв’язатися з нами"
+msgstr "Contact us"
+
+#: static/app/js/custom.js:348 static/app/js/custom.js:349
+msgid "Проконсультуватися"
+msgstr "Consult"
 
 #: static/dashboard/js/scripts-investor.js:29
 msgid "Дохід: "
@@ -44,50 +92,50 @@ msgstr "Earnings "
 msgid "пробіг км"
 msgstr "mileage km"
 
-#: static/dashboard/js/scripts-partner.js:366
+#: static/dashboard/js/scripts-partner.js:364
 msgid "грн"
 msgstr "UAH"
 
-#: static/dashboard/js/scripts-partner.js:367
+#: static/dashboard/js/scripts-partner.js:365
 msgid "грн/км"
 msgstr "UAH/km"
 
-#: static/dashboard/js/scripts-partner.js:439
+#: static/dashboard/js/scripts-partner.js:445
 msgid "Каса: "
 msgstr "Cash: "
 
-#: static/dashboard/js/scripts-partner.js:439
+#: static/dashboard/js/scripts-partner.js:445
 msgid " грн"
 msgstr " UAH"
 
-#: static/dashboard/js/scripts-partner.js:440
+#: static/dashboard/js/scripts-partner.js:446
 msgid "Кількість замовлень: "
 msgstr "Number of orders: "
 
-#: static/dashboard/js/scripts-partner.js:441
+#: static/dashboard/js/scripts-partner.js:447
 msgid "Відсоток прийнятих замовлень: "
 msgstr "Percentage of accepted orders: "
 
-#: static/dashboard/js/scripts-partner.js:442
+#: static/dashboard/js/scripts-partner.js:448
 msgid "Середній чек, грн: "
 msgstr "Average check, UAH: "
 
-#: static/dashboard/js/scripts-partner.js:443
+#: static/dashboard/js/scripts-partner.js:449
 msgid "Пробіг, км: "
 msgstr "Mileage, km: "
 
-#: static/dashboard/js/scripts-partner.js:444
+#: static/dashboard/js/scripts-partner.js:450
 msgid "Ефективність, грн/км: "
 msgstr "Efficiency, UAH/km: "
 
-#: static/dashboard/js/scripts-partner.js:445
+#: static/dashboard/js/scripts-partner.js:451
 msgid "Час в дорозі: "
 msgstr "Time on the road: "
 
-#: static/dashboard/js/scripts-partner.js:457
+#: static/dashboard/js/scripts-partner.js:463
 msgid "по"
 msgstr "to"
 
-#: static/dashboard/js/scripts-partner.js:617
+#: static/dashboard/js/scripts-partner.js:623
 msgid "База даних оновлено"
 msgstr "Database updated"
