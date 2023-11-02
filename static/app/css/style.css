@@ -2,7 +2,33 @@ body {
 	color: #040000;
 	background-color: #ffffff;
 	font-size: 18px;
+	-webkit-tap-highlight-color : rgba(0, 0, 0, 0) !important;
 }
+
+input[type='text'],
+input[type='number'],
+input[type='email'],
+input[type='password'],
+input[type='color'],
+input[type='url'],
+input[type='image'],
+input[type='tel'],
+input[type='submit'],
+input[type='file'],
+input[type='range'],
+input[type='reset'],
+input[type='button'],
+input[type='search'],
+button,
+textarea {
+ -webkit-appearance : none !important;
+ outline: 0 none !important;
+}
+
+
+
+
+
 
 /* Заголовки використовують Montserrat */
 h1, h2, h3, h4, h5, h6 {
@@ -2745,7 +2771,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	padding: 15px 20px;
 	border-radius: 20px;
 	border-color: #EC6323;
-	outline: 2px auto #EC6323 !important
+	border: 2px solid #EC6323;
 }
 
 .analytics-box .buttons-box .consult-button {
@@ -2753,9 +2779,9 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	background-color: #fff;
 	color: #EC6323;
 	padding: 15px 20px;
+	border: 2px solid #EC6323;
 	border-color: #EC6323;
 	border-radius: 20px;
-	outline: 2px auto #EC6323 !important;
 }
 
 
@@ -2852,15 +2878,15 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	padding: 15px 20px;
 	border-radius: 20px;
 	border-color: #EC6323;
+	border: 2px solid #EC6323;
 }
 
 .spending-box .buttons-box .free-access-button {
 	background-color: #fff;
 	color: #EC6323;
 	padding: 15px 20px;
-	border-color: #EC6323;
+	border: 2px solid #EC6323;
 	border-radius: 20px;
-	outline: 2px auto;
 }
 
 
@@ -2951,6 +2977,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	padding: 15px 20px;
 	border: none;
 	border-radius: 20px;
+	border: 2px solid #EC6323;
 }
 
 .control-box .buttons-box .consult-button {
@@ -2960,6 +2987,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	border-color: #EC6323;
 	border-radius: 20px;
 	outline: 2px auto;
+	border: 2px solid #EC6323;
 }
 
 
@@ -3152,9 +3180,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	background-color: #FF8C24;
 }
 
-.free-access-section .close-button,
-.to-consult-section .close-button,
-.to-connect-section .close-button {
+.free-access-section .close-button {
 	position: absolute;
 	top: 10px;
 	right: 20px;
@@ -3162,6 +3188,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	border: none;
 	font-size: 50px;
 	cursor: pointer;
+	color: black;
 }
 
 span.error-message,

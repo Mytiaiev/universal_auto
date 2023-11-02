@@ -82,7 +82,6 @@ $(document).ready(function () {
 	$(".close-btn").click(function () {
 		$("#loginForm").fadeOut();
 		$(".forgot-password-form").fadeOut();
-		window.location.reload();
 	});
 
 	$("#login-invest").click(function () {
