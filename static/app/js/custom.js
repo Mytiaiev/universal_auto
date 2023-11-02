@@ -361,6 +361,7 @@ $(document).ready(function () {
     let phoneInput = accessForm.find('#phone').val();
     let nameInput = accessForm.find('#name').val();
     $(".error-message").hide();
+    $(".error-name").hide();
 
     if (!/^\+\d{1,3} \d{2,3} \d{2,3}-\d{2,3}-\d{2,3}$/.test(phoneInput)) {
 			$(".error-message").show();
