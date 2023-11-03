@@ -99,28 +99,35 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
             start, end = self.kwargs['period'].split('&')
 
         queryset = ManagerFilterMixin.get_queryset(self, CarEfficiency)
-        filtered_qs = queryset.filter(report_from__range=(start, end)).select_related("vehicle")
+        filtered_qs = queryset.filter(report_from__range=(start, end)).select_related("vehicle").order_by("report_from")
         return filtered_qs
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         aggregated_data = queryset.aggregate(
-            total_kasa=Sum('total_kasa'),
-            total_mileage=Sum('mileage')
+            total_kasa=Coalesce(Sum('total_kasa'), Decimal(0)),
+            total_mileage=Coalesce(Sum('mileage'), Decimal(0)),
         )
-        kasa = aggregated_data.get('total_kasa', 0)
-        total_mileage = aggregated_data.get('total_mileage', 0)
-        serialized_data = [{
-                "report_from": item.report_from.strftime('%Y-%m-%d'),
-                "licence_plate": item.vehicle.licence_plate,
-                "mileage": item.mileage,
-                "efficiency": item.efficiency
-            } for item in queryset]
+        efficiency_dict = {}
+        kasa = aggregated_data.get('total_kasa')
+        total_mileage = aggregated_data.get('total_mileage')
+        average = kasa/total_mileage if total_mileage else Decimal(0)
+        dates = sorted(list(set(queryset.values_list("report_from", flat=True))))
+        for vehicle in queryset.values_list("vehicle__licence_plate", flat=True):
+            if vehicle not in efficiency_dict:
+                efficiency_dict[vehicle] = {
+                    "name": vehicle,
+                    "mileage": list(queryset.filter(vehicle__licence_plate=vehicle).values_list("mileage", flat=True)),
+                    "efficiency": list(
+                        queryset.filter(vehicle__licence_plate=vehicle).values_list("efficiency", flat=True))
+                }
 
         response_data = {
-            "efficiency": serialized_data,
+            "vehicles": list(efficiency_dict.values()),
+            "dates": dates,
             "total_mileage": total_mileage,
-            "kasa": kasa
+            "kasa": kasa,
+            "average_efficiency": average
         }
         return Response(response_data)
 

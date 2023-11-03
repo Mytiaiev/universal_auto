@@ -97,6 +97,7 @@ class UklonRequest(Synchronizer):
                                        method=method)
         if response.status_code in (401, 403):
             self.create_session()
+            return self.response_data(url, params, data, headers, pjson, method)
         return response.json()
 
     @staticmethod
@@ -207,9 +208,10 @@ class UklonRequest(Synchronizer):
                 vehicle_name = f"{driver['selected_vehicle']['make']} {driver['selected_vehicle']['model']}"
                 vin_code = self.response_data(f"{url_2}/{driver['selected_vehicle']['vehicle_id']}")
                 vin_code = vin_code.get('vin_code', '')
-
             email = self.response_data(url=f"{url_1}/{driver['id']}")
-
+            driver_data = self.response_data(
+                url=f"{Service.get_value('UKLON_1')}{Service.get_value('UKLON_6')}/{driver['id']}/images",
+                params={'image_size': 'sm'})
             drivers.append({
                 'fleet_name': self.fleet,
                 'name': driver['first_name'].split()[0],
@@ -217,6 +219,7 @@ class UklonRequest(Synchronizer):
                 'email': email.get('email'),
                 'phone_number': f"+{driver['phone']}",
                 'driver_external_id': driver['id'],
+                'photo': driver_data["driver_avatar_photo"]["url"],
                 'pay_cash': pay_cash,
                 'licence_plate': self.find_value_str(driver, *('selected_vehicle', 'license_plate')),
                 'vehicle_name': vehicle_name,
@@ -284,9 +287,8 @@ class UklonRequest(Synchronizer):
             except KeyError:
                 bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"), text=f"{orders}")
 
-    def disable_cash(self, pk, enable):
+    def disable_cash(self, driver_id, enable):
         url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
-        driver_id = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
         url += f'{Service.get_value("UKLON_6")}/{driver_id}/restrictions'
         headers = self.get_header()
         headers.update({"Content-Type": "application/json"})

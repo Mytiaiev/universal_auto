@@ -238,9 +238,7 @@ class BoltRequest(Synchronizer):
         return {'wait': wait,
                 'with_client': with_client}
 
-    def cash_restriction(self, pk, enable):
-        driver = Driver.objects.get(pk=pk)
-        driver_id = driver.get_driver_external_id(self.fleet)
+    def disable_cash(self, driver_id, enable):
         payload = {
             "driver_id": driver_id,
             "has_cash_payment": enable

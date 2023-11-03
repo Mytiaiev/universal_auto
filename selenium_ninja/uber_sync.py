@@ -1,6 +1,8 @@
+from datetime import datetime, timedelta
+
 import requests
 
-from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder
+from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder, Driver
 from auto_bot.handlers.order.utils import check_vehicle
 from selenium_ninja.driver import SeleniumTools
 
@@ -66,6 +68,7 @@ class UberRequest(Synchronizer):
                   firstName
                   lastName
                 }
+                pictureUrl
                 email
                 phone {
                   countryCode
@@ -115,6 +118,7 @@ class UberRequest(Synchronizer):
                             'driver_external_id': driver['member']['user']['uuid'],
                             'licence_plate': licence_plate,
                             'pay_cash': True,
+                            'photo': driver['member']['user']['pictureUrl'],
                             'vehicle_name': vehicle_name,
                             'vin_code': vin_code,
                             'worked': True})
@@ -275,3 +279,48 @@ class UberRequest(Synchronizer):
             uber_driver.download_payments_order("Uber", day)
             uber_driver.save_trips_report("Uber", day)
             uber_driver.quit()
+
+    def disable_cash(self, driver_id, enable):
+        date = datetime.now() + timedelta(weeks=1)
+        period = date.isoformat() + "Z"
+        block_query = '''mutation EnableCashBlocks($supplierUuid: UberDataSchemasBasicProtoUuidInput!,
+         $earnerUuid: UberDataSchemasBasicProtoUuidInput!) {
+                    enableCashBlock(
+                        supplierUuid: $supplierUuid
+                        earnerUuid: $earnerUuid
+                      ) { 
+                      cashBlockOverride {
+                        earnerUuid {
+                        value
+                        __typename
+                        }
+                      }
+                      __typename
+                    }
+        }'''
+        unblock_query = '''mutation DisableCashBlocks(
+                            $supplierUuid: UberDataSchemasBasicProtoUuidInput!,
+                             $earnerUuid: UberDataSchemasBasicProtoUuidInput!,
+                              $effectiveAt: UberDataSchemasTimeProtoDateTimeInput!) {
+                              disableCashBlock(
+                                supplierUuid: $supplierUuid
+                                earnerUuid: $earnerUuid
+                                effectiveAt: $effectiveAt
+                              ) {
+                                cashBlockOverride {
+                                  earnerUuid {
+                                    value
+                                    __typename
+                                  }
+                                }
+                                __typename
+                              }
+                            }'''
+        variables = {
+                    "supplierUuid":  str(self.session.uber_uuid),
+                    "earnerUuid": driver_id,
+                    "effectiveAt": period
+        }
+        query = unblock_query if enable == 'true' else block_query
+        data = self.get_payload(query, variables)
+        requests.post(self.base_url, headers=self.get_header(), json=data)

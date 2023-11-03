@@ -278,6 +278,7 @@ class Vehicle(models.Model):
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак', db_index=True)
     registration = models.CharField(null=True, max_length=12, unique=True, verbose_name='Номер документа')
+    purchase_date = models.DateField(null=True, verbose_name='Дата початку роботи')
     vin_code = models.CharField(max_length=17, blank=True)
     chat_id = models.CharField(max_length=15, blank=True, null=True, verbose_name="Група автомобіля телеграм")
     gps_id = models.IntegerField(default=0)
@@ -392,7 +393,7 @@ class Driver(User):
     WAIT_FOR_CLIENT = 'Очікую клієнта'
     OFFLINE = 'Не працюю'
     RENT = 'Орендую авто'
-
+    photo = models.ImageField(blank=True, null=True, upload_to='drivers', verbose_name='Фото водія')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True,
                                 verbose_name='Менеджер водіїв')
@@ -1085,6 +1086,7 @@ class SubscribeUsers(models.Model):
             return subscriber
         except SubscribeUsers.DoesNotExist:
             return None
+
 
 class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')

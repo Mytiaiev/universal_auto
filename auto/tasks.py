@@ -526,10 +526,15 @@ def get_today_rent(self, partner_pk):
 @app.task(bind=True, queue='bot_tasks')
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
-        UklonRequest(partner_pk).disable_cash(pk, enable)
-        logger.info('disable_uklon_cash')
-        BoltRequest(partner_pk).cash_restriction(pk, enable)
-        logger.info('disable_bolt_cash')
+        driver = Driver.objects.get(pk=pk)
+        settings = check_available_fleets(partner_pk)
+        for setting in settings:
+            disable_class = fleets.get(setting.key)
+            if disable_class:
+                driver_id = driver.get_driver_external_id(disable_class(partner_pk).fleet)
+                disable_class(partner_pk).disable_cash(driver_id, enable)
+        message = f"Cash enabled for {driver}" if enable == 'true' else f"Cash disbled for {driver}"
+        logger.info(message)
     except Exception as e:
         logger.error(e)
 

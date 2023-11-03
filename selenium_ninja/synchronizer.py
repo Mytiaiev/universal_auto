@@ -1,4 +1,8 @@
+from io import BytesIO
+
+import requests
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files import File
 from django.db.models import Q
 from django.utils import timezone
 
@@ -131,11 +135,18 @@ class Synchronizer:
     def update_driver_fields(self, driver, **kwargs):
         yesterday = timezone.localtime() - datetime.timedelta(days=1)
         phone_number = kwargs.get('phone_number')
+        photo = kwargs.get('photo')
         email = kwargs.get('email')
         worked = kwargs.get('worked')
         swap_vehicle = Vehicle.objects.filter(licence_plate=kwargs['licence_plate']).first()
         reshuffle = DriverReshuffle.objects.filter(swap_vehicle=swap_vehicle,
                                                    swap_time__date=yesterday.date())
+        if all([photo, not driver.photo, "default.jpeg" not in photo]):
+            response = requests.get(photo)
+            if response.status_code == 200:
+                image_data = response.content
+                image_file = BytesIO(image_data)
+                driver.photo = File(image_file, name=f"{driver.name}_{driver.second_name}.jpg")
         if reshuffle:
             Driver.objects.filter(vehicle=swap_vehicle).update(vehicle=None)
         if driver.partner.contacts:

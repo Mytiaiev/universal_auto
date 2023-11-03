@@ -18,7 +18,7 @@ from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException, NoSuchElementException, InvalidArgumentException
 
 from app.models import ParkSettings, UberService, UberSession, Partner, NewUklonService, NewUklonFleet, \
-    FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService, CredentialPartner, Vehicle
+    FleetOrder, Fleets_drivers_vehicles_rate, UaGpsService, Vehicle
 from auto import settings
 from scripts.redis_conn import redis_instance, get_logger
 from selenium_ninja.synchronizer import InfinityTokenError, AuthenticationError
@@ -399,7 +399,7 @@ class SeleniumTools:
         try:
             xpath = UberService.get_value('UBER_GENERATE_TRIPS_1')
             WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
-        except Exception:
+        except TimeoutException:
             xpath = UberService.get_value('UBER_GENERATE_TRIPS_2')
             WebDriverWait(self.driver, self.sleep).until(ec.presence_of_element_located((By.XPATH, xpath))).click()
         self.driver.find_element(By.XPATH, UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_4')).click()
@@ -422,9 +422,9 @@ class SeleniumTools:
         try:
             in_progress_text = f"{UberService.get_value('UBER_DOWNLOAD_PAYMENTS_ORDER_2')}"
             WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.XPATH, in_progress_text)))
-            WebDriverWait(self.driver, 600).until_not(ec.presence_of_element_located((By.XPATH, in_progress_text)))
-        except:
-            pass
+            WebDriverWait(self.driver, 200).until_not(ec.presence_of_element_located((By.XPATH, in_progress_text)))
+        except TimeoutException:
+            self.driver.refresh()
         WebDriverWait(self.driver, 60).until(ec.element_to_be_clickable((By.XPATH, download_button))).click()
         time.sleep(self.sleep)
         self.get_last_downloaded_file_from_remote(self.file_pattern(fleet, day))
