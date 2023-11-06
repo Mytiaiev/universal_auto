@@ -352,7 +352,6 @@ function fetchCarEfficiencyData(period, start, end) {
 						series.data.push(efficiencyValue);
 						dates.push(date);
 					});
-
 				areaChartOptions.series = seriesData;
 				areaChartOptions.labels = dates;
 				areaChart.updateOptions(areaChartOptions);
