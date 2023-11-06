@@ -281,49 +281,6 @@ def download_daily_report(self, partner_pk, day=None):
                 report.save()
 
 
-# @app.task(bind=True, queue='beat_tasks')
-# def calculate_vehicle_earnings(self, partner_pk):
-#     end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
-#     start = end - timedelta(days=6)
-#     for vehicle in Vehicle.objects.filter(partner=partner_pk):
-#         earnings = 0
-#         week = []
-#         reports = SummaryReport.objects.filter(report_from__range=(start, end),
-#                                                vehicle=vehicle)
-#
-#         vehicle_spending = VehicleSpending.objects.filter(vehicle=vehicle,
-#                                                           created_at__range=(start, end)).aggregate(
-#             Sum('amount'))['amount__sum'] or 0
-#         for report in reports:
-#             if report.driver.salary_calculation == SalaryCalculation.WEEK:
-#                 week.append(report)
-#                 continue
-#             else:
-#                 driver_payments = DriverPayments.objects.filter(report_to=report.report_from,
-#                                                                 driver=report.driver).first()
-#                 if driver_payments:
-#                     earnings -= driver_payments.salary + driver_payments.cash
-#             if vehicle.investor_car:
-#                 earnings += report.total_amount_without_fee * (1 - vehicle.investor_percentage)
-#             else:
-#                 earnings += report.total_amount_without_fee
-#
-#         for driver_report in week:
-#             driver_salary = 0
-#             driver_payments = DriverPayments.objects.filter(report_to=end,
-#                                                             driver=driver_report.driver.id).first()
-#             if driver_payments:
-#                 rate = (driver_payments.salary + driver_payments.cash)/driver_payments.kasa
-#                 driver_salary = driver_report.total_amount_without_fee * rate
-#                 print(driver_salary)
-#             if vehicle.investor_car:
-#                 earnings += driver_report.total_amount_without_fee * (1 - vehicle.investor_percentage) - driver_salary
-#             else:
-#                 earnings += driver_report.total_amount_without_fee - driver_salary
-#         print(vehicle)
-#         print(earnings - vehicle_spending)
-
-
 @app.task(bind=True, queue='beat_tasks')
 def get_car_efficiency(self, partner_pk, day=None):
     day = get_day_for_task(day)
@@ -1082,6 +1039,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="2"), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
+    # repeat
     # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute="10", hour='*/4'), get_today_rent.s(partner_id))

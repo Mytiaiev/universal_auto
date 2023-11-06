@@ -18,7 +18,6 @@ from taxi_service.utils import get_dates
 # Create your views here.
 
 class SummaryReportListView(CombinedPermissionsMixin,
-                            PartnerFilterMixin,
                             ManagerFilterMixin,
                             generics.ListAPIView):
     serializer_class = SummaryReportSerializer

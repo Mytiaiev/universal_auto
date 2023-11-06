@@ -2,47 +2,43 @@ import json
 import datetime
 import requests
 from _decimal import Decimal
-from django.db.models import Q
 from django.utils import timezone
 from app.models import UaGpsService, Driver, Vehicle, RentInformation, Partner, FleetOrder, \
-    DriverEfficiency, DriverReshuffle, CredentialPartner, ParkSettings
+    DriverEfficiency, CredentialPartner, ParkSettings, GpsProvider
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
 
 
-class UaGpsSynchronizer:
-
-    def __init__(self, partner_id, url=UaGpsService.get_value("BASE_URL")):
-        self.url = url
-        self.partner_id = partner_id
-        self.session = self.get_session()
+class UaGpsSynchronizer(GpsProvider):
 
     def get_session(self):
-
-        params = {
-            'svc': 'token/login',
-            'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner_id)})
-        }
-        login = requests.get(self.url, params=params)
-        return login.json()['eid']
+        if not redis_instance().exists(f"{self.partner}_gps_session"):
+            params = {
+                'svc': 'token/login',
+                'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner)})
+            }
+            response = requests.get(self.url, params=params)
+            redis_instance().set(f"{self.partner}_gps_session", response.json()['eid'])
+        return redis_instance().get(f"{self.partner}_gps_session")
 
     def get_gps_id(self):
-        if not redis_instance().exists(f"{self.partner_id}_gps_id"):
-            payload = {"spec": {"itemsType": "avl_resource", "propName": "sys_name", "propValueMask": "*", "sortType": ""},
+        if not redis_instance().exists(f"{self.partner}_gps_id"):
+            payload = {"spec": {"itemsType": "avl_resource", "propName": "sys_name",
+                                "propValueMask": "*", "sortType": ""},
                        "force": 1, "flags": 5, "from": 0, "to": 4294967295}
             params = {
-                'sid': self.session,
+                'sid': self.get_session(),
                 'svc': 'core/search_items',
             }
             params.update({'params': json.dumps(payload)})
             response = requests.post(url=UaGpsService.get_value("BASE_URL"), params=params)
-            redis_instance().set(f"{self.partner_id}_gps_id", response.json()['items'][0]['id'])
-        return redis_instance().get(f"{self.partner_id}_gps_id")
+            redis_instance().set(f"{self.partner}_gps_id", response.json()['items'][0]['id'])
+        return redis_instance().get(f"{self.partner}_gps_id")
 
     def synchronize(self):
         params = {
-            'sid': self.session,
+            'sid': self.get_session(),
             'svc': 'core/update_data_flags',
             'params': json.dumps({"spec": [{"type": "type",
                                             "data": "avl_unit",
@@ -54,8 +50,6 @@ class UaGpsSynchronizer:
             Vehicle.objects.filter(licence_plate=vehicle['d']['nm'].split('(')[0]).update(gps_id=vehicle['i'])
 
     def generate_report(self, start_time, end_time, vehicle_id):
-        road_distance = 0
-        road_time = datetime.timedelta()
         parameters = {
             "reportResourceId": self.get_gps_id(),
             "reportObjectId": vehicle_id,
@@ -71,18 +65,15 @@ class UaGpsSynchronizer:
 
         params = {
             'svc': 'report/exec_report',
-            'sid': self.session,
+            'sid': self.get_session(),
             'params': json.dumps(parameters)
         }
-        try:
-            report = requests.get(self.url, params=params)
-            raw_time = report.json()['reportResult']['stats'][4][1]
-            clean_time = [int(i) for i in raw_time.split(':')]
-            road_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
-            raw_distance = report.json()['reportResult']['stats'][5][1]
-            road_distance = Decimal(raw_distance.split(' ')[0])
-        except Exception as e:
-            print(e)
+        report = requests.get(self.url, params=params)
+        raw_time = report.json()['reportResult']['stats'][4][1]
+        clean_time = [int(i) for i in raw_time.split(':')]
+        road_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
+        raw_distance = report.json()['reportResult']['stats'][5][1]
+        road_distance = Decimal(raw_distance.split(' ')[0])
         return road_distance, road_time
 
     @staticmethod
@@ -181,7 +172,7 @@ class UaGpsSynchronizer:
 
     def save_daily_rent(self, delta):
         day = timezone.localtime() - datetime.timedelta(days=delta)
-        in_road = self.get_road_distance(self.partner_id, delta=delta)
+        in_road = self.get_road_distance(self.partner, delta=delta)
         for driver, result in in_road.items():
             distance, road_time = result
             total_km = self.calc_total_km(driver, day)
@@ -190,12 +181,12 @@ class UaGpsSynchronizer:
             DriverEfficiency.objects.filter(driver=driver, report_from=day).update(road_time=road_time)
             RentInformation.objects.create(report_from=day,
                                            driver=driver,
-                                           partner=Partner.get_partner(self.partner_id),
+                                           partner=Partner.get_partner(self.partner),
                                            rent_distance=rent_distance)
 
     def check_today_rent(self):
         start = timezone.make_aware(datetime.datetime.combine(timezone.localtime(), datetime.time.min))
-        in_road = self.get_road_distance(self.partner_id)
+        in_road = self.get_road_distance(self.partner)
         for driver, result in in_road.items():
             distance, road_time, end_time = result
             total_km = 0
