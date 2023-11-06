@@ -302,11 +302,13 @@ $(document).ready(function () {
 
     if (success) {
 			thankYouMessage.show();
+			$(".header_section").show();
 			setTimeout(function () {
 				thankYouMessage.hide();
 			}, 5000);
     } else {
 			existingYouMessage.show();
+			$(".header_section").show();
 			setTimeout(function () {
 				existingYouMessage.hide();
 			}, 5000);
@@ -334,6 +336,7 @@ $(document).ready(function () {
 		$("#free-access-form h2").text(gettext("Отримати безкоштовний доступ на місяць"));
 		$("#access-form input[type='submit']").val(gettext("Отримати безкоштовний доступ"));
 		formSectionFree.show();
+		$(".header_section").hide();
 		thankYouMessage.hide();
 	});
 
@@ -341,6 +344,7 @@ $(document).ready(function () {
 		$("#free-access-form h2").text(gettext("Зв’язатися з нами"));
     $("#access-form input[type='submit']").val(gettext("Зв’язатися з нами"));
 		formSectionFree.show();
+		$(".header_section").hide();
 		thankYouMessage.hide();
 	});
 
@@ -348,11 +352,13 @@ $(document).ready(function () {
 		$("#free-access-form h2").text(gettext("Проконсультуватися"));
 		$("#access-form input[type='submit']").val(gettext("Проконсультуватися"));
 		formSectionFree.show();
+		$(".header_section").hide();
 		thankYouMessage.hide();
 	});
 
 	closeButtonAccess.on("click", function () {
 		formSectionFree.hide();
+		$(".header_section").show();
 	});
 
 	accessForm.on("submit", function (e) {

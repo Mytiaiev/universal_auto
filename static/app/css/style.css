@@ -3756,15 +3756,16 @@ span.error-name {
 	.free-access-section {
 		display: none;
 		background-color: #A1E8B9;
-		padding: 20px;
-		text-align: center;
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		border-radius: 62px;
-		width: 390px;
-		height: 475px;
+    padding: 20px;
+    text-align: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 62px;
+    width: 390px;
+    height: 448px;
+    z-index: 9999;
 	}
 
 	.free-access-section h2 {
