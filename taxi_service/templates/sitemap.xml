@@ -5,5 +5,9 @@
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
     </url>
-    <!-- Додайте інші URL-адреси вашого сайту тут -->
+    <url>
+        <loc>https://ninja-taxi.kyiv.ua/auto-park/</loc>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
 </urlset>

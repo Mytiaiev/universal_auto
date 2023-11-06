@@ -458,6 +458,10 @@ label[for="showPassword"] {
 	label[for="showPassword"] {
 		margin-right: 20px;
 	}
+
+	#navbarSupportedContent {
+		display: none !important;
+	}
 }
 
 /*end adaptive for phone vertical*/
@@ -724,7 +728,7 @@ label[for="showPassword"] {
 
 @media screen and (max-width: 767px) {
 	.footer_section {
-		margin-top: 30px;
+		margin-top: 25px;
 		height: auto;
 	}
 
@@ -1535,6 +1539,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
 	border-radius: 52px;
 	width: 360px;
+	margin: 5px;
 }
 
 .client-card-header {
@@ -2991,6 +2996,10 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	border: 2px solid #EC6323;
 }
 
+.auto-park-five-section .img-box .image-2 {
+	display: none;
+}
+
 
 /*block 6*/
 
@@ -4378,6 +4387,126 @@ span.error-name {
 	}
 
 	/*Form styles adaptive*/
+
+	.free-access-section {
+		display: none;
+		background-color: #A1E8B9;
+		padding: 20px;
+		text-align: center;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		border-radius: 62px;
+		width: 100%;
+    height: 385px;
+    z-index: 9999;
+	}
+
+	.free-access-section h2 {
+		margin-top: 25px;
+		color: #EC6323;
+		text-align: center;
+		font-size: 25px;
+		font-style: normal;
+		font-weight: 700;
+		line-height: normal;
+		text-transform: uppercase;
+	}
+
+	.free-access-section p {
+		margin-top: 15px;
+		color: #38423B;
+		text-align: center;
+		font-size: 20px;
+		font-style: normal;
+		font-weight: 400;
+		line-height: normal;
+	}
+
+	.free-access-section input[type="text"],
+	.free-access-section input[type="tel"] {
+		font-size: 20px;
+		margin-top: 0;
+		width: 100%;
+		padding: 15px 20px;
+		border: 1px solid #ccc;
+		border-radius: 25px;
+	}
+
+	.free-access-section input[type="submit"] {
+		width: 100%;
+		font-size: 16px;
+		margin-top: 0;
+		background-color: #EC6323;
+		color: #fff;
+		padding: 15px 5px;
+		border: none;
+		cursor: pointer;
+		transition: background-color 0.3s;
+		border-radius: 62px;
+	}
+
+	.free-access-section input[type="submit"]:hover {
+		background-color: #FF8C24;
+	}
+
+	.free-access-section .close-button {
+		position: absolute;
+		top: 10px;
+		right: 20px;
+		background: transparent;
+		border: none;
+		font-size: 50px;
+		cursor: pointer;
+	}
+
+	span.error-message,
+	span.error-name {
+		display: none;
+		color: red;
+		font-size: 15px;
+		float: left;
+		margin-left: 20px;
+	}
+
+	/*///////////////*/
+
+	.thank-you-message,
+	.existing-you-message {
+		display: none;
+		background-color: #A1E8B9;
+		padding: 20px;
+		text-align: center;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		border-radius: 62px;
+		width: 390px;
+		height: 140px;
+	}
+
+	.thank-you-message {
+	height: 160px !important;
+	}
+
+	.message-box {
+		background-color: white;
+		padding: 1px;
+		margin: 0;
+		border-radius: 62px;
+	}
+
+	.message-box h2 {
+		color: #EC6323;
+		margin: 20px 20px;
+		text-align: center;
+		font-size: 15px;
+		font-style: normal;
+		font-weight: 700;
+		line-height: normal;
+	}
 }
 
 /*End Auto Park page*/

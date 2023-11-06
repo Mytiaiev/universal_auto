@@ -301,15 +301,15 @@ $(document).ready(function () {
     formSectionFree.hide();
 
     if (success) {
-        thankYouMessage.show();
-        setTimeout(function () {
-            thankYouMessage.hide();
-        }, 5000);
+			thankYouMessage.show();
+			setTimeout(function () {
+				thankYouMessage.hide();
+			}, 5000);
     } else {
-        existingYouMessage.show();
-        setTimeout(function () {
-            existingYouMessage.hide();
-        }, 5000);
+			existingYouMessage.show();
+			setTimeout(function () {
+				existingYouMessage.hide();
+			}, 5000);
     }
   }
 
@@ -317,15 +317,15 @@ $(document).ready(function () {
 	function submitForm(formData) {
     formData += "&action=free_access_or_consult";
     $.ajax({
-        type: "POST",
-        url: ajaxPostUrl,
-        data: formData,
-        success: function(response) {
-            hideFormAndShowThankYou(response.success);
-        },
-        error: function () {
-            console.log("Помилка під час відправки форми.");
-        }
+			type: "POST",
+			url: ajaxPostUrl,
+			data: formData,
+			success: function(response) {
+				hideFormAndShowThankYou(response.success);
+			},
+			error: function () {
+				console.log("Помилка під час відправки форми.");
+			}
     });
   }
 
