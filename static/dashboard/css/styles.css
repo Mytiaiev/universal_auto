@@ -1,8 +1,6 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #313A34;
-  color: #9e9ea4;
 }
 
 /* Заголовки використовують Montserrat */
@@ -23,12 +21,13 @@ p, span, div {
 
 .grid-container {
   display: grid;
-  grid-template-columns: 260px 1fr 1fr 1fr;
+  grid-template-columns: 60px 1fr 1fr 1fr;
   grid-template-rows: 0.2fr 3fr;
   grid-template-areas:
     "sidebar header header header"
     "sidebar main main main";
   height: 100vh;
+  transition: grid-template-columns 1s;
 }
 
 
@@ -53,7 +52,7 @@ p, span, div {
 #sidebar {
   grid-area: sidebar;
   height: 100%;
-  background-color: #38423B;
+  background-color: #A1E8B9;
   overflow-y: auto;
   transition: all 0.5s;
   -webkit-transition: all 0.5s;
@@ -79,13 +78,16 @@ p, span, div {
 
 .sidebar-list {
   padding: 0;
-  margin-top: 15px;
+  margin-top: 55px;
   list-style-type: none;
 }
 
 .sidebar-list-item {
-  padding: 20px 20px 20px 20px;
+  display: flex;
+  align-items: center;
+  padding: 20px 20px 25px 20px;
   font-size: 18px;
+  color: #141E17;
 }
 
 .sidebar-list-item:hover {
@@ -105,6 +107,36 @@ p, span, div {
   z-index: 12 !important;
 }
 
+.fas {
+	padding-right: 10px;
+	color: #fff;
+}
+
+.sidebar-toggle {
+  position: fixed;
+  top: 80px;
+  left: 22px;
+  cursor: pointer;
+  z-index: 999;
+}
+
+#sidebar .sidebar-list-item span {
+	display: none;
+	transition: opacity 0.5s;
+	opacity: 0;
+}
+
+img.logo-2 {
+	display: none;
+}
+
+img.logo-1 {
+	position: absolute;
+	width: 60px;
+	height: auto;
+	left: 0px;
+	top: 12px;
+}
 
 /* ---------- MAIN ---------- */
 
@@ -112,7 +144,7 @@ p, span, div {
   grid-area: main;
   overflow-y: auto;
   padding: 20px 20px;
-  color: rgba(255, 255, 255, 0.95);
+  /*color: rgba(255, 255, 255, 0.95);*/
 }
 
 .main-title {
@@ -153,19 +185,19 @@ p, span, div {
   background-color: #1858A6;
 }
 
+.card:nth-child(1),
+.card-partner:nth-child(1) {
+  background-color: #A1E8B9;
+}
+
 .card:nth-child(2),
 .card-partner:nth-child(2) {
-  background-color: #EC6323;
+  background-color: #18A64D;
 }
 
 .card:nth-child(3),
 .card-partner:nth-child(3) {
-  background-color: #18A64D;
-}
-
-.card:nth-child(4),
-.card-partner:nth-child(4) {
-  background-color: #d50000;
+  background-color: #79C8C5;
 }
 
 .card-inner,
@@ -185,7 +217,6 @@ p, span, div {
 }
 
 .charts-card {
-  background-color: #38423B;
   margin-bottom: 20px;
   padding: 25px;
   box-sizing: border-box;
@@ -548,31 +579,32 @@ p, span, div {
 
 #account_circle {
   font-size: 30px;
-  color: #fff;
+  /*color: #fff;*/
   margin-right: 20px;
 }
 
 /*burger-menu*/
+
 .burger-menu {
   position: relative;
-  width: 30px;
+  width: 60px;
   height: 20px;
   cursor: pointer;
 }
 
-#logout-dashboard,
-#changePassword {
-  padding: 8px 15px;
-  border-radius: 5px;
-  border: none;
-  background-color: #3e8f3e;
-  color: #fff;
-  cursor: pointer;
-  margin-left: auto;
-  display: block;
-  margin-top: 10px;
-  width: calc(100% - 5px);
+#logout-dashboard, #changePassword {
+	padding: 5px 15px;
+	border-radius: 10px;
+	cursor: pointer;
+	margin-left: auto;
+	margin-right: auto;
+	display: block;
+	margin-top: 10px;
+	width: calc(100% - 5px);
+	border: 1px solid #EC6323;
+	margin-bottom: 10px;
 }
+
 
 .burger-icon,
 .burger-icon:before,
@@ -596,15 +628,14 @@ p, span, div {
 }
 
 .burger-content {
-  display: none;
-  position: absolute;
-  top: 100%;
-  right: -25px;
-  background-color: #313A34;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 10px;
-  z-index: 1;
-  border-radius: 5px;
+	display: none;
+	position: absolute;
+	top: 163%;
+	right: -6px;
+	background-color: #A1E8B9;
+	box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+	padding: 10px 10px 10px 10px;
+	border-radius: 10px;
 }
 
 .burger-menu.open .burger-content {
@@ -615,6 +646,41 @@ p, span, div {
   display: none;
   color: #d50000;
 }
+
+
+.stripes {
+		margin-top: 5px;
+		margin-right: 40px;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		width: 35px;
+		height: 22px;
+	}
+
+	.top-stripe {
+		width: 35px;
+		height: 8px;
+		border-radius: 25px;
+		background-color: #EC6323;
+	}
+
+	.middle-stripe {
+	  margin-top: 2px;
+	  margin-bottom: 2px;
+	  margin-left: 5px;
+		width: 25px;
+		height: 8px;
+		border-radius: 25px;
+		background-color: #EC6323;
+	}
+
+	.bottom-stripe {
+		width: 35px;
+		height: 8px;
+		border-radius: 25px;
+		background-color: #EC6323;
+	}
 
 
 /* Стилізація контейнера "info-driver" */
@@ -743,7 +809,7 @@ input[type="button"] {
   padding: 8px 16px;
   font-size: 16px;
   background-color: #3e8f3e;
-  color: white;
+/*  color: white;*/
   border: none;
   border-radius: 4px;
   cursor: pointer;

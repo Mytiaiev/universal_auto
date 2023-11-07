@@ -114,9 +114,9 @@ let barChartOptions = {
 	yaxis: {
 		title: {
 			text: gettext("Дохід (грн.)"),
-			style: {
-				color: "#f5f7ff",
-			},
+//			style: {
+//				color: "#f5f7ff",
+//			},
 		},
 		axisBorder: {
 			color: "#55596e",
@@ -747,3 +747,49 @@ function formatTime(time) {
 		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 	}
 }
+
+$(document).ready(function() {
+  const gridContainer = $(".grid-container");
+  const sidebarToggle = $("#sidebar-toggle");
+  const sidebarTitle = $(".sidebar-title");
+  const sidebarListItems = $("#sidebar .sidebar-list-item span");
+  const sidebarToggleIcon = sidebarToggle.find("i");
+
+  let isSidebarOpen = false;
+
+  function toggleSidebar() {
+    isSidebarOpen = !isSidebarOpen;
+
+    if (isSidebarOpen) {
+      gridContainer.css("grid-template-columns", "300px 1fr 1fr 1fr");
+      sidebarTitle.css("padding", "10px 30px 0px 30px");
+      sidebarToggleIcon.removeClass("fa-angle-double-right").addClass("fa-angle-double-left");
+
+      $(".logo-1").hide();
+      $(".logo-2").show();
+
+      setTimeout(function() {
+        sidebarListItems.each(function(index) {
+          $(this).css("display", "block");
+          $(this).css("transition-delay", `${0.1 * (index + 1)}s`);
+          $(this).css("opacity", 1);
+        });
+      }, 500);
+    } else {
+      gridContainer.css("grid-template-columns", "60px 1fr 1fr 1fr");
+      sidebarTitle.css("padding", "30px 30px 50px 30px");
+      sidebarToggleIcon.removeClass("fa-angle-double-left").addClass("fa-angle-double-right");
+
+      $(".logo-1").show();
+      $(".logo-2").hide();
+
+      sidebarListItems.each(function() {
+        $(this).css("display", "none");
+        $(this).css("transition-delay", "0s");
+        $(this).css("opacity", 0);
+      });
+    }
+  }
+
+  sidebarToggle.click(toggleSidebar);
+});
