@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.contrib.auth import logout
 
-from app.models import Partner, Manager,SubscribeUsers
+from app.models import Partner, Manager, SubscribeUsers
 from taxi_service.forms import SubscriberForm, MainOrderForm, CommentForm
 from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 partner_logout, login_in_investor,
@@ -15,7 +15,7 @@ from taxi_service.utils import (update_order_sum_or_status, restart_order,
                                 active_vehicles_gps, order_confirm,
                                 check_aggregators)
 
-from auto.tasks import update_driver_data, get_gps_session, get_uber_session, get_bolt_session, get_uklon_session
+from auto.tasks import update_driver_data, get_session
 
 
 class PostRequestHandler:
@@ -66,26 +66,21 @@ class PostRequestHandler:
         return JsonResponse({}, status=200)
 
     def handler_success_login(self, request):
-        action = request.POST.get('action')
+        aggregator = request.POST.get('aggregator')
         login = request.POST.get('login')
         password = request.POST.get('password')
+        print(aggregator)
         partner = Partner.objects.get(user=request.user.pk)
-
-        def get_session_task(service_name):
-            task = globals()[f'get_{service_name}_session'].delay(partner.pk, login=login, password=password)
-            return JsonResponse({'task_id': task.id}, safe=False)
-
-        if action in ['uber', 'bolt', 'uklon', 'gps']:
-            response = HttpResponse(get_session_task(action), content_type='application/json')
-        else:
-            response = JsonResponse({'error': 'Invalid action'}, status=400)
+        task = get_session.delay(partner.pk, aggregator, login=login, password=password)
+        json_data = JsonResponse({'task_id': task.id}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
 
         return response
 
     def handler_handler_logout(self, request):
-        action = request.POST.get('action')
+        aggregator = request.POST.get('aggregator')
         partner = Partner.objects.get(user=request.user.pk)
-        partner_logout(action, partner.pk)
+        partner_logout(aggregator, partner.pk)
 
         return JsonResponse({}, status=200)
 
@@ -153,21 +148,16 @@ class PostRequestHandler:
     def handler_free_access(self, request):
         name = request.POST.get('name')
         phone = request.POST.get('phone')
+        response_data = {'success': False, 'error': 'Ви вже підписались'}
+        phone = phone.replace(' ', '').replace('-', '')
+        user, created = SubscribeUsers.objects.get_or_create(phone_number=phone,
+                                                             defaults={"name": name})
+        if created:
+            response_data = {'success': True}
 
-        if name and phone:
-            phone = phone.replace(' ', '').replace('-', '')
-            existing_subscriber = SubscribeUsers.objects.filter(phone_number=phone).first()
-
-            if existing_subscriber:
-                response_data = {'success': False, 'error': 'Ви вже підписались'}
-            else:
-                subscriber = SubscribeUsers.objects.create(name=name, phone_number=phone)
-                subscriber.save()
-                response_data = {'success': True}
-
-            json_data = JsonResponse(response_data, safe=False)
-            response = HttpResponse(json_data, content_type='application/json')
-            return response
+        json_data = JsonResponse(response_data, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
 
     def handler_unknown_action(self, request):
         return JsonResponse({}, status=400)
@@ -196,23 +186,17 @@ class GetRequestHandler:
         return JsonResponse(response_data, safe=False)
 
     def handle_check_aggregators(self, request):
-
-        aggregators = check_aggregators(request.user.pk)
-        json_data = JsonResponse({'data': aggregators}, safe=False)
+        aggregators, fleets = check_aggregators(request.user.pk)
+        json_data = JsonResponse({'data': aggregators, 'fleets': fleets}, safe=False)
         response = HttpResponse(json_data, content_type='application/json')
         return response
 
     def handle_check_task(self, request):
         upd = AsyncResult(request.GET.get('task_id'))
-        if upd.ready():
-            result = upd.get()
-            json_data = JsonResponse({'data': result[1]}, safe=False)
-            response = HttpResponse(json_data, content_type='application/json')
-            return response
-        else:
-            json_data = JsonResponse({'data': 'in progress'}, safe=False)
-            response = HttpResponse(json_data, content_type='application/json')
-            return response
+        answer = upd.get()[1] if upd.ready() else 'in progress'
+        json_data = JsonResponse({'data': answer}, safe=False)
+        response = HttpResponse(json_data, content_type='application/json')
+        return response
 
     def handle_unknown_action(self, request):
         return JsonResponse({}, status=400)

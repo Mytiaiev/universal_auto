@@ -1,28 +1,30 @@
 from datetime import datetime, timedelta
-
 import requests
 
-from app.models import UberService, Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder, Driver
+from app.models import Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder, Fleet
 from auto_bot.handlers.order.utils import check_vehicle
 from selenium_ninja.driver import SeleniumTools
-
 from selenium_ninja.synchronizer import Synchronizer
 
 
-class UberRequest(Synchronizer):
+class UberRequest(Fleet, Synchronizer):
 
-    def __init__(self, partner_id=None, fleet="Uber"):
-        super().__init__(partner_id, fleet)
-        self.base_url = UberService.get_value('REQUEST_UBER_BASE_URL')
+    # def __init__(self, partner_id=None, fleet="Uber"):
+    #     super().__init__(partner_id, fleet)
+    #     self.base_url = UberService.get_value('REQUEST_UBER_BASE_URL')
 
     def get_header(self):
-        obj_session = UberSession.objects.filter(partner=self.partner_id).latest('created_at')
+        obj_session = UberSession.objects.filter(partner=self.partner).latest('created_at')
         headers = {
             "content-type": "application/json",
             "x-csrf-token": "x",
             "cookie": f"sid={obj_session.session}; csid={obj_session.cook_session}"
         }
         return headers
+
+    @staticmethod
+    def create_session(partner, login, password):
+        SeleniumTools(partner).create_uber_session(login, password)
 
     @staticmethod
     def remove_dup(text):
@@ -110,7 +112,7 @@ class UberRequest(Synchronizer):
                 vehicle_name = driver['associatedVehicles'][0]['make']
                 vin_code = driver['associatedVehicles'][0]['vin']
             phone = driver['member']['user']['phone']
-            drivers.append({'fleet_name': self.fleet,
+            drivers.append({'fleet_name': self.name,
                             'name': self.remove_dup(driver['member']['user']['name']['firstName']),
                             'second_name': self.remove_dup(driver['member']['user']['name']['lastName']),
                             'email': driver['member']['user']['email'],
@@ -125,7 +127,7 @@ class UberRequest(Synchronizer):
         return drivers
 
     def save_report(self, day):
-        reports = Payments.objects.filter(report_from=day, vendor_name=self.fleet, partner=self.partner_id)
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.name, partner=self.partner)
         if reports:
             return list(reports)
         start = self.report_interval(day, True) * 1000
@@ -150,8 +152,8 @@ class UberRequest(Synchronizer):
                     }
                   }
                 }'''
-        uber_drivers = Fleets_drivers_vehicles_rate.objects.filter(partner=self.partner_id,
-                                                                   fleet__name=self.fleet)
+        uber_drivers = Fleets_drivers_vehicles_rate.objects.filter(partner=self.partner,
+                                                                   fleet__name=self.name)
         drivers_id = [obj.driver_external_id for obj in uber_drivers]
         variables = {
                       "performanceReportRequest": {
@@ -191,22 +193,22 @@ class UberRequest(Synchronizer):
                 for report in response.json()['data']['getPerformanceReport']:
                     if report['totalEarnings']:
                         driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=report['uuid'],
-                                                                          partner=self.partner_id).driver
+                                                                          partner=self.partner).driver
                         vehicle = check_vehicle(driver, day, max_time=True)[0]
                         order = Payments(
                             report_from=day,
-                            vendor_name=self.fleet,
+                            vendor_name=self.name,
                             driver_id=report['uuid'],
                             full_name=str(driver),
                             total_amount=round(report['totalEarnings'], 2),
                             total_amount_without_fee=round(report['totalEarnings'], 2),
                             total_amount_cash=round(report['cashEarnings'], 2),
                             total_rides=report['totalTrips'],
-                            partner=Partner.get_partner(self.partner_id),
+                            partner=Partner.get_partner(self.partner),
                             vehicle=vehicle)
                         order.save()
             else:
-                self.logger.error(f"Failed save uber report {self.partner_id} {response}")
+                self.logger.error(f"Failed save uber report {self.partner} {response}")
 
     def get_drivers_status(self):
         query = '''query GetDriverEvents($orgUUID: String!) {
@@ -275,9 +277,9 @@ class UberRequest(Synchronizer):
 
     def get_fleet_orders(self, day):
         if not FleetOrder.objects.filter(fleet="Uber", accepted_time__date=day):
-            uber_driver = SeleniumTools(self.partner_id)
-            uber_driver.download_payments_order("Uber", day)
-            uber_driver.save_trips_report("Uber", day)
+            uber_driver = SeleniumTools(self.partner)
+            uber_driver.download_payments_order(day)
+            uber_driver.save_trips_report(day)
             uber_driver.quit()
 
     def disable_cash(self, driver_id, enable):

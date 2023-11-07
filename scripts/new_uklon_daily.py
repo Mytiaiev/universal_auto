@@ -1,17 +1,16 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from django.db.models import Sum
 from django.utils import timezone
 
-from auto_bot.handlers.driver_manager.utils import get_drivers_vehicles_list, calculate_efficiency, get_efficiency
-from selenium_ninja.bolt_sync import BoltRequest
-from app.models import FleetOrder, PaymentTypes, Driver, Vehicle
+from app.models import Fleet
+from app.uklon_sync import UklonRequest
+from auto_bot.handlers.driver_manager.utils import get_efficiency
 
 
 def run(*args):
-    start = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday())
-    yesterday = timezone.localtime().date() - timedelta(days=1)
-    get_efficiency(515224934, start, yesterday)
+    UklonRequest.objects.create(name="Uklon", min_fee=6000)
+    fleet = Fleet.objects.get(name='Uklon')
+    print(fleet)
 
 
 

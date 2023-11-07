@@ -59,7 +59,6 @@ class Partner(models.Model):
     calendar = models.CharField(max_length=255, verbose_name='Календар змін водіїв')
     contacts = models.BooleanField(default=False, verbose_name='Доступ до контактів')
 
-
     @classmethod
     def get_partner(cls, pk):
         return cls.objects.get(id=pk)
@@ -427,12 +426,13 @@ class RentInformation(models.Model):
 
 class Fleet(PolymorphicModel):
     name = models.CharField(max_length=255)
+    base_url = models.URLField(verbose_name="Початкова сторінка", null=True)
     fees = models.DecimalField(decimal_places=2, max_digits=3, default=0)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     min_fee = models.DecimalField(decimal_places=2, max_digits=15, default=0)
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, max_length=55, verbose_name='Партнер')
+    partner = models.ManyToManyField(Partner, verbose_name='Партнери')
 
     class Meta:
         verbose_name = 'Автопарк'
@@ -442,9 +442,27 @@ class Fleet(PolymorphicModel):
         return f'{self.name}'
 
 
+class NinjaFleet(Fleet):
+
+    @staticmethod
+    def start_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.min))
+
+    @staticmethod
+    def end_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.max))
+
+    def download_report(self, day=None):
+        report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                         report_to=self.end_report_interval(day),
+                                         vendor_name=self.name)
+        return list(report)
+
+
 class GpsProvider(PolymorphicModel):
     partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, max_length=55, verbose_name='Партнер')
-    url = models.URLField(verbose_name="Сторінка логіну")
+    base_url = models.URLField(verbose_name="Сторінка логіну", null=True)
+    name = models.CharField(max_length=50, verbose_name="Назва ресурсу")
 
 
 class Client(User):
@@ -547,33 +565,7 @@ class SummaryReport(models.Model):
         verbose_name_plural = 'Зведені звіти'
 
 
-class BoltFleet(Fleet):
-    pass
 
-
-class NewUklonFleet(Fleet):
-    token = models.CharField(max_length=40, default=None, null=True, verbose_name="Код автопарку")
-
-
-class UberFleet(Fleet):
-    pass
-
-
-class NinjaFleet(Fleet):
-
-    @staticmethod
-    def start_report_interval(day):
-        return timezone.localize(datetime.combine(day, time.min))
-
-    @staticmethod
-    def end_report_interval(day):
-        return timezone.localize(datetime.combine(day, time.max))
-
-    def download_report(self, day=None):
-        report = Payments.objects.filter(report_from=self.start_report_interval(day),
-                                         report_to=self.end_report_interval(day),
-                                         vendor_name=self.name)
-        return list(report)
 
 
 class StatusChange(models.Model):

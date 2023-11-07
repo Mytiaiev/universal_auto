@@ -6,22 +6,20 @@ $(document).ready(function () {
 			action: "aggregators"
 		},
 		success: function (response) {
-			let aggregators = response.data;
-
-			for (let aggregator in aggregators) {
-				if (aggregators.hasOwnProperty(aggregator)) {
-					localStorage.setItem(aggregator, aggregators[aggregator] ? 'success' : 'false');
-				}
-			}
-		}
+            const aggregators = new Set(response.data);
+            const fleets = new Set(response.fleets);
+            fleets.forEach(fleet => {
+                localStorage.setItem(fleet, aggregators.has(fleet) ? 'success' : 'false');
+            });
+        }
 	});
 	const partnerForm = $("#partnerForm");
 	const partnerLoginField = $("#partnerLogin");
 	const partnerRadioButtons = $("input[name='partner']");
 
-	let uklonStatus = localStorage.getItem('uklon');
-	let boltStatus = localStorage.getItem('bolt');
-	let uberStatus = localStorage.getItem('uber');
+	let uklonStatus = localStorage.getItem('Uklon');
+	let boltStatus = localStorage.getItem('Bolt');
+	let uberStatus = localStorage.getItem('Uber');
 
 	// Перевірка умови, коли показувати або ховати елемент
 	if ((uklonStatus === 'success' || boltStatus === 'success' || uberStatus === 'success')) {
@@ -38,7 +36,7 @@ $(document).ready(function () {
 	});
 
 	function updateLoginField(partner) {
-		if (partner === 'uklon') {
+		if (partner === 'Uklon') {
 			partnerLoginField.val('+380');
 		} else {
 			partnerLoginField.val('');
@@ -50,7 +48,7 @@ $(document).ready(function () {
 		$("#settingsWindow").fadeIn();
 	}
 
-	if (localStorage.getItem('uber')) {
+	if (localStorage.getItem('Uber')) {
 		$("#partnerLogin").hide()
 		$("#partnerPassword").hide()
 		$(".opt-partnerForm").hide()
@@ -130,7 +128,8 @@ $(document).ready(function () {
 			url: ajaxPostUrl,
 			data: {
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner,
+				aggregator: partner,
+				action: "login",
 				login: login,
 				password: password,
 			},
@@ -179,7 +178,8 @@ $(document).ready(function () {
 			url: ajaxPostUrl,
 			data: {
 				csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val(),
-				action: partner + "_logout",
+				action: "logout",
+				aggregator: partner
 			},
 			success: function (response) {
 				if (response.data === true) {

@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from scripts.redis_conn import redis_instance, get_logger
 from app.models import Fleet, Fleets_drivers_vehicles_rate, Driver, Vehicle, Role, JobApplication, Partner, \
-    DriverReshuffle, Schema, UberSession
+    DriverReshuffle, Schema
 import datetime
 
 
@@ -26,10 +26,7 @@ class InfinityTokenError(Exception):
 
 class Synchronizer:
 
-    def __init__(self, partner_id, fleet):
-        self.partner_id = partner_id
-        self.fleet = fleet
-        self.session = UberSession.objects.filter(partner=self.partner_id).latest('created_at')
+    def __init__(self):
         self.redis = redis_instance()
         self.logger = get_logger()
 
@@ -56,24 +53,24 @@ class Synchronizer:
             return
         driver = Fleets_drivers_vehicles_rate.objects.filter(fleet=fleet,
                                                              driver_external_id=kwargs['driver_external_id'],
-                                                             partner=self.partner_id).first()
+                                                             partner=self.partner).first()
         if not driver:
             Fleets_drivers_vehicles_rate.objects.create(fleet=fleet,
                                                         driver_external_id=kwargs['driver_external_id'],
                                                         driver=self.get_or_create_driver(**kwargs),
                                                         pay_cash=kwargs['pay_cash'],
-                                                        partner=Partner.get_partner(self.partner_id))
+                                                        partner=Partner.get_partner(self.partner))
         else:
             self.update_driver_fields(driver.driver, **kwargs)
             driver.pay_cash = kwargs["pay_cash"]
             driver.save(update_fields=['pay_cash'])
 
     def get_or_create_driver(self, **kwargs):
-        partner = Partner.get_partner(self.partner_id)
+        partner = Partner.get_partner(self.partner)
         driver = Driver.objects.filter((Q(name=kwargs['name'], second_name=kwargs['second_name']) |
                                         Q(name=kwargs['second_name'], second_name=kwargs['name']) |
                                         Q(phone_number__icontains=kwargs['phone_number'][-10:])
-                                        ) & Q(partner=self.partner_id)).first()
+                                        ) & Q(partner=self.partner)).first()
         if not driver and kwargs['email']:
             driver = Driver.objects.filter(email__icontains=kwargs['email']).first()
         if not driver:
@@ -97,7 +94,7 @@ class Synchronizer:
                 Fleets_drivers_vehicles_rate.objects.get_or_create(fleet=fleet,
                                                                    driver_external_id=driver.chat_id,
                                                                    driver=driver,
-                                                                   partner=Partner.get_partner(self.partner_id))
+                                                                   partner=Partner.get_partner(self.partner))
             except ObjectDoesNotExist:
                 pass
         else:
@@ -113,7 +110,7 @@ class Synchronizer:
                                                                   "name": v_name.upper(),
                                                                   "licence_plate": licence_plate,
                                                                   "vin_code": vin,
-                                                                  "partner": Partner.get_partner(self.partner_id)
+                                                                  "partner": Partner.get_partner(self.partner)
                                                              })
             if not created:
                 self.update_vehicle_fields(vehicle, **kwargs)
@@ -129,7 +126,7 @@ class Synchronizer:
         if vin_code and vehicle.vin_code != vin_code:
             vehicle.vin_code = vin_code
 
-        vehicle.partner = Partner.get_partner(self.partner_id)
+        vehicle.partner = Partner.get_partner(self.partner)
         vehicle.save()
 
     def update_driver_fields(self, driver, **kwargs):

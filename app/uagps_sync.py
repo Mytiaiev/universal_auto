@@ -1,16 +1,62 @@
 import json
 import datetime
+import time
 import requests
 from _decimal import Decimal
 from django.utils import timezone
+from selenium.common import NoSuchElementException, InvalidArgumentException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
 from app.models import UaGpsService, Driver, Vehicle, RentInformation, Partner, FleetOrder, \
-    DriverEfficiency, CredentialPartner, ParkSettings, GpsProvider
+    DriverEfficiency, CredentialPartner, ParkSettings, Fleet, GpsProvider
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
+from selenium_ninja.driver import SeleniumTools, click_and_clear
+from selenium_ninja.synchronizer import InfinityTokenError, AuthenticationError
 
 
-class UaGpsSynchronizer(GpsProvider):
+class UaGpsSynchronizer(SeleniumTools, GpsProvider):
+
+    def create_session(self, login, password):
+        try:
+            session = None
+            self.driver.get(self.base_url)
+            time.sleep(self.sleep)
+            user_field = WebDriverWait(self.driver, self.sleep).until(
+                ec.presence_of_element_located((By.ID, UaGpsService.get_value('UAGPS_LOGIN_1'))))
+            click_and_clear(user_field)
+            user_field.send_keys(login)
+            pass_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_2'))
+            click_and_clear(pass_field)
+            pass_field.send_keys(password)
+            self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
+            time.sleep(self.sleep)
+            cookies = self.driver.get_cookies()
+        except (NoSuchElementException, InvalidArgumentException):
+            return False
+        for cookie in cookies:
+            if cookie.get('name') == 'sessions':
+                session = cookie.get('value')
+        self.quit()
+        if session:
+            params = {
+                'sid': session,
+                'svc': 'token/list',
+                'params': json.dumps({})
+            }
+            response = requests.get(url=UaGpsService.get_value("BASE_URL"), params=params)
+            tokens_list = response.json()
+            for token in tokens_list:
+                if not token.get('dur'):
+                    infinity_token = token['h']
+                    break
+            else:
+                raise InfinityTokenError
+        else:
+            raise AuthenticationError(f"Gps login or password incorrect.")
+        return infinity_token
 
     def get_session(self):
         if not redis_instance().exists(f"{self.partner}_gps_session"):
@@ -210,6 +256,6 @@ class UaGpsSynchronizer(GpsProvider):
                                                     self.get_timestamp(end_time),
                                                     driver.vehicle.gps_id)[0]
             rent_distance = total_km - distance
-            time = timezone.localtime(end_time).strftime("%H:%M")
+            time_now = timezone.localtime(end_time).strftime("%H:%M")
             bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
-                             text=f"Орендовано на {time} {driver} - {rent_distance}")
+                             text=f"Орендовано на {time_now} {driver} - {rent_distance}")

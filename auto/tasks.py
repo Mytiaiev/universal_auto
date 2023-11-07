@@ -16,8 +16,8 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, CredentialPartner, \
-    PaymentTypes, DriverEffVehicleKasa
+    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, \
+    PaymentTypes, DriverEffVehicleKasa, Fleet, GpsProvider
 from django.db.models import Sum, IntegerField, FloatField, Q, DecimalField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_report, \
@@ -36,33 +36,15 @@ from scripts.conversion import convertion, haversine, get_location_from_db
 from auto.celery import app
 from scripts.google_calendar import GoogleCalendar
 from scripts.redis_conn import redis_instance
-from selenium_ninja.bolt_sync import BoltRequest
-from selenium_ninja.driver import SeleniumTools
+from app.bolt_sync import BoltRequest
 from selenium_ninja.synchronizer import AuthenticationError
-from selenium_ninja.uagps_sync import UaGpsSynchronizer
-from selenium_ninja.uber_sync import UberRequest
-from selenium_ninja.uklon_sync import UklonRequest
+from app.uagps_sync import UaGpsSynchronizer
+from app.uber_sync import UberRequest
+from app.uklon_sync import UklonRequest
 from scripts.nbu_conversion import convert_to_currency
 from taxi_service.utils import login_in
 
 logger = get_task_logger(__name__)
-
-fleets = {
-    "BOLT_PASSWORD": BoltRequest,
-    "UKLON_PASSWORD": UklonRequest,
-    "UBER_PASSWORD": UberRequest,
-}
-
-
-def check_available_fleets(partner_pk):
-    settings = CredentialPartner.objects.filter(
-        Q(key="BOLT_PASSWORD") |
-        Q(key="UKLON_PASSWORD") |
-        Q(key="UBER_PASSWORD") |
-        Q(key="UAGPS_TOKEN"),
-        partner=partner_pk
-    ).order_by("-key")
-    return settings
 
 
 def get_day_for_task(day=None):
@@ -113,70 +95,31 @@ def auto_send_task_bot(self):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def get_uber_session(self, partner_pk, login=None, password=None):
+def get_session(self, partner_pk, aggregator='Uber', login=None, password=None):
+    fleet = Fleet.objects.get(name=aggregator)
     try:
-        chrome = SeleniumTools(partner_pk)
-        chrome.uber_login(login=login, password=password)
-        success = login_in(action='uber', user_id=partner_pk, login_name=login, password=password)
-    except Exception as e:
-        success = False
-        logger.error(e)
-
-    return partner_pk, success
-
-
-@app.task(bind=True, queue='beat_tasks')
-def get_bolt_session(self, partner_pk, login=None, password=None):
-    try:
-        BoltRequest(partner_pk).get_login_token(login=login, password=password)
-        success = login_in(action='bolt', user_id=partner_pk, login_name=login, password=password)
+        fleet.create_session(partner_pk, login=login, password=password)
+        success = login_in(aggregator=aggregator, partner_id=partner_pk, login_name=login, password=password)
     except AuthenticationError as e:
         logger.error(e)
         success = False
-    return partner_pk, success
-
-
-@app.task(bind=True, queue='beat_tasks')
-def get_uklon_session(self, partner_pk, login=None, password=None):
-    try:
-        UklonRequest(partner_pk).create_session(login=login, password=password)
-        success = login_in(action='uklon', user_id=partner_pk, login_name=login, password=password)
-    except AuthenticationError as e:
-        success = False
-        logger.error(e)
-
-    return partner_pk, success
-
-
-@app.task(bind=True, queue='beat_tasks')
-def get_gps_session(self, partner_pk, login=None, password=None):
-    try:
-        chrome = SeleniumTools(partner_pk)
-        token = chrome.gps_login(login=login, password=password)
-        success = login_in(action='gps', user_id=partner_pk, login_name=login, password=password, token=token)
-    except Exception as e:
-        success = False
-        logger.error(e)
-
     return partner_pk, success
 
 
 @app.task(bind=True, queue='beat_tasks')
 def get_orders_from_fleets(self, partner_pk, day=None):
-    settings = check_available_fleets(partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk)
     day = get_day_for_task(day)
     drivers = Driver.objects.filter(partner=partner_pk)
-    for setting in settings:
-        request_class = fleets.get(setting.key)
-        if request_class:
-            if isinstance(request_class(partner_pk), UberRequest):
-                try:
-                    request_class(partner_pk).get_fleet_orders(day)
-                except Exception as e:
-                    logger.error(e)
-            else:
-                for driver in drivers:
-                    request_class(partner_pk).get_fleet_orders(day, driver.pk)
+    for fleet in fleets:
+        if isinstance(fleet, UberRequest):
+            try:
+                fleet.get_fleet_orders(day)
+            except Exception as e:
+                logger.error(e)
+        else:
+            for driver in drivers:
+                fleet.get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -196,14 +139,13 @@ def check_orders_for_vehicle(self, partner_pk):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_today_orders(self, partner_pk):
-    settings = check_available_fleets(partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk)
     day = timezone.localtime() - timedelta(minutes=5)
     drivers = Driver.objects.filter(partner=partner_pk)
-    for setting in settings:
-        request_class = fleets.get(setting.key)
-        if request_class and not isinstance(request_class(partner_pk), UberRequest):
+    for fleet in fleets:
+        if not isinstance(fleet, UberRequest):
             for driver in drivers:
-                request_class(partner_pk).get_fleet_orders(day, driver.pk)
+                fleet.get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -255,11 +197,9 @@ def send_notify_to_check_car(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
     day = get_day_for_task(day)
-    settings = check_available_fleets(partner_pk)
-    for setting in settings:
-        request_class = fleets.get(setting.key)
-        if request_class:
-            request_class(partner_pk).save_report(day)
+    fleets = Fleet.objects.filter(partner=partner_pk)
+    for fleet in fleets:
+        fleet.save_report(day)
     save_report_to_ninja_payment(day, partner_pk)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
     for driver in Driver.objects.filter(partner=partner_pk):
@@ -386,14 +326,12 @@ def update_driver_status(self, partner_pk):
     try:
         status_online = set()
         status_with_client = set()
-        settings = check_available_fleets(partner_pk)
-        for setting in settings:
-            update_class = fleets.get(setting.key)
-            if update_class:
-                statuses = update_class(partner_pk).get_drivers_status()
-                logger.info(f"{update_class.__name__} {statuses}")
-                status_online = status_online.union(set(statuses['wait']))
-                status_with_client = status_with_client.union(set(statuses['with_client']))
+        fleets = Fleet.objects.filter(partner=partner_pk)
+        for fleet in fleets:
+            statuses = fleet.get_drivers_status()
+            logger.info(f"{fleet} {statuses}")
+            status_online = status_online.union(set(statuses['wait']))
+            status_with_client = status_with_client.union(set(statuses['with_client']))
         drivers = Driver.objects.filter(partner=partner_pk)
         for driver in drivers:
             active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
@@ -428,14 +366,11 @@ def update_driver_data(self, partner_pk, manager_id=None):
     try:
         drivers = Driver.objects.filter(partner=partner_pk)
         drivers.update(worked=False)
-        settings = check_available_fleets(partner_pk)
-        synchronize_classes = fleets.copy()
-        gps_class = {"UAGPS_TOKEN": UaGpsSynchronizer}
-        synchronize_classes.update(gps_class)
-        for setting in settings:
-            synchronization_class = synchronize_classes.get(setting.key)
-            if synchronization_class:
-                synchronization_class(partner_pk).synchronize()
+        fleets = Fleet.objects.filter(partner=partner_pk)
+        gps = GpsProvider.objects.filter(partner=partner_pk)
+        synchronize_classes = fleets.union(gps)
+        for synchronization_class in synchronize_classes:
+            synchronization_class.synchronize()
         success = True
     except Exception as e:
         logger.error(e)
@@ -447,8 +382,8 @@ def update_driver_data(self, partner_pk, manager_id=None):
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        SeleniumTools().add_driver(candidate)
-        BoltRequest().add_driver(candidate)
+        UklonRequest.add_driver(candidate)
+        BoltRequest.add_driver(candidate)
         logger.info('The job application has been sent')
     except Exception as e:
         logger.error(e)
@@ -457,7 +392,8 @@ def send_on_job_application_on_driver(self, job_id):
 @app.task(bind=True, queue='bot_tasks')
 def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
     try:
-        UklonRequest(partner_pk).detaching_the_driver_from_the_car(licence_plate)
+        fleet = UklonRequest.objects.get(partner=partner_pk)
+        fleet.detaching_the_driver_from_the_car(licence_plate)
         logger.info(f'Car {licence_plate} was detached')
     except Exception as e:
         logger.error(e)
@@ -466,7 +402,8 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 @app.task(bind=True, queue='beat_tasks')
 def get_rent_information(self, partner_pk, delta=1):
     try:
-        UaGpsSynchronizer(partner_pk).save_daily_rent(delta)
+        gps = GpsProvider.objects.get(partner=partner_pk)
+        gps.save_daily_rent(delta)
         logger.info('write rent report')
     except Exception as e:
         logger.error(e)
@@ -475,7 +412,8 @@ def get_rent_information(self, partner_pk, delta=1):
 @app.task(bind=True, queue='beat_tasks')
 def get_today_rent(self, partner_pk):
     try:
-        UaGpsSynchronizer(partner_pk).check_today_rent()
+        gps = GpsProvider.objects.get(partner=partner_pk)
+        gps.check_today_rent()
     except Exception as e:
         logger.error(e)
 
@@ -484,12 +422,10 @@ def get_today_rent(self, partner_pk):
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
         driver = Driver.objects.get(pk=pk)
-        settings = check_available_fleets(partner_pk)
-        for setting in settings:
-            disable_class = fleets.get(setting.key)
-            if disable_class:
-                driver_id = driver.get_driver_external_id(disable_class(partner_pk).fleet)
-                disable_class(partner_pk).disable_cash(driver_id, enable)
+        fleets = Fleet.objects.filter(partner=partner_pk)
+        for fleet in fleets:
+            driver_id = driver.get_driver_external_id(fleet.name)
+            fleet.disable_cash(driver_id, enable)
         message = f"Cash enabled for {driver}" if enable == 'true' else f"Cash disbled for {driver}"
         logger.info(message)
     except Exception as e:
@@ -499,7 +435,8 @@ def fleets_cash_trips(self, partner_pk, pk, enable):
 @app.task(bind=True, queue='beat_tasks')
 def withdraw_uklon(self, partner_pk):
     try:
-        UklonRequest(partner_pk).withdraw_money()
+        fleet = UklonRequest.objects.get(partner=partner_pk)
+        fleet.withdraw_money()
     except Exception as e:
         logger.error(e)
 
@@ -1065,7 +1002,7 @@ def setup_periodic_tasks(partner, sender=None):
     # sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
     # manager_paid_weekly.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="9", day_of_week="1"),
-                             get_uber_session.s(partner_id))
+                             get_session.s(partner_id))
 
 
 def remove_periodic_tasks(partner, sender=None):
