@@ -457,7 +457,7 @@ def update_driver_status(self, partner_pk):
                                              partner=Partner.get_partner(partner_pk),
                                              licence_plate=vehicle.licence_plate,
                                              chat_id=driver.chat_id)
-                logger.warning(f'{driver}: {current_status}')
+                logger.info(f'{driver}: {current_status}')
             else:
                 if work_ninja:
                     work_ninja.end_at = timezone.localtime()
@@ -1077,7 +1077,7 @@ def setup_periodic_tasks(partner, sender=None):
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="2"), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
-    # sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute="10", hour='*/4'), get_today_rent.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))

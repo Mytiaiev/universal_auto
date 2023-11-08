@@ -318,10 +318,8 @@ class UklonRequest(Synchronizer):
                                                                       partner=self.partner_id)) * 100
         for key, value in balance.items():
             if value > 0:
-                transfer = str(uuid.uuid4())
                 items.append({
-                    "transfer_id": f"{transfer}",
-                    "driver_id": key,
+                    "employee_id": key,
                     "amount": {
                         "amount": value,
                         "currency": "UAH"
@@ -331,7 +329,8 @@ class UklonRequest(Synchronizer):
             payload = {
                 "items": items
             }
-            self.response_data(url=url2, headers=headers, data=json.dumps(payload), method='POST')
+            response = self.response_data(url=url2, headers=headers, data=json.dumps(payload), method='POST')
+            print(response)
 
     def detaching_the_driver_from_the_car(self, licence_plate):
         base_url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
