@@ -9,7 +9,12 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
 
-from app.models import Driver, UseOfCars, VehicleGPS, Order, Partner, ParkSettings, CredentialPartner, Fleet
+from app.bolt_sync import BoltRequest
+from app.models import Driver, UseOfCars, VehicleGPS, Order, Partner, ParkSettings, CredentialPartner, Fleet, \
+    NewUklonService, UberService, UaGpsService, BoltService
+from app.uagps_sync import UaGpsSynchronizer
+from app.uber_sync import UberRequest
+from app.uklon_sync import UklonRequest
 from scripts.redis_conn import get_logger
 
 
@@ -167,7 +172,9 @@ def login_in(aggregator=None, partner_id=None, login_name=None, password=None, t
     if aggregator == 'Bolt':
         update_park_set(partner_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
         update_park_set(partner_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
-
+        BoltRequest.objects.create(name=aggregator,
+                                   partner=Partner.get_partner(partner_id),
+                                   )
     elif aggregator == 'Uklon':
         update_park_set(partner_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)
         update_park_set(partner_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon', park=False)
@@ -177,18 +184,26 @@ def login_in(aggregator=None, partner_id=None, login_name=None, password=None, t
         update_park_set(
             partner_id, 'CLIENT_ID', random_hex,
             description='Ідентифікатор клієнта Uklon', check_value=False, park=False)
+        UklonRequest.objects.create(name=aggregator,
+                                    partner=Partner.get_partner(partner_id),
+                                    base_url=NewUklonService.get_value("UKLON_SESSION"))
     elif aggregator == 'Uber':
         update_park_set(partner_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber', park=False)
         update_park_set(partner_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
+        UberRequest.objects.create(name=aggregator,
+                                   partner=Partner.get_partner(partner_id),
+                                   base_url=UberService.get_value("REQUEST_UBER_BASE_URL"))
     elif aggregator == 'Gps':
         update_park_set(partner_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
-    fleet = Fleet.objects.get(name=aggregator)
-    fleet.partner.add(partner_id)
+        UaGpsSynchronizer.objects.create(name=aggregator,
+                                         partner=Partner.get_partner(partner_id),
+                                         base_url=UaGpsService.get_value("LOGIN_URL"))
     return True
 
 
 def partner_logout(aggregator, partner_pk):
     settings = ParkSettings.objects.filter(partner=partner_pk)
+    Fleet.objects.filter(name=aggregator, partner=partner_pk).delete()
     credentials = CredentialPartner.objects.filter(partner=partner_pk)
     if aggregator == 'Uklon':
         settings.filter(key='WITHDRAW_UKLON').delete()
@@ -203,8 +218,6 @@ def partner_logout(aggregator, partner_pk):
     credential_action = credential_dict.get(aggregator)
     if credential_action:
         credentials.filter(key__in=credential_action).delete()
-    fleet = Fleet.objects.get(name=aggregator)
-    fleet.partner.remove(partner_pk)
     return True
 
 

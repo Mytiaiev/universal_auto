@@ -257,7 +257,7 @@ class SeleniumTools:
                 'svc': 'token/list',
                 'params': json.dumps({})
             }
-            response = requests.get(url, params=params)
+            response = requests.get(f"{url}wialon/ajax.html", params=params)
             tokens_list = response.json()
             for token in tokens_list:
                 if not token.get('dur'):

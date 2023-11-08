@@ -329,6 +329,7 @@ def update_driver_status(self, partner_pk):
         status_with_client = set()
         fleets = Fleet.objects.filter(partner=partner_pk)
         for fleet in fleets:
+            print(fleet.partner, fleet)
             statuses = fleet.get_drivers_status()
             logger.info(f"{fleet} {statuses}")
             status_online = status_online.union(set(statuses['wait']))
@@ -867,6 +868,8 @@ def get_driver_reshuffles(self, partner, delta=0):
             self.retry(args=[partner, delta], countdown=600)
 
 
+
+# showing in other partners
 def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=fleet_name, partner=partner_pk)
     if reports:

@@ -426,13 +426,12 @@ class RentInformation(models.Model):
 
 class Fleet(PolymorphicModel):
     name = models.CharField(max_length=255)
-    base_url = models.URLField(verbose_name="Початкова сторінка", null=True)
     fees = models.DecimalField(decimal_places=2, max_digits=3, default=0)
     created_at = models.DateTimeField(editable=False, auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     min_fee = models.DecimalField(decimal_places=2, max_digits=15, default=0)
-    partner = models.ManyToManyField(Partner, verbose_name='Партнери')
+    partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнери')
 
     class Meta:
         verbose_name = 'Автопарк'

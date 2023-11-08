@@ -23,7 +23,7 @@ class UaGpsSynchronizer(Fleet):
                 'svc': 'token/login',
                 'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner)})
             }
-            response = requests.get(f"{self.base_url}/wialon/ajax", params=params)
+            response = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
             redis_instance().set(f"{self.partner}_gps_session", response.json()['eid'])
         return redis_instance().get(f"{self.partner}_gps_session")
 
@@ -37,7 +37,7 @@ class UaGpsSynchronizer(Fleet):
                 'svc': 'core/search_items',
             }
             params.update({'params': json.dumps(payload)})
-            response = requests.post(f"{self.base_url}/wialon/ajax", params=params)
+            response = requests.post(f"{self.base_url}wialon/ajax.html", params=params)
             redis_instance().set(f"{self.partner}_gps_id", response.json()['items'][0]['id'])
         return redis_instance().get(f"{self.partner}_gps_id")
 

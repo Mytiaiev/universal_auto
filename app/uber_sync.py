@@ -22,6 +22,10 @@ class UberRequest(Fleet, Synchronizer):
         }
         return headers
 
+    def get_uuid(self):
+        obj_session = UberSession.objects.filter(partner=self.partner__id).latest('created_at')
+        return str(obj_session.uber_uuid)
+
     @staticmethod
     def create_session(partner, login, password):
         SeleniumTools(partner).create_uber_session(login, password)
@@ -89,7 +93,7 @@ class UberRequest(Fleet, Synchronizer):
           }
         '''
         variables = {
-                    "orgUUID": str(self.session.uber_uuid),
+                    "orgUUID": self.get_uuid(),
                     "pagingOptions": {
                         "pageSize": 25
                                     },
@@ -157,7 +161,7 @@ class UberRequest(Fleet, Synchronizer):
         drivers_id = [obj.driver_external_id for obj in uber_drivers]
         variables = {
                       "performanceReportRequest": {
-                        "orgUUID": str(self.session.uber_uuid),
+                        "orgUUID": self.get_uuid(),
                         "dimensions": [
                           "vs:driver"
                         ],
@@ -220,7 +224,7 @@ class UberRequest(Fleet, Synchronizer):
                       }
                     }'''
         variables = {
-                    "orgUUID": str(self.session.uber_uuid)
+                    "orgUUID": self.get_uuid()
                      }
         with_client = []
         wait = []
@@ -260,7 +264,7 @@ class UberRequest(Fleet, Synchronizer):
                       vin
                     }'''
         variables = {
-            "orgUUID": str(self.session.uber_uuid),
+            "orgUUID": self.get_uuid(),
             "pageSize": 25
         }
         data = self.get_payload(query, variables)
@@ -319,7 +323,7 @@ class UberRequest(Fleet, Synchronizer):
                               }
                             }'''
         variables = {
-                    "supplierUuid":  str(self.session.uber_uuid),
+                    "supplierUuid":  self.get_uuid(),
                     "earnerUuid": driver_id,
                     "effectiveAt": period
         }

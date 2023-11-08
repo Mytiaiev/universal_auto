@@ -8,6 +8,7 @@ import requests
 from django.db import IntegrityError
 from django.utils import timezone
 
+from django.db import models
 from app.models import BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes, Fleet
 from auto import settings
@@ -16,13 +17,10 @@ from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 
 
 class BoltRequest(Fleet, Synchronizer):
+    base_url = models.URLField(default=BoltService.get_value('REQUEST_BOLT_LOGIN_URL'))
     # def __init__(self, partner_id=None, fleet="Bolt"):
     #     super().__init__(partner_id, fleet)
-    #     self.base_url = BoltService.get_value('REQUEST_BOLT_LOGIN_URL')
-
-    @staticmethod
-    def param():
-        return {"language": "uk-ua", "version": "FO.3.03"}
+    #     self.base_url =
 
     def create_session(self, partner=None, login=None, password=None):
         if not (login and password):
@@ -43,6 +41,10 @@ class BoltRequest(Fleet, Synchronizer):
         else:
             refresh_token = response.json()["data"]["refresh_token"]
             self.redis.set(f"{self.partner}_{self.name}_refresh", refresh_token)
+
+    @staticmethod
+    def param():
+        return {"language": "uk-ua", "version": "FO.3.03"}
 
     def get_access_token(self):
         token = self.redis.get(f"{self.partner}_{self.name}_refresh")
