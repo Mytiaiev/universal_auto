@@ -1,5 +1,6 @@
 import base64
 import csv
+import json
 import os
 import time
 from datetime import datetime
@@ -12,11 +13,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver import DesiredCapabilities
-from selenium.common import TimeoutException
+from selenium.common import TimeoutException, NoSuchElementException, InvalidArgumentException
 
-from app.models import FleetOrder, Partner, Vehicle, Fleets_drivers_vehicles_rate, UberService, UberSession
+from app.models import FleetOrder, Partner, Vehicle, Fleets_drivers_vehicles_rate, UberService, UberSession, \
+    UaGpsService
 from scripts.redis_conn import get_logger
-from selenium_ninja.synchronizer import AuthenticationError
+from selenium_ninja.synchronizer import AuthenticationError, InfinityTokenError
 
 
 class SeleniumTools:
@@ -227,6 +229,45 @@ class SeleniumTools:
         input_password.send_keys(password)
         WebDriverWait(self.driver, self.sleep).until(
             ec.element_to_be_clickable((By.XPATH, UberService.get_value('UBER_LOGIN_2')))).click()
+
+    def create_gps_session(self, login, password, url):
+        try:
+            session = None
+            self.driver.get(url)
+            time.sleep(self.sleep)
+            user_field = WebDriverWait(self.driver, self.sleep).until(
+                ec.presence_of_element_located((By.ID, UaGpsService.get_value('UAGPS_LOGIN_1'))))
+            click_and_clear(user_field)
+            user_field.send_keys(login)
+            pass_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_2'))
+            click_and_clear(pass_field)
+            pass_field.send_keys(password)
+            self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
+            time.sleep(self.sleep)
+            cookies = self.driver.get_cookies()
+        except (NoSuchElementException, InvalidArgumentException):
+            return False
+        for cookie in cookies:
+            if cookie.get('name') == 'sessions':
+                session = cookie.get('value')
+        self.quit()
+        if session:
+            params = {
+                'sid': session,
+                'svc': 'token/list',
+                'params': json.dumps({})
+            }
+            response = requests.get(url, params=params)
+            tokens_list = response.json()
+            for token in tokens_list:
+                if not token.get('dur'):
+                    infinity_token = token['h']
+                    break
+            else:
+                raise InfinityTokenError
+        else:
+            raise AuthenticationError(f"Gps login or password incorrect.")
+        return infinity_token
 
     @staticmethod
     def report_file_name(pattern):

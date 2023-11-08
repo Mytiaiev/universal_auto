@@ -1,62 +1,21 @@
 import json
 import datetime
-import time
 import requests
 from _decimal import Decimal
 from django.utils import timezone
-from selenium.common import NoSuchElementException, InvalidArgumentException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-from app.models import UaGpsService, Driver, Vehicle, RentInformation, Partner, FleetOrder, \
-    DriverEfficiency, CredentialPartner, ParkSettings, Fleet, GpsProvider
+from app.models import Driver, Vehicle, RentInformation, Partner, FleetOrder, \
+    DriverEfficiency, CredentialPartner, ParkSettings, Fleet
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
-from selenium_ninja.driver import SeleniumTools, click_and_clear
-from selenium_ninja.synchronizer import InfinityTokenError, AuthenticationError
+from selenium_ninja.driver import SeleniumTools
 
 
-class UaGpsSynchronizer(SeleniumTools, GpsProvider):
+class UaGpsSynchronizer(Fleet):
 
-    def create_session(self, login, password):
-        try:
-            session = None
-            self.driver.get(self.base_url)
-            time.sleep(self.sleep)
-            user_field = WebDriverWait(self.driver, self.sleep).until(
-                ec.presence_of_element_located((By.ID, UaGpsService.get_value('UAGPS_LOGIN_1'))))
-            click_and_clear(user_field)
-            user_field.send_keys(login)
-            pass_field = self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_2'))
-            click_and_clear(pass_field)
-            pass_field.send_keys(password)
-            self.driver.find_element(By.ID, UaGpsService.get_value('UAGPS_LOGIN_3')).click()
-            time.sleep(self.sleep)
-            cookies = self.driver.get_cookies()
-        except (NoSuchElementException, InvalidArgumentException):
-            return False
-        for cookie in cookies:
-            if cookie.get('name') == 'sessions':
-                session = cookie.get('value')
-        self.quit()
-        if session:
-            params = {
-                'sid': session,
-                'svc': 'token/list',
-                'params': json.dumps({})
-            }
-            response = requests.get(url=UaGpsService.get_value("BASE_URL"), params=params)
-            tokens_list = response.json()
-            for token in tokens_list:
-                if not token.get('dur'):
-                    infinity_token = token['h']
-                    break
-            else:
-                raise InfinityTokenError
-        else:
-            raise AuthenticationError(f"Gps login or password incorrect.")
-        return infinity_token
+    def create_session(self, partner, login, password):
+        token = SeleniumTools(partner).create_gps_session(login, password, self.base_url)
+        return token
 
     def get_session(self):
         if not redis_instance().exists(f"{self.partner}_gps_session"):
@@ -64,7 +23,7 @@ class UaGpsSynchronizer(SeleniumTools, GpsProvider):
                 'svc': 'token/login',
                 'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner)})
             }
-            response = requests.get(self.url, params=params)
+            response = requests.get(f"{self.base_url}/wialon/ajax", params=params)
             redis_instance().set(f"{self.partner}_gps_session", response.json()['eid'])
         return redis_instance().get(f"{self.partner}_gps_session")
 
@@ -78,7 +37,7 @@ class UaGpsSynchronizer(SeleniumTools, GpsProvider):
                 'svc': 'core/search_items',
             }
             params.update({'params': json.dumps(payload)})
-            response = requests.post(url=UaGpsService.get_value("BASE_URL"), params=params)
+            response = requests.post(f"{self.base_url}/wialon/ajax", params=params)
             redis_instance().set(f"{self.partner}_gps_id", response.json()['items'][0]['id'])
         return redis_instance().get(f"{self.partner}_gps_id")
 

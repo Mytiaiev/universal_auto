@@ -9,8 +9,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
 
-from app.models import Driver, UseOfCars, VehicleGPS, Order, Partner, ParkSettings, CredentialPartner, Fleet, \
-    GpsProvider
+from app.models import Driver, UseOfCars, VehicleGPS, Order, Partner, ParkSettings, CredentialPartner, Fleet
 from scripts.redis_conn import get_logger
 
 
@@ -262,11 +261,6 @@ def send_reset_code(email, user_login):
 def check_aggregators(user_pk):
     partner = Partner.objects.get(user_id=user_pk)
     aggregators = Fleet.objects.filter(partner=partner).values_list('name', flat=True)
-    try:
-        gps = GpsProvider.objects.get(partner=partner).name
-        aggregators.append(gps)
-    except ObjectDoesNotExist:
-        pass
 
     # aggregator_results = {
     #     'Bolt': CredentialPartner.objects.filter(partner=partner, key='BOLT_NAME').exists(),

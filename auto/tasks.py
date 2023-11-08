@@ -17,7 +17,7 @@ from telegram.error import BadRequest
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
     TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, \
-    PaymentTypes, DriverEffVehicleKasa, Fleet, GpsProvider
+    PaymentTypes, DriverEffVehicleKasa, Fleet
 from django.db.models import Sum, IntegerField, FloatField, Q, DecimalField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_report, \
@@ -98,8 +98,9 @@ def auto_send_task_bot(self):
 def get_session(self, partner_pk, aggregator='Uber', login=None, password=None):
     fleet = Fleet.objects.get(name=aggregator)
     try:
-        fleet.create_session(partner_pk, login=login, password=password)
-        success = login_in(aggregator=aggregator, partner_id=partner_pk, login_name=login, password=password)
+        token = fleet.create_session(partner_pk, login=login, password=password)
+        success = login_in(aggregator=aggregator, partner_id=partner_pk,
+                           login_name=login, password=password, token=token)
     except AuthenticationError as e:
         logger.error(e)
         success = False

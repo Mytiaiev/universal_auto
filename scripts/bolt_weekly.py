@@ -1,8 +1,9 @@
-from auto.drivers import Bolt
+from app.models import Fleet
+from app.uagps_sync import UaGpsSynchronizer
 
 
 def run():
-    b = Bolt(driver=True, sleep=5, headless=True)
-    b.login()
-    b.download_payments_order()
-    b.save_report()
+    UaGpsSynchronizer.objects.create(name="Gps", base_url="https://uagps.net/")
+    Fleet.objects.filter(name="Uklon").update(base_url="https://fleets.uklon.com.ua/api/")
+    Fleet.objects.filter(name="Bolt").update(base_url="https://fleetownerportal.live.boltsvc.net/fleetOwnerPortal/")
+    Fleet.objects.filter(name="Uber").update(base_url="https://supplier.uber.com/graphql")

@@ -19,8 +19,6 @@ newuklon_states = {
 }
 
 uagps_states = {
-    'BASE_URL': ('https://uagps.net/wialon/ajax.html', 'url'),
-    'LOGIN_URL': ('https://uagps.net/', 'url'),
     'UAGPS_LOGIN_1': ('user', 'ID'),
     'UAGPS_LOGIN_2': ('passw', 'ID'),
     'UAGPS_LOGIN_3': ('submit', 'ID')

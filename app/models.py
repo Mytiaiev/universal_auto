@@ -459,10 +459,6 @@ class NinjaFleet(Fleet):
         return list(report)
 
 
-class GpsProvider(PolymorphicModel):
-    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, max_length=55, verbose_name='Партнер')
-    base_url = models.URLField(verbose_name="Сторінка логіну", null=True)
-    name = models.CharField(max_length=50, verbose_name="Назва ресурсу")
 
 
 class Client(User):
