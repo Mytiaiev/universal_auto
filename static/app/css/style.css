@@ -933,8 +933,6 @@ label[for="showPassword"] {
 }
 
 .right_content .decorate-img {
-	/*margin-top: -128px;*/
-	/*right: -97px;*/
 	position: relative;
 	z-index: -1;
 }
@@ -983,10 +981,16 @@ label[for="showPassword"] {
 	line-height: normal;
 }
 
-.right_content .one-info .button-block-1 {
+/*.right_content .one-info .button-block-1 {
 	text-align: center;
 	position: relative;
 	z-index: 1022;
+}*/
+
+.telegram-button.button-block-1 {
+    text-align: end;
+    position: relative;
+    right: 20px;
 }
 
 .telegram-button button {
@@ -1664,6 +1668,7 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 	}
 
 	.telegram-button button {
+		margin-right: 45px;
 		padding: 5px 40px;
 		font-size: 12px;
 	}
@@ -2098,7 +2103,6 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 		height: auto;
 		right: 30px;
 		position: relative;
-		/* Ви можете залишити clip-path за необхідністю */
 	}
 
 	.right_content .decorate-img .one-info {
@@ -2130,6 +2134,10 @@ input[type="radio"]#howItWorksRadio:checked + label::before {
 		margin-bottom: 10px;
 		font-size: 26px;
 	}
+
+	.telegram-button.button-block-1 {
+    text-align: center;
+}
 
 	/*block 2*/
 	.about_section {
