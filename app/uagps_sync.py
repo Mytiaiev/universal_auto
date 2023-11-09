@@ -20,17 +20,15 @@ class UaGpsSynchronizer(Fleet):
         return token
 
     def get_session(self):
-        if not redis_instance().exists(f"{self.partner}_gps_session"):
-            params = {
-                'svc': 'token/login',
-                'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner)})
-            }
-            response = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
-            redis_instance().set(f"{self.partner}_gps_session", response.json()['eid'])
-        return redis_instance().get(f"{self.partner}_gps_session")
+        params = {
+            'svc': 'token/login',
+            'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner)})
+        }
+        response = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
+        return response.json()['eid']
 
     def get_gps_id(self):
-        if not redis_instance().exists(f"{self.partner}_gps_id"):
+        if not redis_instance().exists(f"{self.partner.id}_gps_id"):
             payload = {"spec": {"itemsType": "avl_resource", "propName": "sys_name",
                                 "propValueMask": "*", "sortType": ""},
                        "force": 1, "flags": 5, "from": 0, "to": 4294967295}
@@ -40,8 +38,8 @@ class UaGpsSynchronizer(Fleet):
             }
             params.update({'params': json.dumps(payload)})
             response = requests.post(f"{self.base_url}wialon/ajax.html", params=params)
-            redis_instance().set(f"{self.partner}_gps_id", response.json()['items'][0]['id'])
-        return redis_instance().get(f"{self.partner}_gps_id")
+            redis_instance().set(f"{self.partner.id}_gps_id", response.json()['items'][0]['id'])
+        return redis_instance().get(f"{self.partner.id}_gps_id")
 
     def synchronize(self):
         params = {
@@ -52,7 +50,7 @@ class UaGpsSynchronizer(Fleet):
                                             "flags": 1,
                                             "mode": 0}]})
         }
-        response = requests.get(self.url, params=params)
+        response = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
         for vehicle in response.json():
             Vehicle.objects.filter(licence_plate=vehicle['d']['nm'].split('(')[0]).update(gps_id=vehicle['i'])
 
@@ -75,7 +73,7 @@ class UaGpsSynchronizer(Fleet):
             'sid': self.get_session(),
             'params': json.dumps(parameters)
         }
-        report = requests.get(self.url, params=params)
+        report = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
         raw_time = report.json()['reportResult']['stats'][4][1]
         clean_time = [int(i) for i in raw_time.split(':')]
         road_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])

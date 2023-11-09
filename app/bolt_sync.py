@@ -13,6 +13,7 @@ from app.models import BoltService, Driver, Fleets_drivers_vehicles_rate, Paymen
     CredentialPartner, Vehicle, PaymentTypes, Fleet
 from auto import settings
 from auto_bot.handlers.order.utils import check_vehicle
+from scripts.redis_conn import redis_instance
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 
 
@@ -20,7 +21,7 @@ class BoltRequest(Fleet, Synchronizer):
     base_url = models.URLField(default=BoltService.get_value('REQUEST_BOLT_LOGIN_URL'))
 
     def create_session(self, partner=None, login=None, password=None):
-        partner_id = partner if partner else self.partner
+        partner_id = partner if partner else self.partner.id
         if self.partner:
             login = CredentialPartner.get_value("BOLT_NAME", partner=partner_id)
             password = CredentialPartner.get_value("BOLT_PASSWORD", partner=partner_id)
@@ -38,15 +39,15 @@ class BoltRequest(Fleet, Synchronizer):
             raise AuthenticationError(f"{self.name} login or password incorrect.")
         else:
             refresh_token = response.json()["data"]["refresh_token"]
-            self.redis.set(f"{partner_id}_{self.name}_refresh", refresh_token)
+            redis_instance().set(f"{partner_id}_{self.name}_refresh", refresh_token)
 
     @staticmethod
     def param():
         return {"language": "uk-ua", "version": "FO.3.03"}
 
     def get_access_token(self):
-        token = self.redis.get(f"{self.partner}_{self.name}_refresh")
-        park_id = self.redis.get(f"{self.partner}_{self.name}_park_id")
+        token = redis_instance().get(f"{self.partner.id}_{self.name}_refresh")
+        park_id = redis_instance().get(f"{self.partner.id}_{self.name}_park_id")
         if token and park_id:
             access_payload = {
                 "refresh_token": token,
@@ -73,11 +74,11 @@ class BoltRequest(Fleet, Synchronizer):
                                         headers=headers)
                 if not response.json()['code']:
                     park_id = response.json()["data"]["companies"][0]["id"]
-                    self.redis.set(f"{self.partner}_{self.name}_park_id", park_id)
+                    redis_instance().set(f"{self.partner.id}_{self.name}_park_id", park_id)
                     self.get_access_token()
-            else:
-                self.create_session()
-                self.get_access_token()
+        else:
+            self.create_session()
+            self.get_access_token()
 
     def get_target_url(self, url, params):
         new_token = self.get_access_token()
@@ -92,7 +93,7 @@ class BoltRequest(Fleet, Synchronizer):
         return response.json()
 
     def save_report(self, day):
-        reports = Payments.objects.filter(report_from=day, vendor_name=self.name, partner=self.partner)
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.name, partner=self.partner.id)
         if reports:
             return list(reports)
         # date format str yyyy-mm-dd
@@ -107,7 +108,7 @@ class BoltRequest(Fleet, Synchronizer):
         rides = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', param)
         for driver in reports['data']['drivers']:
             db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=driver['id'],
-                                                                 partner=self.partner).driver
+                                                                 partner=self.partner.id).driver
             vehicle = check_vehicle(db_driver, day, max_time=True)[0]
             order = Payments(
                 report_from=day,
@@ -117,7 +118,7 @@ class BoltRequest(Fleet, Synchronizer):
                 total_amount_cash=driver['cash_in_hand'],
                 total_amount=driver['gross_revenue'],
                 tips=driver['tips'],
-                partner=Partner.get_partner(self.partner),
+                partner=self.partner,
                 bonuses=driver['bonuses'],
                 cancels=driver['cancellation_fees'],
                 fee=-(driver['gross_revenue'] - driver['net_earnings']),
@@ -219,10 +220,10 @@ class BoltRequest(Fleet, Synchronizer):
                             "destination": order['order_stops'][-1]['address'],
                             "vehicle": vehicle,
                             "price": price,
-                            "partner": Partner.get_partner(self.partner)
+                            "partner": self.partner
                             }
                     if check_vehicle(driver)[0] != vehicle:
-                        self.redis.hset(f"wrong_vehicle_{self.partner}", pk, order['car_reg_number'])
+                        redis_instance().hset(f"wrong_vehicle_{self.partner.id}", pk, order['car_reg_number'])
                     FleetOrder.objects.create(**data)
 
     def get_drivers_status(self):

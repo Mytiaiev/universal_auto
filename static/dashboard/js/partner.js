@@ -48,7 +48,7 @@ $(document).ready(function () {
 		$("#settingsWindow").fadeIn();
 	}
 
-	if (localStorage.getItem('Uber')) {
+	if (localStorage.getItem('Uber') === 'success') {
 		$("#partnerLogin").hide()
 		$("#partnerPassword").hide()
 		$(".opt-partnerForm").hide()

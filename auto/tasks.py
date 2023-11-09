@@ -96,7 +96,7 @@ def auto_send_task_bot(self):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_session(self, partner_pk, aggregator='Uber', login=None, password=None):
-    fleet = Fleet.objects.get(name=aggregator)
+    fleet = Fleet.objects.get(name=aggregator, partner=None)
     try:
         token = fleet.create_session(partner_pk, login=login, password=password)
         success = login_in(aggregator=aggregator, partner_id=partner_pk,

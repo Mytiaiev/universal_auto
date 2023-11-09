@@ -1,34 +1,26 @@
 import json
 import secrets
-import time
 import uuid
 from datetime import datetime
-
-import redis
-from selenium.webdriver.support import expected_conditions as ec
 import requests
 from django.utils import timezone
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
 from django.db import models
 from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
-    CredentialPartner, Vehicle, PaymentTypes, Fleet, NewUklonService
-from auto import settings
+    CredentialPartner, Vehicle, PaymentTypes, Fleet
 from auto_bot.handlers.order.utils import check_vehicle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
-from selenium_ninja.driver import click_and_clear, SeleniumTools
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from django.db import IntegrityError
 
 
-class UklonRequest(Fleet, Synchronizer, SeleniumTools):
+class UklonRequest(Fleet, Synchronizer):
     base_url = models.URLField(default=Service.get_value('UKLON_SESSION'))
 
     def get_header(self) -> dict:
-        token = self.redis.get(f"{self.partner}_{self.name}_token")
+        token = redis_instance().get(f"{self.partner.id}_{self.name}_token")
         if not token:
-            token = self.create_session()
+            token = self.create_session(self.partner.id)
         headers = {
             'Authorization': f'Bearer {token}'
         }
@@ -52,17 +44,17 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
         return payload
 
     def uklon_id(self):
-        if not redis_instance().exists(f"{self.partner}_park_id"):
+        if not redis_instance().exists(f"{self.partner.id}_park_id"):
             response = self.response_data(url=f"{self.base_url}me")
-            redis_instance().set(f"{self.partner}_park_id", response['fleets'][0]['id'])
-        return redis_instance().get(f"{self.partner}_park_id")
+            redis_instance().set(f"{self.partner.id}_park_id", response['fleets'][0]['id'])
+        return redis_instance().get(f"{self.partner.id}_park_id")
 
-    def create_session(self, partner=None, login=None, password=None):
+    def create_session(self, partner, login=None, password=None):
         payload = self.park_payload(login, password)
         response = requests.post(f"{self.base_url}auth", json=payload)
         if response.status_code == 201:
             token = response.json()["access_token"]
-            self.redis.set(f"{partner}_{self.name}_token", token)
+            redis_instance().set(f"{partner}_{self.name}_token", token)
             return token
         else:
             raise AuthenticationError(f"{self.name} login or password incorrect.")
@@ -91,8 +83,8 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
                       pjson: dict = None,
                       method: str = None) -> dict:
 
-        if not self.redis.exists(f"{self.partner}_{self.name}_token"):
-            self.create_session()
+        if not redis_instance().exists(f"{self.partner.id}_{self.name}_token"):
+            self.create_session(self.partner.id)
         response = self.request_method(url=url,
                                        params=params,
                                        headers=self.get_header() if headers is None else headers,
@@ -100,7 +92,7 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
                                        data=data,
                                        method=method)
         if response.status_code in (401, 403):
-            self.create_session()
+            self.create_session(self.partner.id)
             return self.response_data(url, params, data, headers, pjson, method)
         return response.json()
 
@@ -165,7 +157,7 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
                     fares=float(0),
                     fee=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
                     total_amount_without_fee=self.find_value(i, *('profit', 'total', 'amount')),
-                    partner=Partner.get_partner(self.partner),
+                    partner=self.partner,
                     vehicle=vehicle
                 )
                 try:
@@ -201,9 +193,7 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
         url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url_1 = url + Service.get_value('UKLON_6')
         url_2 = url + Service.get_value('UKLON_2')
-
         all_drivers = self.response_data(url=url_1, params=param)
-
         for driver in all_drivers['items']:
             pay_cash, vehicle_name, vin_code = True, '', ''
             if driver['restrictions']:
@@ -230,7 +220,6 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
                 'vin_code': vin_code,
                 'worked': True,
             })
-
         return drivers
 
     def get_fleet_orders(self, day, pk):
@@ -283,10 +272,10 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
                             "vehicle": vehicle,
                             "payment": PaymentTypes.map_payments(order['payment']['paymentType']),
                             "price": order['payment']['cost'],
-                            "partner": Partner.get_partner(self.partner)
+                            "partner": self.partner
                             }
                     if check_vehicle(driver)[0] != vehicle:
-                        self.redis.hset(f"wrong_vehicle_{self.partner}", pk, order['vehicle']['licencePlate'])
+                        redis_instance().hset(f"wrong_vehicle_{self.partner}", pk, order['vehicle']['licencePlate'])
                     FleetOrder.objects.create(**data)
             except KeyError:
                 bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"), text=f"{orders}")
@@ -354,109 +343,15 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
 
     def get_vehicles(self):
         vehicles = []
-
         param = {'limit': '30', 'offset': '0'}
         url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url += Service.get_value('UKLON_2')
         all_vehicles = self.response_data(url=url, params=param)
         for vehicle in all_vehicles['data']:
             response = self.response_data(url=f"{url}/{vehicle['id']}")
-
             vehicles.append({
                 'licence_plate': vehicle['licencePlate'],
                 'vehicle_name': f"{vehicle['about']['maker']['name']} {vehicle['about']['model']['name']}",
                 'vin_code': response.get('vin_code', '')
             })
-
         return vehicles
-
-    def add_driver(self, job_application):
-
-        url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
-        self.driver.get(url)
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_2')))).click()
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_3')))).click()
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-        form_phone_number = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_5'))
-        click_and_clear(form_phone_number)
-        form_phone_number.send_keys(job_application.phone_number[4:])
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-
-        # 2FA
-        code = self.wait_otp_code(f'{job_application.phone_number} code')
-        digits = self.driver.find_elements(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_6'))
-        for i, element in enumerate(digits):
-            element.send_keys(code[i])
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_7')).click()
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-        if self.sleep:
-            time.sleep(self.sleep)
-        registration_fields = {"firstName": job_application.first_name,
-                               "lastName": job_application.last_name,
-                               "email": job_application.email,
-                               "password": job_application.password}
-        for field, value in registration_fields.items():
-            element = self.driver.find_element(By.ID, field)
-            click_and_clear(element)
-            element.send_keys(value)
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-
-        file_paths = [
-            f"{settings.MEDIA_URL}{job_application.photo}",
-            f"{settings.MEDIA_URL}{job_application.driver_license_front}",
-            f"{settings.MEDIA_URL}{job_application.driver_license_back}",
-
-        ]
-        for i, file_path in enumerate(file_paths):
-            if self.sleep:
-                time.sleep(self.sleep)
-            local_path = self.download_from_bucket(file_path, i)
-            photo_input = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_8'))
-            photo_input.send_keys(local_path)
-            WebDriverWait(self.driver, self.sleep).until(
-                ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_9')))).click()
-            time.sleep(1)
-            WebDriverWait(self.driver, self.sleep).until(
-                ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_9')))).click()
-            WebDriverWait(self.driver, self.sleep).until(
-                ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-        fleet_code = WebDriverWait(self.driver, self.sleep).until(
-            ec.presence_of_element_located((By.ID, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_10'))))
-        click_and_clear(fleet_code)
-        fleet_code.send_keys(self.uklon_id())
-        WebDriverWait(self.driver, self.sleep).until(
-            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
-        job_application.status_uklon = datetime.now().date()
-        job_application.save()
-        self.quit()
-
-    def wait_otp_code(self, key):
-        p = redis_instance().pubsub()
-        p.subscribe(key)
-        p.ping()
-        while True:
-            try:
-                otp = p.get_message()
-                if otp:
-                    otpa = list(f'{otp["data"]}')
-                    otpa = list(filter(lambda d: d.isdigit(), otpa))
-                    digits = [s.isdigit() for s in otpa]
-                    if not digits or (not all(digits)) or len(digits) != 4:
-                        continue
-                    break
-            except redis.ConnectionError as e:
-                self.logger.error(str(e))
-                p = redis_instance().pubsub()
-                p.subscribe('code')
-            time.sleep(1)
-        return otpa

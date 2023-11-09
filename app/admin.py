@@ -6,7 +6,7 @@ from django.core.exceptions import FieldError
 
 from scripts.google_calendar import GoogleCalendar
 from .filters import VehicleEfficiencyUserFilter, DriverEfficiencyUserFilter, RentInformationUserFilter, \
-    TransactionInvestorUserFilter, ReportUserFilter, VehicleManagerFilter, SummaryReportUserFilter
+    TransactionInvestorUserFilter, ReportUserFilter, VehicleManagerFilter, SummaryReportUserFilter, FleetRelatedFilter
 from .models import *
 
 
@@ -1094,7 +1094,7 @@ class FleetOrderAdmin(admin.ModelAdmin):
 
 @admin.register(Fleets_drivers_vehicles_rate)
 class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner', field_to_filter='driver__worked')(admin.ModelAdmin)):
-    list_filter = ('fleet',)
+    list_filter = (FleetRelatedFilter,)
     readonly_fields = ('fleet', 'driver_external_id')
     list_per_page = 25
     raw_id_fields = ['driver', 'partner']

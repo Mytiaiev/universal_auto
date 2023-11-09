@@ -5,6 +5,8 @@ import os
 import time
 from datetime import datetime
 import re
+
+import redis
 from selenium.webdriver.support import expected_conditions as ec
 import requests
 from django.utils import timezone
@@ -16,8 +18,10 @@ from selenium.webdriver import DesiredCapabilities
 from selenium.common import TimeoutException, NoSuchElementException, InvalidArgumentException
 
 from app.models import FleetOrder, Partner, Vehicle, Fleets_drivers_vehicles_rate, UberService, UberSession, \
-    UaGpsService
-from scripts.redis_conn import get_logger
+    UaGpsService, NewUklonService
+from app.uklon_sync import UklonRequest
+from auto import settings
+from scripts.redis_conn import get_logger, redis_instance
 from selenium_ninja.synchronizer import AuthenticationError, InfinityTokenError
 
 
@@ -26,7 +30,6 @@ class SeleniumTools:
         self.partner = partner
         self.remote = remote
         self.sleep = sleep
-        self.uber_s = UberSession.objects.filter(partner=partner).latest('created_at')
         self.logger = get_logger()
         if driver:
             if self.remote:
@@ -143,21 +146,22 @@ class SeleniumTools:
             with open(os.path.join(os.getcwd(), filename), 'wb') as f:
                 f.write(content)
 
-    def get_uuid(self):
-        obj_session = UberSession.objects.filter(partner=self.partner).latest('created_at')
-        return str(obj_session.uber_uuid)
+
+
+    def get_uber_session(self):
+        return UberSession.objects.filter(partner=self.partner).latest('created_at')
 
     def get_cookies(self):
         cookies = [
             {
                 'name': 'sid',
-                'value': self.uber_s.session,
+                'value': self.get_uber_session().session,
                 'domain': '.uber.com',
                 'path': '/',
             },
             {
                 'name': 'csid',
-                'value': self.uber_s.cook_session,
+                'value': self.get_uber_session().cook_session,
                 'domain': '.uber.com',
                 'path': '/',
             },
@@ -294,7 +298,7 @@ class SeleniumTools:
                                  f'{UberService.get_value("UBER_CALENDAR_4")}{day}]').click()
 
     def generate_payments_order(self, day):
-        url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}{self.get_uuid()}/reports"
+        url = f"{UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_1')}{str(self.get_uber_session().uber_uuid)}/reports"
         xpath = UberService.get_value('UBER_GENERATE_PAYMENTS_ORDER_2')
         self.driver.get(UberService.get_value('BASE_URL'))
         for cook in self.get_cookies():
@@ -369,6 +373,97 @@ class SeleniumTools:
                                  "partner": Partner.get_partner(self.partner)}
                         FleetOrder.objects.create(**order)
                 os.remove(file_path)
+
+    def add_driver(self, job_application):
+        uklon_id = UklonRequest.objects.filter(partner=self.partner).uklon_id()
+        url = NewUklonService.get_value('NEWUKLON_ADD_DRIVER_1')
+        self.driver.get(url)
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_2')))).click()
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.presence_of_element_located((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_3')))).click()
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+        form_phone_number = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_5'))
+        click_and_clear(form_phone_number)
+        form_phone_number.send_keys(job_application.phone_number[4:])
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+
+        # 2FA
+        code = self.wait_otp_code(f'{job_application.phone_number} code')
+        digits = self.driver.find_elements(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_6'))
+        for i, element in enumerate(digits):
+            element.send_keys(code[i])
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_7')).click()
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+        if self.sleep:
+            time.sleep(self.sleep)
+        registration_fields = {"firstName": job_application.first_name,
+                               "lastName": job_application.last_name,
+                               "email": job_application.email,
+                               "password": job_application.password}
+        for field, value in registration_fields.items():
+            element = self.driver.find_element(By.ID, field)
+            click_and_clear(element)
+            element.send_keys(value)
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+
+        file_paths = [
+            f"{settings.MEDIA_URL}{job_application.photo}",
+            f"{settings.MEDIA_URL}{job_application.driver_license_front}",
+            f"{settings.MEDIA_URL}{job_application.driver_license_back}",
+
+        ]
+        for i, file_path in enumerate(file_paths):
+            if self.sleep:
+                time.sleep(self.sleep)
+            local_path = self.download_from_bucket(file_path, i)
+            photo_input = self.driver.find_element(By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_8'))
+            photo_input.send_keys(local_path)
+            WebDriverWait(self.driver, self.sleep).until(
+                ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_9')))).click()
+            time.sleep(1)
+            WebDriverWait(self.driver, self.sleep).until(
+                ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_9')))).click()
+            WebDriverWait(self.driver, self.sleep).until(
+                ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+        fleet_code = WebDriverWait(self.driver, self.sleep).until(
+            ec.presence_of_element_located((By.ID, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_10'))))
+        click_and_clear(fleet_code)
+        fleet_code.send_keys(uklon_id)
+        WebDriverWait(self.driver, self.sleep).until(
+            ec.element_to_be_clickable((By.XPATH, NewUklonService.get_value('NEWUKLON_ADD_DRIVER_4')))).click()
+        job_application.status_uklon = datetime.now().date()
+        job_application.save()
+        self.quit()
+
+    def wait_otp_code(self, key):
+        p = redis_instance().pubsub()
+        p.subscribe(key)
+        p.ping()
+        while True:
+            try:
+                otp = p.get_message()
+                if otp:
+                    otpa = list(f'{otp["data"]}')
+                    otpa = list(filter(lambda d: d.isdigit(), otpa))
+                    digits = [s.isdigit() for s in otpa]
+                    if not digits or (not all(digits)) or len(digits) != 4:
+                        continue
+                    break
+            except redis.ConnectionError as e:
+                self.logger.error(str(e))
+                p = redis_instance().pubsub()
+                p.subscribe('code')
+            time.sleep(1)
+        return otpa
 
 
 def click_and_clear(element):

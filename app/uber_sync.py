@@ -103,7 +103,7 @@ class UberRequest(Fleet, Synchronizer):
                     }
         drivers = []
         data = self.get_payload(query, variables)
-        response = requests.post(self.base_url, headers=self.get_header(), json=data)
+        response = requests.post(str(self.base_url), headers=self.get_header(), json=data)
         drivers_data = response.json()['data']['getDrivers']['drivers']
         for driver in drivers_data:
             licence_plate = ''
@@ -190,7 +190,7 @@ class UberRequest(Fleet, Synchronizer):
                     }
         if uber_drivers:
             data = self.get_payload(query, variables)
-            response = requests.post(self.base_url, headers=self.get_header(), json=data)
+            response = requests.post(str(self.base_url), headers=self.get_header(), json=data)
             if response.status_code == 200 and response.json()['data']:
                 for report in response.json()['data']['getPerformanceReport']:
                     if report['totalEarnings']:
@@ -206,7 +206,7 @@ class UberRequest(Fleet, Synchronizer):
                             total_amount_without_fee=round(report['totalEarnings'], 2),
                             total_amount_cash=round(report['cashEarnings'], 2),
                             total_rides=report['totalTrips'],
-                            partner=Partner.get_partner(self.partner),
+                            partner=self.partner,
                             vehicle=vehicle)
                         order.save()
             else:
@@ -227,7 +227,7 @@ class UberRequest(Fleet, Synchronizer):
         with_client = []
         wait = []
         data = self.get_payload(query, variables)
-        response = requests.post(self.base_url, headers=self.get_header(), json=data)
+        response = requests.post(str(self.base_url), headers=self.get_header(), json=data)
         if response.status_code == 200:
             drivers = response.json()['data']['getDriverEvents']['driverEvents']
             if drivers:
@@ -266,7 +266,7 @@ class UberRequest(Fleet, Synchronizer):
             "pageSize": 25
         }
         data = self.get_payload(query, variables)
-        response = requests.post(self.base_url, headers=self.get_header(), json=data)
+        response = requests.post(str(self.base_url), headers=self.get_header(), json=data)
         if response.status_code == 200:
             vehicles_list = []
             vehicles = response.json()["data"]["getSupplierVehicles"]["vehicles"]
@@ -279,7 +279,7 @@ class UberRequest(Fleet, Synchronizer):
 
     def get_fleet_orders(self, day):
         if not FleetOrder.objects.filter(fleet="Uber", accepted_time__date=day):
-            uber_driver = SeleniumTools(self.partner)
+            uber_driver = SeleniumTools(self.partner.id)
             uber_driver.download_payments_order(day)
             uber_driver.save_trips_report(day)
             uber_driver.quit()
@@ -327,4 +327,4 @@ class UberRequest(Fleet, Synchronizer):
         }
         query = unblock_query if enable == 'true' else block_query
         data = self.get_payload(query, variables)
-        requests.post(self.base_url, headers=self.get_header(), json=data)
+        requests.post(str(self.base_url), headers=self.get_header(), json=data)
