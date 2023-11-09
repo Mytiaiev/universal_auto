@@ -10,9 +10,6 @@ from selenium_ninja.synchronizer import Synchronizer
 
 class UberRequest(Fleet, Synchronizer):
     base_url = models.URLField(default=UberService.get_value('REQUEST_UBER_BASE_URL'))
-    # def __init__(self, partner_id=None, fleet="Uber"):
-    #     super().__init__(partner_id, fleet)
-    #     self.base_url = UberService.get_value('REQUEST_UBER_BASE_URL')
 
     def get_header(self):
         obj_session = UberSession.objects.filter(partner=self.partner).latest('created_at')
@@ -24,7 +21,7 @@ class UberRequest(Fleet, Synchronizer):
         return headers
 
     def get_uuid(self):
-        obj_session = UberSession.objects.filter(partner=self.partner__id).latest('created_at')
+        obj_session = UberSession.objects.filter(partner=self.partner).latest('created_at')
         return str(obj_session.uber_uuid)
 
     @staticmethod

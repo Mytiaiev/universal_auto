@@ -24,9 +24,6 @@ from django.db import IntegrityError
 
 class UklonRequest(Fleet, Synchronizer, SeleniumTools):
     base_url = models.URLField(default=Service.get_value('UKLON_SESSION'))
-    # def __init__(self, partner_id=None, fleet="Uklon"):
-    #     super().__init__(partner_id, fleet)
-    #     self.base_url = Service.get_value('UKLON_SESSION')
 
     def get_header(self) -> dict:
         token = self.redis.get(f"{self.partner}_{self.name}_token")
