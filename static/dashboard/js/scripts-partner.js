@@ -19,6 +19,35 @@ function toggleSidebar() {
 	}
 }
 
+function formatTime(time) {
+	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+
+	if (!parts) {
+		return time;
+	} else {
+		let days = parseInt(parts[1]);
+		let hours = parseInt(parts[2]);
+		let minutes = parseInt(parts[3]);
+		let seconds = parseInt(parts[4]);
+
+		hours += days * 24;
+
+		// Форматувати рядок у вигляді HH:mm:ss
+		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+}
+
+function applyCustomDateRange() {
+	$(".apply-filter-button").prop("disabled", true);
+
+	let startDate = $("#start_report").val();
+	let endDate = $("#end_report").val();
+
+	const selectedPeriod = 'custom'
+
+	fetchSummaryReportData(selectedPeriod, startDate, endDate);
+	fetchCarEfficiencyData(selectedPeriod, startDate, endDate);
+}
 
 // ---------- CHARTS ----------
 
@@ -60,7 +89,7 @@ let barChartOptions = {
 		opacity: 1,
 	},
 	grid: {
-		borderColor: "#55596e",
+		borderColor: "black",
 		yaxis: {
 			lines: {
 				show: true,
@@ -74,7 +103,7 @@ let barChartOptions = {
 	},
 	legend: {
 		labels: {
-			colors: "#f5f7ff",
+			colors: "black",
 		},
 		show: false,
 		position: "top",
@@ -93,20 +122,20 @@ let barChartOptions = {
 		categories: [],
 		title: {
 			style: {
-				color: "#f5f7ff",
+				color: "black",
 			},
 		},
 		axisBorder: {
 			show: true,
-			color: "#55596e",
+			color: "black",
 		},
 		axisTicks: {
 			show: true,
-			color: "#55596e",
+			color: "black",
 		},
 		labels: {
 			style: {
-				colors: "#f5f7ff",
+				colors: "black",
 			},
 			rotate: -45,
 		},
@@ -114,16 +143,16 @@ let barChartOptions = {
 	yaxis: {
 		title: {
 			text: gettext("Дохід (грн.)"),
-//			style: {
-//				color: "#f5f7ff",
-//			},
+			style: {
+				color: "black",
+			},
 		},
 		axisBorder: {
-			color: "#55596e",
+			color: "black",
 			show: true,
 		},
 		axisTicks: {
-			color: "#55596e",
+			color: "black",
 			show: true,
 		},
 		labels: {
@@ -468,7 +497,7 @@ function fetchDriverEfficiencyData(period, start, end) {
 	});
 }
 
-const commonPeriodSelect = $('#period-common');
+const commonPeriodSelect = $('.custom-select');
 const periodSelect = $('#period');
 
 commonPeriodSelect.on('change', function () {
@@ -520,17 +549,6 @@ function customDateRange() {
 
 	const selectedPeriod = periodSelect.val();
 	fetchDriverEfficiencyData(selectedPeriod, startDate, endDate);
-}
-
-function applyCustomDateRange() {
-	$(".apply-filter-button").prop("disabled", true);
-
-	let startDate = $("#start_report").val();
-	let endDate = $("#end_report").val();
-
-	const selectedPeriod = commonPeriodSelect.val();
-	fetchSummaryReportData(selectedPeriod, startDate, endDate);
-	fetchCarEfficiencyData(selectedPeriod, startDate, endDate);
 }
 
 
@@ -728,27 +746,7 @@ $(document).ready(function () {
 	resetButton.on("click", function () {
 		areaChart.resetSeries();
 	});
-});
 
-function formatTime(time) {
-	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
-
-	if (!parts) {
-		return time;
-	} else {
-		let days = parseInt(parts[1]);
-		let hours = parseInt(parts[2]);
-		let minutes = parseInt(parts[3]);
-		let seconds = parseInt(parts[4]);
-
-		hours += days * 24;
-
-		// Форматувати рядок у вигляді HH:mm:ss
-		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-	}
-}
-
-$(document).ready(function() {
   const gridContainer = $(".grid-container");
   const sidebarToggle = $("#sidebar-toggle");
   const sidebarTitle = $(".sidebar-title");
@@ -792,4 +790,34 @@ $(document).ready(function() {
   }
 
   sidebarToggle.click(toggleSidebar);
+
+  const customSelect = $(".custom-select");
+  const selectedOption = customSelect.find(".selected-option");
+  const optionsList = customSelect.find(".options");
+  const iconDown = customSelect.find(".fas.fa-angle-down");
+
+  iconDown.click(function() {
+  	customSelect.toggleClass("active");
+  });
+
+  selectedOption.click(function() {
+    customSelect.toggleClass("active");
+  });
+
+  optionsList.on("click", "li", function() {
+    const clickedValue = $(this).data("value");
+    selectedOption.text($(this).text());
+    customSelect.removeClass("active");
+
+	  if (clickedValue !== "custom") {
+		fetchSummaryReportData(clickedValue);
+		fetchCarEfficiencyData(clickedValue);
+		}
+
+		if (clickedValue === "custom") {
+			$("#datePicker").css("display", "block");
+		} else {
+			$("#datePicker").css("display", "none");
+		}
+  });
 });

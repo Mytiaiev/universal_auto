@@ -152,12 +152,122 @@ img.logo-1 {
   justify-content: space-between;
 }
 
+.main-title h2 {
+	color: #141E17;
+	font-family: Montserrat;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+label {
+  color: #26392C;
+	font-size: 23px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+  margin-right: 10px;
+}
+
+.custom-select {
+  position: relative;
+  display: inline-block;
+  width: 215px;
+  top: 35px;
+}
+
+.selected-option {
+	color: #53785E;
+	font-size: 20px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+	display: flex;
+	width: 215px;
+  padding: 10px;
+  border: 0px solid #ccc;
+  border-radius: 62px;
+  box-shadow: 0 6px 5px 2px #ccc;
+  cursor: pointer;
+}
+
+.options {
+	width: 200px;
+	position: absolute;
+	top: 60%;
+	left: 7px;
+	display: none;
+	background-color: #fff;
+	list-style: none;
+	padding: 10px;
+	margin: 0px;
+	border: 0px solid #ccc;
+	border-radius: 25px;
+	box-shadow: 0 6px 5px 2px #ccc;
+	z-index: 1;
+}
+
+.options li {
+	color: #53785E;
+	font-size: 20px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.custom-select.active .options {
+  display: block;
+}
+
+i.fas.fa-angle-down {
+	position: relative;
+	top: -36px;
+	color: #EC6323;
+	font-size: 25px;
+	margin-left: 195px;
+	margin-top: 0px;
+	margin-right: 0;
+	padding: 0;
+	cursor: pointer;
+}
+
+#datePicker,
+#datePickerDriver {
+  display: none;
+  margin-top: 20px;
+}
+
+#start_date,
+#end_date,
+#start_report,
+#end_report {
+  padding: 5px;
+  font-size: 16px;
+  margin-right: 10px;
+  border: 0px solid #ccc;
+	border-radius: 25px;
+	box-shadow: 0 6px 5px 2px #ccc;
+}
+
+input[type="button"] {
+	padding: 8px 16px;
+	font-size: 16px;
+	background-color: #EC6323;
+	color: white;
+	border: none;
+	border-radius: 10px;
+	cursor: pointer;
+}
+
 .main-cards,
 .main-cards-partner {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
-  margin: 20px 0;
+  margin: 30px 0;
 }
 
 .card,
@@ -578,9 +688,12 @@ img.logo-1 {
 }
 
 #account_circle {
-  font-size: 30px;
-  /*color: #fff;*/
-  margin-right: 20px;
+  color: #141E17;
+	font-size: 36px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	text-transform: uppercase;
 }
 
 /*burger-menu*/
@@ -649,38 +762,38 @@ img.logo-1 {
 
 
 .stripes {
-		margin-top: 5px;
-		margin-right: 40px;
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		width: 35px;
-		height: 22px;
-	}
+	margin-top: 5px;
+	margin-right: 40px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	width: 35px;
+	height: 22px;
+}
 
-	.top-stripe {
-		width: 35px;
-		height: 8px;
-		border-radius: 25px;
-		background-color: #EC6323;
-	}
+.top-stripe {
+	width: 35px;
+	height: 8px;
+	border-radius: 25px;
+	background-color: #EC6323;
+}
 
-	.middle-stripe {
-	  margin-top: 2px;
-	  margin-bottom: 2px;
-	  margin-left: 5px;
-		width: 25px;
-		height: 8px;
-		border-radius: 25px;
-		background-color: #EC6323;
-	}
+.middle-stripe {
+	margin-top: 2px;
+	margin-bottom: 2px;
+	margin-left: 5px;
+	width: 25px;
+	height: 8px;
+	border-radius: 25px;
+	background-color: #EC6323;
+}
 
-	.bottom-stripe {
-		width: 35px;
-		height: 8px;
-		border-radius: 25px;
-		background-color: #EC6323;
-	}
+.bottom-stripe {
+	width: 35px;
+	height: 8px;
+	border-radius: 25px;
+	background-color: #EC6323;
+}
 
 
 /* Стилізація контейнера "info-driver" */
@@ -776,40 +889,11 @@ th, td {
 
 
 /* Стилізація форми періода */
-form {
-  /*display: flex;*/
-  align-items: center;
-}
-
-label {
-  font-size: 16px;
-  margin-right: 10px;
-}
-
-select {
-  padding: 8px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  outline: none;
-  margin-right: 10px;
-}
-
-input[type="button"] {
-  padding: 8px 16px;
-  font-size: 16px;
-  background-color: #3e8f3e;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
 
 #reset-button {
   padding: 8px 16px;
   font-size: 16px;
   background-color: #3e8f3e;
-/*  color: white;*/
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -888,40 +972,6 @@ select:focus {
 }
 
 /*стилі для періода*/
-.common-period {
-  margin: 20px 0 20px;
-}
-
-.common-period label {
-  font-weight: bold;
-}
-
-#period-common {
-  margin-right: 10px;
-  padding: 5px;
-  font-size: 16px;
-}
-
-#datePicker,
-#datePickerDriver {
-  display: none;
-  margin-top: 20px;
-}
-
-#datePicker label,
-#datePickerDriver label {
-  font-weight: bold;
-  margin-right: 10px;
-}
-
-#start_date,
-#end_date,
-#start_report,
-#end_report {
-  padding: 5px;
-  font-size: 16px;
-  margin-right: 10px;
-}
 
 .title-driver {
   display: flex;
