@@ -237,7 +237,7 @@ def get_car_efficiency(self, partner_pk, day=None):
             else Driver.objects.filter(vehicle=vehicle)
         if not efficiency:
             total_kasa = 0
-            total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
+            total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps_id, day)
             if total_km:
                 for driver in drivers:
                     report = SummaryReport.objects.filter(report_from=day,
@@ -275,10 +275,11 @@ def get_driver_efficiency(self, partner_pk, day=None):
                 if reshuffles:
                     for reshuffle in reshuffles:
                         driver_vehicles.append(reshuffle.swap_vehicle)
-                        total_km += UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day, reshuffle)
+                        total_km += UaGpsSynchronizer.objects.get(
+                            partner=partner_pk).total_per_day(vehicle.gps_id, day, reshuffle)
                 elif vehicle:
                     driver_vehicles.append(vehicle)
-                    total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
+                    total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps_id, day)
                 else:
                     continue
             if driver_vehicles:
@@ -424,8 +425,9 @@ def fleets_cash_trips(self, partner_pk, pk, enable):
         fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
         for fleet in fleets:
             driver_id = driver.get_driver_external_id(fleet.name)
-            fleet.disable_cash(driver_id, enable)
-        message = f"Cash enabled for {driver}" if enable == 'true' else f"Cash disbled for {driver}"
+            if driver_id:
+                fleet.disable_cash(driver_id, enable)
+        message = f"Cash enabled for {driver}" if enable == 'true' else f"Cash disabled for {driver}"
         logger.info(message)
     except Exception as e:
         logger.error(e)
@@ -550,7 +552,7 @@ def check_personal_orders(self):
         notify_min = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_MIN'))
         notify_km = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_KM'))
         vehicle = check_vehicle(order.driver)[0]
-        gps = UaGpsSynchronizer(order.driver.partner)
+        gps = UaGpsSynchronizer.objects.get(partner=order.driver.partner)
         route = gps.generate_report(gps.get_timestamp(order.order_time),
                                     gps.get_timestamp(finish_time), vehicle.gps_id)[0]
         pc_message = redis_instance().hget(str(order.chat_id_client), "client_msg")
@@ -799,7 +801,8 @@ def get_distance_trip(self, order, start_trip_with_client, end, gps_id):
     delta = format_end - start
     try:
         instance = Order.objects.filter(pk=order).first()
-        result = UaGpsSynchronizer(instance.driver.partner).generate_report(start_trip_with_client, end, gps_id)
+        result = UaGpsSynchronizer.objects.get(
+            partner=instance.driver.partner).generate_report(start_trip_with_client, end, gps_id)
         minutes = delta.total_seconds() // 60
         instance.distance_gps = result[0]
         price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
@@ -865,14 +868,12 @@ def get_driver_reshuffles(self, partner, delta=0):
             self.retry(args=[partner, delta], countdown=600)
 
 
-
-# showing in other partners
 def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
     reports = Payments.objects.filter(report_from=day, vendor_name=fleet_name, partner=partner_pk)
     if reports:
         return reports
 
-    for driver in Driver.objects.exclude(chat_id=''):
+    for driver in Driver.objects.filter(partner=partner_pk).exclude(chat_id=''):
         records = Order.objects.filter(driver__chat_id=driver.chat_id,
                                        status_order=Order.COMPLETED,
                                        created_at__date=day,

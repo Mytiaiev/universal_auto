@@ -1,8 +1,9 @@
+import uuid
 from datetime import datetime, timedelta
 import requests
 from django.db import models
 
-from app.models import Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder, Fleet, UberService
+from app.models import Payments, UberSession, Fleets_drivers_vehicles_rate, FleetOrder, Fleet, UberService
 from auto_bot.handlers.order.utils import check_vehicle
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.synchronizer import Synchronizer
@@ -285,7 +286,7 @@ class UberRequest(Fleet, Synchronizer):
             uber_driver.quit()
 
     def disable_cash(self, driver_id, enable):
-        date = datetime.now() + timedelta(weeks=1)
+        date = datetime.now()
         period = date.isoformat() + "Z"
         block_query = '''mutation EnableCashBlocks($supplierUuid: UberDataSchemasBasicProtoUuidInput!,
          $earnerUuid: UberDataSchemasBasicProtoUuidInput!) {
@@ -321,9 +322,9 @@ class UberRequest(Fleet, Synchronizer):
                               }
                             }'''
         variables = {
-                    "supplierUuid":  self.get_uuid(),
-                    "earnerUuid": driver_id,
-                    "effectiveAt": period
+                    "supplierUuid": {"value": self.get_uuid()},
+                    "earnerUuid": {"value": driver_id},
+                    "effectiveAt": {"value": period}
         }
         query = unblock_query if enable == 'true' else block_query
         data = self.get_payload(query, variables)

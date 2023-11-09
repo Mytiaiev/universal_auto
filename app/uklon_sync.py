@@ -1,15 +1,15 @@
 import json
 import secrets
-import uuid
 from datetime import datetime
 import requests
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.db import models
-from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
+from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes, Fleet
 from auto_bot.handlers.order.utils import check_vehicle
 from auto_bot.main import bot
-from scripts.redis_conn import redis_instance
+from scripts.redis_conn import redis_instance, get_logger
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from django.db import IntegrityError
 
@@ -138,8 +138,12 @@ class UklonRequest(Fleet, Synchronizer):
         data = self.response_data(url=url, params=param)['items']
         if data:
             for i in data:
-                db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id'],
-                                                                     partner=self.partner).driver
+                try:
+                    db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id'],
+                                                                         partner=self.partner).driver
+                except ObjectDoesNotExist:
+                    get_logger().error(self, i['driver']['id'])
+                    continue
                 vehicle = check_vehicle(db_driver, day, max_time=True)[0]
                 order = Payments(
                     report_from=day.date(),
@@ -163,7 +167,7 @@ class UklonRequest(Fleet, Synchronizer):
                 try:
                     order.save()
                 except IntegrityError:
-                    pass
+                    get_logger().error(f"{self}, {db_driver} report not saved")
 
     def get_drivers_status(self):
         first_key, second_key = 'with_client', 'wait'

@@ -146,8 +146,6 @@ class SeleniumTools:
             with open(os.path.join(os.getcwd(), filename), 'wb') as f:
                 f.write(content)
 
-
-
     def get_uber_session(self):
         return UberSession.objects.filter(partner=self.partner).latest('created_at')
 

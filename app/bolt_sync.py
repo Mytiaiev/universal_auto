@@ -5,15 +5,16 @@ from urllib import parse
 
 import pendulum
 import requests
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.utils import timezone
 
 from django.db import models
-from app.models import BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, Partner, FleetOrder, \
+from app.models import BoltService, Driver, Fleets_drivers_vehicles_rate, Payments, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes, Fleet
 from auto import settings
 from auto_bot.handlers.order.utils import check_vehicle
-from scripts.redis_conn import redis_instance
+from scripts.redis_conn import redis_instance, get_logger
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 
 
@@ -93,7 +94,7 @@ class BoltRequest(Fleet, Synchronizer):
         return response.json()
 
     def save_report(self, day):
-        reports = Payments.objects.filter(report_from=day, vendor_name=self.name, partner=self.partner.id)
+        reports = Payments.objects.filter(report_from=day, vendor_name=self.name, partner=self.partner)
         if reports:
             return list(reports)
         # date format str yyyy-mm-dd
@@ -107,8 +108,12 @@ class BoltRequest(Fleet, Synchronizer):
         param['limit'] = 25
         rides = self.get_target_url(f'{self.base_url}getDriverEngagementData/dateRange', param)
         for driver in reports['data']['drivers']:
-            db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=driver['id'],
-                                                                 partner=self.partner.id).driver
+            try:
+                db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=driver['id'],
+                                                                     partner=self.partner).driver
+            except ObjectDoesNotExist:
+                get_logger().error(self, driver['id'])
+                continue
             vehicle = check_vehicle(db_driver, day, max_time=True)[0]
             order = Payments(
                 report_from=day,
@@ -223,7 +228,7 @@ class BoltRequest(Fleet, Synchronizer):
                             "partner": self.partner
                             }
                     if check_vehicle(driver)[0] != vehicle:
-                        redis_instance().hset(f"wrong_vehicle_{self.partner.id}", pk, order['car_reg_number'])
+                        redis_instance().hset(f"wrong_vehicle_{self.partner}", pk, order['car_reg_number'])
                     FleetOrder.objects.create(**data)
 
     def get_drivers_status(self):

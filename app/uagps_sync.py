@@ -4,7 +4,7 @@ import requests
 from _decimal import Decimal
 from django.db import models
 from django.utils import timezone
-from app.models import Driver, Vehicle, RentInformation, Partner, FleetOrder, \
+from app.models import Driver, Vehicle, RentInformation, FleetOrder, \
     DriverEfficiency, CredentialPartner, ParkSettings, Fleet, UaGpsService
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
@@ -96,11 +96,11 @@ class UaGpsSynchronizer(Fleet):
     def get_timestamp(timeframe):
         return int(timeframe.timestamp())
 
-    def get_road_distance(self, partner_id, delta=0):
+    def get_road_distance(self, delta=0):
         day = timezone.localtime() - datetime.timedelta(days=delta)
         road_dict = {}
         start, end = self.get_start_end(day)
-        for driver in Driver.objects.filter(partner=partner_id):
+        for driver in Driver.objects.filter(partner=self.partner):
             if RentInformation.objects.filter(report_from=day, driver=driver):
                 continue
             road_distance = 0
@@ -177,7 +177,7 @@ class UaGpsSynchronizer(Fleet):
 
     def save_daily_rent(self, delta):
         day = timezone.localtime() - datetime.timedelta(days=delta)
-        in_road = self.get_road_distance(self.partner, delta=delta)
+        in_road = self.get_road_distance(delta=delta)
         for driver, result in in_road.items():
             distance, road_time = result
             total_km = self.calc_total_km(driver, day)
@@ -186,12 +186,12 @@ class UaGpsSynchronizer(Fleet):
             DriverEfficiency.objects.filter(driver=driver, report_from=day).update(road_time=road_time)
             RentInformation.objects.create(report_from=day,
                                            driver=driver,
-                                           partner=Partner.get_partner(self.partner),
+                                           partner=self.partner,
                                            rent_distance=rent_distance)
 
     def check_today_rent(self):
         start = timezone.make_aware(datetime.datetime.combine(timezone.localtime(), datetime.time.min))
-        in_road = self.get_road_distance(self.partner)
+        in_road = self.get_road_distance()
         for driver, result in in_road.items():
             distance, road_time, end_time = result
             total_km = 0
