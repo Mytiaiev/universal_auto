@@ -23,9 +23,10 @@ class BoltRequest(Fleet, Synchronizer):
     #     self.base_url =
 
     def create_session(self, partner=None, login=None, password=None):
-        if not (login and password):
-            login = CredentialPartner.get_value("BOLT_NAME", partner=self.partner)
-            password = CredentialPartner.get_value("BOLT_PASSWORD", partner=self.partner)
+        partner_id = partner if partner else self.partner
+        if self.partner:
+            login = CredentialPartner.get_value("BOLT_NAME", partner=partner_id)
+            password = CredentialPartner.get_value("BOLT_PASSWORD", partner=partner_id)
         payload = {
             'username': login,
             'password': password,
@@ -40,7 +41,7 @@ class BoltRequest(Fleet, Synchronizer):
             raise AuthenticationError(f"{self.name} login or password incorrect.")
         else:
             refresh_token = response.json()["data"]["refresh_token"]
-            self.redis.set(f"{self.partner}_{self.name}_refresh", refresh_token)
+            self.redis.set(f"{partner_id}_{self.name}_refresh", refresh_token)
 
     @staticmethod
     def param():

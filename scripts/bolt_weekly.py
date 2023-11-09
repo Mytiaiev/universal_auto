@@ -4,8 +4,8 @@ from app.uklon_sync import UklonRequest
 
 
 def run():
-    UklonRequest.objects.create(name="Uklon", base_url="https://fleets.uklon.com.ua/api/")
-    # UaGpsSynchronizer.objects.create(name="Gps", base_url="https://uagps.net/")
+
+    UaGpsSynchronizer.objects.create(name="Gps", base_url="https://uagps.net/")
     # Fleet.objects.filter(name="Uklon").update(base_url="https://fleets.uklon.com.ua/api/")
     # Fleet.objects.filter(name="Bolt").update(base_url="https://fleetownerportal.live.boltsvc.net/fleetOwnerPortal/")
     # Fleet.objects.filter(name="Uber").update(base_url="https://supplier.uber.com/graphql")

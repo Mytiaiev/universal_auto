@@ -10,7 +10,7 @@ import requests
 from django.utils import timezone
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-
+from django.db import models
 from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
     CredentialPartner, Vehicle, PaymentTypes, Fleet, NewUklonService
 from auto import settings
@@ -23,7 +23,7 @@ from django.db import IntegrityError
 
 
 class UklonRequest(Fleet, Synchronizer, SeleniumTools):
-
+    base_url = models.URLField(default=Service.get_value('UKLON_SESSION'))
     # def __init__(self, partner_id=None, fleet="Uklon"):
     #     super().__init__(partner_id, fleet)
     #     self.base_url = Service.get_value('UKLON_SESSION')
@@ -38,7 +38,7 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
         return headers
 
     def park_payload(self, login, password) -> dict:
-        if not (login and password):
+        if self.partner:
             login = CredentialPartner.get_value(key='UKLON_NAME', partner=self.partner)
             password = CredentialPartner.get_value(key='UKLON_PASSWORD', partner=self.partner)
             client_id = CredentialPartner.get_value(key='CLIENT_ID', partner=self.partner)
@@ -65,7 +65,7 @@ class UklonRequest(Fleet, Synchronizer, SeleniumTools):
         response = requests.post(f"{self.base_url}auth", json=payload)
         if response.status_code == 201:
             token = response.json()["access_token"]
-            self.redis.set(f"{self.partner}_{self.name}_token", token)
+            self.redis.set(f"{partner}_{self.name}_token", token)
             return token
         else:
             raise AuthenticationError(f"{self.name} login or password incorrect.")

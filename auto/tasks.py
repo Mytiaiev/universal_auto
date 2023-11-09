@@ -109,7 +109,7 @@ def get_session(self, partner_pk, aggregator='Uber', login=None, password=None):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_orders_from_fleets(self, partner_pk, day=None):
-    fleets = Fleet.objects.filter(partner=partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
     day = get_day_for_task(day)
     drivers = Driver.objects.filter(partner=partner_pk)
     for fleet in fleets:
@@ -140,7 +140,7 @@ def check_orders_for_vehicle(self, partner_pk):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_today_orders(self, partner_pk):
-    fleets = Fleet.objects.filter(partner=partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
     day = timezone.localtime() - timedelta(minutes=5)
     drivers = Driver.objects.filter(partner=partner_pk)
     for fleet in fleets:
@@ -198,7 +198,7 @@ def send_notify_to_check_car(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
     day = get_day_for_task(day)
-    fleets = Fleet.objects.filter(partner=partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
     for fleet in fleets:
         fleet.save_report(day)
     save_report_to_ninja_payment(day, partner_pk)
@@ -327,9 +327,8 @@ def update_driver_status(self, partner_pk):
     try:
         status_online = set()
         status_with_client = set()
-        fleets = Fleet.objects.filter(partner=partner_pk)
+        fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
         for fleet in fleets:
-            print(fleet.partner, fleet)
             statuses = fleet.get_drivers_status()
             logger.info(f"{fleet} {statuses}")
             status_online = status_online.union(set(statuses['wait']))
@@ -369,9 +368,7 @@ def update_driver_data(self, partner_pk, manager_id=None):
         drivers = Driver.objects.filter(partner=partner_pk)
         drivers.update(worked=False)
         fleets = Fleet.objects.filter(partner=partner_pk)
-        gps = GpsProvider.objects.filter(partner=partner_pk)
-        synchronize_classes = fleets.union(gps)
-        for synchronization_class in synchronize_classes:
+        for synchronization_class in fleets:
             synchronization_class.synchronize()
         success = True
     except Exception as e:
@@ -404,7 +401,7 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 @app.task(bind=True, queue='beat_tasks')
 def get_rent_information(self, partner_pk, delta=1):
     try:
-        gps = GpsProvider.objects.get(partner=partner_pk)
+        gps = UaGpsSynchronizer.objects.get(partner=partner_pk)
         gps.save_daily_rent(delta)
         logger.info('write rent report')
     except Exception as e:
@@ -414,7 +411,7 @@ def get_rent_information(self, partner_pk, delta=1):
 @app.task(bind=True, queue='beat_tasks')
 def get_today_rent(self, partner_pk):
     try:
-        gps = GpsProvider.objects.get(partner=partner_pk)
+        gps = UaGpsSynchronizer.objects.get(partner=partner_pk)
         gps.check_today_rent()
     except Exception as e:
         logger.error(e)
@@ -424,7 +421,7 @@ def get_today_rent(self, partner_pk):
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
         driver = Driver.objects.get(pk=pk)
-        fleets = Fleet.objects.filter(partner=partner_pk)
+        fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
         for fleet in fleets:
             driver_id = driver.get_driver_external_id(fleet.name)
             fleet.disable_cash(driver_id, enable)

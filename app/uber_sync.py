@@ -1,14 +1,15 @@
 from datetime import datetime, timedelta
 import requests
+from django.db import models
 
-from app.models import Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder, Fleet
+from app.models import Payments, UberSession, Fleets_drivers_vehicles_rate, Partner, FleetOrder, Fleet, UberService
 from auto_bot.handlers.order.utils import check_vehicle
 from selenium_ninja.driver import SeleniumTools
 from selenium_ninja.synchronizer import Synchronizer
 
 
 class UberRequest(Fleet, Synchronizer):
-
+    base_url = models.URLField(default=UberService.get_value('REQUEST_UBER_BASE_URL'))
     # def __init__(self, partner_id=None, fleet="Uber"):
     #     super().__init__(partner_id, fleet)
     #     self.base_url = UberService.get_value('REQUEST_UBER_BASE_URL')

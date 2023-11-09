@@ -173,8 +173,7 @@ def login_in(aggregator=None, partner_id=None, login_name=None, password=None, t
         update_park_set(partner_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
         update_park_set(partner_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
         BoltRequest.objects.create(name=aggregator,
-                                   partner=Partner.get_partner(partner_id),
-                                   )
+                                   partner=Partner.get_partner(partner_id))
     elif aggregator == 'Uklon':
         update_park_set(partner_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)
         update_park_set(partner_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon', park=False)
@@ -185,19 +184,16 @@ def login_in(aggregator=None, partner_id=None, login_name=None, password=None, t
             partner_id, 'CLIENT_ID', random_hex,
             description='Ідентифікатор клієнта Uklon', check_value=False, park=False)
         UklonRequest.objects.create(name=aggregator,
-                                    partner=Partner.get_partner(partner_id),
-                                    base_url=NewUklonService.get_value("UKLON_SESSION"))
+                                    partner=Partner.get_partner(partner_id))
     elif aggregator == 'Uber':
         update_park_set(partner_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber', park=False)
         update_park_set(partner_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
         UberRequest.objects.create(name=aggregator,
-                                   partner=Partner.get_partner(partner_id),
-                                   base_url=UberService.get_value("REQUEST_UBER_BASE_URL"))
+                                   partner=Partner.get_partner(partner_id))
     elif aggregator == 'Gps':
         update_park_set(partner_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
         UaGpsSynchronizer.objects.create(name=aggregator,
-                                         partner=Partner.get_partner(partner_id),
-                                         base_url=UaGpsService.get_value("LOGIN_URL"))
+                                         partner=Partner.get_partner(partner_id))
     return True
 
 
