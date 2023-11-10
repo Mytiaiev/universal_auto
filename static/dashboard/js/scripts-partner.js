@@ -107,29 +107,55 @@ let barChartOptions = {
     },
     formatter: function(params) {
       let category = params[0].axisValue;
-      let value = params[0].value;
-      return category + ': ' + value + ' грн.';
+      let cash = parseFloat(params[0].value);
+			let card = parseFloat(params[1].value);
+			let total = (cash + card).toFixed(2);
+      let cashColor = '#79C8C5';
+      let cardColor = '#EC6323';
+      return (
+        category +
+        ':<br>' +
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:' +
+        cashColor +
+        '"></span> Готівка: ' +
+        cash +
+        ' грн.<br>' +
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:' +
+        cardColor +
+        '"></span> Карта: ' +
+        card +
+        ' грн.<br>' +
+        'Весь дохід: ' +
+        total +
+        ' грн.'
+      );
     }
   },
   series: [
     {
-      data: [1200, 2000, 1500, 800, 700, 1100, 2000],
+      name: 'card',
       type: 'bar',
+      stack: 'total',
+      label: {
+        focus: 'series'
+      },
       itemStyle: {
-        color: function(params) {
-          var data = barChartOptions.series[0].data;
-          var maxData = Math.max(...data);
-          var value = params.data;
-          if (value <= 0.3 * maxData) {
-            return '#A1E8B9';
-          } else if (value <= 0.65 * maxData) {
-            return '#79C8C5';
-          } else {
-            return '#18A64D';
-          }
-        }
-      }
-    }
+        color: '#79C8C5'
+      },
+      data: []
+    },
+    {
+      name: 'cash',
+      type: 'bar',
+      stack: 'total',
+      label: {
+        focus: 'series'
+      },
+      itemStyle: {
+        color: '#EC6323'
+      },
+      data: []
+    },
   ]
 };
 
@@ -284,8 +310,10 @@ function fetchSummaryReportData(period, start, end) {
 				$('#bar-chart').show();
 				const driversData = data[0]['drivers'];
 				const categories = driversData.map(driver => driver.full_name);
-				const values = driversData.map(driver => driver.total_kasa);
-				barChartOptions.series[0].data = values;
+				const total_card = driversData.map(driver => driver.total_card);
+				const total_cash = driversData.map(driver => driver.total_cash);
+				barChartOptions.series[0].data = total_card;
+				barChartOptions.series[1].data = total_cash;
 				barChartOptions.xAxis.data = categories;
 				barChart.setOption(barChartOptions);
 			} else {
