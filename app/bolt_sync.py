@@ -1,9 +1,7 @@
-import datetime
+from datetime import datetime
 import mimetypes
 import time
 from urllib import parse
-
-import pendulum
 import requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
@@ -142,7 +140,7 @@ class BoltRequest(Fleet, Synchronizer):
 
     def get_drivers_table(self):
         driver_list = []
-        start = end = pendulum.now().strftime('%Y-%m-%d')
+        start = end = datetime.now().strftime('%Y-%m-%d')
         params = {"start_date": start,
                   "end_date": end,
                   "offset": 0,
@@ -205,7 +203,7 @@ class BoltRequest(Fleet, Synchronizer):
                         continue
                     try:
                         finish = timezone.make_aware(
-                            datetime.datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
+                            datetime.fromtimestamp(order['order_stops'][-1]['arrived_at']))
                     except TypeError:
                         finish = None
                     try:
@@ -217,8 +215,7 @@ class BoltRequest(Fleet, Synchronizer):
                             "fleet": self.name,
                             "driver": driver,
                             "from_address": order['pickup_address'],
-                            "accepted_time": timezone.make_aware(
-                                datetime.datetime.fromtimestamp(order['accepted_time'])),
+                            "accepted_time": timezone.make_aware(datetime.fromtimestamp(order['accepted_time'])),
                             "state": bolt_states.get(order['order_try_state']),
                             "finish_time": finish,
                             "payment": PaymentTypes.map_payments(order['payment_method']),
@@ -350,12 +347,12 @@ class BoltRequest(Fleet, Synchronizer):
         encoded = parse.urlencode(payload_form)
         requests.post(f'{BoltService.get_value("R_BOLT_ADD_DRIVER_1")}register/', headers=headers,
                       params=params, data=encoded)
-        job_application.status_bolt = datetime.datetime.now().date()
+        job_application.status_bolt = datetime.now().date()
         job_application.save()
 
     def get_vehicles(self):
         vehicles_list = []
-        start = end = pendulum.now().strftime('%Y-%m-%d')
+        start = end = datetime.now().strftime('%Y-%m-%d')
         params = {"start_date": start,
                   "end_date": end,
                   "offset": 0,

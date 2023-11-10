@@ -7,7 +7,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from app.models import CarEfficiency, Driver, SummaryReport, Manager, \
-    Vehicle, RentInformation, ParkSettings, DriverEfficiency, Partner, Role, DriverSchemaRate, SalaryCalculation, \
+    Vehicle, RentInformation, DriverEfficiency, Partner, Role, DriverSchemaRate, SalaryCalculation, \
     DriverPayments
 
 
@@ -46,16 +46,16 @@ def get_drivers_vehicles_list(chat_id, cls):
 
 def calculate_rent(start, end, driver):
     end_time = datetime.combine(end, datetime.max.time())
-    rent_report = RentInformation.objects.filter(
-        rent_distance__gt=driver.schema.limit_distance,
-        report_from__range=(start, end_time),
-        driver=driver)
-    if rent_report:
-        overall_rent = ExpressionWrapper(F('rent_distance') - driver.schema.limit_distance,
-                                         output_field=DecimalField())
-        total_rent = rent_report.aggregate(distance=Sum(overall_rent))['distance']
-    else:
-        total_rent = 0
+    total_rent = 0
+    if driver.schema:
+        rent_report = RentInformation.objects.filter(
+            rent_distance__gt=driver.schema.limit_distance,
+            report_from__range=(start, end_time),
+            driver=driver)
+        if rent_report:
+            overall_rent = ExpressionWrapper(F('rent_distance') - driver.schema.limit_distance,
+                                             output_field=DecimalField())
+            total_rent = rent_report.aggregate(distance=Sum(overall_rent))['distance']
     return total_rent
 
 
@@ -126,7 +126,6 @@ def generate_message_report(chat_id, daily=False):
     for driver in drivers.filter(schema__salary_calculation=calculation):
         payment = DriverPayments.objects.filter(report_from=start, report_to=end, driver=driver).first()
         driver_message = ''
-
         if payment:
             driver_message += f"{driver} каса: {payment.kasa}\n"
             if payment.rent:
@@ -359,4 +358,3 @@ def get_driver_efficiency_report(manager_id=None, start=None, end=None):
     for k, v in sorted_effective_driver.items():
         report[k] = [f"{vk}: {vv}\n" for vk, vv in v.items()]
     return report
-

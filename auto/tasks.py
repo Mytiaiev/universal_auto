@@ -69,7 +69,7 @@ def raw_gps_handler(pk):
 
     try:
         date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = timezone.make_aware(date_time, timezone.get_current_timezone())
+        date_time = timezone.make_aware(date_time)
     except ValueError as err:
         return f'Error converting date and time: {err}'
     updated = Vehicle.objects.filter(gps_imei=raw.imei).update(lat=lat, lon=lon, coord_time=date_time)
@@ -140,13 +140,12 @@ def check_orders_for_vehicle(self, partner_pk):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_today_orders(self, partner_pk):
-    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
+    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name__in=('Gps', 'Uber'))
     day = timezone.localtime() - timedelta(minutes=5)
     drivers = Driver.objects.filter(partner=partner_pk)
     for fleet in fleets:
-        if not isinstance(fleet, UberRequest):
-            for driver in drivers:
-                fleet.get_fleet_orders(day, driver.pk)
+        for driver in drivers:
+            fleet.get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -201,7 +200,6 @@ def download_daily_report(self, partner_pk, day=None):
     fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
     for fleet in fleets:
         fleet.save_report(day)
-    save_report_to_ninja_payment(day, partner_pk)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
     for driver in Driver.objects.filter(partner=partner_pk):
         payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
@@ -226,36 +224,38 @@ def download_daily_report(self, partner_pk, day=None):
 def get_car_efficiency(self, partner_pk, day=None):
     day = get_day_for_task(day)
     for vehicle in Vehicle.objects.filter(partner=partner_pk):
-        efficiency = CarEfficiency.objects.filter(report_from=day,
+        efficiency = CarEfficiency.objects.exists(report_from=day,
                                                   partner=partner_pk,
                                                   vehicle=vehicle)
+        if efficiency:
+            continue
         vehicle_drivers = {}
         total_spending = VehicleSpending.objects.filter(
             vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
         reshuffles = DriverReshuffle.objects.filter(swap_time__date=day, swap_vehicle=vehicle)
         drivers = [reshuffle.driver_start for reshuffle in reshuffles] if reshuffles \
             else Driver.objects.filter(vehicle=vehicle)
-        if not efficiency:
-            total_kasa = 0
-            total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps_id, day)
-            if total_km:
-                for driver in drivers:
-                    report = SummaryReport.objects.filter(report_from=day,
-                                                          driver=driver).first()
-                    if report:
-                        vehicle_drivers[driver] = report.total_amount_without_fee
-                        total_kasa += report.total_amount_without_fee
-            result = max(
-                Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
-            car = CarEfficiency.objects.create(report_from=day,
-                                               vehicle=vehicle,
-                                               total_kasa=total_kasa,
-                                               total_spending=total_spending,
-                                               mileage=total_km,
-                                               efficiency=result,
-                                               partner=Partner.get_partner(partner_pk))
-            for driver, kasa in vehicle_drivers.items():
-                DriverEffVehicleKasa.objects.create(driver=driver, efficiency_car=car, kasa=kasa)
+        total_kasa = 0
+        total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps_id, day)
+        if total_km:
+            for driver in drivers:
+                report = SummaryReport.objects.filter(
+                    report_from=day,
+                    driver=driver).aggregate(
+                    clean_amount=Coalesce(Sum('total_amount_without_fee'), Decimal(0)))['total_amount_sum']
+                vehicle_drivers[driver] = report
+                total_kasa += report
+        result = max(
+            Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
+        car = CarEfficiency.objects.create(report_from=day,
+                                           vehicle=vehicle,
+                                           total_kasa=total_kasa,
+                                           total_spending=total_spending,
+                                           mileage=total_km,
+                                           efficiency=result,
+                                           partner=Partner.get_partner(partner_pk))
+        for driver, kasa in vehicle_drivers.items():
+            DriverEffVehicleKasa.objects.create(driver=driver, efficiency_car=car, kasa=kasa)
 
 
 @app.task(bind=True, queue='beat_tasks')
