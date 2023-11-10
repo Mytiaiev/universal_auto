@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from _decimal import Decimal
 from django.db.models import Sum, F, OuterRef, Subquery, DecimalField, Avg, Value, CharField, ExpressionWrapper, Case, \
-    When
+    When, Func
 from django.db.models.functions import Concat, Round, Coalesce
 from rest_framework import generics
 from rest_framework.response import Response
@@ -42,8 +42,8 @@ class SummaryReportListView(CombinedPermissionsMixin,
             rent_amount=Sum('rent_distance')
         )
         queryset = filtered_qs.values('driver_id').annotate(
-            full_name=Concat(F("driver__user_ptr__name"),
-                             Value(" "),
+            full_name=Concat(Func(F("driver__user_ptr__name"), Value(1), Value(1), function='SUBSTRING', output_field=CharField()),
+                             Value(". "),
                              F("driver__user_ptr__second_name"), output_field=CharField()),
             total_kasa=Sum('total_amount_without_fee'),
             total_cash=Sum('total_amount_cash'),

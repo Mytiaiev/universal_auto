@@ -49,122 +49,91 @@ function applyCustomDateRange() {
 	fetchCarEfficiencyData(selectedPeriod, startDate, endDate);
 }
 
-// ---------- CHARTS ----------
+// ---------- CHARTS ---------- //
+
+var barChart = echarts.init(document.getElementById('bar-chart'));
 
 // BAR CHART
 let barChartOptions = {
-	series: [{
-		data: [],
-		name: gettext("Заробіток "),
-	}],
-	chart: {
-		type: "bar",
-		background: "transparent",
-		height: 350,
-		toolbar: {
-			show: false,
-		},
-	},
-	colors: [
-		"#89A632",
-		"#FDCA10",
-		"#18A64D",
-		"#1858A6",
-		"#79C8C5",
-		"#EC6323",
-		"#018B72"
-	],
-	plotOptions: {
-		bar: {
-			distributed: true,
-			borderRadius: 4,
-			horizontal: false,
-			columnWidth: "40%",
-		}
-	},
-	dataLabels: {
-		enabled: false,
-	},
-	fill: {
-		opacity: 1,
-	},
-	grid: {
-		borderColor: "black",
-		yaxis: {
-			lines: {
-				show: true,
-			},
-		},
-		xaxis: {
-			lines: {
-				show: true,
-			},
-		},
-	},
-	legend: {
-		labels: {
-			colors: "black",
-		},
-		show: false,
-		position: "top",
-	},
-	stroke: {
-		colors: ["transparent"],
-		show: true,
-		width: 2
-	},
-	tooltip: {
-		shared: true,
-		intersect: false,
-		theme: "dark",
-	},
-	xaxis: {
-		categories: [],
-		title: {
-			style: {
-				color: "black",
-			},
-		},
-		axisBorder: {
-			show: true,
-			color: "black",
-		},
-		axisTicks: {
-			show: true,
-			color: "black",
-		},
-		labels: {
-			style: {
-				colors: "black",
-			},
-			rotate: -45,
-		},
-	},
-	yaxis: {
-		title: {
-			text: gettext("Дохід (грн.)"),
-			style: {
-				color: "black",
-			},
-		},
-		axisBorder: {
-			color: "black",
-			show: true,
-		},
-		axisTicks: {
-			color: "black",
-			show: true,
-		},
-		labels: {
-			style: {
-				colors: "#f5f7ff",
-			},
-		},
-	}
+  grid: {
+    height: '70%'
+  },
+  xAxis: {
+    type: 'category',
+    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    axisLabel: {
+      rotate: 45
+    }
+  },
+  yAxis: {
+    type: 'value',
+    name: 'Сума (грн.)',
+    nameLocation: 'middle',
+    nameRotate: 90,
+    nameGap: 60,
+    nameTextStyle: {
+      fontSize: 18,
+    }
+  },
+  dataZoom: [
+    {
+      type: 'slider',
+      start: 1,
+      end: 20,
+      showDetail: false,
+      backgroundColor: 'white',
+      dataBackground: {
+        lineStyle: {
+          color: 'orange',
+          width: 5
+        }
+      },
+      selectedDataBackground: {
+        lineStyle: {
+          color: 'rgb(255, 69, 0)',
+          width: 5
+        }
+      },
+      handleStyle: {
+        color: 'orange',
+        borderWidth: 0
+      },
+    }
+  ],
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: {
+      type: 'shadow'
+    },
+    formatter: function(params) {
+      let category = params[0].axisValue;
+      let value = params[0].value;
+      return category + ': ' + value + ' грн.';
+    }
+  },
+  series: [
+    {
+      data: [1200, 2000, 1500, 800, 700, 1100, 2000],
+      type: 'bar',
+      itemStyle: {
+        color: function(params) {
+          var data = barChartOptions.series[0].data;
+          var maxData = Math.max(...data);
+          var value = params.data;
+          if (value <= 0.3 * maxData) {
+            return '#A1E8B9';
+          } else if (value <= 0.65 * maxData) {
+            return '#79C8C5';
+          } else {
+            return '#18A64D';
+          }
+        }
+      }
+    }
+  ]
 };
 
-let barChart = new ApexCharts(document.querySelector("#bar-chart"), barChartOptions);
-barChart.render();
+barChart.setOption(barChartOptions);
 
 
 // AREA CHART
@@ -317,8 +286,8 @@ function fetchSummaryReportData(period, start, end) {
 				const categories = driversData.map(driver => driver.full_name);
 				const values = driversData.map(driver => driver.total_kasa);
 				barChartOptions.series[0].data = values;
-				barChartOptions.xaxis.categories = categories;
-				barChart.updateOptions(barChartOptions);
+				barChartOptions.xAxis.data = categories;
+				barChart.setOption(barChartOptions);
 			} else {
 				$(".noDataMessage1").show();
 				$('#bar-chart').hide();
@@ -820,4 +789,7 @@ $(document).ready(function () {
 			$("#datePicker").css("display", "none");
 		}
   });
+//
+//  const customSlider = $("#slider");
+//	customSlider.
 });
