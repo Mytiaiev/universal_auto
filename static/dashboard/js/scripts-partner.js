@@ -494,34 +494,6 @@ function fetchDriverEfficiencyData(period, start, end) {
 	});
 }
 
-const commonPeriodSelect = $('.custom-select');
-const periodSelect = $('#period');
-
-commonPeriodSelect.on('change', function () {
-	const selectedPeriod = commonPeriodSelect.val();
-	if (selectedPeriod !== "custom") {
-		fetchSummaryReportData(selectedPeriod);
-		fetchCarEfficiencyData(selectedPeriod);
-	}
-	if (selectedPeriod === "custom") {
-		$("#datePicker").css("display", "block");
-	} else {
-		$("#datePicker").css("display", "none");
-	}
-});
-
-periodSelect.on('change', function () {
-	const selectedPeriod = periodSelect.val();
-	if (selectedPeriod !== "custom") {
-		fetchDriverEfficiencyData(selectedPeriod);
-	}
-	if (selectedPeriod === "custom") {
-		$("#datePickerDriver").css("display", "block");
-	} else {
-		$("#datePickerDriver").css("display", "none");
-	}
-});
-
 fetchSummaryReportData('yesterday');
 fetchCarEfficiencyData('yesterday');
 fetchDriverEfficiencyData('yesterday');
@@ -553,7 +525,6 @@ $(document).ready(function () {
 	let $table = $('.driver-table');
 	let $tbody = $table.find('tbody');
 
-	// Function to sort the table by a specific column
 	function sortTable(column, order) {
 		let rows = $tbody.find('tr').toArray();
 
@@ -790,36 +761,45 @@ $(document).ready(function () {
 
   sidebarToggle.click(toggleSidebar);
 
-  const customSelect = $(".custom-select");
-  const selectedOption = customSelect.find(".selected-option");
-  const optionsList = customSelect.find(".options");
-  const iconDown = customSelect.find(".fas.fa-angle-down");
+	function initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, fetchFunction, datePicker) {
+		iconDown.click(function() {
+			customSelect.toggleClass("active");
+		});
 
-  iconDown.click(function() {
-  	customSelect.toggleClass("active");
-  });
+		selectedOption.click(function() {
+			customSelect.toggleClass("active");
+		});
 
-  selectedOption.click(function() {
-    customSelect.toggleClass("active");
-  });
+		optionsList.on("click", "li", function() {
+			const clickedValue = $(this).data("value");
+			selectedOption.text($(this).text());
+			customSelect.removeClass("active");
 
-  optionsList.on("click", "li", function() {
-    const clickedValue = $(this).data("value");
-    selectedOption.text($(this).text());
-    customSelect.removeClass("active");
+			if (clickedValue !== "custom") {
+				fetchFunction(clickedValue);
+			}
 
-	  if (clickedValue !== "custom") {
-		fetchSummaryReportData(clickedValue);
-		fetchCarEfficiencyData(clickedValue);
-		}
+			if (clickedValue === "custom") {
+				datePicker.css("display", "block");
+			} else {
+				datePicker.css("display", "none");
+			}
+		});
+	}
 
-		if (clickedValue === "custom") {
-			$("#datePicker").css("display", "block");
-		} else {
-			$("#datePicker").css("display", "none");
-		}
-  });
-//
-//  const customSlider = $("#slider");
-//	customSlider.
+	const customSelect = $(".custom-select");
+	const selectedOption = customSelect.find(".selected-option");
+	const optionsList = customSelect.find(".options");
+	const iconDown = customSelect.find(".fas.fa-angle-down");
+	const datePicker = $("#datePicker");
+
+	initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, fetchSummaryReportData, datePicker);
+
+	const customSelectDriver = $(".custom-select-drivers");
+	const selectedOptionDriver = customSelectDriver.find(".selected-option-drivers");
+	const optionsListDriver = customSelectDriver.find(".options-drivers");
+	const iconDownDriver = customSelectDriver.find(".fas.fa-angle-down");
+	const datePickerDriver = $("#datePickerDriver");
+
+	initializeCustomSelect(customSelectDriver, selectedOptionDriver, optionsListDriver, iconDownDriver, fetchDriverEfficiencyData, datePickerDriver);
 });

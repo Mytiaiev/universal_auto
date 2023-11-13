@@ -295,23 +295,27 @@
       </div>
       <div class="filter">
         <label for="period">{% trans 'Виберіть період:' %}</label>
-        <select id="period" name="period">
-          <option value="yesterday">{% trans 'Вчора' %}</option>
-          <option value="current_week">{% trans 'Поточний тиждень' %}</option>
-          <option value="last_week">{% trans 'Минулий тиждень' %}</option>
-          <option value="current_month">{% trans 'Поточний місяць' %}</option>
-          <option value="last_month">{% trans 'Минулий місяць' %}</option>
-          <option value="current_quarter">{% trans 'Поточний квартал' %}</option>
-          <option value="last_quarter">{% trans 'Минулий квартал' %}</option>
-          <option value="custom">{% trans 'Вибрати період >' %}</option>
-        </select>
+        <div class="custom-select-drivers">
+          <span class="selected-option-drivers">{% trans 'Вчора' %}</span>
+          <i class="fas fa-angle-down"></i>
+          <ul class="options-drivers">
+            <li data-value="yesterday">{% trans 'Вчора' %}</li>
+            <li data-value="current_week">{% trans 'Поточний тиждень' %}</li>
+            <li data-value="last_week">{% trans 'Минулий тиждень' %}</li>
+            <li data-value="current_month">{% trans 'Поточний місяць' %}</li>
+            <li data-value="last_month">{% trans 'Минулий місяць' %}</li>
+            <li data-value="current_quarter">{% trans 'Поточний квартал' %}</li>
+            <li data-value="last_quarter">{% trans 'Минулий квартал' %}</li>
+            <li data-value="custom">{% trans 'Вибрати період >' %}</li>
+          </ul>
+        </div>
       </div>
       <div id="datePickerDriver" style="display: none;">
         <label for="start_date">{% trans 'Початкова дата:' %}</label>
-        <input type="date" id="start_date" name="start_date">
+        <input type="date" id="start_report" name="start_date">
         <label for="end_date">{% trans 'Кінцева дата:' %}</label>
-        <input type="date" id="end_date" name="end_date">
-        <input class="apply-filter-button" type="button" value={% trans 'Фільтрувати' %} onclick="customDateRange()">
+        <input type="date" id="end_report" name="end_date">
+        <input class="apply-filter-button" type="button" onclick="applyCustomDateRange()" value={% trans 'Фільтрувати'%}>
       </div>
       <table class="driver-table">
         <thead>
