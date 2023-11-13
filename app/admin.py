@@ -1016,12 +1016,19 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
         elif request.user.groups.filter(name='Partner').exists():
             fieldsets = (
-                ('Номер автомобіля',            {'fields': ['licence_plate', 'gps_imei',
+                ('Номер автомобіля',            {'fields': ['licence_plate', 'gps_imei', 'gps',
                                                             ]}),
                 ('Інформація про машину',       {'fields': ['name', 'purchase_price',
                                                             'investor_car', 'investor_percentage'
                                                             ]}),
                 ('Додатково',                   {'fields': ['manager',
+                                                            ]}),
+            )
+        elif request.user.groups.filter(name='Manager').exists():
+            fieldsets = (
+                ('Номер автомобіля',            {'fields': ['licence_plate', 'gps_imei', 'gps',
+                                                            ]}),
+                ('Інформація про машину',       {'fields': ['name', 'purchase_price',
                                                             ]}),
             )
         else:

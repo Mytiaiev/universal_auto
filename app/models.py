@@ -274,7 +274,7 @@ class Vehicle(models.Model):
     purchase_date = models.DateField(null=True, verbose_name='Дата початку роботи')
     vin_code = models.CharField(max_length=17, blank=True)
     chat_id = models.CharField(max_length=15, blank=True, null=True, verbose_name="Група автомобіля телеграм")
-    gps = models.ForeignKey(GPSNumber, on_delete=models.CASCADE, null=True, verbose_name="Назва авто в Gps")
+    gps = models.ForeignKey(GPSNumber, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Назва авто в Gps")
     gps_imei = models.CharField(max_length=100, blank=True, default='')
     coord_time = models.DateTimeField(null=True, verbose_name="Час отримання координат")
     lat = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Широта")

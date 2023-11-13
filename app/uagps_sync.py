@@ -7,7 +7,7 @@ from app.models import Driver, GPSNumber, RentInformation, FleetOrder, \
     DriverEfficiency, CredentialPartner, ParkSettings, Fleet, Partner
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
-from scripts.redis_conn import redis_instance
+from scripts.redis_conn import redis_instance, get_logger
 from selenium_ninja.driver import SeleniumTools
 
 
@@ -36,7 +36,7 @@ class UaGpsSynchronizer(Fleet):
                 'svc': 'core/search_items',
             }
             params.update({'params': json.dumps(payload)})
-            response = requests.post(f"{self.base_url}wialon/ajax.html", params=params)
+            response = requests.post(f"{self.partner.gps_url}wialon/ajax.html", params=params)
             redis_instance().set(f"{self.partner.id}_gps_id", response.json()['items'][0]['id'])
         return redis_instance().get(f"{self.partner.id}_gps_id")
 
@@ -49,7 +49,7 @@ class UaGpsSynchronizer(Fleet):
                                             "flags": 1,
                                             "mode": 0}]})
         }
-        response = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
+        response = requests.get(f"{self.partner.gps_url}wialon/ajax.html", params=params)
         for vehicle in response.json():
             GPSNumber.objects.get_or_create(gps_id=vehicle['i'],
                                             defaults={
@@ -75,7 +75,7 @@ class UaGpsSynchronizer(Fleet):
             'sid': self.get_session(),
             'params': json.dumps(parameters)
         }
-        report = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
+        report = requests.get(f"{self.partner.gps_url}wialon/ajax.html", params=params)
         raw_time = report.json()['reportResult']['stats'][4][1]
         clean_time = [int(i) for i in raw_time.split(':')]
         road_time = datetime.timedelta(hours=clean_time[0], minutes=clean_time[1], seconds=clean_time[2])
@@ -139,7 +139,7 @@ class UaGpsSynchronizer(Fleet):
                                                           self.get_timestamp(timezone.localtime(end_report)),
                                                           order.vehicle.gps.gps_id)
                     except AttributeError as e:
-                        self.logger.error(e)
+                        get_logger().error(e)
                         continue
                     previous_finish_time = end_report
                     road_distance += report[0]
@@ -155,7 +155,7 @@ class UaGpsSynchronizer(Fleet):
                                                       self.get_timestamp(timezone.localtime(yesterday_order.finish_time)),
                                                       yesterday_order.vehicle.gps.gps_id)
                     except AttributeError as e:
-                        self.logger.error(e)
+                        get_logger().error(e)
                         continue
                     road_distance += report[0]
                     road_time += report[1]
@@ -185,7 +185,7 @@ class UaGpsSynchronizer(Fleet):
                 elif vehicle:
                     total_km = self.total_per_day(driver.vehicle.gps.gps_id, day)
             except AttributeError as e:
-                self.logger.error(e)
+                get_logger().error(e)
                 continue
         return total_km
 
@@ -230,7 +230,7 @@ class UaGpsSynchronizer(Fleet):
                                                         self.get_timestamp(end_time),
                                                         driver.vehicle.gps.gps_id)[0]
                 except AttributeError as e:
-                    self.logger.error(e)
+                    get_logger().error(e)
                     continue
             rent_distance = total_km - distance
             time_now = timezone.localtime(end_time).strftime("%H:%M")

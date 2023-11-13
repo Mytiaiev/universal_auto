@@ -56,6 +56,8 @@ class UklonRequest(Fleet, Synchronizer):
             token = response.json()["access_token"]
             redis_instance().set(f"{partner}_{self.name}_token", token)
             return token
+        elif response.status_code == 429:
+            raise AuthenticationError(f"{self.name} service unavailable.")
         else:
             raise AuthenticationError(f"{self.name} login or password incorrect.")
 
