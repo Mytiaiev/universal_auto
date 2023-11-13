@@ -56,6 +56,7 @@ class Partner(models.Model):
     role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
     chat_id = models.CharField(blank=True, null=True, max_length=10, verbose_name='Ідентифікатор чата')
+    gps_url = models.URLField(null=True, verbose_name='Сторінка логіну Gps')
     calendar = models.CharField(max_length=255, verbose_name='Календар змін водіїв')
     contacts = models.BooleanField(default=False, verbose_name='Доступ до контактів')
 

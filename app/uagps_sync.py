@@ -2,10 +2,9 @@ import json
 import datetime
 import requests
 from _decimal import Decimal
-from django.db import models
 from django.utils import timezone
 from app.models import Driver, GPSNumber, RentInformation, FleetOrder, \
-    DriverEfficiency, CredentialPartner, ParkSettings, Fleet, UaGpsService
+    DriverEfficiency, CredentialPartner, ParkSettings, Fleet, Partner
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
 from scripts.redis_conn import redis_instance
@@ -13,10 +12,10 @@ from selenium_ninja.driver import SeleniumTools
 
 
 class UaGpsSynchronizer(Fleet):
-    base_url = models.URLField(default=UaGpsService.get_value('LOGIN_URL'))
 
     def create_session(self, partner, login, password):
-        token = SeleniumTools(partner).create_gps_session(login, password, self.base_url)
+        partner_obj = Partner.get_partner(partner)
+        token = SeleniumTools(partner).create_gps_session(login, password, partner_obj.gps_url)
         return token
 
     def get_session(self):
@@ -24,7 +23,7 @@ class UaGpsSynchronizer(Fleet):
             'svc': 'token/login',
             'params': json.dumps({"token": CredentialPartner.get_value('UAGPS_TOKEN', partner=self.partner)})
         }
-        response = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
+        response = requests.get(f"{self.partner.gps_url}wialon/ajax.html", params=params)
         return response.json()['eid']
 
     def get_gps_id(self):

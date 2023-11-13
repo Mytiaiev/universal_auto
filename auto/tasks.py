@@ -225,7 +225,7 @@ def download_daily_report(self, partner_pk, day=None):
 def get_car_efficiency(self, partner_pk, day=None):
     day = get_day_for_task(day)
     for vehicle in Vehicle.objects.filter(partner=partner_pk):
-        efficiency = CarEfficiency.objects.exists(report_from=day,
+        efficiency = CarEfficiency.objects.filter(report_from=day,
                                                   partner=partner_pk,
                                                   vehicle=vehicle)
         if efficiency:
@@ -246,7 +246,7 @@ def get_car_efficiency(self, partner_pk, day=None):
             report = SummaryReport.objects.filter(
                 report_from=day,
                 driver=driver).aggregate(
-                clean_amount=Coalesce(Sum('total_amount_without_fee'), Decimal(0)))['total_amount_sum']
+                clean_amount=Coalesce(Sum('total_amount_without_fee'), Decimal(0)))['clean_amount']
             vehicle_drivers[driver] = report
             total_kasa += report
         result = max(
