@@ -4,7 +4,7 @@ import requests
 from _decimal import Decimal
 from django.db import models
 from django.utils import timezone
-from app.models import Driver, Vehicle, RentInformation, FleetOrder, \
+from app.models import Driver, GPSNumber, RentInformation, FleetOrder, \
     DriverEfficiency, CredentialPartner, ParkSettings, Fleet, UaGpsService
 from auto_bot.handlers.order.utils import check_reshuffle
 from auto_bot.main import bot
@@ -52,7 +52,10 @@ class UaGpsSynchronizer(Fleet):
         }
         response = requests.get(f"{self.base_url}wialon/ajax.html", params=params)
         for vehicle in response.json():
-            Vehicle.objects.filter(licence_plate=vehicle['d']['nm'].split('(')[0]).update(gps_id=vehicle['i'])
+            GPSNumber.objects.get_or_create(gps_id=vehicle['i'],
+                                            defaults={
+                                                "name": vehicle['d']['nm']
+                                            })
 
     def generate_report(self, start_time, end_time, vehicle_id):
         parameters = {
@@ -124,17 +127,21 @@ class UaGpsSynchronizer(Fleet):
                     continue
                 previous_finish_time = None
                 for order in completed:
-                    end_report = order.finish_time if order.finish_time < end else end
-                    if previous_finish_time is None or order.accepted_time >= previous_finish_time:
-                        report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
-                                                      self.get_timestamp(timezone.localtime(end_report)),
-                                                      order.vehicle.gps_id)
-                    elif order.finish_time <= previous_finish_time:
+                    try:
+                        end_report = order.finish_time if order.finish_time < end else end
+                        if previous_finish_time is None or order.accepted_time >= previous_finish_time:
+                            report = self.generate_report(self.get_timestamp(timezone.localtime(order.accepted_time)),
+                                                          self.get_timestamp(timezone.localtime(end_report)),
+                                                          order.vehicle.gps.gps_id)
+                        elif order.finish_time <= previous_finish_time:
+                            continue
+                        else:
+                            report = self.generate_report(self.get_timestamp(timezone.localtime(previous_finish_time)),
+                                                          self.get_timestamp(timezone.localtime(end_report)),
+                                                          order.vehicle.gps.gps_id)
+                    except AttributeError as e:
+                        self.logger.error(e)
                         continue
-                    else:
-                        report = self.generate_report(self.get_timestamp(timezone.localtime(previous_finish_time)),
-                                                      self.get_timestamp(timezone.localtime(end_report)),
-                                                      order.vehicle.gps_id)
                     previous_finish_time = end_report
                     road_distance += report[0]
                     road_time += report[1]
@@ -144,9 +151,13 @@ class UaGpsSynchronizer(Fleet):
                                                             finish_time__gt=start,
                                                             accepted_time__lte=start).first()
                 if yesterday_order:
-                    report = self.generate_report(self.get_timestamp(start),
-                                                  self.get_timestamp(timezone.localtime(yesterday_order.finish_time)),
-                                                  yesterday_order.vehicle.gps_id)
+                    try:
+                        report = self.generate_report(self.get_timestamp(start),
+                                                      self.get_timestamp(timezone.localtime(yesterday_order.finish_time)),
+                                                      yesterday_order.vehicle.gps.gps_id)
+                    except AttributeError as e:
+                        self.logger.error(e)
+                        continue
                     road_distance += report[0]
                     road_time += report[1]
                 if delta:
@@ -167,12 +178,16 @@ class UaGpsSynchronizer(Fleet):
         total_km = 0
         vehicles = check_reshuffle(driver, day)
         for vehicle, reshuffles in vehicles.items():
-            if reshuffles:
-                for reshuffle in reshuffles:
-                    total_km += self.total_per_day(reshuffle.swap_vehicle.gps_id,
-                                                   day, reshuffle)
-            elif vehicle:
-                total_km = self.total_per_day(driver.vehicle.gps_id, day)
+            try:
+                if reshuffles:
+                    for reshuffle in reshuffles:
+                        total_km += self.total_per_day(reshuffle.swap_vehicle.gps.gps_id,
+                                                       day, reshuffle)
+                elif vehicle:
+                    total_km = self.total_per_day(driver.vehicle.gps.gps_id, day)
+            except AttributeError as e:
+                self.logger.error(e)
+                continue
         return total_km
 
     def save_daily_rent(self, delta):
@@ -199,21 +214,25 @@ class UaGpsSynchronizer(Fleet):
                 end_time = timezone.localtime()
             vehicles = check_reshuffle(driver)
             for vehicle, reshuffles in vehicles.items():
-                if reshuffles:
-                    for reshuffle in reshuffles:
-                        if reshuffle.end_time < end_time:
-                            total_km += self.total_per_day(reshuffle.swap_vehicle.gps_id,
-                                                           reshuffle=reshuffle)
-                        elif reshuffle.swap_time < end_time:
-                            total_km += self.generate_report(self.get_timestamp(reshuffle.swap_time),
-                                                             self.get_timestamp(end_time),
-                                                             reshuffle.swap_vehicle.gps_id)[0]
-                        else:
-                            continue
-                elif vehicle:
-                    total_km = self.generate_report(self.get_timestamp(start),
-                                                    self.get_timestamp(end_time),
-                                                    driver.vehicle.gps_id)[0]
+                try:
+                    if reshuffles:
+                        for reshuffle in reshuffles:
+                            if reshuffle.end_time < end_time:
+                                total_km += self.total_per_day(reshuffle.swap_vehicle.gps.gps_id,
+                                                               reshuffle=reshuffle)
+                            elif reshuffle.swap_time < end_time:
+                                total_km += self.generate_report(self.get_timestamp(reshuffle.swap_time),
+                                                                 self.get_timestamp(end_time),
+                                                                 reshuffle.swap_vehicle.gps.gps_id)[0]
+                            else:
+                                continue
+                    elif vehicle:
+                        total_km = self.generate_report(self.get_timestamp(start),
+                                                        self.get_timestamp(end_time),
+                                                        driver.vehicle.gps.gps_id)[0]
+                except AttributeError as e:
+                    self.logger.error(e)
+                    continue
             rent_distance = total_km - distance
             time_now = timezone.localtime(end_time).strftime("%H:%M")
             bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),

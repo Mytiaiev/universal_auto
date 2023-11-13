@@ -871,6 +871,16 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
     list_per_page = 25
     readonly_fields = ('name', 'second_name', 'email', 'phone_number', 'driver_status')
 
+    def get_list_editable(self, request):
+        if request.user.groups.filter(name='Partner').exists():
+            return ['vehicle', 'schema', 'manager']
+        elif request.user.groups.filter(name='Manager').exists():
+            return ['vehicle', 'schema']
+
+    def changelist_view(self, request, extra_context=None):
+        self.list_editable = self.get_list_editable(request)
+        return super().changelist_view(request, extra_context)
+
     def get_readonly_fields(self, request, obj=None):
         return self.readonly_fields if not request.user.is_superuser else tuple()
 
@@ -888,6 +898,7 @@ class DriverAdmin(filter_queryset_by_group('Partner', field_to_filter='worked')(
                     'vehicle', 'chat_id', 'schema',
                     'driver_status'
                     ]
+
 
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
@@ -965,15 +976,27 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
             return [f.name for f in self.model._meta.fields]
         elif request.user.groups.filter(name='Partner').exists():
             return ['licence_plate', 'name',
-                    'vin_code',
+                    'vin_code', 'gps',
                     'purchase_price',
                     'manager', 'investor_car', 'created_at'
                     ]
         else:
             return ['licence_plate', 'name',
-                    'vin_code',
+                    'vin_code', 'gps',
                     'purchase_price'
                     ]
+
+    def get_list_editable(self, request):
+        if request.user.groups.filter(name='Partner').exists() or request.user.is_superuser:
+            return ['investor_car', 'manager', 'purchase_price', 'gps']
+        elif request.user.groups.filter(name='Manager').exists():
+            return ['gps']
+        else:
+            return []
+
+    def changelist_view(self, request, extra_context=None):
+        self.list_editable = self.get_list_editable(request)
+        return super().changelist_view(request, extra_context)
 
     def get_fieldsets(self, request, obj=None):
         if request.user.is_superuser:
@@ -985,7 +1008,7 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
                                                             'currency_rate', 'currency_back',
                                                             ]}),
                 ('Особисті дані авто',          {'fields': ['vin_code', 'gps_imei', 'lat', 'lon',
-                                                            'car_status', 'gps_id',
+                                                            'car_status', 'gps',
                                                             ]}),
                 ('Додатково',                   {'fields': ['chat_id', 'partner', 'manager',
                                                             ]}),

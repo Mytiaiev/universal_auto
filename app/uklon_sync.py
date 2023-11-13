@@ -325,7 +325,7 @@ class UklonRequest(Fleet, Synchronizer):
             payload = {
                 "items": items
             }
-            response = self.response_data(url=url2, headers=headers, data=json.dumps(payload), method='POST')
+            self.response_data(url=url2, headers=headers, data=json.dumps(payload), method='POST')
 
     def detaching_the_driver_from_the_car(self, licence_plate):
         base_url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"

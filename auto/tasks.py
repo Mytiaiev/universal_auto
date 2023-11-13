@@ -151,6 +151,7 @@ def get_today_orders(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def check_card_cash_value(self, partner_pk):
     orders = FleetOrder.objects.filter(accepted_time__date=timezone.localtime().date(),
+                                       state=FleetOrder.COMPLETED,
                                        partner=partner_pk)
     kasa_qs = orders.values('driver').annotate(kasa=Sum('price'))
     for driver in kasa_qs:
@@ -172,7 +173,7 @@ def check_card_cash_value(self, partner_pk):
                 enable = 'false'
             bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
                              text=f"Готівка {enable} у {driver_obj}")
-            # fleets_cash_trips.delay(partner_pk, driver, enable)
+            fleets_cash_trips.delay(partner_pk, driver_obj.pk, enable)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -236,15 +237,18 @@ def get_car_efficiency(self, partner_pk, day=None):
         drivers = [reshuffle.driver_start for reshuffle in reshuffles] if reshuffles \
             else Driver.objects.filter(vehicle=vehicle)
         total_kasa = 0
-        total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps_id, day)
-        if total_km:
-            for driver in drivers:
-                report = SummaryReport.objects.filter(
-                    report_from=day,
-                    driver=driver).aggregate(
-                    clean_amount=Coalesce(Sum('total_amount_without_fee'), Decimal(0)))['total_amount_sum']
-                vehicle_drivers[driver] = report
-                total_kasa += report
+        try:
+            total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps.gps_id, day)
+        except AttributeError as e:
+            logger.error(e)
+            continue
+        for driver in drivers:
+            report = SummaryReport.objects.filter(
+                report_from=day,
+                driver=driver).aggregate(
+                clean_amount=Coalesce(Sum('total_amount_without_fee'), Decimal(0)))['total_amount_sum']
+            vehicle_drivers[driver] = report
+            total_kasa += report
         result = max(
             Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
         car = CarEfficiency.objects.create(report_from=day,
@@ -272,15 +276,19 @@ def get_driver_efficiency(self, partner_pk, day=None):
             avg_price = 0
             total_km = 0
             for vehicle, reshuffles in vehicles.items():
-                if reshuffles:
-                    for reshuffle in reshuffles:
-                        driver_vehicles.append(reshuffle.swap_vehicle)
-                        total_km += UaGpsSynchronizer.objects.get(
-                            partner=partner_pk).total_per_day(vehicle.gps_id, day, reshuffle)
-                elif vehicle:
-                    driver_vehicles.append(vehicle)
-                    total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps_id, day)
-                else:
+                try:
+                    if reshuffles:
+                        for reshuffle in reshuffles:
+                            driver_vehicles.append(reshuffle.swap_vehicle)
+                            total_km += UaGpsSynchronizer.objects.get(
+                                partner=partner_pk).total_per_day(reshuffle.swap_vehicle.gps.gps_id, day, reshuffle)
+                    elif vehicle:
+                        driver_vehicles.append(vehicle)
+                        total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps.gps_id, day)
+                    else:
+                        continue
+                except AttributeError as e:
+                    logger.error(e)
                     continue
             if driver_vehicles:
                 report = SummaryReport.objects.filter(report_from=day, driver=driver).first()
@@ -554,7 +562,7 @@ def check_personal_orders(self):
         vehicle = check_vehicle(order.driver)[0]
         gps = UaGpsSynchronizer.objects.get(partner=order.driver.partner)
         route = gps.generate_report(gps.get_timestamp(order.order_time),
-                                    gps.get_timestamp(finish_time), vehicle.gps_id)[0]
+                                    gps.get_timestamp(finish_time), vehicle.gps.gps_id)[0]
         pc_message = redis_instance().hget(str(order.chat_id_client), "client_msg")
         pd_message = redis_instance().hget(str(order.driver.chat_id), "driver_msg")
         if timezone.localtime() > finish_time or distance < route:
@@ -861,8 +869,10 @@ def get_driver_reshuffles(self, partner, delta=0):
                 reshuffle = DriverReshuffle.objects.filter(calendar_event_id=calendar_event_id)
                 reshuffle.update(**obj_data) if reshuffle else DriverReshuffle.objects.create(**obj_data)
             if delta:
-                deleted_reshuffles = DriverReshuffle.objects.exclude(calendar_event_id__in=list_events)
-                for reshuffle in deleted_reshuffles.filter(swap_time__date=day.date()):
+                deleted_reshuffles = DriverReshuffle.objects.filter(
+                    partner=partner,
+                    swap_time__date=day.date()).exclude(calendar_event_id__in=list_events)
+                for reshuffle in deleted_reshuffles:
                     reshuffle.delete()
         except socket.timeout:
             self.retry(args=[partner, delta], countdown=600)
@@ -976,19 +986,19 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
-    sender.add_periodic_task(crontab(minute="0", hour="2"), update_driver_data.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="*/3"), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
     # repeat
     sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute="10", hour='*/4'), get_today_rent.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))
-    sender.add_periodic_task(crontab(minute="2", hour='*/4'), get_driver_reshuffles.s(partner_id))
+    sender.add_periodic_task(crontab(minute="2", hour='*/2'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute='20', hour='4'), check_orders_for_vehicle.s(partner_id))
-    sender.add_periodic_task(crontab(minute="0", hour='*/4'), get_today_orders.s(partner_id))
-    sender.add_periodic_task(crontab(minute="5", hour='*/4'), send_notify_to_check_car.s(partner_id))
-    sender.add_periodic_task(crontab(minute="5", hour='*/4'), check_card_cash_value.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour='*/2'), get_today_orders.s(partner_id))
+    sender.add_periodic_task(crontab(minute="5", hour='*/2'), send_notify_to_check_car.s(partner_id))
+    sender.add_periodic_task(crontab(minute="5", hour='*/2'), check_card_cash_value.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
