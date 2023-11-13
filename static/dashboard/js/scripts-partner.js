@@ -723,6 +723,7 @@ $(document).ready(function () {
 		$('#datePicker').hide()
 		$('.driver-container').hide()
 		$('#sidebar').removeClass('sidebar-responsive');
+		$('.main-title h2').text('Автомобілі');
 	});
 
 	$('#DriverBtnContainer').click(function () {
@@ -736,6 +737,7 @@ $(document).ready(function () {
 		if (window.innerWidth <= 900) {
 			$('.driver-container').css('display', 'block');
 		}
+		$('.main-title h2').text('Водії');
 	});
 
 	const resetButton = $("#reset-button");

@@ -273,17 +273,17 @@
       <div class="car-item">
         <div class="car-image">
           <img src="{% static 'app/images/index-one-block-2.webp' %}" alt="Зображення авто">
+          <p>{{ car.licence_plate }}</p>
         </div>
         <div class="car-details">
-          <p>{% trans 'Номер авто:' %}<br>{{ car.licence_plate }}</p>
-          <p>{% trans 'Заробіток:' %}<br>₴ {{ car.kasa }}</p>
-          <p>{% trans 'Витрати:' %}<br>₴ {{ car.spending }}</p>
+          <p>{% trans 'Заробіток:' %}<br><span>₴ {{ car.kasa }}</span></p>
+          <p>{% trans 'Витрати:' %}<br><span>₴ {{ car.spending }}</span></p>
           <div class="progress-bar">
             <div class="progress" style="width: {{ car.progress_percentage }}%; max-width: 100%">
               <div class="progress-label" style="color: #0a0a0a">{{ car.progress_percentage }}%</div>
             </div>
           </div>
-          <p>{% trans 'Вартість авто:' %}<br>₴ {{ car.price }}</p>
+          <p>{% trans 'Вартість авто:' %}<br><span>₴ {{ car.price }}</span></p>
         </div>
       </div>
     </div>
