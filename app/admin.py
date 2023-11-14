@@ -1131,7 +1131,6 @@ class Fleets_drivers_vehicles_rateAdmin(filter_queryset_by_group('Partner', fiel
     list_filter = (FleetRelatedFilter,)
     readonly_fields = ('fleet', 'driver_external_id')
     list_per_page = 25
-    raw_id_fields = ['driver', 'partner']
     list_select_related = ['driver', 'partner']
 
     def get_list_display(self, request):
