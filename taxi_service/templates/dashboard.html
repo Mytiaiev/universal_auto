@@ -114,9 +114,11 @@
       <!-- Модальне вікно -->
       <div id="loadingModal" class="modal">
         <div class="modal-content">
-          <p id="loadingMessage">{% trans 'Зачекайте, будь ласка, поки оновлюється база даних...' %}</p>
-          <div id="loader" class="loader"></div>
-          <div id="checkmark" class="checkmark"></div>
+            <div class="loading-content">
+              <p id="loadingMessage">{% trans 'Зачекайте, будь ласка, поки оновлюється база даних...' %}</p>
+              <div id="loader" class="loader"></div>
+              <div id="checkmark" class="checkmark"></div>
+            </div>
         </div>
       </div>
       {% endif %}

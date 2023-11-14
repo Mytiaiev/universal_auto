@@ -1051,17 +1051,32 @@ select:focus {
 }
 
 .modal-content {
-  background-color: #38423B;
-  margin: 10% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  border-radius: 25px;
-  width: 50%;
+  background-color: #A1E8B9;
+	margin: 10% auto;
+	padding: 50px;
+	border: 1px solid #888;
+	border-radius: 62px;
+	width: 50%;
+}
+
+.loading-content {
+    background-color: white;
+    border-radius: 62px;
+}
+
+.loading-content p {
+	text-align: center;
+	color: #141E17;
+	font-size: 23px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: normal;
+	margin: 0;
 }
 
 .checkmark {
   width: 40px;
-  height: 40px;
+  height: 100px;
   position: relative;
   display: none;
 }
@@ -1080,12 +1095,12 @@ select:focus {
 
 .loader {
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 2s linear infinite;
-  margin: 0 auto;
+	border-top: 4px solid grey;
+	border-radius: 50%;
+	width: 40px;
+	height: 40px;
+	animation: spin 2s linear infinite;
+	margin: 0px auto;
 }
 
 @keyframes spin {
