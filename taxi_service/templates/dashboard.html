@@ -250,12 +250,12 @@
       <div class="charts-card">
         <h2 class="chart-title">{% trans 'Дохід' %}</h2>
         <div class="noDataMessage1" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
-        <div id="investor-bar-chart"></div>
+        <div id="investor-bar-chart" style="width: 100%; height: 600px;"></div>
       </div>
       <div class="charts-card">
         <h2 class="chart-title">{% trans 'Пробіг автомобіля' %}</h2>
         <div class="noDataMessage2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
-        <div id="investor-area-chart"></div>
+        <div id="investor-area-chart" style="width: 100%; height: 600px;"></div>
       </div>
       {% else %}
       <div class="charts-card">
@@ -266,7 +266,7 @@
       <div class="charts-card">
         <h2 class="chart-title">{% trans 'Ефективність автомобіля' %}</h2>
         <div class="noDataMessage2" style="display: none;">{% trans "За обраний період відсутні дані." %}</div>
-        <div id="area-chart"></div>
+        <div id="area-chart" style="width: 100%; height: 600px;"></div>
       </div>
       {% endif %}
     </div>

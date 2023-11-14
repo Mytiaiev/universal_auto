@@ -605,16 +605,25 @@ $(document).ready(function () {
 						},
 						success: function (response) {
 							if (response.data === true) {
-								$("#loadingMessage").text(gettext("База даних оновлено"));
+								$("#loadingMessage").text(gettext("Базу даних оновлено"));
 								$("#loader").css("display", "none");
 								$("#checkmark").css("display", "block");
 
 								setTimeout(function () {
 									$("#loadingModal").css("display", "none");
-									window.location.reload();
 								}, 3000);
 								clearInterval(interval);
-							}
+							};
+							if (response.data === false) {
+								$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше"));
+								$("#loader").css("display", "none");
+								$("#checkmark").css("display", "none");
+
+								setTimeout(function () {
+									$("#loadingModal").css("display", "none");
+								}, 3000);
+								clearInterval(interval);
+							};
 						}
 					});
 				}, 5000);
