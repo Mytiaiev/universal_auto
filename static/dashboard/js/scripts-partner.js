@@ -143,9 +143,6 @@ let areaChartOptions = {
 	series: [{
 		name: "",
 		data: [''],
-	}, {
-		name: "",
-		data: [''],
 	}],
 	chart: {
 		type: "area",
@@ -208,52 +205,6 @@ let areaChartOptions = {
 	stroke: {
 		curve: "smooth",
 	},
-	xAxis: {
-		axisBorder: {
-			color: "#55596e",
-			show: true,
-		},
-		axisTicks: {
-			color: "#55596e",
-			show: true,
-		},
-		labels: {
-			offsetY: 5,
-			style: {
-				colors: "#f5f7ff",
-			},
-		},
-	},
-	yAxis:
-		[
-			{
-				title: {
-					text: gettext("пробіг км"),
-					style: {
-						color: "#f5f7ff",
-					},
-				},
-				labels: {
-					style: {
-						colors: ["#f5f7ff"],
-					},
-				},
-			},
-			{
-				opposite: true,
-				title: {
-					text: gettext("пробіг км"),
-					style: {
-						color: "#f5f7ff",
-					},
-				},
-				labels: {
-					style: {
-						colors: ["#f5f7ff"],
-					},
-				},
-			},
-		],
 	tooltip: {
 		shared: true,
 		intersect: false,
@@ -322,46 +273,23 @@ function fetchCarEfficiencyData(period, start, end) {
 		type: 'GET',
 		dataType: 'json',
 		success: function (data) {
-			let totalAmount = data['kasa'];
-			let mileage = data['total_mileage'];
-			let efficiency;
-			if (mileage !== 0) {
-				efficiency = parseFloat(totalAmount / mileage).toFixed(2);
-			} else {
-				efficiency = 0
-			}
-			;
-
-			if (data['efficiency'].length !== 0) {
+			if (data['dates'].length !== 0) {
 				$(".noDataMessage2").hide();
 				$('#area-chart').show();
-				const seriesData = [];
-				const dates = [];
-				data.efficiency.forEach(dateData => {
-					const date = dateData.report_from;
-					const vehicleName = dateData.licence_plate;;
-					const efficiencyValue = dateData.efficiency;
-						let series = seriesData.find(series => series.name === vehicleName);
-						if (!series) {
-							series = {
-								name: vehicleName,
-								data: [],
-							};
-							seriesData.push(series);
-						}
-						series.data.push(efficiencyValue);
-						dates.push(date);
-					});
+				let seriesData = data["vehicles"].map(item =>({
+                    name: item.name,
+                    data: item.efficiency
+                }));
 				areaChartOptions.series = seriesData;
-				areaChartOptions.labels = dates;
+				areaChartOptions.labels = data['dates'];
 				areaChart.updateOptions(areaChartOptions);
 			} else {
 				$(".noDataMessage2").show();
 				$('#area-chart').hide();
 			}
 			;
-			$('.weekly-income-amount').text(totalAmount + ' ' + gettext('грн'));
-			$('.income-efficiency').text(efficiency + ' ' + gettext('грн/км'));
+			$('.weekly-income-amount').text(data["kasa"] + ' ' + gettext('грн'));
+			$('.income-efficiency').text(data["average_efficiency"].toFixed(2) + ' ' + gettext('грн/км'));
 		},
 		error: function (error) {
 			console.error(error);
@@ -622,13 +550,21 @@ $(document).ready(function () {
 								$("#loadingMessage").text(gettext("База даних оновлено"));
 								$("#loader").css("display", "none");
 								$("#checkmark").css("display", "block");
-
 								setTimeout(function () {
 									$("#loadingModal").css("display", "none");
 									window.location.reload();
 								}, 3000);
 								clearInterval(interval);
+							} if (response.data === false) {
+							    $("#loadingMessage").text(gettext("Сталася помилка, спробуйте ще раз"));
+							    $("#loader").css("display", "none");
+							    setTimeout(function () {
+									$("#loadingModal").css("display", "none");
+									window.location.reload();
+								}, 3000);
+								clearInterval(interval);
 							}
+
 						}
 					});
 				}, 5000);

@@ -1,8 +1,5 @@
-from auto.drivers import Bolt
+from app.uagps_sync import UaGpsSynchronizer
 
 
 def run():
-    b = Bolt(driver=True, sleep=5, headless=True)
-    b.login()
-    b.download_payments_order()
-    b.save_report()
+    UaGpsSynchronizer.objects.create(name="Gps")

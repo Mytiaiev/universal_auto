@@ -1,3 +1,4 @@
+import json
 import os
 import socket
 from datetime import datetime, timedelta, time
@@ -16,8 +17,8 @@ from telegram.error import BadRequest
 
 from app.models import RawGPS, Vehicle, Order, Driver, JobApplication, ParkSettings, UseOfCars, CarEfficiency, \
     Payments, SummaryReport, Manager, Partner, DriverEfficiency, FleetOrder, ReportTelegramPayments, \
-    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, CredentialPartner, \
-    PaymentTypes, DriverEffVehicleKasa
+    TransactionsConversation, VehicleSpending, DriverReshuffle, DriverPayments, SalaryCalculation, \
+    PaymentTypes, DriverEffVehicleKasa, Fleet
 from django.db.models import Sum, IntegerField, FloatField, Q, DecimalField
 from django.db.models.functions import Cast, Coalesce
 from auto_bot.handlers.driver_manager.utils import get_daily_report, get_efficiency, generate_message_report, \
@@ -36,33 +37,15 @@ from scripts.conversion import convertion, haversine, get_location_from_db
 from auto.celery import app
 from scripts.google_calendar import GoogleCalendar
 from scripts.redis_conn import redis_instance
-from selenium_ninja.bolt_sync import BoltRequest
-from selenium_ninja.driver import SeleniumTools
+from app.bolt_sync import BoltRequest
 from selenium_ninja.synchronizer import AuthenticationError
-from selenium_ninja.uagps_sync import UaGpsSynchronizer
-from selenium_ninja.uber_sync import UberRequest
-from selenium_ninja.uklon_sync import UklonRequest
+from app.uagps_sync import UaGpsSynchronizer
+from app.uber_sync import UberRequest
+from app.uklon_sync import UklonRequest
 from scripts.nbu_conversion import convert_to_currency
 from taxi_service.utils import login_in
 
 logger = get_task_logger(__name__)
-
-fleets = {
-    "BOLT_PASSWORD": BoltRequest,
-    "UKLON_PASSWORD": UklonRequest,
-    "UBER_PASSWORD": UberRequest,
-}
-
-
-def check_available_fleets(partner_pk):
-    settings = CredentialPartner.objects.filter(
-        Q(key="BOLT_PASSWORD") |
-        Q(key="UKLON_PASSWORD") |
-        Q(key="UBER_PASSWORD") |
-        Q(key="UAGPS_TOKEN"),
-        partner=partner_pk
-    ).order_by("-key")
-    return settings
 
 
 def get_day_for_task(day=None):
@@ -87,7 +70,7 @@ def raw_gps_handler(pk):
 
     try:
         date_time = timezone.datetime.strptime(data[0] + data[1], '%d%m%y%H%M%S')
-        date_time = timezone.make_aware(date_time, timezone.get_current_timezone())
+        date_time = timezone.make_aware(date_time)
     except ValueError as err:
         return f'Error converting date and time: {err}'
     updated = Vehicle.objects.filter(gps_imei=raw.imei).update(lat=lat, lon=lon, coord_time=date_time)
@@ -113,70 +96,32 @@ def auto_send_task_bot(self):
 
 
 @app.task(bind=True, queue='beat_tasks')
-def get_uber_session(self, partner_pk, login=None, password=None):
+def get_session(self, partner_pk, aggregator='Uber', login=None, password=None):
+    fleet = Fleet.objects.get(name=aggregator, partner=None)
     try:
-        chrome = SeleniumTools(partner_pk)
-        chrome.uber_login(login=login, password=password)
-        success = login_in(action='uber', user_id=partner_pk, login_name=login, password=password)
-    except Exception as e:
-        success = False
-        logger.error(e)
-
-    return partner_pk, success
-
-
-@app.task(bind=True, queue='beat_tasks')
-def get_bolt_session(self, partner_pk, login=None, password=None):
-    try:
-        BoltRequest(partner_pk).get_login_token(login=login, password=password)
-        success = login_in(action='bolt', user_id=partner_pk, login_name=login, password=password)
+        token = fleet.create_session(partner_pk, login=login, password=password)
+        success = login_in(aggregator=aggregator, partner_id=partner_pk,
+                           login_name=login, password=password, token=token)
     except AuthenticationError as e:
         logger.error(e)
         success = False
-    return partner_pk, success
-
-
-@app.task(bind=True, queue='beat_tasks')
-def get_uklon_session(self, partner_pk, login=None, password=None):
-    try:
-        UklonRequest(partner_pk).create_session(login=login, password=password)
-        success = login_in(action='uklon', user_id=partner_pk, login_name=login, password=password)
-    except AuthenticationError as e:
-        success = False
-        logger.error(e)
-
-    return partner_pk, success
-
-
-@app.task(bind=True, queue='beat_tasks')
-def get_gps_session(self, partner_pk, login=None, password=None):
-    try:
-        chrome = SeleniumTools(partner_pk)
-        token = chrome.gps_login(login=login, password=password)
-        success = login_in(action='gps', user_id=partner_pk, login_name=login, password=password, token=token)
-    except Exception as e:
-        success = False
-        logger.error(e)
-
     return partner_pk, success
 
 
 @app.task(bind=True, queue='beat_tasks')
 def get_orders_from_fleets(self, partner_pk, day=None):
-    settings = check_available_fleets(partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
     day = get_day_for_task(day)
     drivers = Driver.objects.filter(partner=partner_pk)
-    for setting in settings:
-        request_class = fleets.get(setting.key)
-        if request_class:
-            if isinstance(request_class(partner_pk), UberRequest):
-                try:
-                    request_class(partner_pk).get_fleet_orders(day)
-                except Exception as e:
-                    logger.error(e)
-            else:
-                for driver in drivers:
-                    request_class(partner_pk).get_fleet_orders(day, driver.pk)
+    for fleet in fleets:
+        if isinstance(fleet, UberRequest):
+            try:
+                fleet.get_fleet_orders(day)
+            except Exception as e:
+                logger.error(e)
+        else:
+            for driver in drivers:
+                fleet.get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -196,19 +141,18 @@ def check_orders_for_vehicle(self, partner_pk):
 
 @app.task(bind=True, queue='beat_tasks')
 def get_today_orders(self, partner_pk):
-    settings = check_available_fleets(partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name__in=('Gps', 'Uber'))
     day = timezone.localtime() - timedelta(minutes=5)
     drivers = Driver.objects.filter(partner=partner_pk)
-    for setting in settings:
-        request_class = fleets.get(setting.key)
-        if request_class and not isinstance(request_class(partner_pk), UberRequest):
-            for driver in drivers:
-                request_class(partner_pk).get_fleet_orders(day, driver.pk)
+    for fleet in fleets:
+        for driver in drivers:
+            fleet.get_fleet_orders(day, driver.pk)
 
 
 @app.task(bind=True, queue='beat_tasks')
 def check_card_cash_value(self, partner_pk):
     orders = FleetOrder.objects.filter(accepted_time__date=timezone.localtime().date(),
+                                       state=FleetOrder.COMPLETED,
                                        partner=partner_pk)
     kasa_qs = orders.values('driver').annotate(kasa=Sum('price'))
     for driver in kasa_qs:
@@ -230,7 +174,7 @@ def check_card_cash_value(self, partner_pk):
                 enable = 'false'
             bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"),
                              text=f"Готівка {enable} у {driver_obj}")
-            # fleets_cash_trips.delay(partner_pk, driver, enable)
+            fleets_cash_trips.delay(partner_pk, driver_obj.pk, enable)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -255,12 +199,9 @@ def send_notify_to_check_car(self, partner_pk):
 @app.task(bind=True, queue='beat_tasks')
 def download_daily_report(self, partner_pk, day=None):
     day = get_day_for_task(day)
-    settings = check_available_fleets(partner_pk)
-    for setting in settings:
-        request_class = fleets.get(setting.key)
-        if request_class:
-            request_class(partner_pk).save_report(day)
-    save_report_to_ninja_payment(day, partner_pk)
+    fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
+    for fleet in fleets:
+        fleet.save_report(day)
     fleet_reports = Payments.objects.filter(report_from=day, partner=partner_pk)
     for driver in Driver.objects.filter(partner=partner_pk):
         payments = [r for r in fleet_reports if r.driver_id == driver.get_driver_external_id(r.vendor_name)]
@@ -281,49 +222,6 @@ def download_daily_report(self, partner_pk, day=None):
                 report.save()
 
 
-# @app.task(bind=True, queue='beat_tasks')
-# def calculate_vehicle_earnings(self, partner_pk):
-#     end = timezone.localtime().date() - timedelta(days=timezone.localtime().weekday() + 1)
-#     start = end - timedelta(days=6)
-#     for vehicle in Vehicle.objects.filter(partner=partner_pk):
-#         earnings = 0
-#         week = []
-#         reports = SummaryReport.objects.filter(report_from__range=(start, end),
-#                                                vehicle=vehicle)
-#
-#         vehicle_spending = VehicleSpending.objects.filter(vehicle=vehicle,
-#                                                           created_at__range=(start, end)).aggregate(
-#             Sum('amount'))['amount__sum'] or 0
-#         for report in reports:
-#             if report.driver.salary_calculation == SalaryCalculation.WEEK:
-#                 week.append(report)
-#                 continue
-#             else:
-#                 driver_payments = DriverPayments.objects.filter(report_to=report.report_from,
-#                                                                 driver=report.driver).first()
-#                 if driver_payments:
-#                     earnings -= driver_payments.salary + driver_payments.cash
-#             if vehicle.investor_car:
-#                 earnings += report.total_amount_without_fee * (1 - vehicle.investor_percentage)
-#             else:
-#                 earnings += report.total_amount_without_fee
-#
-#         for driver_report in week:
-#             driver_salary = 0
-#             driver_payments = DriverPayments.objects.filter(report_to=end,
-#                                                             driver=driver_report.driver.id).first()
-#             if driver_payments:
-#                 rate = (driver_payments.salary + driver_payments.cash)/driver_payments.kasa
-#                 driver_salary = driver_report.total_amount_without_fee * rate
-#                 print(driver_salary)
-#             if vehicle.investor_car:
-#                 earnings += driver_report.total_amount_without_fee * (1 - vehicle.investor_percentage) - driver_salary
-#             else:
-#                 earnings += driver_report.total_amount_without_fee - driver_salary
-#         print(vehicle)
-#         print(earnings - vehicle_spending)
-
-
 @app.task(bind=True, queue='beat_tasks')
 def get_car_efficiency(self, partner_pk, day=None):
     day = get_day_for_task(day)
@@ -331,33 +229,38 @@ def get_car_efficiency(self, partner_pk, day=None):
         efficiency = CarEfficiency.objects.filter(report_from=day,
                                                   partner=partner_pk,
                                                   vehicle=vehicle)
+        if efficiency:
+            continue
         vehicle_drivers = {}
         total_spending = VehicleSpending.objects.filter(
             vehicle=vehicle, created_at__date=day).aggregate(Sum('amount'))['amount__sum'] or 0
         reshuffles = DriverReshuffle.objects.filter(swap_time__date=day, swap_vehicle=vehicle)
         drivers = [reshuffle.driver_start for reshuffle in reshuffles] if reshuffles \
             else Driver.objects.filter(vehicle=vehicle)
-        if not efficiency:
-            total_kasa = 0
-            total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
-            if total_km:
-                for driver in drivers:
-                    report = SummaryReport.objects.filter(report_from=day,
-                                                          driver=driver).first()
-                    if report:
-                        vehicle_drivers[driver] = report.total_amount_without_fee
-                        total_kasa += report.total_amount_without_fee
-            result = max(
-                Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
-            car = CarEfficiency.objects.create(report_from=day,
-                                               vehicle=vehicle,
-                                               total_kasa=total_kasa,
-                                               total_spending=total_spending,
-                                               mileage=total_km,
-                                               efficiency=result,
-                                               partner=Partner.get_partner(partner_pk))
-            for driver, kasa in vehicle_drivers.items():
-                DriverEffVehicleKasa.objects.create(driver=driver, efficiency_car=car, kasa=kasa)
+        total_kasa = 0
+        try:
+            total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps.gps_id, day)
+        except AttributeError as e:
+            logger.error(e)
+            continue
+        for driver in drivers:
+            report = SummaryReport.objects.filter(
+                report_from=day,
+                driver=driver).aggregate(
+                clean_amount=Coalesce(Sum('total_amount_without_fee'), Decimal(0)))['clean_amount']
+            vehicle_drivers[driver] = report
+            total_kasa += report
+        result = max(
+            Decimal(total_kasa) - Decimal(total_spending), Decimal(0)) / Decimal(total_km) if total_km else 0
+        car = CarEfficiency.objects.create(report_from=day,
+                                           vehicle=vehicle,
+                                           total_kasa=total_kasa,
+                                           total_spending=total_spending,
+                                           mileage=total_km,
+                                           efficiency=result,
+                                           partner=Partner.get_partner(partner_pk))
+        for driver, kasa in vehicle_drivers.items():
+            DriverEffVehicleKasa.objects.create(driver=driver, efficiency_car=car, kasa=kasa)
 
 
 @app.task(bind=True, queue='beat_tasks')
@@ -374,14 +277,19 @@ def get_driver_efficiency(self, partner_pk, day=None):
             avg_price = 0
             total_km = 0
             for vehicle, reshuffles in vehicles.items():
-                if reshuffles:
-                    for reshuffle in reshuffles:
-                        driver_vehicles.append(reshuffle.swap_vehicle)
-                        total_km += UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day, reshuffle)
-                elif vehicle:
-                    driver_vehicles.append(vehicle)
-                    total_km = UaGpsSynchronizer(partner_pk).total_per_day(vehicle.gps_id, day)
-                else:
+                try:
+                    if reshuffles:
+                        for reshuffle in reshuffles:
+                            driver_vehicles.append(reshuffle.swap_vehicle)
+                            total_km += UaGpsSynchronizer.objects.get(
+                                partner=partner_pk).total_per_day(reshuffle.swap_vehicle.gps.gps_id, day, reshuffle)
+                    elif vehicle:
+                        driver_vehicles.append(vehicle)
+                        total_km = UaGpsSynchronizer.objects.get(partner=partner_pk).total_per_day(vehicle.gps.gps_id, day)
+                    else:
+                        continue
+                except AttributeError as e:
+                    logger.error(e)
                     continue
             if driver_vehicles:
                 report = SummaryReport.objects.filter(report_from=day, driver=driver).first()
@@ -429,14 +337,12 @@ def update_driver_status(self, partner_pk):
     try:
         status_online = set()
         status_with_client = set()
-        settings = check_available_fleets(partner_pk)
-        for setting in settings:
-            update_class = fleets.get(setting.key)
-            if update_class:
-                statuses = update_class(partner_pk).get_drivers_status()
-                logger.info(f"{update_class.__name__} {statuses}")
-                status_online = status_online.union(set(statuses['wait']))
-                status_with_client = status_with_client.union(set(statuses['with_client']))
+        fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
+        for fleet in fleets:
+            statuses = fleet.get_drivers_status()
+            logger.info(f"{fleet} {statuses}")
+            status_online = status_online.union(set(statuses['wait']))
+            status_with_client = status_with_client.union(set(statuses['with_client']))
         drivers = Driver.objects.filter(partner=partner_pk)
         for driver in drivers:
             active_order = Order.objects.filter(driver=driver, status_order=Order.IN_PROGRESS)
@@ -471,14 +377,9 @@ def update_driver_data(self, partner_pk, manager_id=None):
     try:
         drivers = Driver.objects.filter(partner=partner_pk)
         drivers.update(worked=False)
-        settings = check_available_fleets(partner_pk)
-        synchronize_classes = fleets.copy()
-        gps_class = {"UAGPS_TOKEN": UaGpsSynchronizer}
-        synchronize_classes.update(gps_class)
-        for setting in settings:
-            synchronization_class = synchronize_classes.get(setting.key)
-            if synchronization_class:
-                synchronization_class(partner_pk).synchronize()
+        fleets = Fleet.objects.filter(partner=partner_pk)
+        for synchronization_class in fleets:
+            synchronization_class.synchronize()
         success = True
     except Exception as e:
         logger.error(e)
@@ -490,8 +391,8 @@ def update_driver_data(self, partner_pk, manager_id=None):
 def send_on_job_application_on_driver(self, job_id):
     try:
         candidate = JobApplication.objects.get(id=job_id)
-        SeleniumTools().add_driver(candidate)
-        BoltRequest().add_driver(candidate)
+        UklonRequest.add_driver(candidate)
+        BoltRequest.add_driver(candidate)
         logger.info('The job application has been sent')
     except Exception as e:
         logger.error(e)
@@ -500,7 +401,8 @@ def send_on_job_application_on_driver(self, job_id):
 @app.task(bind=True, queue='bot_tasks')
 def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
     try:
-        UklonRequest(partner_pk).detaching_the_driver_from_the_car(licence_plate)
+        fleet = UklonRequest.objects.get(partner=partner_pk)
+        fleet.detaching_the_driver_from_the_car(licence_plate)
         logger.info(f'Car {licence_plate} was detached')
     except Exception as e:
         logger.error(e)
@@ -509,7 +411,8 @@ def detaching_the_driver_from_the_car(self, partner_pk, licence_plate):
 @app.task(bind=True, queue='beat_tasks')
 def get_rent_information(self, partner_pk, delta=1):
     try:
-        UaGpsSynchronizer(partner_pk).save_daily_rent(delta)
+        gps = UaGpsSynchronizer.objects.get(partner=partner_pk)
+        gps.save_daily_rent(delta)
         logger.info('write rent report')
     except Exception as e:
         logger.error(e)
@@ -518,7 +421,8 @@ def get_rent_information(self, partner_pk, delta=1):
 @app.task(bind=True, queue='beat_tasks')
 def get_today_rent(self, partner_pk):
     try:
-        UaGpsSynchronizer(partner_pk).check_today_rent()
+        gps = UaGpsSynchronizer.objects.get(partner=partner_pk)
+        gps.check_today_rent()
     except Exception as e:
         logger.error(e)
 
@@ -526,10 +430,14 @@ def get_today_rent(self, partner_pk):
 @app.task(bind=True, queue='bot_tasks')
 def fleets_cash_trips(self, partner_pk, pk, enable):
     try:
-        UklonRequest(partner_pk).disable_cash(pk, enable)
-        logger.info('disable_uklon_cash')
-        BoltRequest(partner_pk).cash_restriction(pk, enable)
-        logger.info('disable_bolt_cash')
+        driver = Driver.objects.get(pk=pk)
+        fleets = Fleet.objects.filter(partner=partner_pk).exclude(name='Gps')
+        for fleet in fleets:
+            driver_id = driver.get_driver_external_id(fleet.name)
+            if driver_id:
+                fleet.disable_cash(driver_id, enable)
+        message = f"Cash enabled for {driver}" if enable == 'true' else f"Cash disabled for {driver}"
+        logger.info(message)
     except Exception as e:
         logger.error(e)
 
@@ -537,7 +445,8 @@ def fleets_cash_trips(self, partner_pk, pk, enable):
 @app.task(bind=True, queue='beat_tasks')
 def withdraw_uklon(self, partner_pk):
     try:
-        UklonRequest(partner_pk).withdraw_money()
+        fleet = UklonRequest.objects.get(partner=partner_pk)
+        fleet.withdraw_money()
     except Exception as e:
         logger.error(e)
 
@@ -652,9 +561,9 @@ def check_personal_orders(self):
         notify_min = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_MIN'))
         notify_km = int(ParkSettings.get_value('PERSONAL_CLIENT_NOTIFY_KM'))
         vehicle = check_vehicle(order.driver)[0]
-        gps = UaGpsSynchronizer(order.driver.partner)
+        gps = UaGpsSynchronizer.objects.get(partner=order.driver.partner)
         route = gps.generate_report(gps.get_timestamp(order.order_time),
-                                    gps.get_timestamp(finish_time), vehicle.gps_id)[0]
+                                    gps.get_timestamp(finish_time), vehicle.gps.gps_id)[0]
         pc_message = redis_instance().hget(str(order.chat_id_client), "client_msg")
         pd_message = redis_instance().hget(str(order.driver.chat_id), "driver_msg")
         if timezone.localtime() > finish_time or distance < route:
@@ -901,7 +810,8 @@ def get_distance_trip(self, order, start_trip_with_client, end, gps_id):
     delta = format_end - start
     try:
         instance = Order.objects.filter(pk=order).first()
-        result = UaGpsSynchronizer(instance.driver.partner).generate_report(start_trip_with_client, end, gps_id)
+        result = UaGpsSynchronizer.objects.get(
+            partner=instance.driver.partner).generate_report(start_trip_with_client, end, gps_id)
         minutes = delta.total_seconds() // 60
         instance.distance_gps = result[0]
         price_per_minute = (int(ParkSettings.get_value('AVERAGE_DISTANCE_PER_HOUR')) *
@@ -960,8 +870,10 @@ def get_driver_reshuffles(self, partner, delta=0):
                 reshuffle = DriverReshuffle.objects.filter(calendar_event_id=calendar_event_id)
                 reshuffle.update(**obj_data) if reshuffle else DriverReshuffle.objects.create(**obj_data)
             if delta:
-                deleted_reshuffles = DriverReshuffle.objects.exclude(calendar_event_id__in=list_events)
-                for reshuffle in deleted_reshuffles.filter(swap_time__date=day.date()):
+                deleted_reshuffles = DriverReshuffle.objects.filter(
+                    partner=partner,
+                    swap_time__date=day.date()).exclude(calendar_event_id__in=list_events)
+                for reshuffle in deleted_reshuffles:
                     reshuffle.delete()
         except socket.timeout:
             self.retry(args=[partner, delta], countdown=600)
@@ -972,7 +884,7 @@ def save_report_to_ninja_payment(day, partner_pk, fleet_name='Ninja'):
     if reports:
         return reports
 
-    for driver in Driver.objects.exclude(chat_id=''):
+    for driver in Driver.objects.filter(partner=partner_pk).exclude(chat_id=''):
         records = Order.objects.filter(driver__chat_id=driver.chat_id,
                                        status_order=Order.COMPLETED,
                                        created_at__date=day,
@@ -1075,18 +987,19 @@ def setup_periodic_tasks(partner, sender=None):
         sender = current_app
     partner_id = partner.pk
     sender.add_periodic_task(20, update_driver_status.s(partner_id))
-    sender.add_periodic_task(crontab(minute="0", hour="2"), update_driver_data.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour="*/3"), update_driver_data.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="4"), download_daily_report.s(partner_id))
+    # repeat
     sender.add_periodic_task(crontab(minute="0", hour='*/2'), withdraw_uklon.s(partner_id))
     sender.add_periodic_task(crontab(minute="40", hour='4'), get_rent_information.s(partner_id))
     sender.add_periodic_task(crontab(minute="10", hour='*/4'), get_today_rent.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour='1'), get_driver_reshuffles.s(partner_id, delta=1))
-    sender.add_periodic_task(crontab(minute="2", hour='*/4'), get_driver_reshuffles.s(partner_id))
+    sender.add_periodic_task(crontab(minute="2", hour='*/2'), get_driver_reshuffles.s(partner_id))
     sender.add_periodic_task(crontab(minute="15", hour='4'), get_orders_from_fleets.s(partner_id))
     sender.add_periodic_task(crontab(minute='20', hour='4'), check_orders_for_vehicle.s(partner_id))
-    sender.add_periodic_task(crontab(minute="0", hour='*/4'), get_today_orders.s(partner_id))
-    sender.add_periodic_task(crontab(minute="5", hour='*/4'), send_notify_to_check_car.s(partner_id))
-    sender.add_periodic_task(crontab(minute="5", hour='*/4'), check_card_cash_value.s(partner_id))
+    sender.add_periodic_task(crontab(minute="0", hour='*/2'), get_today_orders.s(partner_id))
+    sender.add_periodic_task(crontab(minute="5", hour='*/2'), send_notify_to_check_car.s(partner_id))
+    sender.add_periodic_task(crontab(minute="5", hour='*/2'), check_card_cash_value.s(partner_id))
     sender.add_periodic_task(crontab(minute="2", hour="9"), send_driver_efficiency.s(partner_id))
     sender.add_periodic_task(crontab(minute="0", hour="9"), send_efficiency_report.s(partner_id))
     sender.add_periodic_task(crontab(minute="30", hour="7"), get_car_efficiency.s(partner_id))
@@ -1102,7 +1015,7 @@ def setup_periodic_tasks(partner, sender=None):
     # sender.add_periodic_task(crontab(minute="55", hour="11", day_of_week="1"),
     # manager_paid_weekly.s(partner_id))
     sender.add_periodic_task(crontab(minute="55", hour="9", day_of_week="1"),
-                             get_uber_session.s(partner_id))
+                             get_session.s(partner_id))
 
 
 def remove_periodic_tasks(partner, sender=None):
