@@ -256,6 +256,7 @@ class Investor(models.Model):
 class GPSNumber(models.Model):
     name = models.CharField(max_length=255, verbose_name='Назва')
     gps_id = models.IntegerField(default=0)
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
 
     def __str__(self) -> str:
         return f'{self.name}'

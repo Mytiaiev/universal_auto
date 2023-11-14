@@ -550,15 +550,21 @@ $(document).ready(function () {
 								$("#loadingMessage").text(gettext("База даних оновлено"));
 								$("#loader").css("display", "none");
 								$("#checkmark").css("display", "block");
-							} else {
-							    $("#loadingMessage").text(gettext("Сталася помилка, спробуйте ще раз"));
-							    $("#loader").css("display", "none");
-							}
-							setTimeout(function () {
+								setTimeout(function () {
 									$("#loadingModal").css("display", "none");
 									window.location.reload();
 								}, 3000);
 								clearInterval(interval);
+							} if (response.data === false) {
+							    $("#loadingMessage").text(gettext("Сталася помилка, спробуйте ще раз"));
+							    $("#loader").css("display", "none");
+							    setTimeout(function () {
+									$("#loadingModal").css("display", "none");
+									window.location.reload();
+								}, 3000);
+								clearInterval(interval);
+							}
+
 						}
 					});
 				}, 5000);

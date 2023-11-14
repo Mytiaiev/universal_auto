@@ -178,7 +178,7 @@ class CarsInformationListView(CombinedPermissionsMixin,
                 price=F('purchase_price'),
                 kasa=ExpressionWrapper(Round(Sum('carefficiency__total_kasa') * F('investor_percentage'), 2),
                                        output_field=DecimalField(decimal_places=2, max_digits=10)),
-                spending=Sum('carefficiency__total_spending')
+                spending=Coalesce(Sum('carefficiency__total_spending'), Decimal(0))
             ).annotate(
                 progress_percentage=ExpressionWrapper(
                     Case(
@@ -193,8 +193,8 @@ class CarsInformationListView(CombinedPermissionsMixin,
             queryset = ManagerFilterMixin.get_queryset(self, Vehicle)
             queryset = queryset.values('licence_plate').annotate(
                 price=F('purchase_price'),
-                kasa=Sum('carefficiency__total_kasa'),
-                spending=Sum('carefficiency__total_spending')
+                kasa=Coalesce(Sum('carefficiency__total_kasa'), Decimal(0)),
+                spending=Coalesce(Sum('carefficiency__total_spending'), Decimal(0))
             ).annotate(
                 progress_percentage=ExpressionWrapper(
                     Case(

@@ -730,11 +730,11 @@ class SummaryReportAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
 
 @admin.register(Partner)
 class PartnerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'chat_id', 'contacts')
+    list_display = ('user', 'chat_id', 'gps_url', 'contacts')
     list_per_page = 25
 
     fieldsets = [
-        (None, {'fields': ['user', 'chat_id', 'contacts']}),
+        (None, {'fields': ['user', 'chat_id', 'gps_url', 'contacts']}),
     ]
 
     def save_model(self, request, obj, form, change):
@@ -1041,9 +1041,13 @@ class VehicleAdmin(filter_queryset_by_group('Partner')(admin.ModelAdmin)):
         return fieldsets
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if not request.user.is_superuser:
-            if db_field.name in ('manager', 'investor_car'):
+        if request.user.groups.filter(name='Partner').exists():
+            if db_field.name in ('manager', 'investor_car', 'gps'):
                 kwargs['queryset'] = db_field.related_model.objects.filter(partner__user=request.user)
+        if request.user.groups.filter(name='Manager').exists():
+            manager = Manager.objects.filter(user=request.user)
+            if db_field.name == 'gps':
+                kwargs['queryset'] = db_field.related_model.objects.filter(partner=manager.partner)
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 

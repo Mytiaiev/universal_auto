@@ -53,7 +53,8 @@ class UaGpsSynchronizer(Fleet):
         for vehicle in response.json():
             GPSNumber.objects.get_or_create(gps_id=vehicle['i'],
                                             defaults={
-                                                "name": vehicle['d']['nm']
+                                                "name": vehicle['d']['nm'],
+                                                "partner": self.partner
                                             })
 
     def generate_report(self, start_time, end_time, vehicle_id):
