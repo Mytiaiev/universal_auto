@@ -9,7 +9,12 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
 
-from app.models import Driver, UseOfCars, VehicleGPS, Order, Partner, ParkSettings, CredentialPartner
+from app.bolt_sync import BoltRequest
+from app.models import Driver, UseOfCars, VehicleGPS, Order, Partner, ParkSettings, CredentialPartner, Fleet, \
+    NewUklonService, UberService, UaGpsService, BoltService
+from app.uagps_sync import UaGpsSynchronizer
+from app.uber_sync import UberRequest
+from app.uklon_sync import UklonRequest
 from scripts.redis_conn import get_logger
 
 
@@ -163,42 +168,50 @@ def update_park_set(partner, key, value, description=None, check_value=True, par
             CredentialPartner.objects.create(key=key, value=value, partner=partner)
 
 
-def login_in(action=None, user_id=None, login_name=None, password=None, token=None):
-    if action == 'bolt':
-        update_park_set(user_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
-        update_park_set(user_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
-    elif action == 'uklon':
-        update_park_set(user_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)
-        update_park_set(user_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon', park=False)
-        update_park_set(user_id, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
+def login_in(aggregator=None, partner_id=None, login_name=None, password=None, token=None):
+    if aggregator == 'Bolt':
+        update_park_set(partner_id, 'BOLT_PASSWORD', password, description='Пароль користувача Bolt', park=False)
+        update_park_set(partner_id, 'BOLT_NAME', login_name, description='Ім\'я користувача Bolt', park=False)
+        BoltRequest.objects.create(name=aggregator,
+                                   partner=Partner.get_partner(partner_id))
+    elif aggregator == 'Uklon':
+        update_park_set(partner_id, 'UKLON_PASSWORD', password, description='Пароль користувача Uklon', park=False)
+        update_park_set(partner_id, 'UKLON_NAME', login_name, description='Ім\'я користувача Uklon', park=False)
+        update_park_set(partner_id, 'WITHDRAW_UKLON', '150000', description='Залишок грн на карті водія Uklon')
         hex_length = 16
         random_hex = secrets.token_hex(hex_length)
         update_park_set(
-            user_id, 'CLIENT_ID', random_hex,
+            partner_id, 'CLIENT_ID', random_hex,
             description='Ідентифікатор клієнта Uklon', check_value=False, park=False)
-    elif action == 'uber':
-        update_park_set(user_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber', park=False)
-        update_park_set(user_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
-    elif action == 'gps':
-        update_park_set(user_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
-
+        UklonRequest.objects.create(name=aggregator,
+                                    partner=Partner.get_partner(partner_id))
+    elif aggregator == 'Uber':
+        update_park_set(partner_id, 'UBER_PASSWORD', password, description='Пароль користувача Uber', park=False)
+        update_park_set(partner_id, 'UBER_NAME', login_name, description='Ім\'я користувача Uber', park=False)
+        UberRequest.objects.create(name=aggregator,
+                                   partner=Partner.get_partner(partner_id))
+    elif aggregator == 'Gps':
+        update_park_set(partner_id, 'UAGPS_TOKEN', token, description='Токен для GPS сервісу', park=False)
+        UaGpsSynchronizer.objects.create(name=aggregator,
+                                         partner=Partner.get_partner(partner_id))
     return True
 
 
-def partner_logout(action, user_pk):
-    settings = ParkSettings.objects.filter(partner=Partner.get_partner(user_pk))
-    credentials = CredentialPartner.objects.filter(partner=Partner.get_partner(user_pk))
-    if action == 'uklon_logout':
+def partner_logout(aggregator, partner_pk):
+    settings = ParkSettings.objects.filter(partner=partner_pk)
+    Fleet.objects.filter(name=aggregator, partner=partner_pk).delete()
+    credentials = CredentialPartner.objects.filter(partner=partner_pk)
+    if aggregator == 'Uklon':
         settings.filter(key='WITHDRAW_UKLON').delete()
 
     credential_dict = {
-        'uber_logout': ('UBER_NAME', 'UBER_PASSWORD'),
-        'bolt_logout': ('BOLT_NAME', 'BOLT_PASSWORD'),
-        'uklon_logout': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID'),
-        'gps_logout': ('UAGPS_TOKEN',)
+        'Uber': ('UBER_NAME', 'UBER_PASSWORD'),
+        'Bolt': ('BOLT_NAME', 'BOLT_PASSWORD'),
+        'Uklon': ('UKLON_NAME', 'UKLON_PASSWORD', 'CLIENT_ID'),
+        'Gps': ('UAGPS_TOKEN',)
     }
 
-    credential_action = credential_dict.get(action)
+    credential_action = credential_dict.get(aggregator)
     if credential_action:
         credentials.filter(key__in=credential_action).delete()
     return True
@@ -256,12 +269,13 @@ def send_reset_code(email, user_login):
 
 def check_aggregators(user_pk):
     partner = Partner.objects.get(user_id=user_pk)
+    aggregators = Fleet.objects.filter(partner=partner).values_list('name', flat=True)
 
-    aggregator_results = {
-        'bolt': CredentialPartner.objects.filter(partner=partner, key='BOLT_NAME').exists(),
-        'uklon': CredentialPartner.objects.filter(partner=partner, key='UKLON_NAME').exists(),
-        'uber': CredentialPartner.objects.filter(partner=partner, key='UBER_NAME').exists(),
-        'gps': CredentialPartner.objects.filter(partner=partner, key='UAGPS_TOKEN').exists(),
-    }
-
-    return aggregator_results
+    # aggregator_results = {
+    #     'Bolt': CredentialPartner.objects.filter(partner=partner, key='BOLT_NAME').exists(),
+    #     'Uklon': CredentialPartner.objects.filter(partner=partner, key='UKLON_NAME').exists(),
+    #     'Uber': CredentialPartner.objects.filter(partner=partner, key='UBER_NAME').exists(),
+    #     'Gps': CredentialPartner.objects.filter(partner=partner, key='UAGPS_TOKEN').exists(),
+    # }
+    fleets = Fleet.objects.all().values_list('name', flat=True)
+    return list(aggregators), list(fleets)

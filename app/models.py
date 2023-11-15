@@ -1,14 +1,11 @@
 import os
 import string
 import random
-import csv
-
 import re
 from datetime import datetime, date, time
-import pendulum
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from django.db import models, IntegrityError, ProgrammingError
+from django.db import models, ProgrammingError
 from django.utils.safestring import mark_safe
 from polymorphic.models import PolymorphicModel
 from django.contrib.auth.models import User as AuUser
@@ -59,6 +56,7 @@ class Partner(models.Model):
     role = models.CharField(max_length=25, default=Role.OWNER, choices=Role.choices)
     user = models.OneToOneField(AuUser, on_delete=models.SET_NULL, null=True)
     chat_id = models.CharField(blank=True, null=True, max_length=10, verbose_name='Ідентифікатор чата')
+    gps_url = models.URLField(null=True, verbose_name='Сторінка логіну Gps')
     calendar = models.CharField(max_length=255, verbose_name='Календар змін водіїв')
     contacts = models.BooleanField(default=False, verbose_name='Доступ до контактів')
 
@@ -126,20 +124,7 @@ class UberTrips(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
-class FileNameProcessed(models.Model):
-    filename_weekly = models.CharField(max_length=150, unique=True)
-
-    @staticmethod
-    def save_filename_to_db(processed_files: list):
-        for name in processed_files:
-            order = FileNameProcessed(
-                filename_weekly=name)
-
-            order.save()
-
-
 class User(models.Model):
-
     name = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ім'я")
     second_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Прізвище')
     email = models.EmailField(blank=True, null=True, max_length=254, verbose_name='Електронна пошта')
@@ -268,6 +253,15 @@ class Investor(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 
+class GPSNumber(models.Model):
+    name = models.CharField(max_length=255, verbose_name='Назва')
+    gps_id = models.IntegerField(default=0)
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
+
+    def __str__(self) -> str:
+        return f'{self.name}'
+
+
 class Vehicle(models.Model):
     class Currency(models.TextChoices):
         UAH = 'UAH', 'Гривня',
@@ -278,9 +272,10 @@ class Vehicle(models.Model):
     type = models.CharField(max_length=20, default='Електро', verbose_name='Тип')
     licence_plate = models.CharField(max_length=24, unique=True, verbose_name='Номерний знак', db_index=True)
     registration = models.CharField(null=True, max_length=12, unique=True, verbose_name='Номер документа')
+    purchase_date = models.DateField(null=True, verbose_name='Дата початку роботи')
     vin_code = models.CharField(max_length=17, blank=True)
     chat_id = models.CharField(max_length=15, blank=True, null=True, verbose_name="Група автомобіля телеграм")
-    gps_id = models.IntegerField(default=0)
+    gps = models.ForeignKey(GPSNumber, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Назва авто в Gps")
     gps_imei = models.CharField(max_length=100, blank=True, default='')
     coord_time = models.DateTimeField(null=True, verbose_name="Час отримання координат")
     lat = models.DecimalField(null=True, decimal_places=6, max_digits=10, default=0, verbose_name="Широта")
@@ -392,7 +387,7 @@ class Driver(User):
     WAIT_FOR_CLIENT = 'Очікую клієнта'
     OFFLINE = 'Не працюю'
     RENT = 'Орендую авто'
-
+    photo = models.ImageField(blank=True, null=True, upload_to='drivers', verbose_name='Фото водія')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
     manager = models.ForeignKey(Manager, on_delete=models.SET_NULL, null=True, blank=True,
                                 verbose_name='Менеджер водіїв')
@@ -405,15 +400,6 @@ class Driver(User):
         verbose_name = 'Водія'
         verbose_name_plural = 'Водії'
 
-    @staticmethod
-    def get_default_schema_id():
-        return Schema.get_half_schema_id()
-
-    def save(self, *args, **kwargs):
-        if not self.schema:
-            self.schema_id = self.get_default_schema_id()
-        super().save(*args, **kwargs)
-
     def get_driver_external_id(self, vendor: str):
         try:
             return Fleets_drivers_vehicles_rate.objects.get(fleet__name=vendor, driver=self,
@@ -421,13 +407,6 @@ class Driver(User):
                                                             deleted_at=None).driver_external_id
         except ObjectDoesNotExist:
             return
-
-    def get_kassa(self, vendor: str, week_number: [str, None] = None) -> float:
-        driver_external_id = self.get_driver_external_id(vendor)
-        current_date = pendulum.parse(week_number, tz="Europe/Kiev")
-        qset = Payments.objects.filter(vendor_name=vendor, driver_id=driver_external_id) \
-            .filter(report_from__lte=current_date.end_of('week'), report_to__gte=current_date.start_of('week'))
-        return sum(map(lambda x: x.kassa(), qset))
 
     def __str__(self) -> str:
         return f'{self.name} {self.second_name}'
@@ -444,6 +423,7 @@ class DriverReshuffle(models.Model):
 class RentInformation(models.Model):
     report_from = models.DateField(verbose_name='Дата звіту')
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, verbose_name='Водій')
+    # vehicle
     rent_distance = models.DecimalField(null=True, blank=True, max_digits=6,
                                         decimal_places=2, verbose_name='Орендована дистанція')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
@@ -461,6 +441,7 @@ class Fleet(PolymorphicModel):
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     min_fee = models.DecimalField(decimal_places=2, max_digits=15, default=0)
+    partner = models.ForeignKey(Partner, null=True, on_delete=models.CASCADE, verbose_name='Партнери')
 
     class Meta:
         verbose_name = 'Автопарк'
@@ -468,6 +449,25 @@ class Fleet(PolymorphicModel):
 
     def __str__(self) -> str:
         return f'{self.name}'
+
+
+class NinjaFleet(Fleet):
+
+    @staticmethod
+    def start_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.min))
+
+    @staticmethod
+    def end_report_interval(day):
+        return timezone.localize(datetime.combine(day, time.max))
+
+    def download_report(self, day=None):
+        report = Payments.objects.filter(report_from=self.start_report_interval(day),
+                                         report_to=self.end_report_interval(day),
+                                         vendor_name=self.name)
+        return list(report)
+
+
 
 
 class Client(User):
@@ -570,33 +570,7 @@ class SummaryReport(models.Model):
         verbose_name_plural = 'Зведені звіти'
 
 
-class BoltFleet(Fleet):
-    pass
 
-
-class NewUklonFleet(Fleet):
-    token = models.CharField(max_length=40, default=None, null=True, verbose_name="Код автопарку")
-
-
-class UberFleet(Fleet):
-    pass
-
-
-class NinjaFleet(Fleet):
-
-    @staticmethod
-    def start_report_interval(day):
-        return timezone.localize(datetime.combine(day, time.min))
-
-    @staticmethod
-    def end_report_interval(day):
-        return timezone.localize(datetime.combine(day, time.max))
-
-    def download_report(self, day=None):
-        report = Payments.objects.filter(report_from=self.start_report_interval(day),
-                                         report_to=self.end_report_interval(day),
-                                         vendor_name=self.name)
-        return list(report)
 
 
 class StatusChange(models.Model):
@@ -617,9 +591,6 @@ class Fleets_drivers_vehicles_rate(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Видалено')
     pay_cash = models.BooleanField(default=False, verbose_name='Оплата готівкою')
-
-    def __str__(self) -> str:
-        return ''
 
     class Meta:
         verbose_name = 'Водія в агрегаторах'
@@ -680,218 +651,6 @@ class VehicleGPS(GPS):
     class Meta:
         verbose_name = 'GPS Vehicle'
         verbose_name_plural = 'GPS Vehicle'
-
-
-class WeeklyReportFile(models.Model):
-    organization_name = models.CharField(max_length=20)
-    report_file_name = models.CharField(max_length=255, unique=True)
-    report_from = models.CharField(max_length=10)
-    report_to = models.CharField(max_length=10)
-    file = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def transfer_reports_to_db(self, company_name, report_name, from_date, until_date, header, rows):
-        self.organization_name = company_name
-        self.report_file_name = report_name
-        self.report_from = from_date
-        self.report_to = until_date
-        self.file = (header + rows)
-        self.save()
-
-    # Calculates the number of days in the report
-    def check_full_data(self, start, end, file_name):
-        start = datetime.strptime(start, '%Y-%m-%d').date()
-        end = datetime.strptime(end, '%Y-%m-%d').date()
-        difference = end - start
-        if difference.days == 7:
-            return True
-        else:
-            print(f"{file_name} include {difference.days} days of the week")
-            return False
-
-    # Help separate the date from file name
-    def convert_file_name(self, split_symbol, name_list):
-        converted_list = []
-        for string in name_list:
-            string = string.split(split_symbol)
-            for part in string:
-                converted_list.append(part)
-        return converted_list
-
-    def save_weekly_reports_to_db(self):
-        for file in csv_list:
-            rows = []
-            try:
-                with open(file, 'r') as report:
-                    report_name = report.name
-                    csvreader = csv.reader(report)
-                    header = next(csvreader)
-                    for row in csvreader:
-                        rows.append(row)
-
-                    # Checks Uber, Uklon and Bolt name in report and report dates; checks the number of days in
-                    # the report. If days are less than seven, code issues a warning message and does not
-                    # add file to the database.
-
-                    if "payments_driver" in report.name:
-                        company_name = "uber"
-                        from_date = report.name[0:4] + '-' + report.name[4:6] + '-' + report.name[6:8]
-                        until_date = report.name[9:13] + '-' + report.name[13:15] + '-' + report.name[15:17]
-                        if self.check_full_data(start=from_date, end=until_date, file_name=report_name):
-                            pass
-                        else:
-                            continue
-                        WeeklyReportFile.transfer_reports_to_db(self=WeeklyReportFile(), company_name=company_name,
-                                                                report_name=report_name, from_date=from_date,
-                                                                until_date=until_date, header=header, rows=rows)
-
-                    elif "Income" in report.name:
-                        company_name = "uklon"
-                        refactor_file_name = report.name.split(" ")
-                        refactor_file_name = [refactor_file_name[2], refactor_file_name[4]]
-                        refactor_file_name = self.convert_file_name('-', refactor_file_name)
-                        refactor_file_name.pop(1)
-                        refactor_file_name = self.convert_file_name('_', refactor_file_name)
-                        refactor_file_name.pop(0)
-
-                        # Adds a zero to a single digit
-                        for date in refactor_file_name:
-                            if len(date) == 1:
-                                refactor_file_name[refactor_file_name.index(date)] = "0" + date
-
-                        from_date = str(
-                            refactor_file_name[2] + '-' + refactor_file_name[0] + '-' + refactor_file_name[1])
-                        until_date = str(
-                            refactor_file_name[-1] + '-' + refactor_file_name[-3] + '-' + refactor_file_name[-2])
-                        if self.check_full_data(start=from_date, end=until_date, file_name=report_name):
-                            pass
-                        else:
-                            continue
-                        WeeklyReportFile.transfer_reports_to_db(self=WeeklyReportFile(), company_name=company_name,
-                                                                report_name=report_name, from_date=from_date,
-                                                                until_date=until_date, header=header, rows=rows)
-
-                    elif "Bolt" in report.name:
-                        company_name = "bolt"
-                        bolt_date_report = rows[1][2]
-                        from_date = bolt_date_report[8:18]
-                        until_date = bolt_date_report[-10:]
-                        if self.check_full_data(start=from_date, end=until_date, file_name=report_name):
-                            pass
-                        else:
-                            continue
-                        WeeklyReportFile.transfer_reports_to_db(self=WeeklyReportFile(), company_name=company_name,
-                                                                report_name=report_name, from_date=from_date,
-                                                                until_date=until_date, header=header, rows=rows)
-                    else:
-                        continue
-
-            # Catches an error if the filename is already exist in DB
-            except IntegrityError as error:
-                print(f"{report_name} already exists in Database")
-
-
-class UberTransactions(models.Model):
-    transaction_uuid = models.UUIDField(unique=True)
-    driver_uuid = models.UUIDField()
-    driver_name = models.CharField(max_length=50)
-    driver_second_name = models.CharField(max_length=50)
-    trip_uuid = models.UUIDField()
-    trip_description = models.CharField(max_length=50)
-    organization_name = models.CharField(max_length=50)
-    organization_nickname = models.CharField(max_length=50)
-    transaction_time = models.CharField(max_length=50)
-    paid_to_you = models.DecimalField(decimal_places=2, max_digits=10)
-    your_earnings = models.DecimalField(decimal_places=2, max_digits=10)
-    cash = models.DecimalField(decimal_places=2, max_digits=10)
-    fare = models.DecimalField(decimal_places=2, max_digits=10)
-    tax = models.DecimalField(decimal_places=2, max_digits=10)
-    fare2 = models.DecimalField(decimal_places=2, max_digits=10)
-    service_tax = models.DecimalField(decimal_places=2, max_digits=10)
-    wait_time = models.DecimalField(decimal_places=2, max_digits=10)
-    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10)
-    peak_rate = models.DecimalField(decimal_places=2, max_digits=10)
-    tips = models.DecimalField(decimal_places=2, max_digits=10)
-    cancel_payment = models.DecimalField(decimal_places=2, max_digits=10)
-
-    @staticmethod
-    def save_transactions_to_db(file_name):
-        with open(file_name, 'r', encoding='utf-8') as fl:
-            reader = csv.reader(fl)
-            next(reader)
-            for row in reader:
-                try:
-                    transaction = UberTransactions(transaction_uuid=row[0],
-                                                   driver_uuid=row[1],
-                                                   driver_name=row[2],
-                                                   driver_second_name=row[3],
-                                                   trip_uuid=row[4],
-                                                   trip_description=row[5],
-                                                   organization_name=row[6],
-                                                   organization_nickname=row[7],
-                                                   transaction_time=row[8],
-                                                   paid_to_you=row[9],
-                                                   your_earnings=row[10],
-                                                   cash=row[11],
-                                                   fare=row[12],
-                                                   tax=row[13],
-                                                   fare2=row[14],
-                                                   service_tax=row[15],
-                                                   wait_time=row[16],
-                                                   transfered_to_bank=row[17],
-                                                   peak_rate=row[18],
-                                                   tips=row[19],
-                                                   cancel_payment=row[20])
-                    transaction.save()
-                except IntegrityError:
-                    print(f"{row[0]} transaction is already in DB")
-
-
-class BoltTransactions(models.Model):
-    driver_name = models.CharField(max_length=50)
-    driver_number = models.CharField(max_length=13)
-    trip_date = models.CharField(max_length=50)
-    payment_confirmed = models.CharField(max_length=50)
-    boarding = models.CharField(max_length=255)
-    payment_method = models.CharField(max_length=30)
-    requsted_time = models.CharField(max_length=5)
-    fare = models.DecimalField(decimal_places=2, max_digits=10)
-    payment_authorization = models.DecimalField(decimal_places=2, max_digits=10)
-    service_tax = models.DecimalField(decimal_places=2, max_digits=10)
-    cancel_payment = models.DecimalField(decimal_places=2, max_digits=10)
-    tips = models.DecimalField(decimal_places=2, max_digits=10)
-    order_status = models.CharField(max_length=50)
-    car = models.CharField(max_length=50)
-    license_plate = models.CharField(max_length=30)
-
-    class Meta:
-        unique_together = (('driver_name', 'driver_number', 'trip_date', 'payment_confirmed', 'boarding'))
-
-    @staticmethod
-    def save_transactions_to_db(file_name):
-        with open(file_name, 'r', encoding='utf-8') as fl:
-            reader = csv.reader(fl)
-            for row in reader:
-                if row[17] == "" and row[0] != "" and row[0] != "Ім'я водія":
-                    try:
-                        transaction = BoltTransactions(driver_name=row[0],
-                                                       driver_number=row[1],
-                                                       trip_date=row[2],
-                                                       payment_confirmed=row[3],
-                                                       boarding=row[4],
-                                                       payment_method=row[5],
-                                                       requsted_time=row[6],
-                                                       fare=row[7],
-                                                       payment_authorization=row[8],
-                                                       service_tax=row[9],
-                                                       cancel_payment=row[10],
-                                                       tips=row[11],
-                                                       order_status=row[12],
-                                                       car=row[13],
-                                                       license_plate=row[14])
-                        transaction.save()
-                    except IntegrityError:
-                        print(f"Transaction is already in DB")
 
 
 class RepairReport(models.Model):
@@ -1083,8 +842,9 @@ class SubscribeUsers(models.Model):
         try:
             subscriber = SubscribeUsers.objects.get(email=email)
             return subscriber
-        except SubscribeUsers.DoesNotExist:
+        except ObjectDoesNotExist:
             return None
+
 
 class JobApplication(models.Model):
     first_name = models.CharField(max_length=255, verbose_name='Ім\'я')
@@ -1326,84 +1086,6 @@ class UberSession(models.Model):
     uber_uuid = models.UUIDField(verbose_name="Код автопарку Uber")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
     partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-
-
-class NewUklonPaymentsOrder(models.Model):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
-    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
-    full_name = models.CharField(max_length=255, verbose_name='ПІ водія')
-    signal = models.CharField(max_length=8, verbose_name='Унікальний індифікатор водія')
-    total_rides = models.PositiveIntegerField(verbose_name='Кількість поїздок')
-    total_distance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Пробіг під замовлення')
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Готівкою')
-    total_amount_cach_less = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На гаманець')
-    total_amount_on_card = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='На картку')
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна сума')
-    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
-    bonuses = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Бонуси')
-    fares = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Штрафи')
-    comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Uklon')
-    total_amount_without_comission = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Разом')
-    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
-
-    vendor_name = 'NewUklon'
-
-
-class BoltPaymentsOrder(models.Model):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
-    report_file_name = models.CharField(max_length=255, verbose_name='Назва файлу')
-    driver_full_name = models.CharField(max_length=24, verbose_name='ПІ водія')
-    mobile_number = models.CharField(max_length=24, verbose_name='Унікальний індифікатор водія')
-    range_string = models.CharField(max_length=50, verbose_name='Період')
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальний тариф')
-    cancels_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Плата за скасування')
-    autorization_payment = models.DecimalField(decimal_places=2, max_digits=10,
-                                               verbose_name='Авторизаційцний платіж (платіж)')
-    autorization_deduction = models.DecimalField(decimal_places=2, max_digits=10,
-                                                 verbose_name='Авторизаційцний платіж (відрахування)')
-    additional_fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Додатковий збір')
-    fee = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Комісія Bolt')
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Поїздки за готівку')
-    discount_cash_trips = models.DecimalField(decimal_places=2, max_digits=10,
-                                              verbose_name='Сума знижки Bolt за готівкові поїздки')
-    driver_bonus = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Водійський бонус')
-    compensation = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Компенсації')
-    refunds = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Повернення коштів')
-    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
-    weekly_balance = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Тижневий баланс')
-    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
-
-    vendor_name = 'Bolt'
-
-
-class UberPaymentsOrder(models.Model):
-    report_from = models.DateTimeField(verbose_name='Репорт з')
-    report_to = models.DateTimeField(verbose_name='Репорт по')
-    report_file_name = models.CharField(max_length=255, verbose_name='Назва файла')
-    driver_uuid = models.UUIDField(verbose_name='Унікальний індитифікатор водія')
-    first_name = models.CharField(max_length=24, verbose_name='Імя водія')
-    last_name = models.CharField(max_length=24, verbose_name='Прізвище водія')
-    total_amount = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Загальна дохід')
-    total_clean_amout = models.DecimalField(decimal_places=2, max_digits=10,
-                                            verbose_name='Загальна дохід - Чистий тариф')
-    total_amount_cach = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Виплати')
-    transfered_to_bank = models.DecimalField(decimal_places=2, max_digits=10,
-                                             verbose_name='Перераховано на банківський рахунок')
-    returns = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Відшкодування та витрати')
-    tips = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Чайові')
-    partner = models.ForeignKey(Partner, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Партнер')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Створено')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Оновлено')
-
-    vendor_name = 'Uber'
 
 
 class UserBank(models.Model):

@@ -1,40 +1,36 @@
 import json
 import secrets
-import uuid
 from datetime import datetime
-
 import requests
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-
-from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, Partner, FleetOrder, \
-    CredentialPartner, Vehicle, PaymentTypes
+from django.db import models
+from app.models import ParkSettings, Fleets_drivers_vehicles_rate, Driver, Payments, Service, FleetOrder, \
+    CredentialPartner, Vehicle, PaymentTypes, Fleet
 from auto_bot.handlers.order.utils import check_vehicle
 from auto_bot.main import bot
-from scripts.redis_conn import redis_instance
+from scripts.redis_conn import redis_instance, get_logger
 from selenium_ninja.synchronizer import Synchronizer, AuthenticationError
 from django.db import IntegrityError
 
 
-class UklonRequest(Synchronizer):
-    def __init__(self, partner_id=None, fleet="Uklon"):
-        super().__init__(partner_id, fleet)
-        self.base_url = Service.get_value('UKLON_SESSION')
-        self.parameters = {'limit': '50', 'offset': '0'}
+class UklonRequest(Fleet, Synchronizer):
+    base_url = models.URLField(default=Service.get_value('UKLON_SESSION'))
 
     def get_header(self) -> dict:
-        token = self.redis.get(f"{self.partner_id}_{self.fleet}_token")
+        token = redis_instance().get(f"{self.partner.id}_{self.name}_token")
         if not token:
-            token = self.create_session()
+            token = self.create_session(self.partner.id)
         headers = {
             'Authorization': f'Bearer {token}'
         }
         return headers
 
     def park_payload(self, login, password) -> dict:
-        if not (login and password):
-            login = CredentialPartner.get_value(key='UKLON_NAME', partner=self.partner_id)
-            password = CredentialPartner.get_value(key='UKLON_PASSWORD', partner=self.partner_id)
-            client_id = CredentialPartner.get_value(key='CLIENT_ID', partner=self.partner_id)
+        if self.partner:
+            login = CredentialPartner.get_value(key='UKLON_NAME', partner=self.partner)
+            password = CredentialPartner.get_value(key='UKLON_PASSWORD', partner=self.partner)
+            client_id = CredentialPartner.get_value(key='CLIENT_ID', partner=self.partner)
         else:
             hex_length = 16
             client_id = secrets.token_hex(hex_length)
@@ -48,20 +44,22 @@ class UklonRequest(Synchronizer):
         return payload
 
     def uklon_id(self):
-        if not redis_instance().exists(f"{self.partner_id}_park_id"):
+        if not redis_instance().exists(f"{self.partner.id}_park_id"):
             response = self.response_data(url=f"{self.base_url}me")
-            redis_instance().set(f"{self.partner_id}_park_id", response['fleets'][0]['id'])
-        return redis_instance().get(f"{self.partner_id}_park_id")
+            redis_instance().set(f"{self.partner.id}_park_id", response['fleets'][0]['id'])
+        return redis_instance().get(f"{self.partner.id}_park_id")
 
-    def create_session(self, login=None, password=None):
+    def create_session(self, partner, login=None, password=None):
         payload = self.park_payload(login, password)
         response = requests.post(f"{self.base_url}auth", json=payload)
         if response.status_code == 201:
             token = response.json()["access_token"]
-            self.redis.set(f"{self.partner_id}_{self.fleet}_token", token)
+            redis_instance().set(f"{partner}_{self.name}_token", token)
             return token
+        elif response.status_code == 429:
+            raise AuthenticationError(f"{self.name} service unavailable.")
         else:
-            raise AuthenticationError(f"{self.fleet} login or password incorrect.")
+            raise AuthenticationError(f"{self.name} login or password incorrect.")
 
     @staticmethod
     def request_method(url: str = None,
@@ -87,8 +85,8 @@ class UklonRequest(Synchronizer):
                       pjson: dict = None,
                       method: str = None) -> dict:
 
-        if not self.redis.exists(f"{self.partner_id}_{self.fleet}_token"):
-            self.create_session()
+        if not redis_instance().exists(f"{self.partner.id}_{self.name}_token"):
+            self.create_session(self.partner.id)
         response = self.request_method(url=url,
                                        params=params,
                                        headers=self.get_header() if headers is None else headers,
@@ -96,7 +94,8 @@ class UklonRequest(Synchronizer):
                                        data=data,
                                        method=method)
         if response.status_code in (401, 403):
-            self.create_session()
+            self.create_session(self.partner.id)
+            return self.response_data(url, params, data, headers, pjson, method)
         return response.json()
 
     @staticmethod
@@ -129,24 +128,28 @@ class UklonRequest(Synchronizer):
 
     def save_report(self, day):
         if Payments.objects.filter(report_from=day.date(),
-                                   vendor_name=self.fleet,
-                                   partner=self.partner_id):
+                                   vendor_name=self.name,
+                                   partner=self.partner):
             return
-        param = self.parameters.copy()
-        param.update({'dateFrom': self.report_interval(day, start=True),
-                     'dateTo': self.report_interval(day)
-                      })
+        param = {'dateFrom': self.report_interval(day, start=True),
+                 'dateTo': self.report_interval(day),
+                 'limit': '50', 'offset': '0'
+                 }
         url = f"{Service.get_value('UKLON_3')}{self.uklon_id()}"
         url += Service.get_value('UKLON_4')
         data = self.response_data(url=url, params=param)['items']
         if data:
             for i in data:
-                db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id'],
-                                                                     partner=self.partner_id).driver
+                try:
+                    db_driver = Fleets_drivers_vehicles_rate.objects.get(driver_external_id=i['driver']['id'],
+                                                                         partner=self.partner).driver
+                except ObjectDoesNotExist:
+                    get_logger().error(self, i['driver']['id'])
+                    continue
                 vehicle = check_vehicle(db_driver, day, max_time=True)[0]
                 order = Payments(
                     report_from=day.date(),
-                    vendor_name=self.fleet,
+                    vendor_name=self.name,
                     full_name=f"{i['driver']['first_name'].split()[0]} {i['driver']['last_name'].split()[0]}",
                     driver_id=i['driver']['id'],
                     total_rides=0 if 'total_orders_count' not in i else i['total_orders_count'],
@@ -160,13 +163,13 @@ class UklonRequest(Synchronizer):
                     fares=float(0),
                     fee=self.find_value(i, *('loss', 'order', 'wallet', 'amount')),
                     total_amount_without_fee=self.find_value(i, *('profit', 'total', 'amount')),
-                    partner=Partner.get_partner(self.partner_id),
+                    partner=self.partner,
                     vehicle=vehicle
                 )
                 try:
                     order.save()
                 except IntegrityError:
-                    pass
+                    get_logger().error(f"{self}, {db_driver} report not saved")
 
     def get_drivers_status(self):
         first_key, second_key = 'with_client', 'wait'
@@ -176,7 +179,7 @@ class UklonRequest(Synchronizer):
             }
         url = f"{Service.get_value('UKLON_5')}{self.uklon_id()}"
         url += Service.get_value('UKLON_6')
-        data = self.response_data(url, params=self.parameters)
+        data = self.response_data(url, params={'limit': '50', 'offset': '0'})
         for driver in data['data']:
             first_data = (driver['last_name'], driver['first_name'])
             second_data = (driver['first_name'], driver['last_name'])
@@ -190,15 +193,13 @@ class UklonRequest(Synchronizer):
 
     def get_drivers_table(self):
         drivers = []
-        param = self.parameters.copy()
-        param.update({'status': 'All',
-                      'limit': '30'})
+        param = {'status': 'All',
+                 'limit': '30',
+                 'offset': '0'}
         url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url_1 = url + Service.get_value('UKLON_6')
         url_2 = url + Service.get_value('UKLON_2')
-
         all_drivers = self.response_data(url=url_1, params=param)
-
         for driver in all_drivers['items']:
             pay_cash, vehicle_name, vin_code = True, '', ''
             if driver['restrictions']:
@@ -207,101 +208,98 @@ class UklonRequest(Synchronizer):
                 vehicle_name = f"{driver['selected_vehicle']['make']} {driver['selected_vehicle']['model']}"
                 vin_code = self.response_data(f"{url_2}/{driver['selected_vehicle']['vehicle_id']}")
                 vin_code = vin_code.get('vin_code', '')
-
             email = self.response_data(url=f"{url_1}/{driver['id']}")
-
+            driver_data = self.response_data(
+                url=f"{Service.get_value('UKLON_1')}{Service.get_value('UKLON_6')}/{driver['id']}/images",
+                params={'image_size': 'sm'})
             drivers.append({
-                'fleet_name': self.fleet,
+                'fleet_name': self.name,
                 'name': driver['first_name'].split()[0],
                 'second_name': driver['last_name'].split()[0],
                 'email': email.get('email'),
                 'phone_number': f"+{driver['phone']}",
                 'driver_external_id': driver['id'],
+                'photo': driver_data["driver_avatar_photo"]["url"],
                 'pay_cash': pay_cash,
                 'licence_plate': self.find_value_str(driver, *('selected_vehicle', 'license_plate')),
                 'vehicle_name': vehicle_name,
                 'vin_code': vin_code,
                 'worked': True,
             })
-
         return drivers
 
     def get_fleet_orders(self, day, pk):
-        states = {"completed": FleetOrder.COMPLETED,
-                  "Rider": FleetOrder.CLIENT_CANCEL,
-                  "Driver": FleetOrder.DRIVER_CANCEL,
-                  "System": FleetOrder.SYSTEM_CANCEL,
-                  "Dispatcher": FleetOrder.SYSTEM_CANCEL
-                  }
-
-        driver = Driver.objects.get(pk=pk)
-        driver_id = driver.get_driver_external_id(self.fleet)
-        if driver_id:
-            str_driver_id = driver_id.replace("-", "")
-            params = {"limit": 50,
-                      "fleetId": self.uklon_id(),
-                      "driverId": driver_id,
-                      "from": self.report_interval(day, start=True),
-                      "to": self.report_interval(day)
+        start = self.report_interval(day, start=True)
+        end = self.report_interval(day)
+        if end > start:
+            states = {"completed": FleetOrder.COMPLETED,
+                      "Rider": FleetOrder.CLIENT_CANCEL,
+                      "Driver": FleetOrder.DRIVER_CANCEL,
+                      "System": FleetOrder.SYSTEM_CANCEL,
+                      "Dispatcher": FleetOrder.SYSTEM_CANCEL
                       }
-            orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
-            try:
-                for order in orders['items']:
-                    if (FleetOrder.objects.filter(order_id=order['id']) or
-                            order['status'] in ("running", "accepted", "arrived")):
-                        continue
-                    detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
-                                                params={"driverId": str_driver_id})
-                    try:
-                        finish_time = timezone.make_aware(datetime.fromtimestamp(detail["completedAt"]))
-                    except KeyError:
-                        finish_time = None
-                    try:
-                        start_time = timezone.make_aware(datetime.fromtimestamp(detail["createdAt"]))
-                    except KeyError:
-                        start_time = None
-                    if order['status'] != "completed":
-                        state = order["cancellation"]["initiator"]
-                    else:
-                        state = order['status']
-                    vehicle = Vehicle.objects.get(licence_plate=order['vehicle']['licencePlate'])
-                    data = {"order_id": order['id'],
-                            "fleet": self.fleet,
-                            "driver": driver,
-                            "from_address": order['route']['points'][0]["address"],
-                            "accepted_time": start_time,
-                            "state": states.get(state),
-                            "finish_time": finish_time,
-                            "destination": order['route']['points'][-1]["address"],
-                            "vehicle": vehicle,
-                            "payment": PaymentTypes.map_payments(order['payment']['paymentType']),
-                            "price": order['payment']['cost'],
-                            "partner": Partner.get_partner(self.partner_id)
-                            }
-                    if check_vehicle(driver)[0] != vehicle:
-                        self.redis.hset(f"wrong_vehicle_{self.partner_id}", pk, order['vehicle']['licencePlate'])
-                    FleetOrder.objects.create(**data)
-            except KeyError:
-                bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"), text=f"{orders}")
 
-    def disable_cash(self, pk, enable):
+            driver = Driver.objects.get(pk=pk)
+            driver_id = driver.get_driver_external_id(self.name)
+            if driver_id:
+                str_driver_id = driver_id.replace("-", "")
+                params = {"limit": 50,
+                          "fleetId": self.uklon_id(),
+                          "driverId": driver_id,
+                          "from": start,
+                          "to": end
+                          }
+                orders = self.response_data(url=f"{Service.get_value('UKLON_1')}orders", params=params)
+                try:
+                    for order in orders['items']:
+                        if (FleetOrder.objects.filter(order_id=order['id']) or
+                                order['status'] in ("running", "accepted", "arrived")):
+                            continue
+                        detail = self.response_data(url=f"{Service.get_value('UKLON_1')}orders/{order['id']}",
+                                                    params={"driverId": str_driver_id})
+                        try:
+                            finish_time = timezone.make_aware(datetime.fromtimestamp(detail["completedAt"]))
+                        except KeyError:
+                            finish_time = None
+                        try:
+                            start_time = timezone.make_aware(datetime.fromtimestamp(detail["createdAt"]))
+                        except KeyError:
+                            start_time = None
+                        if order['status'] != "completed":
+                            state = order["cancellation"]["initiator"]
+                        else:
+                            state = order['status']
+                        vehicle = Vehicle.objects.get(licence_plate=order['vehicle']['licencePlate'])
+                        data = {"order_id": order['id'],
+                                "fleet": self.name,
+                                "driver": driver,
+                                "from_address": order['route']['points'][0]["address"],
+                                "accepted_time": start_time,
+                                "state": states.get(state),
+                                "finish_time": finish_time,
+                                "destination": order['route']['points'][-1]["address"],
+                                "vehicle": vehicle,
+                                "payment": PaymentTypes.map_payments(order['payment']['paymentType']),
+                                "price": order['payment']['cost'],
+                                "partner": self.partner
+                                }
+                        if check_vehicle(driver)[0] != vehicle:
+                            redis_instance().hset(f"wrong_vehicle_{self.partner}", pk, order['vehicle']['licencePlate'])
+                        FleetOrder.objects.create(**data)
+                except KeyError:
+                    bot.send_message(chat_id=ParkSettings.get_value("DEVELOPER_CHAT_ID"), text=f"{orders}")
+
+    def disable_cash(self, driver_id, enable):
         url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
-        driver_id = Driver.objects.get(pk=pk).get_driver_external_id(self.fleet)
         url += f'{Service.get_value("UKLON_6")}/{driver_id}/restrictions'
         headers = self.get_header()
         headers.update({"Content-Type": "application/json"})
         payload = {"type": "Cash"}
-        if enable == 'true':
-            self.response_data(url=url,
-                               headers=headers,
-                               data=json.dumps(payload),
-                               method='DELETE')
-        else:
-            self.response_data(url=url,
-                               headers=headers,
-                               data=json.dumps(payload),
-                               method='PUT')
-        pay_cash = True if enable == 'true' else False
+        method, pay_cash = ('DELETE', True) if enable == 'true' else ('PUT', False)
+        self.response_data(url=url,
+                           headers=headers,
+                           data=json.dumps(payload),
+                           method=method)
         Fleets_drivers_vehicles_rate.objects.filter(driver_external_id=driver_id).update(pay_cash=pay_cash)
 
     def withdraw_money(self):
@@ -315,13 +313,11 @@ class UklonRequest(Synchronizer):
         for driver in resp['items']:
             balance[driver['driver_id']] = driver['wallet']['balance']['amount'] -\
                                            int(ParkSettings.get_value('WITHDRAW_UKLON',
-                                                                      partner=self.partner_id)) * 100
+                                                                      partner=self.partner)) * 100
         for key, value in balance.items():
             if value > 0:
-                transfer = str(uuid.uuid4())
                 items.append({
-                    "transfer_id": f"{transfer}",
-                    "driver_id": key,
+                    "employee_id": key,
                     "amount": {
                         "amount": value,
                         "currency": "UAH"
@@ -348,19 +344,15 @@ class UklonRequest(Synchronizer):
 
     def get_vehicles(self):
         vehicles = []
-
-        param = self.parameters
-        param.update({"limit": '30'})
+        param = {'limit': '30', 'offset': '0'}
         url = f"{Service.get_value('UKLON_1')}{self.uklon_id()}"
         url += Service.get_value('UKLON_2')
         all_vehicles = self.response_data(url=url, params=param)
         for vehicle in all_vehicles['data']:
             response = self.response_data(url=f"{url}/{vehicle['id']}")
-
             vehicles.append({
                 'licence_plate': vehicle['licencePlate'],
                 'vehicle_name': f"{vehicle['about']['maker']['name']} {vehicle['about']['model']['name']}",
                 'vin_code': response.get('vin_code', '')
             })
-
         return vehicles
