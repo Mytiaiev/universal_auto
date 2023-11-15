@@ -453,6 +453,47 @@ input[type="button"] {
   .hedaer-left {
     display: none;
   }
+
+  #account_circle {
+		font-size: 30px !important;
+	}
+
+	.sidebar-toggle{
+		display: none;
+	}
+
+	.sidebar-list {
+		margin-top: 0;
+	}
+
+	.chart-title {
+		font-size: 20px;
+	}
+
+	.car-select {
+		left: 0;
+		top: 100px;
+	}
+
+	#area-chart {
+    top: 35px;
+	}
+
+	.driver-block {
+		background-color: white !important;
+	}
+
+	.title-driver h2 {
+		font-size: 22px !important;
+	}
+
+	.filter label {
+		font-size: 18px;
+	}
+
+	.custom-select-drivers {
+    right: 7px;
+	}
 }
 
 /*vehicle-block*/
