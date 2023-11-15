@@ -60,14 +60,14 @@ let barChartOptions = {
   },
   xAxis: {
     type: 'category',
-    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    data: [],
     axisLabel: {
       rotate: 45
     }
   },
   yAxis: {
     type: 'value',
-    name: 'Сума (грн.)',
+    name: gettext('Сума (грн.)'),
     nameLocation: 'middle',
     nameRotate: 90,
     nameGap: 60,
@@ -221,7 +221,7 @@ let areaChartOptions = {
   tooltip: {
     trigger: 'axis',
     formatter: function (params) {
-      return 'Дата: ' + params[0].name + '<br/>' + params[0].seriesName + ' : ' + params[0].value + ' грн/км'
+      return gettext('Дата: ') + params[0].name + '<br/>' + params[0].seriesName + ' : ' + params[0].value + gettext(' грн/км')
     }
   }
 };
@@ -629,7 +629,7 @@ $(document).ready(function () {
 		$('#datePicker').hide()
 		$('.driver-container').hide()
 		$('#sidebar').removeClass('sidebar-responsive');
-		$('.main-title h2').text('Автомобілі');
+		$('.main-title h2').text(gettext('Автомобілі'));
 	});
 
 	$('#DriverBtnContainer').click(function () {
@@ -643,7 +643,7 @@ $(document).ready(function () {
 		if (window.innerWidth <= 900) {
 			$('.driver-container').css('display', 'block');
 		}
-		$('.main-title h2').text('Водії');
+		$('.main-title h2').text(gettext('Водії'));
 	});
 
 	const resetButton = $("#reset-button");
