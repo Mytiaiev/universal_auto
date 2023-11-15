@@ -53,7 +53,6 @@ class DriverEfficiencyRentSerializer(serializers.Serializer):
 
 
 class VehiclesEfficiencySerializer(serializers.Serializer):
-    name = serializers.CharField()
     efficiency = serializers.ListField(child=serializers.FloatField())
     mileage = serializers.ListField(child=serializers.FloatField())
 

@@ -163,81 +163,70 @@ barChart.setOption(barChartOptions);
 
 
 // AREA CHART
+
+var areaChart = echarts.init(document.getElementById('area-chart'));
+
 let areaChartOptions = {
-	series: [{
-		name: "",
-		data: [''],
-	}],
-	chart: {
-		type: "area",
-		background: "transparent",
-		height: 350,
-		stacked: false,
-		toolbar: {
-			show: false,
-		},
-	},
-	colors: [
-		"#DCE43F",
-		"#89A632",
-		"#018B72",
-		"#79C8C5",
-		"#EC6323",
-		"#1858A6",
-		"#FDCA10"
-	],
-	labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
-	dataLabels: {
-		enabled: false,
-	},
-	fill: {
-		gradient: {
-			opacityFrom: 0.4,
-			opacityTo: 0.1,
-			shadeIntensity: 1,
-			stops: [0, 100],
-			type: "vertical",
-		},
-		type: "gradient",
-	},
-	grid: {
-		borderColor: "#55596e",
-		yaxis: {
-			lines: {
-				show: true,
-			},
-		},
-		xaxis: {
-			lines: {
-				show: false,
-			},
-		},
-	},
-	legend: {
-		labels: {
-			colors: "#f5f7ff",
-		},
-		show: true,
-		position: "top",
-		horizontalAlign: 'left',
-	},
-	markers: {
-		size: 3,
-		strokeColors: "#1b2635",
-		strokeWidth: 1,
-	},
-	stroke: {
-		curve: "smooth",
-	},
-	tooltip: {
-		shared: true,
-		intersect: false,
-		theme: "dark",
-	}
+	xAxis: {
+    type: 'category',
+    boundaryGap: false,
+    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  },
+  yAxis: {
+    type: 'value'
+  },
+  dataZoom: [
+    {
+      type: 'slider',
+      start: 1,
+      end: 30,
+      showDetail: false,
+      backgroundColor: 'white',
+      dataBackground: {
+        lineStyle: {
+          color: 'orange',
+          width: 5
+        }
+      },
+      selectedDataBackground: {
+        lineStyle: {
+          color: 'rgb(255, 69, 0)',
+          width: 5
+        }
+      },
+      handleStyle: {
+        color: 'orange',
+        borderWidth: 0
+      },
+    }
+  ],
+  series: [
+    {
+      data: [820, 932, 901, 934, 1290, 1330, 1320],
+      type: 'line',
+      symbol: 'circle',
+      symbolSize: 10,
+      lineStyle: {
+        color: '#79C8C5',
+        width: 5
+      },
+      itemStyle: {
+        color: '#18A64D'
+      },
+      areaStyle: {
+        color: '#A1E8B9'
+      }
+    }
+  ],
+  tooltip: {
+    trigger: 'axis',
+    formatter: function (params) {
+      return 'Дата: ' + params[0].name + '<br/>' + params[0].seriesName + ' : ' + params[0].value + ' грн/км'
+    }
+  }
 };
 
-let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
-areaChart.render();
+areaChart.setOption(areaChartOptions);
 
 function fetchSummaryReportData(period, start, end) {
 	let apiUrl;
@@ -286,14 +275,14 @@ function fetchSummaryReportData(period, start, end) {
 	});
 }
 
-function fetchCarEfficiencyData(period, start, end) {
+function fetchCarEfficiencyData(period, vehicleId, vehicle_lc, start, end) {
 	let apiUrl;
 	if (period === 'custom') {
-		apiUrl = `/api/car_efficiencies/${start}&${end}/`;
+		apiUrl = `/api/car_efficiencies/${start}&${end}/${vehicleId}`;
 	} else {
-		apiUrl = `/api/car_efficiencies/${period}/`;
-	}
-	;
+		apiUrl = `/api/car_efficiencies/${period}/${vehicleId}`;
+	};
+
 	$.ajax({
 		url: apiUrl,
 		type: 'GET',
@@ -302,19 +291,26 @@ function fetchCarEfficiencyData(period, start, end) {
 			if (data['dates'].length !== 0) {
 				$(".noDataMessage2").hide();
 				$('#area-chart').show();
-				let seriesData = data["vehicles"].map(item =>({
-                    name: item.name,
-                    data: item.efficiency
-                }));
+				$('.car-select').show();
+
+				let firstVehicleData = {
+					name: vehicle_lc,
+					data: data['vehicles'].efficiency
+				};
+
+				let seriesData = [firstVehicleData];
+
 				areaChartOptions.series = seriesData;
-				areaChartOptions.labels = data['dates'];
-				areaChart.updateOptions(areaChartOptions);
+				areaChartOptions.xAxis.data = data['dates'];
+				areaChart.setOption(areaChartOptions);
+
 			} else {
 				$(".noDataMessage2").show();
 				$('#area-chart').hide();
-			}
-			;
+				$('.car-select').hide();
+			};
 			$('.weekly-income-amount').text(data["kasa"] + ' ' + gettext('грн'));
+			$('.income-km').text(data["total_mileage"] + ' ' + gettext("км"));
 			$('.income-efficiency').text(data["average_efficiency"].toFixed(2) + ' ' + gettext('грн/км'));
 		},
 		error: function (error) {
@@ -421,11 +417,6 @@ function fetchDriverEfficiencyData(period, start, end) {
 		}
 	});
 }
-
-fetchSummaryReportData('yesterday');
-fetchCarEfficiencyData('yesterday');
-fetchDriverEfficiencyData('yesterday');
-
 
 function showDatePicker(periodSelectId, datePickerId) {
 	let periodSelect = $("#" + periodSelectId);
@@ -705,7 +696,7 @@ $(document).ready(function () {
 
   sidebarToggle.click(toggleSidebar);
 
-	function initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, fetchFunction, datePicker) {
+	function initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, datePicker, vehicleId, vehicle_lc) {
 		iconDown.click(function() {
 			customSelect.toggleClass("active");
 		});
@@ -720,7 +711,9 @@ $(document).ready(function () {
 			customSelect.removeClass("active");
 
 			if (clickedValue !== "custom") {
-				fetchFunction(clickedValue);
+				fetchSummaryReportData(clickedValue);
+				fetchCarEfficiencyData(clickedValue, vehicleId, vehicle_lc);
+				fetchDriverEfficiencyData(clickedValue);
 			}
 
 			if (clickedValue === "custom") {
@@ -737,7 +730,16 @@ $(document).ready(function () {
 	const iconDown = customSelect.find(".fas.fa-angle-down");
 	const datePicker = $("#datePicker");
 
-	initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, fetchSummaryReportData, datePicker);
+	const firstVehicle = $(".custom-dropdown .dropdown-options li:first");
+	const vehicleId = firstVehicle.data('value');
+	const vehicle_lc = firstVehicle.text();
+
+	fetchSummaryReportData('yesterday');
+	fetchCarEfficiencyData('yesterday', vehicleId, vehicle_lc);
+	fetchDriverEfficiencyData('yesterday');
+
+	initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, datePicker, vehicleId, vehicle_lc);
+
 
 	const customSelectDriver = $(".custom-select-drivers");
 	const selectedOptionDriver = customSelectDriver.find(".selected-option-drivers");
@@ -745,5 +747,27 @@ $(document).ready(function () {
 	const iconDownDriver = customSelectDriver.find(".fas.fa-angle-down");
 	const datePickerDriver = $("#datePickerDriver");
 
-	initializeCustomSelect(customSelectDriver, selectedOptionDriver, optionsListDriver, iconDownDriver, fetchDriverEfficiencyData, datePickerDriver);
+	initializeCustomSelect(customSelectDriver, selectedOptionDriver, optionsListDriver, iconDownDriver, datePickerDriver);
+
+	$(".custom-dropdown .selected-option").click(function () {
+		$(".custom-dropdown .dropdown-options").toggle();
+	});
+
+	$(".custom-dropdown .dropdown-options li").click(function () {
+		var selectedValue = $(this).data('value');
+		var selectedText = $(this).text();
+    $("#selected-vehicle").html('<span>' + selectedText + '</span><i class="fas fa-angle-down"></i>');
+		$(".custom-dropdown .dropdown-options").hide();
+		const selectedOption = $(".custom-select .selected-option").text();
+    const dataValue = $(".custom-select .options li:contains('" + selectedOption + "')").data('value');
+
+		fetchCarEfficiencyData(dataValue, selectedValue, selectedText);
+	});
+
+	$(document).mouseup(function (e) {
+		var container = $(".custom-dropdown");
+		if (!container.is(e.target) && container.has(e.target).length === 0) {
+			$(".custom-dropdown .dropdown-options").hide();
+		}
+	});
 });

@@ -357,7 +357,7 @@ input[type="button"] {
 
 .car-select {
   position: absolute;
-  right: 60px;
+  left: 190px;
   top: 91px;
   z-index: 99;
 }
@@ -1196,4 +1196,60 @@ select:focus {
   color: #EC6323;
   margin: 0 10px;
   padding: 0;
+}
+
+
+.custom-dropdown {
+	position: relative;
+	display: inline-block;
+}
+
+.custom-dropdown .selected-option {
+	border: 1px solid #ccc;
+	padding: 10px;
+	cursor: pointer;
+	width: 215px;
+	text-align: left;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.custom-dropdown i.fas.fa-angle-down {
+	position: absolute;
+	top: 50%;
+	right: 10px;
+	transform: translateY(-50%);
+	color: #EC6323;
+	font-size: 25px;
+	margin: 0;
+	padding: 0;
+}
+
+.dropdown-options {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	position: absolute;
+	display: none;
+	background-color: white;
+	border: 1px solid #ccc;
+	border-radius: 25px;
+	border-top: none;
+	width: 100%;
+	z-index: 1;
+}
+
+.dropdown-options li {
+	padding: 5px 0 5px 10px;
+	color: #53785E;
+	font-size: 20px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+	cursor: pointer;
+}
+
+.custom-dropdown i.fas.fa-angle-down.icon-visible {
+    display: inline-block;
 }
