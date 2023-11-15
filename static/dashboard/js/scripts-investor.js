@@ -31,7 +31,7 @@ let investorBarChartOptions = {
   },
   xAxis: {
     type: 'category',
-    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    data: [],
     axisLabel: {
       rotate: 45
     }
@@ -86,9 +86,9 @@ let investorBarChartOptions = {
         focus: 'series'
       },
       itemStyle: {
-        color: '#EC6323'
+        color: '#79C8C5'
       },
-      data: [10,20, 30, 40, 50, 60, 70]
+      data: []
     },
   ]
 };
@@ -97,113 +97,51 @@ investorBarChart.setOption(investorBarChartOptions);
 
 
 // AREA CHART
+var investorAreaChart = echarts.init(document.getElementById('investor-area-chart'));
 let investorAreaChartOptions = {
-	series: [{
-		data: [],
-		name: gettext("Пробіг (км): "),
-	}],
-	chart: {
-		type: "bar",
-		background: "transparent",
-		height: 350,
-		toolbar: {
-			show: false,
-		},
-	},
-	colors: [
-		"#2e7d32",
-	],
-	plotOptions: {
-		bar: {
-			distributed: true,
-			borderRadius: 4,
-			horizontal: true,
-			columnWidth: "40%",
-		}
-	},
-	dataLabels: {
-		enabled: false,
-	},
-	fill: {
-		opacity: 1,
-	},
 	grid: {
-		borderColor: "#55596e",
-		yaxis: {
-			lines: {
-				show: true,
-			},
-		},
-		xaxis: {
-			lines: {
-				show: true,
-			},
-		},
-	},
-	legend: {
-		labels: {
-			colors: "#f5f7ff",
-		},
-		show: false,
-		position: "top",
-	},
-	stroke: {
-		colors: ["transparent"],
-		show: true,
-		width: 2
-	},
-	tooltip: {
-		shared: true,
-		intersect: false,
-		theme: "dark",
-	},
-	xaxis: {
-		categories: [],
-		title: {
-			style: {
-				color: "#f5f7ff",
-			},
-		},
-		axisBorder: {
-			show: true,
-			color: "#55596e",
-		},
-		axisTicks: {
-			show: true,
-			color: "#55596e",
-		},
-		labels: {
-			style: {
-				colors: "#f5f7ff",
-			},
-			rotate: -45,
-		},
-	},
-	yaxis: {
-		title: {
-			text: gettext("Пробіг (км.)"),
-			style: {
-				color: "#f5f7ff",
-			},
-		},
-		axisBorder: {
-			color: "#55596e",
-			show: true,
-		},
-		axisTicks: {
-			color: "#55596e",
-			show: true,
-		},
-		labels: {
-			style: {
-				colors: "#f5f7ff",
-			},
-		},
-	}
+    height: '70%'
+  },
+  yAxis: {
+    type: 'category',
+    data: [],
+    axisLabel: {
+      rotate: 45
+    }
+  },
+  xAxis: {
+    type: 'value',
+    name: 'Пробіг (км)',
+    nameLocation: 'middle',
+    nameGap: 60,
+    nameTextStyle: {
+      fontSize: 18,
+    }
+  },
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: {
+      type: 'shadow'
+    },
+  },
+  series: [
+    {
+      name: 'Пробіг (км)',
+      type: 'bar',
+      stack: 'total',
+      label: {
+        focus: 'series'
+      },
+      itemStyle: {
+        color: '#18A64D'
+      },
+      data: []
+    },
+  ]
 };
 
-let investorAreaChart = new ApexCharts(document.querySelector("#investor-area-chart"), investorAreaChartOptions);
-investorAreaChart.render();
+investorAreaChart.setOption(investorAreaChartOptions);
+
 
 function fetchInvestorData(period, start, end) {
 	let apiUrl;
@@ -231,9 +169,10 @@ function fetchInvestorData(period, start, end) {
 				$('#investor-bar-chart').show();
 
 				const values = vehiclesData.map(vehicle => vehicle.earnings);
-				investorBarChartOptions.series.data = values;
+				investorBarChartOptions.series[0].data = values;
 				investorBarChartOptions.xAxis.data = categories;
 				investorBarChart.setOption(investorBarChartOptions);
+
 			} else {
 				$(".noDataMessage1").show();
 				$('#investor-bar-chart').hide()
@@ -245,8 +184,9 @@ function fetchInvestorData(period, start, end) {
 
 				const carValue = vehiclesData.map(vehicle => vehicle.mileage);
 				investorAreaChartOptions.series[0].data = carValue;
-				investorAreaChartOptions.xaxis.categories = categories;
-				investorAreaChart.updateOptions(investorAreaChartOptions);
+				investorAreaChartOptions.yAxis.data = categories;
+				investorAreaChart.setOption(investorAreaChartOptions);
+
 			} else {
 				$(".noDataMessage2").show();
 				$('#investor-area-chart').hide();
@@ -283,17 +223,6 @@ commonPeriodSelect.on('change', function () {
 
 fetchInvestorData('yesterday');
 
-
-//function showDatePicker(periodSelectId, datePickerId) {
-//	let periodSelect = $("#" + periodSelectId);
-//	let datePicker = $("#" + datePickerId);
-//
-//	if (periodSelect.val() === "custom") {
-//		datePicker.css("display", "block");
-//	} else {
-//		datePicker.css("display", "none");
-//	}
-//}
 
 function applyCustomDateRange() {
 	$(".apply-filter-button").prop("disabled", true);
