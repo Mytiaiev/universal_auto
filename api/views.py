@@ -100,8 +100,7 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
 
         queryset = ManagerFilterMixin.get_queryset(self, CarEfficiency)
         filtered_qs = queryset.filter(
-            report_from__range=(start, end),
-            vehicle=self.kwargs['vehicle']).select_related("vehicle").order_by("report_from")
+            report_from__range=(start, end)).select_related("vehicle").order_by("report_from")
         return filtered_qs
 
     def list(self, request, *args, **kwargs):
@@ -110,7 +109,7 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
             total_kasa=Coalesce(Sum('total_kasa'), Decimal(0)),
             total_mileage=Coalesce(Sum('mileage'), Decimal(0)),
         )
-
+        queryset = queryset.filter(vehicle=self.kwargs['vehicle'])
         kasa = aggregated_data.get('total_kasa')
         total_mileage = aggregated_data.get('total_mileage')
         average = kasa / total_mileage if total_mileage else Decimal(0)
