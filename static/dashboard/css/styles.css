@@ -978,7 +978,7 @@ th {
 	color: #141E17;
 	font-size: 20px;
 	font-style: normal;
-	font-weight: 700;
+	font-weight: border;
 	line-height: normal;
 }
 
@@ -1000,7 +1000,7 @@ td {
 	font-family: Open Sans;
 	font-size: 20px;
 	font-style: normal;
-	font-weight: 700;
+	font-weight: 400;
 	line-height: normal;
 }
 
