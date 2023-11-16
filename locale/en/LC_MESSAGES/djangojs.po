@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-11-02 13:09+0200\n"
+"POT-Creation-Date: 2023-11-15 19:22+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,92 +50,86 @@ msgstr "Passwords do not match"
 msgid "Невірний код активації"
 msgstr "Invalid activation code"
 
-#: static/app/js/custom.js:334
+#: static/app/js/custom.js:336
 msgid "Отримати безкоштовний доступ на місяць"
 msgstr ""
 
-#: static/app/js/custom.js:335
+#: static/app/js/custom.js:337
 msgid "Отримати безкоштовний доступ"
 msgstr "Get free access"
 
-#: static/app/js/custom.js:341 static/app/js/custom.js:342
+#: static/app/js/custom.js:344 static/app/js/custom.js:345
 msgid "Зв’язатися з нами"
 msgstr "Contact us"
 
-#: static/app/js/custom.js:348 static/app/js/custom.js:349
+#: static/app/js/custom.js:352 static/app/js/custom.js:353
 msgid "Проконсультуватися"
 msgstr "Consult"
 
-#: static/dashboard/js/scripts-investor.js:29
-msgid "Дохід: "
-msgstr "Income: "
+#: static/dashboard/js/scripts-partner.js:70
+msgid "Сума (грн.)"
+msgstr "Amount (UAH)"
 
-#: static/dashboard/js/scripts-investor.js:116
-#: static/dashboard/js/scripts-partner.js:116
-msgid "Дохід (грн.)"
-msgstr "Income (UAH)"
+#: static/dashboard/js/scripts-partner.js:224
+msgid "Дата: "
+msgstr "Date: "
 
-#: static/dashboard/js/scripts-investor.js:145
-msgid "Пробіг (км): "
-msgstr "Mileage (km): "
+#: static/dashboard/js/scripts-partner.js:224
+msgid " грн/км"
+msgstr " UAH/km"
 
-#: static/dashboard/js/scripts-investor.js:226
-msgid "Пробіг (км.)"
-msgstr "Mileage (km)"
-
-#: static/dashboard/js/scripts-partner.js:29
-msgid "Заробіток "
-msgstr "Earnings "
-
-#: static/dashboard/js/scripts-partner.js:231
-#: static/dashboard/js/scripts-partner.js:245
-msgid "пробіг км"
-msgstr "mileage km"
-
-#: static/dashboard/js/scripts-partner.js:364
-msgid "грн"
-msgstr "UAH"
-
-#: static/dashboard/js/scripts-partner.js:365
-msgid "грн/км"
-msgstr "UAH/km"
-
-#: static/dashboard/js/scripts-partner.js:445
+#: static/dashboard/js/scripts-partner.js:394
 msgid "Каса: "
 msgstr "Cash: "
 
-#: static/dashboard/js/scripts-partner.js:445
+#: static/dashboard/js/scripts-partner.js:394
 msgid " грн"
 msgstr " UAH"
 
-#: static/dashboard/js/scripts-partner.js:446
+#: static/dashboard/js/scripts-partner.js:395
 msgid "Кількість замовлень: "
 msgstr "Number of orders: "
 
-#: static/dashboard/js/scripts-partner.js:447
+#: static/dashboard/js/scripts-partner.js:396
 msgid "Відсоток прийнятих замовлень: "
 msgstr "Percentage of accepted orders: "
 
-#: static/dashboard/js/scripts-partner.js:448
+#: static/dashboard/js/scripts-partner.js:397
 msgid "Середній чек, грн: "
 msgstr "Average check, UAH: "
 
-#: static/dashboard/js/scripts-partner.js:449
+#: static/dashboard/js/scripts-partner.js:398
 msgid "Пробіг, км: "
 msgstr "Mileage, km: "
 
-#: static/dashboard/js/scripts-partner.js:450
+#: static/dashboard/js/scripts-partner.js:399
 msgid "Ефективність, грн/км: "
 msgstr "Efficiency, UAH/km: "
 
-#: static/dashboard/js/scripts-partner.js:451
+#: static/dashboard/js/scripts-partner.js:400
 msgid "Час в дорозі: "
 msgstr "Time on the road: "
 
-#: static/dashboard/js/scripts-partner.js:463
+#: static/dashboard/js/scripts-partner.js:412
 msgid "по"
 msgstr "to"
 
-#: static/dashboard/js/scripts-partner.js:623
-msgid "База даних оновлено"
+#: static/dashboard/js/scripts-partner.js:527
+msgid "Базу даних оновлено"
 msgstr "Database updated"
+
+#: static/dashboard/js/scripts-partner.js:536
+msgid "Сталася помилка, спробуйте ще раз"
+msgstr "An error occurred, please try again"
+
+#: static/dashboard/js/scripts-partner.js:544
+msgid "Помилка оновлення бази даних. Спробуйте пізніше"
+msgstr "Error updating database. Try again later"
+
+#: static/dashboard/js/scripts-partner.js:632
+msgid "Автомобілі"
+msgstr "Cars"
+
+#: static/dashboard/js/scripts-partner.js:646
+msgid "Водії"
+msgstr "Drivers"

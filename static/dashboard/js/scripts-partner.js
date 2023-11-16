@@ -19,201 +19,214 @@ function toggleSidebar() {
 	}
 }
 
+function formatTime(time) {
+	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
 
-// ---------- CHARTS ----------
+	if (!parts) {
+		return time;
+	} else {
+		let days = parseInt(parts[1]);
+		let hours = parseInt(parts[2]);
+		let minutes = parseInt(parts[3]);
+		let seconds = parseInt(parts[4]);
+
+		hours += days * 24;
+
+		// Форматувати рядок у вигляді HH:mm:ss
+		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+}
+
+function applyCustomDateRange() {
+	$(".apply-filter-button").prop("disabled", true);
+
+	let startDate = $("#start_report").val();
+	let endDate = $("#end_report").val();
+
+	const selectedPeriod = 'custom'
+
+	fetchSummaryReportData(selectedPeriod, startDate, endDate);
+	fetchCarEfficiencyData(selectedPeriod, startDate, endDate);
+}
+
+// ---------- CHARTS ---------- //
+
+var barChart = echarts.init(document.getElementById('bar-chart'));
 
 // BAR CHART
 let barChartOptions = {
-	series: [{
-		data: [],
-		name: gettext("Заробіток "),
-	}],
-	chart: {
-		type: "bar",
-		background: "transparent",
-		height: 350,
-		toolbar: {
-			show: false,
-		},
-	},
-	colors: [
-		"#89A632",
-		"#FDCA10",
-		"#18A64D",
-		"#1858A6",
-		"#79C8C5",
-		"#EC6323",
-		"#018B72"
-	],
-	plotOptions: {
-		bar: {
-			distributed: true,
-			borderRadius: 4,
-			horizontal: false,
-			columnWidth: "40%",
-		}
-	},
-	dataLabels: {
-		enabled: false,
-	},
-	fill: {
-		opacity: 1,
-	},
-	grid: {
-		borderColor: "#55596e",
-		yaxis: {
-			lines: {
-				show: true,
-			},
-		},
-		xaxis: {
-			lines: {
-				show: true,
-			},
-		},
-	},
-	legend: {
-		labels: {
-			colors: "#f5f7ff",
-		},
-		show: false,
-		position: "top",
-	},
-	stroke: {
-		colors: ["transparent"],
-		show: true,
-		width: 2
-	},
-	tooltip: {
-		shared: true,
-		intersect: false,
-		theme: "dark",
-	},
-	xaxis: {
-		categories: [],
-		title: {
-			style: {
-				color: "#f5f7ff",
-			},
-		},
-		axisBorder: {
-			show: true,
-			color: "#55596e",
-		},
-		axisTicks: {
-			show: true,
-			color: "#55596e",
-		},
-		labels: {
-			style: {
-				colors: "#f5f7ff",
-			},
-			rotate: -45,
-		},
-	},
-	yaxis: {
-		title: {
-			text: gettext("Дохід (грн.)"),
-			style: {
-				color: "#f5f7ff",
-			},
-		},
-		axisBorder: {
-			color: "#55596e",
-			show: true,
-		},
-		axisTicks: {
-			color: "#55596e",
-			show: true,
-		},
-		labels: {
-			style: {
-				colors: "#f5f7ff",
-			},
-		},
-	}
+  grid: {
+    height: '70%'
+  },
+  xAxis: {
+    type: 'category',
+    data: [],
+    axisLabel: {
+      rotate: 45
+    }
+  },
+  yAxis: {
+    type: 'value',
+    name: gettext('Сума (грн.)'),
+    nameLocation: 'middle',
+    nameRotate: 90,
+    nameGap: 60,
+    nameTextStyle: {
+      fontSize: 18,
+    }
+  },
+  dataZoom: [
+    {
+      type: 'slider',
+      start: 1,
+      end: 20,
+      showDetail: false,
+      backgroundColor: 'white',
+      dataBackground: {
+        lineStyle: {
+          color: 'orange',
+          width: 5
+        }
+      },
+      selectedDataBackground: {
+        lineStyle: {
+          color: 'rgb(255, 69, 0)',
+          width: 5
+        }
+      },
+      handleStyle: {
+        color: 'orange',
+        borderWidth: 0
+      },
+    }
+  ],
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: {
+      type: 'shadow'
+    },
+    formatter: function(params) {
+      let category = params[0].axisValue;
+      let cash = parseFloat(params[0].value);
+			let card = parseFloat(params[1].value);
+			let total = (cash + card).toFixed(2);
+      let cashColor = '#A1E8B9';
+      let cardColor = '#EC6323';
+      return (
+        category +
+        ':<br>' +
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:' +
+        cashColor +
+        '"></span> Готівка: ' +
+        cash +
+        ' грн.<br>' +
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:' +
+        cardColor +
+        '"></span> Карта: ' +
+        card +
+        ' грн.<br>' +
+        'Весь дохід: ' +
+        total +
+        ' грн.'
+      );
+    }
+  },
+  series: [
+    {
+      name: 'card',
+      type: 'bar',
+      stack: 'total',
+      label: {
+        focus: 'series'
+      },
+      itemStyle: {
+        color: '#A1E8B9'
+      },
+      data: []
+    },
+    {
+      name: 'cash',
+      type: 'bar',
+      stack: 'total',
+      label: {
+        focus: 'series'
+      },
+      itemStyle: {
+        color: '#EC6323'
+      },
+      data: []
+    },
+  ]
 };
 
-let barChart = new ApexCharts(document.querySelector("#bar-chart"), barChartOptions);
-barChart.render();
+barChart.setOption(barChartOptions);
 
 
 // AREA CHART
+
+var areaChart = echarts.init(document.getElementById('area-chart'));
+
 let areaChartOptions = {
-	series: [{
-		name: "",
-		data: [''],
-	}],
-	chart: {
-		type: "area",
-		background: "transparent",
-		height: 350,
-		stacked: false,
-		toolbar: {
-			show: false,
-		},
-	},
-	colors: [
-		"#DCE43F",
-		"#89A632",
-		"#018B72",
-		"#79C8C5",
-		"#EC6323",
-		"#1858A6",
-		"#FDCA10"
-	],
-	labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
-	dataLabels: {
-		enabled: false,
-	},
-	fill: {
-		gradient: {
-			opacityFrom: 0.4,
-			opacityTo: 0.1,
-			shadeIntensity: 1,
-			stops: [0, 100],
-			type: "vertical",
-		},
-		type: "gradient",
-	},
-	grid: {
-		borderColor: "#55596e",
-		yaxis: {
-			lines: {
-				show: true,
-			},
-		},
-		xaxis: {
-			lines: {
-				show: false,
-			},
-		},
-	},
-	legend: {
-		labels: {
-			colors: "#f5f7ff",
-		},
-		show: true,
-		position: "top",
-		horizontalAlign: 'left',
-	},
-	markers: {
-		size: 3,
-		strokeColors: "#1b2635",
-		strokeWidth: 1,
-	},
-	stroke: {
-		curve: "smooth",
-	},
-	tooltip: {
-		shared: true,
-		intersect: false,
-		theme: "dark",
-	}
+	xAxis: {
+    type: 'category',
+    boundaryGap: false,
+    data: [],
+  },
+  yAxis: {
+    type: 'value'
+  },
+  dataZoom: [
+    {
+      type: 'slider',
+      start: 1,
+      end: 30,
+      showDetail: false,
+      backgroundColor: 'white',
+      dataBackground: {
+        lineStyle: {
+          color: 'orange',
+          width: 5
+        }
+      },
+      selectedDataBackground: {
+        lineStyle: {
+          color: 'rgb(255, 69, 0)',
+          width: 5
+        }
+      },
+      handleStyle: {
+        color: 'orange',
+        borderWidth: 0
+      },
+    }
+  ],
+  series: [
+    {
+      data: [],
+      type: 'line',
+      symbol: 'circle',
+      symbolSize: 10,
+      lineStyle: {
+        color: '#79C8C5',
+        width: 5
+      },
+      itemStyle: {
+        color: '#18A64D'
+      },
+      areaStyle: {
+        color: '#A1E8B9'
+      }
+    }
+  ],
+  tooltip: {
+    trigger: 'axis',
+    formatter: function (params) {
+      return gettext('Дата: ') + params[0].name + '<br/>' + params[0].seriesName + ' : ' + params[0].value + gettext(' грн/км')
+    }
+  }
 };
 
-let areaChart = new ApexCharts(document.querySelector("#area-chart"), areaChartOptions);
-areaChart.render();
+areaChart.setOption(areaChartOptions);
 
 function fetchSummaryReportData(period, start, end) {
 	let apiUrl;
@@ -237,10 +250,12 @@ function fetchSummaryReportData(period, start, end) {
 				$('#bar-chart').show();
 				const driversData = data[0]['drivers'];
 				const categories = driversData.map(driver => driver.full_name);
-				const values = driversData.map(driver => driver.total_kasa);
-				barChartOptions.series[0].data = values;
-				barChartOptions.xaxis.categories = categories;
-				barChart.updateOptions(barChartOptions);
+				const total_card = driversData.map(driver => driver.total_card);
+				const total_cash = driversData.map(driver => driver.total_cash);
+				barChartOptions.series[0].data = total_card;
+				barChartOptions.series[1].data = total_cash;
+				barChartOptions.xAxis.data = categories;
+				barChart.setOption(barChartOptions);
 			} else {
 				$(".noDataMessage1").show();
 				$('#bar-chart').hide();
@@ -260,14 +275,14 @@ function fetchSummaryReportData(period, start, end) {
 	});
 }
 
-function fetchCarEfficiencyData(period, start, end) {
+function fetchCarEfficiencyData(period, vehicleId, vehicle_lc, start, end) {
 	let apiUrl;
 	if (period === 'custom') {
-		apiUrl = `/api/car_efficiencies/${start}&${end}/`;
+		apiUrl = `/api/car_efficiencies/${start}&${end}/${vehicleId}`;
 	} else {
-		apiUrl = `/api/car_efficiencies/${period}/`;
-	}
-	;
+		apiUrl = `/api/car_efficiencies/${period}/${vehicleId}`;
+	};
+
 	$.ajax({
 		url: apiUrl,
 		type: 'GET',
@@ -276,19 +291,26 @@ function fetchCarEfficiencyData(period, start, end) {
 			if (data['dates'].length !== 0) {
 				$(".noDataMessage2").hide();
 				$('#area-chart').show();
-				let seriesData = data["vehicles"].map(item =>({
-                    name: item.name,
-                    data: item.efficiency
-                }));
+				$('.car-select').show();
+
+				let firstVehicleData = {
+					name: vehicle_lc,
+					data: data['vehicles'].efficiency
+				};
+
+				let seriesData = [firstVehicleData];
+
 				areaChartOptions.series = seriesData;
-				areaChartOptions.labels = data['dates'];
-				areaChart.updateOptions(areaChartOptions);
+				areaChartOptions.xAxis.data = data['dates'];
+				areaChart.setOption(areaChartOptions);
+
 			} else {
 				$(".noDataMessage2").show();
 				$('#area-chart').hide();
-			}
-			;
+				$('.car-select').hide();
+			};
 			$('.weekly-income-amount').text(data["kasa"] + ' ' + gettext('грн'));
+			$('.income-km').text(data["total_mileage"] + ' ' + gettext("км"));
 			$('.income-efficiency').text(data["average_efficiency"].toFixed(2) + ' ' + gettext('грн/км'));
 		},
 		error: function (error) {
@@ -396,39 +418,6 @@ function fetchDriverEfficiencyData(period, start, end) {
 	});
 }
 
-const commonPeriodSelect = $('#period-common');
-const periodSelect = $('#period');
-
-commonPeriodSelect.on('change', function () {
-	const selectedPeriod = commonPeriodSelect.val();
-	if (selectedPeriod !== "custom") {
-		fetchSummaryReportData(selectedPeriod);
-		fetchCarEfficiencyData(selectedPeriod);
-	}
-	if (selectedPeriod === "custom") {
-		$("#datePicker").css("display", "block");
-	} else {
-		$("#datePicker").css("display", "none");
-	}
-});
-
-periodSelect.on('change', function () {
-	const selectedPeriod = periodSelect.val();
-	if (selectedPeriod !== "custom") {
-		fetchDriverEfficiencyData(selectedPeriod);
-	}
-	if (selectedPeriod === "custom") {
-		$("#datePickerDriver").css("display", "block");
-	} else {
-		$("#datePickerDriver").css("display", "none");
-	}
-});
-
-fetchSummaryReportData('yesterday');
-fetchCarEfficiencyData('yesterday');
-fetchDriverEfficiencyData('yesterday');
-
-
 function showDatePicker(periodSelectId, datePickerId) {
 	let periodSelect = $("#" + periodSelectId);
 	let datePicker = $("#" + datePickerId);
@@ -450,23 +439,11 @@ function customDateRange() {
 	fetchDriverEfficiencyData(selectedPeriod, startDate, endDate);
 }
 
-function applyCustomDateRange() {
-	$(".apply-filter-button").prop("disabled", true);
-
-	let startDate = $("#start_report").val();
-	let endDate = $("#end_report").val();
-
-	const selectedPeriod = commonPeriodSelect.val();
-	fetchSummaryReportData(selectedPeriod, startDate, endDate);
-	fetchCarEfficiencyData(selectedPeriod, startDate, endDate);
-}
-
 
 $(document).ready(function () {
 	let $table = $('.driver-table');
 	let $tbody = $table.find('tbody');
 
-	// Function to sort the table by a specific column
 	function sortTable(column, order) {
 		let rows = $tbody.find('tr').toArray();
 
@@ -527,6 +504,7 @@ $(document).ready(function () {
 	$("#updateDatabaseContainer").click(function () {
 
 		$("#loadingModal").css("display", "block")
+		$(".loading-content").css("display", "block");
 
 		$.ajax({
 			type: "POST",
@@ -547,7 +525,8 @@ $(document).ready(function () {
 						},
 						success: function (response) {
 							if (response.data === true) {
-								$("#loadingMessage").text(gettext("База даних оновлено"));
+								$(".loading-content").css("display", "flex");
+								$("#loadingMessage").text(gettext("Базу даних оновлено"));
 								$("#loader").css("display", "none");
 								$("#checkmark").css("display", "block");
 								setTimeout(function () {
@@ -556,15 +535,15 @@ $(document).ready(function () {
 								}, 3000);
 								clearInterval(interval);
 							} if (response.data === false) {
-							    $("#loadingMessage").text(gettext("Сталася помилка, спробуйте ще раз"));
-							    $("#loader").css("display", "none");
-							    setTimeout(function () {
+								$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше"));
+								$("#loader").css("display", "none");
+								$("#checkmark").css("display", "none");
+
+								setTimeout(function () {
 									$("#loadingModal").css("display", "none");
-									window.location.reload();
 								}, 3000);
 								clearInterval(interval);
-							}
-
+							};
 						}
 					});
 				}, 5000);
@@ -644,6 +623,7 @@ $(document).ready(function () {
 		$('#datePicker').hide()
 		$('.driver-container').hide()
 		$('#sidebar').removeClass('sidebar-responsive');
+		$('.main-title h2').text(gettext('Автомобілі'));
 	});
 
 	$('#DriverBtnContainer').click(function () {
@@ -657,6 +637,7 @@ $(document).ready(function () {
 		if (window.innerWidth <= 900) {
 			$('.driver-container').css('display', 'block');
 		}
+		$('.main-title h2').text(gettext('Водії'));
 	});
 
 	const resetButton = $("#reset-button");
@@ -664,22 +645,123 @@ $(document).ready(function () {
 	resetButton.on("click", function () {
 		areaChart.resetSeries();
 	});
-});
 
-function formatTime(time) {
-	let parts = time.match(/(\d+) days?, (\d+):(\d+):(\d+)/);
+  const gridContainer = $(".grid-container");
+  const sidebarToggle = $("#sidebar-toggle");
+  const sidebarTitle = $(".sidebar-title");
+  const sidebarListItems = $("#sidebar .sidebar-list-item span");
+  const sidebarToggleIcon = sidebarToggle.find("i");
 
-	if (!parts) {
-		return time;
-	} else {
-		let days = parseInt(parts[1]);
-		let hours = parseInt(parts[2]);
-		let minutes = parseInt(parts[3]);
-		let seconds = parseInt(parts[4]);
+  let isSidebarOpen = false;
 
-		hours += days * 24;
+  function toggleSidebar() {
+    isSidebarOpen = !isSidebarOpen;
 
-		// Форматувати рядок у вигляді HH:mm:ss
-		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    if (isSidebarOpen) {
+      gridContainer.css("grid-template-columns", "300px 1fr 1fr 1fr");
+      sidebarTitle.css("padding", "10px 30px 0px 30px");
+      sidebarToggleIcon.removeClass("fa-angle-double-right").addClass("fa-angle-double-left");
+
+      $(".logo-1").hide();
+      $(".logo-2").show();
+
+      setTimeout(function() {
+        sidebarListItems.each(function(index) {
+          $(this).css("display", "block");
+          $(this).css("transition-delay", `${0.1 * (index + 1)}s`);
+          $(this).css("opacity", 1);
+        });
+      }, 500);
+    } else {
+      gridContainer.css("grid-template-columns", "60px 1fr 1fr 1fr");
+      sidebarTitle.css("padding", "30px 30px 50px 30px");
+      sidebarToggleIcon.removeClass("fa-angle-double-left").addClass("fa-angle-double-right");
+
+      $(".logo-1").show();
+      $(".logo-2").hide();
+
+      sidebarListItems.each(function() {
+        $(this).css("display", "none");
+        $(this).css("transition-delay", "0s");
+        $(this).css("opacity", 0);
+      });
+    }
+  }
+
+  sidebarToggle.click(toggleSidebar);
+
+	function initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, datePicker, vehicleId, vehicle_lc) {
+		iconDown.click(function() {
+			customSelect.toggleClass("active");
+		});
+
+		selectedOption.click(function() {
+			customSelect.toggleClass("active");
+		});
+
+		optionsList.on("click", "li", function() {
+			const clickedValue = $(this).data("value");
+			selectedOption.text($(this).text());
+			customSelect.removeClass("active");
+
+			if (clickedValue !== "custom") {
+				fetchSummaryReportData(clickedValue);
+				fetchCarEfficiencyData(clickedValue, vehicleId, vehicle_lc);
+				fetchDriverEfficiencyData(clickedValue);
+			}
+
+			if (clickedValue === "custom") {
+				datePicker.css("display", "block");
+			} else {
+				datePicker.css("display", "none");
+			}
+		});
 	}
-}
+
+	const customSelect = $(".custom-select");
+	const selectedOption = customSelect.find(".selected-option");
+	const optionsList = customSelect.find(".options");
+	const iconDown = customSelect.find(".fas.fa-angle-down");
+	const datePicker = $("#datePicker");
+
+	const firstVehicle = $(".custom-dropdown .dropdown-options li:first");
+	const vehicleId = firstVehicle.data('value');
+	const vehicle_lc = firstVehicle.text();
+
+	fetchSummaryReportData('yesterday');
+	fetchCarEfficiencyData('yesterday', vehicleId, vehicle_lc);
+	fetchDriverEfficiencyData('yesterday');
+
+	initializeCustomSelect(customSelect, selectedOption, optionsList, iconDown, datePicker, vehicleId, vehicle_lc);
+
+
+	const customSelectDriver = $(".custom-select-drivers");
+	const selectedOptionDriver = customSelectDriver.find(".selected-option-drivers");
+	const optionsListDriver = customSelectDriver.find(".options-drivers");
+	const iconDownDriver = customSelectDriver.find(".fas.fa-angle-down");
+	const datePickerDriver = $("#datePickerDriver");
+
+	initializeCustomSelect(customSelectDriver, selectedOptionDriver, optionsListDriver, iconDownDriver, datePickerDriver);
+
+	$(".custom-dropdown .selected-option").click(function () {
+		$(".custom-dropdown .dropdown-options").toggle();
+	});
+
+	$(".custom-dropdown .dropdown-options li").click(function () {
+		var selectedValue = $(this).data('value');
+		var selectedText = $(this).text();
+    $("#selected-vehicle").html('<span>' + selectedText + '</span><i class="fas fa-angle-down"></i>');
+		$(".custom-dropdown .dropdown-options").hide();
+		const selectedOption = $(".custom-select .selected-option").text();
+    const dataValue = $(".custom-select .options li:contains('" + selectedOption + "')").data('value');
+
+		fetchCarEfficiencyData(dataValue, selectedValue, selectedText);
+	});
+
+	$(document).mouseup(function (e) {
+		var container = $(".custom-dropdown");
+		if (!container.is(e.target) && container.has(e.target).length === 0) {
+			$(".custom-dropdown .dropdown-options").hide();
+		}
+	});
+});
