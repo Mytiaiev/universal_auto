@@ -42,11 +42,14 @@ function applyCustomDateRange() {
 
 	let startDate = $("#start_report").val();
 	let endDate = $("#end_report").val();
+	const firstVehicle = $(".custom-dropdown .dropdown-options li:first");
+	const vehicleId = firstVehicle.data('value');
+	const vehicle_lc = firstVehicle.text();
 
 	const selectedPeriod = 'custom'
 
 	fetchSummaryReportData(selectedPeriod, startDate, endDate);
-	fetchCarEfficiencyData(selectedPeriod, startDate, endDate);
+	fetchCarEfficiencyData(selectedPeriod, vehicleId, vehicle_lc, startDate, endDate);
 }
 
 // ---------- CHARTS ---------- //
@@ -750,12 +753,14 @@ $(document).ready(function () {
 	$(".custom-dropdown .dropdown-options li").click(function () {
 		var selectedValue = $(this).data('value');
 		var selectedText = $(this).text();
+		let startDate = $("#start_report").val();
+		let endDate = $("#end_report").val();
     $("#selected-vehicle").html('<span>' + selectedText + '</span><i class="fas fa-angle-down"></i>');
 		$(".custom-dropdown .dropdown-options").hide();
 		const selectedOption = $(".custom-select .selected-option").text();
     const dataValue = $(".custom-select .options li:contains('" + selectedOption + "')").data('value');
 
-		fetchCarEfficiencyData(dataValue, selectedValue, selectedText);
+		fetchCarEfficiencyData(dataValue, selectedValue, selectedText, startDate, endDate);
 	});
 
 	$(document).mouseup(function (e) {
