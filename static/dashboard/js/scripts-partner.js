@@ -110,7 +110,7 @@ let barChartOptions = {
       let cash = parseFloat(params[0].value);
 			let card = parseFloat(params[1].value);
 			let total = (cash + card).toFixed(2);
-      let cashColor = '#79C8C5';
+      let cashColor = '#A1E8B9';
       let cardColor = '#EC6323';
       return (
         category +
@@ -140,7 +140,7 @@ let barChartOptions = {
         focus: 'series'
       },
       itemStyle: {
-        color: '#79C8C5'
+        color: '#A1E8B9'
       },
       data: []
     },
@@ -170,7 +170,7 @@ let areaChartOptions = {
 	xAxis: {
     type: 'category',
     boundaryGap: false,
-    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    data: [],
   },
   yAxis: {
     type: 'value'
@@ -202,7 +202,7 @@ let areaChartOptions = {
   ],
   series: [
     {
-      data: [820, 932, 901, 934, 1290, 1330, 1320],
+      data: [],
       type: 'line',
       symbol: 'circle',
       symbolSize: 10,
@@ -504,6 +504,7 @@ $(document).ready(function () {
 	$("#updateDatabaseContainer").click(function () {
 
 		$("#loadingModal").css("display", "block")
+		$(".loading-content").css("display", "block");
 
 		$.ajax({
 			type: "POST",
@@ -524,6 +525,7 @@ $(document).ready(function () {
 						},
 						success: function (response) {
 							if (response.data === true) {
+								$(".loading-content").css("display", "flex");
 								$("#loadingMessage").text(gettext("Базу даних оновлено"));
 								$("#loader").css("display", "none");
 								$("#checkmark").css("display", "block");
@@ -533,14 +535,6 @@ $(document).ready(function () {
 								}, 3000);
 								clearInterval(interval);
 							} if (response.data === false) {
-							    $("#loadingMessage").text(gettext("Сталася помилка, спробуйте ще раз"));
-							    $("#loader").css("display", "none");
-							    setTimeout(function () {
-									$("#loadingModal").css("display", "none");
-								}, 3000);
-								clearInterval(interval);
-							};
-							if (response.data === false) {
 								$("#loadingMessage").text(gettext("Помилка оновлення бази даних. Спробуйте пізніше"));
 								$("#loader").css("display", "none");
 								$("#checkmark").css("display", "none");

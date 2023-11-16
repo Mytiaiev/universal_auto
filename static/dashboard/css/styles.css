@@ -310,12 +310,12 @@ input[type="button"] {
 
 .card:nth-child(2),
 .card-partner:nth-child(2) {
-  background-color: #18A64D;
+  background-color: #A1E8B9;
 }
 
 .card:nth-child(3),
 .card-partner:nth-child(3) {
-  background-color: #79C8C5;
+  background-color: #A1E8B9;
 }
 
 .card-inner,
@@ -698,7 +698,7 @@ input[type="button"] {
 .settings-content form input,
 #passwordChangeForm form input {
   width: 100%;
-  padding: 15px 0;
+  padding: 15px 10px;
   border-radius: 10px;
   border: 1px solid #ccc;
   margin-bottom: 20px;
@@ -790,10 +790,8 @@ input[type="button"] {
 
 .partner-options label:hover {
   padding: 5px 10px;
-  color: #fff;
   cursor: pointer;
-  border: 2px solid #3e8f3e;
-  border-radius: 5px;
+  border-radius: 10px;
 }
 
 .partner-options input:checked + label {
@@ -844,7 +842,6 @@ input[type="button"] {
 	font-style: normal;
 	font-weight: 400;
 	line-height: normal;
-	padding-left: 10px;
 }
 
 /*burger-menu*/
@@ -978,7 +975,7 @@ th {
 	background-color: #A1E8B9;
 	padding: 10px;
 	text-align: left;
-	color: #FFF;
+	color: #141E17;
 	font-size: 20px;
 	font-style: normal;
 	font-weight: 700;
@@ -994,7 +991,7 @@ tr:nth-child(odd) {
 }
 
 tr {
-  border-bottom: 3px solid #EC6323;
+  border-bottom: 3px solid #A1E8B9;
 }
 
 td {
@@ -1101,8 +1098,11 @@ select:focus {
 }
 
 .loading-content {
-    background-color: white;
-    border-radius: 62px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: white;
+	border-radius: 62px;
 }
 
 .loading-content p {
@@ -1124,14 +1124,14 @@ select:focus {
 
 .checkmark::before {
   content: "";
-  position: absolute;
-  top: 25%;
-  left: 800%;
-  width: 15px;
-  height: 50px;
-  border-bottom: 3px solid #4CAF50;
-  border-right: 3px solid #4CAF50;
-  transform: rotate(45deg);
+	position: absolute;
+	top: 20%;
+	left: 35px;
+	width: 15px;
+	height: 35px;
+	border-bottom: 3px solid #4CAF50;
+	border-right: 3px solid #4CAF50;
+	transform: rotate(45deg);
 }
 
 .loader {
@@ -1166,6 +1166,10 @@ select:focus {
 	font-style: normal;
 	font-weight: 700;
 	line-height: normal;
+}
+
+.title-driver .income-drivers-date{
+	color: #EC6323;
 }
 
 #slider-container {
