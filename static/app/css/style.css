@@ -4515,388 +4515,85 @@ span.error-name {
 
 /*Invest page*/
 
-/* investment_section */
+/*block 1*/
 
-.hero-banner-one {
-	margin-top: 70px;
-	position: relative;
-	padding: 0;
+.investment_section {
+	margin-top: 100px;
 }
 
-.hero-banner-one .bg-wrapper {
-	background-color: #a8c465;
-	background-repeat: no-repeat;
-	background-size: cover;
-	padding: 200px 0 80px;
-	position: relative;
-	z-index: 1;
+.investment_section .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.hero-banner-one .hero-heading {
-	text-transform: uppercase;
-	font-family: 'Source Sans 3', sans-serif;
-	font-weight: 700;
-	font-style: italic;
-	letter-spacing: -1px;
-	font-size: 42px;
-	margin-top: 0;
-	margin-bottom: 0.5rem;
-	text-align: left;
-	color: white;
-	position: relative;
-	z-index: 4;
+.investment-left {
+  flex: 1;
 }
 
-.main-illustration {
-	max-width: 100%;
-	max-height: 100%;
-	display: block;
-	margin: 0 auto;
-	width: auto !important
-}
-
-.hero-banner-one form {
-	height: 55px;
-	max-width: 570px;
-	border-radius: 25px;
-	background: #fff;
-	position: relative;
-	display: flex;
-}
-
-.hero-banner-one form input {
-	font-size: 15px;
-	font-weight: 500;
-	padding: 0 25px;
-	border: none;
-	background: 0 0;
-	outline: 0 none;
-	height: 100%;
-	flex: 1;
-}
-
-.hero-banner-one form button {
-	flex-basis: 120px;
-	padding: 8px 25px;
-	background-color: #E96F24;
-	border: 1px solid #E96F24;
-	color: #ffffff;
-	border-radius: 25px;
-}
-
-.hero-banner-one .pr-info span {
-	font-size: 1.6em;
-	color: #FF8C24;
-	font-weight: 700;
-}
-
-.hero-banner-one .illustration-holder {
-	position: absolute;
-	right: 6.7%;
-	bottom: 0;
-	width: 40.44%;
-	max-width: 750px;
-	z-index: 1;
-	top: 50px
-}
-
-.hero-banner-one .illustration-holder .shape-one {
-	left: 11.5%;
-	bottom: 7%;
-	width: 80%;
-}
-
-.hero-banner-one .illustration-holder .shape-two {
-	left: 11%;
-	top: 16%;
-	animation: jumpTwo 3.5s linear infinite;
-}
-
-.hero-banner-one .illustration-holder .shape-three {
-	left: -6%;
-	top: 52%;
-	animation: jumpThree 3.5s linear infinite;
-}
-
-.hero-banner-one .illustration-holder .shape-four {
-	right: -4%;
-	top: 50%;
-	animation: jumpThree 3.5s linear infinite;
-}
-
-.hero-banner-one .illustration-holder .shape-five {
-	right: 13%;
-	top: 30%;
-	animation: jumpTwo 3.5s linear infinite;
-}
-
-.hero-banner-one .illustration-holder .shape-six {
-	top: 32%;
-	left: 0;
-	width: 15.74%;
-	animation: jumpFour 3.5s linear infinite;
-}
-
-.hero-banner-one .illustration-holder .shape-seven {
-	top: 14%;
-	right: 0;
-	width: 11.6%;
-	animation: jumpFive 3.5s linear infinite;
-}
-
-.hero-banner-one .shape-eight {
-	left: 10%;
-	bottom: -25px;
-	z-index: 0;
-	animation: prXOne 3.5s linear infinite;
-}
-
-.text-lg {
-	font-size: 19px;
-	line-height: 1.67em;
-	margin-bottom: 60px;
-	text-align: left;
-}
-
-.lg-pt-30 {
-	padding-top: 30px;
-	color: white;
-}
-
-@keyframes jumpTwo {
-	0% {
-		transform: translateY(0);
-	}
-	50% {
-		transform: translateY(-10px);
-	}
-	100% {
-		transform: translateY(0);
-	}
-}
-
-@keyframes jumpThree {
-	0% {
-		transform: translateY(0);
-	}
-	50% {
-		transform: translateY(-20px);
-	}
-	100% {
-		transform: translateY(0);
-	}
-}
-
-@keyframes jumpFour {
-	0% {
-		transform: translateY(0);
-	}
-	50% {
-		transform: translateY(-5px);
-	}
-	100% {
-		transform: translateY(0);
-	}
-}
-
-@keyframes jumpFive {
-	0% {
-		transform: translateY(0);
-	}
-	50% {
-		transform: translateY(-8px);
-	}
-	100% {
-		transform: translateY(0);
-	}
-}
-
-@keyframes prXOne {
-	0% {
-		transform: translateX(0);
-	}
-	50% {
-		transform: translateX(-15px);
-	}
-	100% {
-		transform: translateX(0);
-	}
-}
-
-/* services_section */
-
-.fancy-feature-one {
-	padding-top: 140px
-}
-
-.inner-title {
-	text-transform: uppercase;
-	font-family: 'Source Sans 3', sans-serif;
-	font-weight: 700;
-	font-style: italic;
-	padding-right: 30px;
-	margin-bottom: 25px;
-	margin-top: 35px;
-	color: #000;
-	height: 50px;
-}
-
-/* blog_section */
-
-.blog-section-one {
-	padding: 0;
-	margin-top: 120px;
-}
-
-.blog-section-one .bg-wrapper {
-	background-color: #a8c465;
-	z-index: 1;
-}
-
-.position-relative {
-	padding-bottom: 20px;
-	padding-top: 20px;
-	position: relative;
-}
-
-.blog-section-one .shape-one {
-	width: 49px;
-	height: 49px;
-	background: #17bd37;
-	border-radius: 9px;
-	right: 12%;
-	top: -2%;
-	animation: 30s linear infinite rotated;
-}
-
-.shapes {
-	position: absolute;
-	z-index: -1;
-}
-
-.blog-section-one .shape-two {
-	bottom: -6%;
-	right: 11%;
-	z-index: 0;
-	animation: 3.2s linear infinite jumpTwo;
-}
-
-.blog-section-one .shape-three {
-	width: 70px;
-	height: 70px;
-	background: #ff8c24;
-	border-radius: 13px;
-	left: 11%;
-	bottom: -3%;
-	animation: 35s linear infinite rotated;
-}
-
-.title-style-one {
-	text-align: left;
-}
-
-.main-title {
-	text-transform: uppercase;
-	font-family: 'Source Sans 3', sans-serif;
-	font-weight: 700;
-	font-style: italic;
-	margin: 0;
-	font-size: 35px;
-	color: #fff;
-}
-
-body .btn-one {
-	line-height: 48px;
-	padding: 0 25px;
-	font-size: 15px;
-	color: #fff;
-	border-radius: 25px;
-	background: #E96F24;
-	font-weight: 500;
-}
-
-.lg-pt-30 {
-	padding-top: 30px !important;
-}
-
-.blog-meta-one {
-	text-align: left;
-	background: #fff;
-	padding: 22px;
-	border-radius: 25px;
-	margin-top: 30px;
-	transition: .3s ease-in-out;
-}
-
-.blog-meta-one .post-img {
-	border-radius: 25px;
-	overflow: hidden;
-	margin: 0;
+.invest-img {
+	border-radius: 62px;
 	width: 100%;
-	display: block;
+	height: auto;
 }
 
-.blog-meta-one .post-tag {
-	line-height: 25px;
-	border-radius: 25px;
-	padding: 0 12px;
-	letter-spacing: 1px;
-	font-size: 16px;
-	font-weight: 500;
-	margin-bottom: 20px;
-	text-transform: uppercase;
-	color: black;
+/* Стилі для правої частини інвестиційного блоку */
+.investment-right {
+  flex: 1;
+  padding: 0 20px;
 }
 
-
-.post-title {
-	text-transform: uppercase;
-	font-family: 'Source Sans 3', sans-serif;
-	font-weight: 700;
-	font-style: italic;
-	margin-top: 20px;
-	height: 150px;
-	color: black;
+.decorate-img {
+  position: relative;
 }
 
-.postInUp {
-	flex: 1 0 100%;
-	padding: 10px;
-	box-sizing: border-box;
+.decorate-img img {
+  width: 100%;
+  height: auto;
 }
 
-.blog_section .post-data a {
-	display: inline-block;
-	padding: 6px 25px;
-	background-color: #E96F24;
-	border: 1px solid #E96F24;
-	color: #ffffff;
-	border-radius: 25px;
-	text-transform: uppercase;
-	font-size: 12px;
-	margin-right: 50px;
+.one-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #ffffff;
 }
 
-@keyframes rotated {
-	0% {
-		transform: rotate(0deg);
-	}
-	100% {
-		transform: rotate(360deg);
-	}
+/* Стилі для текстової інформації */
+.one-info h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
 }
 
-@keyframes jumpTwo {
-	0% {
-		transform: translateY(0);
-	}
-	50% {
-		transform: translateY(-15px);
-	}
-	100% {
-		transform: translateY(0);
-	}
+.text-1 {
+  font-size: 16px;
+  line-height: 1.5;
 }
+
+/* Стилі для блоку з кнопкою і формою */
+.invest-btn-box {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.email-input {
+  padding: 10px;
+  width: 70%;
+}
+
+.free-access-button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+}
+
+/* Додаткові стилі анімації або hover-ефектів можна додати за потреби */
+
+
 
 /* << Drivers page >> */
 

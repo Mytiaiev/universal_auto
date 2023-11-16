@@ -89,7 +89,7 @@
             <li><a href="#">{% trans "Персональний водій для дитини" %}</a></li>
             <li><a href="#">{% trans "Доставка" %}</a></li>
             <li><a href="#">{% trans "Замовлення на певний час" %}</a></li>
-            <li><a href="#">{% trans "Інвестори" %}</a></li>
+            <li><a href="{% url 'investment' %}">{% trans "Інвестори" %}</a></li>
             <li><a href="{% url 'auto-park' %}">{% trans "Власникам автопарків" %}</a></li>
             <li><a href="#">{% trans "Блог" %}</a></li>
             <li class="icon"><a href="https://www.instagram.com/ninja.taxi/"><i class="fa-brands fa-instagram"></i></a>
@@ -124,7 +124,7 @@
           <li class="nav-item">
             <span class="nav-link">{% trans "Для бізнесу" %}</span>
             <ul class="sub-menu">
-              <li><a href="#">{% trans "Інвестори" %}</a></li>
+              <li><a href="{% url 'investment' %}">{% trans "Інвестори" %}</a></li>
               <li><a href="{% url 'auto-park' %}">{% trans "Власникам автопарків" %}</a></li>
               <li><a href="#">{% trans "Ninja блог" %}</a></li>
             </ul>
