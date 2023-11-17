@@ -4,6 +4,7 @@ from rest_framework import serializers
 class AggregateReportSerializer(serializers.Serializer):
     full_name = serializers.CharField()
     total_kasa = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_card = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_cash = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
@@ -15,7 +16,7 @@ class CarDetailSerializer(serializers.Serializer):
     progress_percentage = serializers.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        fields = ('licence_plate', 'price', 'kasa', 'spending', 'progress_percentage')
+        fields = ("licence_plate", "price", "kasa", "spending", "progress_percentage")
 
 
 class DriverEfficiencySerializer(serializers.Serializer):
@@ -27,12 +28,22 @@ class DriverEfficiencySerializer(serializers.Serializer):
     efficiency = serializers.DecimalField(max_digits=10, decimal_places=2)
     mileage = serializers.DecimalField(max_digits=10, decimal_places=2)
     average_price = serializers.DecimalField(max_digits=10, decimal_places=2)
-    rent_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    rent_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, read_only=True
+    )
 
     class Meta:
-        fields = ('full_name', 'total_kasa', 'total_orders',
-                  'accept_percent', 'average_price', 'road_time',
-                  'efficiency', 'mileage', 'rent_amount')
+        fields = (
+            "full_name",
+            "total_kasa",
+            "total_orders",
+            "accept_percent",
+            "average_price",
+            "road_time",
+            "efficiency",
+            "mileage",
+            "rent_amount",
+        )
 
 
 class DriverEfficiencyRentSerializer(serializers.Serializer):
@@ -42,7 +53,6 @@ class DriverEfficiencyRentSerializer(serializers.Serializer):
 
 
 class VehiclesEfficiencySerializer(serializers.Serializer):
-    name = serializers.CharField()
     efficiency = serializers.ListField(child=serializers.FloatField())
     mileage = serializers.ListField(child=serializers.FloatField())
 
@@ -57,7 +67,9 @@ class CarEfficiencySerializer(serializers.Serializer):
 
 class SummaryReportSerializer(serializers.Serializer):
     drivers = AggregateReportSerializer(many=True)
-    total_rent = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    total_rent = serializers.DecimalField(
+        max_digits=10, decimal_places=2, read_only=True
+    )
     start = serializers.CharField()
     end = serializers.CharField()
 

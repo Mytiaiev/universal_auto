@@ -3,6 +3,7 @@ import os
 import jwt
 import json
 
+from django.db.models import Q
 from django.urls import reverse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
@@ -17,7 +18,7 @@ from api.views import CarsInformationListView
 from taxi_service.forms import SubscriberForm, MainOrderForm
 from taxi_service.handlers import PostRequestHandler, GetRequestHandler
 from taxi_service.seo_keywords import seo_index, seo_park_page
-from app.models import ParkSettings, Driver
+from app.models import ParkSettings, Driver, Vehicle
 from auto_bot.main import bot
 
 
@@ -52,7 +53,7 @@ class PostRequestView(View):
             "send_reset_code": handler.handler_change_password,
             "update_password": handler.handler_change_password,
             "upd_database": handler.handler_update_database,
-            "free_access_or_consult": handler.handler_free_access
+            "free_access_or_consult": handler.handler_free_access,
         }
 
         if action in method:
@@ -124,8 +125,9 @@ class DashboardView(TemplateView):
         context["manager_group"] = self.request.user.groups.filter(
             name="Manager"
         ).exists()
-        # context['get_all_vehicle'] = Vehicle.objects.exclude(licence_plate='Unknown car')
-        # context['average_effective_vehicle'] = average_effective_vehicle()
+        context["get_all_vehicle"] = Vehicle.objects.filter(
+            Q(manager__user=self.request.user) | Q(partner__user=self.request.user)
+        )
         context["car_piggy_bank"] = CarsInformationListView.get_queryset(self)
 
         return context

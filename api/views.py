@@ -1,14 +1,13 @@
-from collections import defaultdict
 from datetime import timedelta
 
 from _decimal import Decimal
 from django.db.models import Sum, F, OuterRef, Subquery, DecimalField, Avg, Value, CharField, ExpressionWrapper, Case, \
-    When
+    When, Func
 from django.db.models.functions import Concat, Round, Coalesce
 from rest_framework import generics
 from rest_framework.response import Response
 
-from api.mixins import CombinedPermissionsMixin, PartnerFilterMixin, ManagerFilterMixin, InvestorFilterMixin
+from api.mixins import CombinedPermissionsMixin, ManagerFilterMixin, InvestorFilterMixin
 from api.serializers import SummaryReportSerializer, CarEfficiencySerializer, CarDetailSerializer, \
     DriverEfficiencyRentSerializer, InvestorCarsSerializer
 from app.models import SummaryReport, CarEfficiency, Vehicle, DriverEfficiency, RentInformation
@@ -41,11 +40,13 @@ class SummaryReportListView(CombinedPermissionsMixin,
             rent_amount=Sum('rent_distance')
         )
         queryset = filtered_qs.values('driver_id').annotate(
-            full_name=Concat(F("driver__user_ptr__name"),
-                             Value(" "),
-                             F("driver__user_ptr__second_name"), output_field=CharField()),
+            full_name=Concat(
+                Func(F("driver__user_ptr__name"), Value(1), Value(1), function='SUBSTRING', output_field=CharField()),
+                Value(". "),
+                F("driver__user_ptr__second_name"), output_field=CharField()),
             total_kasa=Sum('total_amount_without_fee'),
             total_cash=Sum('total_amount_cash'),
+            total_card=Sum('total_amount_without_fee') - Sum('total_amount_cash'),
             rent_amount=Subquery(rent_amount_subquery.filter(
                 driver_id=OuterRef('driver_id')).values('rent_amount'), output_field=DecimalField())
         )
@@ -98,7 +99,8 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
             start, end = self.kwargs['period'].split('&')
 
         queryset = ManagerFilterMixin.get_queryset(self, CarEfficiency)
-        filtered_qs = queryset.filter(report_from__range=(start, end)).select_related("vehicle").order_by("report_from")
+        filtered_qs = queryset.filter(
+            report_from__range=(start, end)).select_related("vehicle").order_by("report_from")
         return filtered_qs
 
     def list(self, request, *args, **kwargs):
@@ -107,23 +109,24 @@ class CarEfficiencyListView(CombinedPermissionsMixin,
             total_kasa=Coalesce(Sum('total_kasa'), Decimal(0)),
             total_mileage=Coalesce(Sum('mileage'), Decimal(0)),
         )
-        efficiency_dict = {}
+        queryset = queryset.filter(vehicle=self.kwargs['vehicle'])
         kasa = aggregated_data.get('total_kasa')
         total_mileage = aggregated_data.get('total_mileage')
-        average = kasa/total_mileage if total_mileage else Decimal(0)
+        average = kasa / total_mileage if total_mileage else Decimal(0)
         dates = sorted(list(set(queryset.values_list("report_from", flat=True))))
-        for vehicle in queryset.values_list("vehicle__licence_plate", flat=True):
-            if vehicle not in efficiency_dict:
-                efficiency_dict[vehicle] = {
-                    "name": vehicle,
-                    "mileage": list(queryset.filter(vehicle__licence_plate=vehicle).values_list("mileage", flat=True)),
-                    "efficiency": list(
-                        queryset.filter(vehicle__licence_plate=vehicle).values_list("efficiency", flat=True))
-                }
+        format_dates = []
+        for date in dates:
+            new_date = date.strftime("%d.%m")
+            format_dates.append(new_date)
+
+        efficiency_dict = {
+            "mileage": list(queryset.values_list("mileage", flat=True)),
+            "efficiency": list(queryset.values_list("efficiency", flat=True))
+        }
 
         response_data = {
-            "vehicles": list(efficiency_dict.values()),
-            "dates": dates,
+            "vehicles": efficiency_dict,
+            "dates": format_dates,
             "total_mileage": total_mileage,
             "kasa": kasa,
             "average_efficiency": average

@@ -29,9 +29,9 @@ $(document).ready(function () {
 	});
 });
 
-$(window).on('load', function () {
-	$('.loader').remove();
-});
+//$(window).on('load', function () {
+//	$('.loader').remove();
+//});
 
 $(document).ready(function () {
 
