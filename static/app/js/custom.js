@@ -396,4 +396,31 @@ function intlTelInit(phoneEl) {
 
 $(document).ready(function() {
   intlTelInit('#phone');
+
+//  js investment page
+
+  let currentIndex = 0;
+  const slides = $('.content-slider');
+  const slideWidth = $('.slide').outerWidth();
+  const totalSlides = slides.children().length;
+
+  function nextSlide() {
+    currentIndex = (currentIndex + 1) % totalSlides;
+    updateSlider();
+  }
+
+  function updateSlider() {
+    slides.css('transform', 'translateX(' + (-currentIndex * slideWidth) + 'px)');
+  }
+
+  setInterval(nextSlide, 5000);
+
+  $('.left-arrow, .right-arrow').on('click', function() {
+    if ($(this).hasClass('left-arrow')) {
+      currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
+    } else {
+      currentIndex = (currentIndex + 1) % totalSlides;
+    }
+    updateSlider();
+  });
 });

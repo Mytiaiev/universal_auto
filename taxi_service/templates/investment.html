@@ -11,17 +11,16 @@
     <div class="investment-right">
       <div class="decorate-img">
         <img src="{% static 'app/images/index-one-block-3.webp' %}" alt="three image">
-        <div class="one-info">
+        <div class="invest-one-info">
           <h2>{% trans "Інвестуйте в екологічне майбутнє" %}</h2>
-          <p class="text-1">
+          <p class="invest-text-1">
             {% trans "Вкладайте у майбутнє, обираючи електромобілі від Ninja Taxi." %}
             {% trans "Ваш вибір - це зелена мобільність, чисте повітря та стале місто." %}
-            {% trans "Доєднуйтесь до нас у створенні екологічної майбутньої подорожі!" %}
           </p>
         </div>
       </div>
       <div class="invest-btn-box" id="open-form">
-        <input type="email" placeholder="Введіть вашу електронну адресу" class="email-input">
+        <input type="email" placeholder="Електронна адреса" class="email-input">
         <button class="free-access-button">{% trans "Дізнатись більше" %}</button>
       </div>
     </div>
@@ -29,102 +28,74 @@
 </section>
 <!-- end investment section -->
 
-<!-- services section -->
-<!--<section class="services_section">-->
-<!--  <div class="fancy-feature-one">-->
-<!--    <div class="container">-->
-<!--      <div class="row">-->
-<!--        <div class="fadeInLeft">-->
-<!--          <div class="title-style-one text-center text-lg-start">-->
-<!--            <h2 class="services-title">{% trans "Що ми пропонуємо:" %}</h2>-->
-<!--          </div>-->
-<!--        </div>-->
-<!--      </div>-->
-<!--    </div>-->
-<!--    <div class="container content">-->
-<!--      <div class="row">-->
-<!--        <div class="services-grid__invest col-md-6 col-lg-4" data-block="1">-->
-<!--          <figure style="background-image: url({% static 'app/images/assets/img-3.webp' %})" class="cover"></figure>-->
-<!--          <h5 class="inner-title">{% trans "Ремонт і обслуговування машин за наш рахунок" %}</h5>-->
-<!--          <a class="btn btn-primary" href="#">{% trans "Дізнатись більше" %}</a>-->
-<!--        </div>-->
-<!--        <div class="services-grid__invest col-md-6 col-lg-4" data-block="2">-->
-<!--          <figure style="background-image: url({% static 'app/images/assets/img-1.webp' %})" class="cover"></figure>-->
-<!--          <h5 class="inner-title">{% trans "Власні підзарядні станції" %}</h5>-->
-<!--          <a class="btn btn-primary" href="#">{% trans "Дізнатись більше" %}</a>-->
-<!--        </div>-->
-<!--        <div class="services-grid__invest col-md-6 col-lg-4" data-block="3">-->
-<!--          <figure style="background-image: url({% static 'app/images/assets/img-2.webp' %})" class="cover"></figure>-->
-<!--          <h5 class="inner-title">{% trans "Досвідчені і кваліфіковані водії" %}</h5>-->
-<!--          <a class="btn btn-primary" href="{% url 'drivers' %}">{% trans "Дізнатись більше" %}</a>-->
-<!--        </div>-->
-<!--      </div>-->
-<!--    </div> &lt;!&ndash; /.inner-content &ndash;&gt;-->
-<!--  </div> &lt;!&ndash; /.fancy-feature-one &ndash;&gt;-->
-<!--</section>-->
-<!--&lt;!&ndash; end services section &ndash;&gt;-->
+<!-- investment slider section -->
+<section class="investment-slider">
+  <div class="container">
+    <div class="title-slider">
+      <h2>{% trans 'Варіанти співпраці:' %}</h2>
+    </div>
+    <div class="content-slider">
+      <!-- Перший слайд -->
+      <div class="slide">
+        <h3>В Україні:</h3>
+        <ul>
+          <li>1.Сума інвестиції: 20.000$</li>
+          <li>2.Ставка: 25%</li>
+          <li>3.Електромобіль придбається на території України.</li>
+        </ul>
+        <h3>Строк: 3 - 4 роки</h3>
+        <p>Технічне обслуговування та ремонти на рахунок управлінської компанії<br>Ризик простою 50/50</p>
+        <ul>
+          <h3>Переваги:</h3>
+          <li>Фіксований дохід</li>
+          <li>Інвестор не несе жодних ризиків.</li>
+          <li>Адміністрування "під ключ" за рахунок управлінської компанії.</li>
+        </ul>
+      </div>
 
-<!--&lt;!&ndash; blog section &ndash;&gt;-->
-<!--<section class="blog_section">-->
-<!--  <div class="blog-section-one">-->
-<!--    <div class="bg-wrapper position-relative">-->
-<!--      <div class="shapes shape-one"></div>-->
-<!--      <img src="{% static 'app/images/assets/shape_08.svg' %}" alt=""-->
-<!--           class="lazy-img shapes shape-two">-->
-<!--      <div class="shapes shape-three"></div>-->
-<!--      <div class="container">-->
-<!--        <div class="row align-items-center">-->
-<!--          <div class="col-lg-6 col-sm-7">-->
-<!--            <div class="title-style-one">-->
-<!--              <h2 class="main-title">{% trans "ВНУТРІШНЯ ІСТОРІЯ НАШОЇ КОМПАНІЇ" %}</h2>-->
-<!--            </div> &lt;!&ndash; /.title-style-one &ndash;&gt;-->
-<!--          </div>-->
-<!--          <div class="btn-blog">-->
-<!--            <a href="#" class="btn-one">{% trans "Перейти до блогу" %}</a>-->
-<!--          </div>-->
-<!--        </div>-->
-<!--        <div class="row lg-pt-30">-->
-<!--          <div class="postInUp" data-block="4">-->
-<!--            <article class="blog-meta-one">-->
-<!--              <figure class="post-img"><img-->
-<!--                src="{% static 'app/images/assets/blog_img_01.webp' %}"-->
-<!--                alt="" class="lazy-img w-100 tran4s"></figure>-->
-<!--              <div class="post-data">-->
-<!--                <span class="post-tag" style="background-color: #FFEAC9;">{% trans "Технології" %}</span>-->
-<!--                <h4 class="post-title">{% trans "Технології в дії: Як електро таксі змінюють правила гри" %}</h4>-->
-<!--                <a href="#">{% trans "Перейти до публікації" %}</a>-->
-<!--              </div> &lt;!&ndash; /.post-data &ndash;&gt;-->
-<!--            </article> &lt;!&ndash; /.blog-meta-one &ndash;&gt;-->
-<!--          </div>-->
-<!--          <div class="postInUp" data-block="5">-->
-<!--            <article class="blog-meta-one">-->
-<!--              <figure class="post-img"><img-->
-<!--                src="{% static 'app/images/assets/blog_img_02.webp' %}"-->
-<!--                alt="" class="lazy-img w-100 tran4s"></figure>-->
-<!--              <div class="post-data">-->
-<!--                <span class="post-tag" style="background-color: #CEEBF4;">{% trans "Дизайн" %}</span>-->
-<!--                <h4 class="post-title">{% trans "Дизайн майбутнього: Інноваційні концепції в електро таксі" %}</h4>-->
-<!--                <a href="#">{% trans "Перейти до публікації" %}</a>-->
-<!--              </div> &lt;!&ndash; /.post-data &ndash;&gt;-->
-<!--            </article> &lt;!&ndash; /.blog-meta-one &ndash;&gt;-->
-<!--          </div>-->
-<!--          <div class="postInUp" data-block="6">-->
-<!--            <article class="blog-meta-one">-->
-<!--              <figure class="post-img"><img-->
-<!--                src="{% static 'app/images/assets/blog_img_03.webp' %}"-->
-<!--                alt="" class="lazy-img w-100 tran4s"></figure>-->
-<!--              <div class="post-data">-->
-<!--                <span class="post-tag" style="background-color: #FFDFDF;">{% trans "Підтримка" %}</span>-->
-<!--                <h4 class="post-title">{% trans "Поруч і завжди доступні: Важливість ефективної підтримки в електро-->
-<!--                  таксі" %}</h4>-->
-<!--                <a href="#">{% trans "Перейти до публікації" %}</a>-->
-<!--              </div> &lt;!&ndash; /.post-data &ndash;&gt;-->
-<!--            </article> &lt;!&ndash; /.blog-meta-one &ndash;&gt;-->
-<!--          </div>-->
-<!--        </div>-->
-<!--      </div> &lt;!&ndash; /.container &ndash;&gt;-->
-<!--    </div> &lt;!&ndash; /.bg-wrapper &ndash;&gt;-->
-<!--  </div> &lt;!&ndash; /.blog-section-one &ndash;&gt;-->
-<!--</section>-->
-<!-- end blog section -->
+      <!-- Другий слайд -->
+      <div class="slide">
+        <h3>Закордоном:</h3>
+        <ul>
+          <li>1.Сума інвестиції: 15.000$</li>
+          <li>2.Ставка: 33%</li>
+          <li>3.Електромобіль придбається закордоном.</li>
+        </ul>
+        <h3>Строк: 3 роки</h3>
+        <p>Технічне обслуговування та ремонти на рахунок управлінської компанії<br>Ризик простою 50/50</p>
+        <ul>
+          <h3>Переваги:</h3>
+          <li>Фіксований дохід</li>
+          <li>Інвестор не несе жодних ризиків.</li>
+          <li>Адміністрування "під ключ" за рахунок управлінської компанії.</li>
+        </ul>
+      </div>
+
+      <!-- Третій слайд -->
+      <div class="slide">
+        <h3>Сумісний:</h3>
+        <ul>
+          <li>1.Сума інвестиції: 15.000 (50/50)</li>
+          <li>2.Ставка: 33%</li>
+          <li>3.Електромобіль придбається закордоном</li>
+          <li>4.Марка не обговорюється</li>
+        </ul>
+        <h3>Строк: 3 роки</h3>
+        <p>Технічне обслуговування та ремонти за рахунок -50/50<br>Ризик простою 50/50</p>
+        <ul>
+          <h3>Переваги:</h3>
+          <li>Інвестування за Вашими правилами та вимогами</li>
+        </ul>
+      </div>
+    </div>
+    <div class="consultation-button">
+      <button>Проконсультуватися</button>
+    </div>
+    <div class="slider-arrows">
+      <div class="arrow left-arrow">&#9665;</div>
+      <div class="arrow right-arrow">&#9665;</div>
+    </div>
+  </div>
+</section>
+<!-- end investment slider section -->
 {% endblock %}

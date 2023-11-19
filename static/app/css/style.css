@@ -4525,10 +4525,6 @@ span.error-name {
 
 /*block 1*/
 
-.investment_section {
-	margin-top: 100px;
-}
-
 .investment_section .container {
   display: flex;
   justify-content: space-between;
@@ -4536,71 +4532,205 @@ span.error-name {
 }
 
 .investment-left {
-  flex: 1;
+  position: relative;
+	width: 100%;
+	height: auto;
+	top: 65px;
 }
 
-.invest-img {
+.investment-left img {
 	border-radius: 62px;
-	width: 100%;
+	width: 75%;
 	height: auto;
 }
 
-/* Стилі для правої частини інвестиційного блоку */
-.investment-right {
-  flex: 1;
-  padding: 0 20px;
+
+.investment-right .decorate-img {
+	right: 140px;
+	position: relative;
+	z-index: -1;
+
 }
 
-.decorate-img {
-  position: relative;
+.investment-right .decorate-img img {
+  width: 200%;
+	height: auto;
 }
 
-.decorate-img img {
+.invest-one-info {
+	width: 110%;
+	position: absolute;
+	top: 45%;
+	left: 75%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+	color: #ffffff;
+}
+
+.invest-one-info h2 {
   width: 100%;
-  height: auto;
+	margin-bottom: 20px;
+	color: #EC6323;
+	text-align: center;
+	font-size: 36px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+	text-transform: uppercase;
 }
 
-.one-info {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  color: #ffffff;
+.invest-one-info p {
+  color: #FFF;
+	text-align: center;
+	font-size: 27px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
 }
 
-/* Стилі для текстової інформації */
-.one-info h2 {
-  font-size: 24px;
-  margin-bottom: 20px;
-}
-
-.text-1 {
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-/* Стилі для блоку з кнопкою і формою */
 .invest-btn-box {
-  margin-top: 20px;
-  text-align: center;
+  width: 50%;
+	right: 0;
+	position: absolute;
+	bottom: 260px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 20px;
 }
 
-.email-input {
-  padding: 10px;
-  width: 70%;
+.invest-btn-box .email-input {
+  border-radius: 20px;
+	background: #EC6323;
+	border: 0px solid #EC6323;
+	width: 50%;
+	padding: 15px 20px;
 }
 
-.free-access-button {
-  padding: 10px 20px;
-  background-color: #4CAF50;
-  color: #ffffff;
-  border: none;
+.invest-btn-box .email-input::placeholder {
+	color: rgba(255, 255, 255, 0.50);
+	font-family: Montserrat;
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: normal;
+}
+
+.invest-btn-box .free-access-button {
+	margin-left: 10px;
+	background-color: #fff;
+	color: #EC6323;
+	padding: 15px 20px;
+	border-radius: 20px;
+	border-color: #EC6323;
+	border: 0px solid #EC6323;
+}
+
+/* block 2 */
+
+.investment-slider {
+	background-color: #A1E8B9;
+	margin-top: 80px;
+}
+
+.investment-slider .container {
+	overflow: hidden;
+}
+
+.investment-slider h2 {
+	margin-top: 20px;
+	margin-bottom: 0;
+	color: #FFF;
+	font-size: 32px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+	font-variant: small-caps;
+}
+
+.investment-slider .content-slider {
+	display: flex;
+	transition: transform 0.5s ease-in-out;
+	width: 100%;
+}
+
+.investment-slider .slide {
+	flex: 0 0 100%;
+	box-sizing: border-box;
+	margin-top: 24px;
+}
+
+.investment-slider .slide h3 {
+	color: #FFF;
+	text-align: center;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 700;
+	line-height: normal;
+}
+
+.investment-slider .slide li,
+.investment-slider .slide p {
+	list-style-type: none;
+	color: #FFF;
+	text-align: center;
+	font-size: 25px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: normal;
+}
+
+.investment-slider .consultation-button {
+	text-align: center;
+	margin-top: 30px;
+	margin-bottom: 37px;
+}
+
+.investment-slider .consultation-button button {
+	font-size: 16px;
+	padding: 10px 10px;
+	background-color: #EC6323;
+	color: #fff;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.3s;
+	border-radius: 62px;
+}
+
+.investment-slider .slider-arrows {
+	bottom: 350px;
+	position: relative;
+	display: flex;
+	justify-content: space-between;
+	margin-top: 10px;
+}
+
+.investment-slider .arrow {
+  font-size: 30px;
   cursor: pointer;
 }
 
-/* Додаткові стилі анімації або hover-ефектів можна додати за потреби */
+.investment-slider .left-arrow {
+  transform: scaleX(1);
+}
 
+.investment-slider .right-arrow {
+  transform: scaleX(-1);
+}
+
+.investment-slider .left-arrow::after,
+.investment-slider .right-arrow::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%) scaleX(-1);
+	width: 58px;
+	height: 93px;
+	background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="58" height="93" viewBox="0 0 58 93" fill="none"><path d="M53.8397 39.3994L18.0414 3.89941C11.7298 -2.35963 1 2.11111 1 11V82C1 90.8889 11.7298 95.3596 18.0414 89.1006L53.8397 53.6006C57.7845 49.6887 57.7845 43.3113 53.8397 39.3994Z" fill="%23141E17" stroke="%23141E17"/></svg>') no-repeat;
+}
+
+/* block 3 */
 
 
 /* << Drivers page >> */
