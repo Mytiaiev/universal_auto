@@ -4655,13 +4655,13 @@ span.error-name {
 	width: 100%;
 }
 
-.investment-slider-section .slide {
+.investment-slider-section .investment-slider {
 	flex: 0 0 100%;
 	box-sizing: border-box;
 	margin-top: 24px;
 }
 
-.investment-slider-section .slide h3 {
+.investment-slider-section .investment-slider h3 {
 	color: #FFF;
 	text-align: center;
 	font-size: 25px;
@@ -4670,8 +4670,8 @@ span.error-name {
 	line-height: normal;
 }
 
-.investment-slider-section .slide li,
-.investment-slider-section .slide p {
+.investment-slider-section .investment-slider li,
+.investment-slider-section .investment-slider p {
 	list-style-type: none;
 	color: #FFF;
 	text-align: center;
@@ -4729,6 +4729,15 @@ span.error-name {
 	width: 58px;
 	height: 93px;
 	background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="58" height="93" viewBox="0 0 58 93" fill="none"><path d="M53.8397 39.3994L18.0414 3.89941C11.7298 -2.35963 1 2.11111 1 11V82C1 90.8889 11.7298 95.3596 18.0414 89.1006L53.8397 53.6006C57.7845 49.6887 57.7845 43.3113 53.8397 39.3994Z" fill="%23141E17" stroke="%23141E17"/></svg>') no-repeat;
+}
+
+.splide__arrow {
+	background: #A1E8B9 !important;
+	z-index: -1 !important;
+}
+
+.splide__pagination{
+	z-index: -1 !important;
 }
 
 /* block 3 */
