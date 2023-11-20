@@ -29,7 +29,7 @@
 <!-- end investment section -->
 
 <!-- investment slider section -->
-<section class="investment-slider">
+<section class="investment-slider-section">
   <div class="container">
     <div class="title-slider">
       <h2>{% trans 'Варіанти співпраці:' %}</h2>
@@ -98,4 +98,82 @@
   </div>
 </section>
 <!-- end investment slider section -->
+
+<!-- investment offer -->
+
+<section class="investment-offer-section">
+  <div class="container">
+    <h2>{% trans "Що ми пропонуємо" %}</h2>
+
+    <div class="cards">
+      <div class="card">
+        <img src="{% static 'app/images/invest-img/invest-offer-1.webp' %}" alt="img 1">
+        <h3>{% trans "Ремонт і обслуговування машини" %}</h3>
+        <p>
+          {% trans "Ми несемо повну відповідальність за їх обслуговування та ремонт." %}
+          {% trans "Ви можете бути впевнені, що протягом усього терміну інвестиції, " %}
+          {% trans "ваші машини будуть підтримуватися у найкращому стані." %}
+        </p>
+      </div>
+
+      <div class="card">
+        <img src="{% static 'app/images/invest-img/invest-offer-2.webp' %}" alt="img 2">
+        <h3>{% trans "Власні підзарядні станції" %}</h3>
+        <p>
+          {% trans "Однією з основних переваг нашої інвестиційної пропозиції є те, " %}
+          {% trans "що ми маємо власні мережі підзарядних станцій. " %}
+          {% trans "Це означає, що ви можете бути впевнені, що ваші автомобілі завжди будуть готові до роботи, " %}
+          {% trans "і ви не будете турбуватися про їх зарядку." %}
+        </p>
+      </div>
+
+      <div class="card">
+        <img src="{% static 'app/images/invest-img/invest-offer-3.webp' %}" alt="img 3">
+        <h3>{% trans "Досвідчені і кваліфіковані водії" %}</h3>
+        <p>
+          {% trans "Наша компанія має досвід у підборі та навчанні водіїв, " %}
+          {% trans "які відповідають найвищим стандартам безпеки та обслуговування клієнтів. " %}
+          {% trans "Ви не будете турбуватися про пошук або найм водіїв, " %}
+          {% trans "ведення їх документації або організацію графіків. " %}
+          {% trans "Всі ці питання лежать на наших плечах." %}</p>
+      </div>
+    </div>
+
+    <button>{% trans "Дізнатися як стати інвестором" %}</button>
+  </div>
+</section>
+
+<!-- end investment offer -->
+
+<!-- investment in numbers -->
+
+<section class="investment-in-numbers-section">
+  <div class="container">
+    <h2>{% trans "Інвестиції у цифрах" %}</h2>
+    <div class="durations">
+      <p>
+        {% trans "Початкова інвестиція: Ваша інвестиція становитиме [800000 грн.] для придбання автомобіля." %}
+      </p>
+      <p>
+        {% trans "За нашими розрахунками, інвестицію можна повернути за 3 роки." %}
+      </p>
+      <p>
+        {% trans "Опція викупу: Після того, як інвестиція буде повернута, " %}
+        {% trans "ми можемо викупити автомобіль за залишкову вартість, яка буде [450.000 грн]." %}
+      </p>
+      <p>
+        {% trans "Ви можете і далі використовувати машину та отримувати чистий прибуток" %}
+      </p>
+      <p>
+        {% trans "Протягом всього часу автомобіль генеруватиме прибуток, " %}
+        {% trans "і ви будете отримувати [30% прибутку] від загального прибутку, " %}
+        {% trans "що складається з щотижневого доходу в розмірі [5 000 грн]." %}
+      </p>
+    </div>
+    <div class="img-box">
+      <img src="{% static 'app/images/invest-img/invest-number.webp' %}" alt="img">
+    </div>
+  </div>
+
+</section>
 {% endblock %}
