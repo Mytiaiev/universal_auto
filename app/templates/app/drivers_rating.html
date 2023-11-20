@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+              content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" type="text/css">
+        <title>Drivers rating</title>
+    </head>
+    <body class="">
+        <div class="container-fluid  p-0">
+            <div class="row justify-content-md-center m-0">
+                <div class="col-12 col-md-9 col-xl-6 col-xxl-4 p-2">
+                    <div class=""><h2>Drivers Rating</h2></div>
+                    {% for x in rating %}
+                        <div class="text-white bg-dark"><h3>{{x.fleet}}</h3></div>
+                            {% for period in x.rating %}
+                                <div class="text-white bg-dark">{{ period.start|date:"d.m.Y" }} - {{ period.end|date:"d.m.Y" }}</div>
+                                    {% if period.rating %}
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="col-1" scope="col">#</th>
+                                                        <th class="col-6"scope="col">Driver</th>
+                                                        <th class="col-1"scope="col" style="text-align: right;">Amount</th>
+                                                        <th class="col-1"scope="col" style="text-align: right;">Trips</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for detail in period.rating %}
+                                                        <tr>
+                                                            <td>{{detail.num}}</td>
+                                                            <td>{{detail.driver}}</td>
+                                                            <td style="text-align: right;">{{detail.amount|stringformat:"15.2f"|default:""}}</td>
+                                                            <td style="text-align: right;">{{detail.trips|default:""}}</td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-white bg-warning">Receiving data... Please try later</div>
+                                    {% endif %}
+                            {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

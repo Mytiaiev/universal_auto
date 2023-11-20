@@ -1,0 +1,8 @@
+<form method="post" id="sub-form-{{form}}"  action="" novalidate>
+  {% csrf_token %}
+  {{ subscribe_form.email }}
+	<span class="text-danger small pl-4" id="email-error-1"></span>
+  <button type="submit" name="subscribe_form">
+    {{ button }}
+  </button>
+</form>

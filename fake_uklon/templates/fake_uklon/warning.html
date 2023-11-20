@@ -1,0 +1,46 @@
+{% extends "fake_uklon/base.html" %}
+
+{% block body %}
+<header class="header">
+<div class="container">
+    <div class="logo-icon-base">
+        <div class="logo-block">
+            <div class="clearfix">
+                <div class="pull-left">
+                    <a href="" title="Uklon - Сервис заказ авто онлайн." class="logo_icon">
+                        <img src="/static/fake_uklon/logo.png" class="logo-uklon" alt="Uklon">
+                    </a>
+                </div>
+                <div class="logo-text pull-left sr-only">
+                    <span class="logo-label">UKLON</span>
+                    <span class="logo-sub-label">Сервис умных водителей</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</header>
+<div id="main-block">
+<div class="container-fluid">
+
+  <div  class="row partner-wrap driver-block ng-star-inserted">
+    <div  class="container">
+        <div  class="row">
+            <div  class="col-xs-12 col-sm-12 col-md-6 col-lg-6 animated fadeInRight registration-wrapper">
+                <div  class="row" id="registration"><!----><!---->
+                    <div  class="col-xs-12 col-sm-9 ng-star-inserted" id="login-block">
+                        <div  class="form-group text-center mat-background-warn">
+                            <a href="/fake_uklon/login"><button class="btn btn-orange btn-login" >Вернуться</button></a>
+                            <div  class="label-warning">
+                                {{ warning }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

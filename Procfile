@@ -1,2 +1,2 @@
-web: python manage.py runserver 0.0.0.0:8080
-bot: python manage.py runscript bot
+web: bash ./entrypoint.sh
+worker: celery -A auto worker --beat --loglevel=info --pool=solo

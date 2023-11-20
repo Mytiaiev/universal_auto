@@ -1,0 +1,40 @@
+{% load static %}
+{% load i18n %}
+<!-- footer section -->
+<section class="footer_section">
+  <div class="container">
+    <div class="footer-logo">
+      <a class="navbar-brand" href="{% url 'index' %}">
+        <img src="{% static 'app/images/logo.svg' %}" width="142" height="50" alt="Ninja Taxi">
+      </a>
+      <p>{% trans 'Особистий водій на відстані виклику' %}</p>
+      <a href="{% url 'send_to_telegram' %}">
+        <button>{% trans "Замовити послугу" %}</button>
+      </a>
+    </div>
+    <div class="footer-about">
+      <h2>{% trans "Про" %}</h2>
+      <a href="#">{% trans "Нас" %}</a>
+      <a href="#">{% trans "Працевлаштування" %}</a>
+      <a href="#">{% trans "Соц.мережі" %}</a>
+    </div>
+    <div class="footer-quick-links">
+      <h2>{% trans "Швидкі посилання" %}</h2>
+      <a href="#">{% trans "Колл-центр" %}</a>
+      <a href="{% url "user_agreement" %}">{% trans "Політика конфеденційності" %}</a>
+      <a href="#">{% trans "Сервіс" %}</a>
+    </div>
+    <div class="footer-contact">
+      <h2>{% trans "Контакти" %}</h2>
+      <p>taxi.ninja.ua@gmail.com</p>
+      <p>+380937531057</p>
+      <div class="icon-social-network">
+        <a href="https://www.instagram.com/ninja.taxi/" aria-label="instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.facebook.com/profile.php?id=100090958383203" aria-label="facebook"><i class="fa-brands fa-facebook"></i></a>
+        <a href="https://www.tiktok.com/@ninja.taxi?_t=8gRmG4idFNl" aria-label="tiktok"><i class="fa-brands fa-tiktok"></i></a>
+        <a href="https://www.linkedin.com/company/ninja-taxi/" aria-label="linkedin"><i class="fa-brands fa-linkedin"></i></a>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- end footer section -->

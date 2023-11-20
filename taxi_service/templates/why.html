@@ -1,0 +1,65 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load i18n %}
+{% block content %}
+  <!-- why section -->
+  <section class="why_section layout_padding-bottom">
+    <div class="container">
+      <div class="heading_container heading_center">
+        <h2>
+          {% trans "Чому вибрати саме нас" %}
+        </h2>
+      </div>
+      <div class="why_container">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="box b1">
+              <div class="img-box">
+                <img src="{% static 'app/images/w1.webp' %}" alt="" class="" />
+              </div>
+              <div class="detail-box">
+                <h5>
+                  {% trans "Швидке та легке замовлення" %}
+                </h5>
+                <p>
+                  {% trans "Швидке та інтуїтивне замовлення авто в месенджері Телеграм - що дає змогу легко зателефонувати водію через месенджер або телефон" %}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="box b2">
+              <div class="img-box">
+                <img src="{% static 'app/images/w2.webp' %}" alt="" class="" />
+              </div>
+              <div class="detail-box">
+                <h5>
+                  {% trans "Безпека водіння" %}
+                </h5>
+                <p>
+                  {% trans "Всі машини обладнані системою трекінгу стилю водіння, яка історично гарантує що водій їздить безпечно." %}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="box b3">
+              <div class="img-box">
+                <img src="{% static 'app/images/w3.webp' %}" alt="" class="" />
+              </div>
+              <div class="detail-box">
+                <h5>
+                  {% trans "Повне задоволення" %}
+                </h5>
+                <p>
+                  {% trans "Ми відвеземо вас куди скажете та почекаємо на проміжних точках вашого маршруту" %}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- end why section -->
+{% endblock %}

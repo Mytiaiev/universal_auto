@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+{% load static %}
+{% load i18n %}
+{% include 'header.html' %}
+
+<main>
+  {% block content %}
+    <div class="hero_area">
+
+      <!-- one section -->
+
+      <section class="one_section">
+        <div class="container">
+          <div class="left_images">
+            <div class="one-background-img">
+              <img class="image-map" src="{% static 'app/images/index-one-block-1.webp' %}" alt="one image">
+            </div>
+            <div class="overlay-image">
+              <img src="{% static 'app/images/index-one-block-2.webp' %}" alt="two image">
+            </div>
+          </div>
+          <div class="right_content">
+            <div class="decorate-img">
+              <img src="{% static 'app/images/index-one-block-3.webp' %}" alt="three image">
+              <div class="one-info">
+                <h2>{% trans "ПЕРСОНАЛЬНЕ" %}<br>{% trans "ЕЛЕКТРО-ТАКСІ" %}</h2>
+                <p class="phone"><i class="fas fa-phone"></i> +38(093) 753 10 57</p>
+                <p class="text-1">{% trans "Довірте себе та дитину" %}<br>{% trans "екологічному та" %}<br>{% trans "безпечному оператору" %}<br>{% trans "таксі України" %}
+                </p>
+              </div>
+            </div>
+            <div class="telegram-button button-block-1">
+              <a href="{% url 'send_to_telegram' %}">
+                <button>{% trans "Перейти у Ninja бот" %}</button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- end one section -->
+
+      <!-- about section -->
+
+      <section class="about_section layout_padding">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-6 row-detail-box">
+              <div class="detail-box">
+                <div class="heading_container">
+                  <h2>{% trans "Що таке Ninja Taxi?" %}</h2>
+                </div>
+                <div class="text-image">
+                  <img src="{% static 'app/images/index-deckor-img-1.webp' %}" alt="" loading="lazy">
+                </div>
+                <p class="about-section">
+                  {% trans "Ninja Taxi - преміальна служба  таксі у Києві, що об'єднує в собі  послугу персональний водій для всієї сім'ї та послуги для інших автопарків." %}
+                  {% trans "Ми пишаємося можливістю надавати найкращий сервіс, використовуючи передові електрокари, бо ми прагнемо змінити стандарти таксі та залишити позитивний слід у місті." %}<br>
+                  {% trans "Обираючи Ninja Taxi, Ви обираєте комфорт, швидкість та відмінність в обслуговуванні." %}
+                  {% trans "Наші професійні водії гарантують Вашу безпеку та зручність." %}
+                  {% trans "Ninja Taxi - це Ваш партнер у кращих подорожах." %}
+                </p>
+                <div class="telegram-button-about">
+                  <a href="{% url 'send_to_telegram' %}">
+                    <button>{% trans "Замовити послугу" %}</button>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 row-detail-img">
+              <div class="img-box">
+                <img src="{% static 'app/images/index-one-block-5.webp' %}" alt="" loading="lazy">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- end about section -->
+
+      <!-- services section -->
+
+      <section class="services">
+        <div class="container">
+          <h3 class="services-title">{% trans "Наші послуги:" %}</h3>
+          <div class="services-grid">
+            <div class="services-grid__item col-md-6 col-lg-4">
+              <div class="image-services">
+                <img src="{% static 'app/images/services-1.webp' %}" alt="" loading="lazy">
+              </div>
+              <div class="text-content">
+                <h4 class="services-title-index">{% trans "Персональний водій" %}</h4>
+                <p class="service-text limited-lines">
+                  {% trans "Наші водії – експерти з водіння. Швидко і зручно доправлять вас у пункт призначення. " %}
+                </p>
+                <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+              </div>
+            </div>
+            <div class="services-grid__item col-md-6 col-lg-4">
+              <div class="image-services">
+                <img src="{% static 'app/images/services-2.webp' %}" alt="" loading="lazy">
+              </div>
+              <div class="text-content">
+                <h4 class="services-title-index">{% trans "Персональний водій для Вашої дитини" %}</h4>
+                <p class="service-text limited-lines">
+                  {% trans "Дитячний транспорт безпечно та своєчасно. Наші професіонали - ninja водії з досвідом та навичками. " %}
+                </p>
+                <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+              </div>
+            </div>
+            <div class="services-grid__item col-md-6 col-lg-4">
+              <div class="image-services">
+                <img src="{% static 'app/images/services-3.webp' %}" alt="" loading="lazy">
+              </div>
+              <div class="text-content">
+                <h4 class="services-title-index">{% trans "Доставка цінних речей в сейфі машини" %}</h4>
+                <p class="service-text limited-lines">
+                  {% trans "Наші автомобільні сейфи - надійний захист для грошей, коштовностей та документів." %}
+                </p>
+                <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+              </div>
+            </div>
+            <div class="services-grid__item col-md-6 col-lg-4">
+              <div class="image-services">
+                <img src="{% static 'app/images/services-4.webp' %}" alt="" loading="lazy">
+              </div>
+              <div class="text-content">
+                <h4 class="services-title-index">{% trans "Передзамовлення машини на певний час" %}</h4>
+                <p class="service-text limited-lines">
+                  {% trans "Замовте авто на потрібний Вам час з впевненістю. Комфорт та розклад - в вашому контролі. " %}
+                </p>
+                <button class="btn-read-more" href="#">{% trans "Читати більше" %}</button>
+              </div>
+            </div>
+            <div class="fon-image">
+              <img src="{% static 'app/images/index-deckor-img-1.webp' %}" alt="" loading="lazy">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- end services section -->
+
+      <!-- app section -->
+
+      <section class="app_section">
+        <div class="container container-app">
+          <div class="detail-box">
+            <div class="heading_container">
+              <h5>
+                {% trans "Замовити послуги від Ninja taxi" %}
+              </h5>
+            </div>
+            <div class="app-radio-btn">
+              <input type="radio" id="detailsRadio" name="radioGroup" value="details" checked>
+              <label for="detailsRadio">{% trans "Деталі" %}</label><br>
+              <input type="radio" id="howItWorksRadio" name="radioGroup" value="howItWorks">
+              <label for="howItWorksRadio">{% trans "Як це працює" %}</label><br>
+            </div>
+            <div class="detail-blocks">
+              <div class="detail-radio-1" id="detail-radio-1">
+                <p>
+                  {% trans "Приєднуйтесь до нашого бота і насолоджуйтесь крутішим сервісом від еко-таксі Ninja taxi." %}
+                  {% trans "Щоб розпочати Вам необхідно ввести Своє ім'я та контактний номер." %}
+                </p>
+                <ul>
+                  <li>{% trans "Миттєвий доступ" %}</li>
+                  <li>{% trans "Підтвердження в реальному часі" %}</li>
+                  <li>{% trans "Зручний платіж" %}</li>
+                  <li>{% trans "Історія поїздок" %}</li>
+                  <li>{% trans "Економія часу" %}</li>
+                </ul>
+              </div>
+              <div class="detail-radio-2" id="detail-radio-2" style="display: none">
+                <ul>
+                  <li>{% trans "Перейдіть у Telegram Bot Ninja taxi" %}</li>
+                  <li>{% trans "Авторизуйтеся" %}</li>
+                  <li>{% trans "Оберіть потрібну Вам послугу" %}</li>
+                  <li>{% trans "Здійсніть оплату за послугу" %}</li>
+                  <li>{% trans "Оцініть роботу водія" %}</li>
+                </ul>
+              </div>
+              <div class="app-telegram-button">
+                <a href="{% url 'send_to_telegram' %}">
+                  <button>{% trans "Перейти у Ninja Taxi бот" %}</button>
+                </a>
+              </div>
+            </div>
+            <div class="app-image">
+              <img src="{% static 'app/images/app-1.webp' %}" alt="" loading="lazy">
+            </div>
+          </div>
+          <div class="app-deckor-image">
+            <img src="{% static 'app/images/index-deckor-img-1.webp' %}" alt="" loading="lazy">
+          </div>
+        </div>
+      </section>
+
+      <!-- end app section -->
+
+      <!-- investment section -->
+
+      <section class="investment-section-index layout_padding">
+        <div class="container">
+          <div class="heading_container">
+            <h2>{% trans "Інвестиція в екологічне майбутнє" %}</h2>
+            <p class="investment">
+              {% trans "Розкрийте потенціал інвестицій у світі електромобілів." %}
+              {% trans "Вас чекає неймовірна можливість стати частиною нашої революційної служби та заробити на екологічно орієнтованому бізнесі." %}
+              {% trans "Ninja Taxi запрошує вас приєднатися до нашої високоперспективної команди і вкласти кошти у стійку транспортну систему." %}
+            </p>
+            <div class="button-container">
+              <a href="{% url 'investment' %}" class="btn btn-primary">{% trans "Дізнатися більше" %}</a>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="video-box">
+                <a data-youtube href="https://www.youtube.com/watch?v=GCf8iURnec8" title="investor-1"></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- end investment section -->
+
+      <!-- automation for vehicle fleets section -->
+
+      <section class="automation-section-index layout_padding">
+        <div class="container">
+          <div class="block">
+            <div class="automation-img">
+              <img src="{% static 'app/images/automation-1.webp' %}" alt="" loading="lazy">
+            </div>
+            <div class="block-detail">
+              <h2>{% trans "Переверніть свій автопарк на 360 градусів" %}</h2>
+              <p>{% trans "Автоматизована система від Ninja Taxi- це ключ до ефективності, яка переверне ваш бізнес!" %}</p>
+              <a href="{% url 'auto-park' %}" class="button">{% trans "Дізнатися більше" %}</a>
+              <div class="automation-deckor-image">
+                <img src="{% static 'app/images/index-deckor-img-1.webp' %}" alt="" loading="lazy">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- end automation for vehicle fleets section -->
+
+      <!-- blog selection -->
+
+      <section class="blog-selection layout_padding">
+        <div class="container">
+          <h2 class="title-block">{% trans "Ninja блог" %}</h2>
+          <div class="blog-cards">
+            <div class="blog-card">
+              <img src="{% static 'app/images/blog-img-1.webp' %}" alt="img-blog">
+              <h2 class="title-blog">{% trans "Дизайн майбутнього: інноваційні концепції в електротаксі" %}</h2>
+              <p class="description-blog">{% trans "У світі, де екологічні питання стають все більш актуальними, електрокари не просто є перевізниками, вони - це майбутнє транспорту." %}</p>
+              <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
+            </div>
+            <div class="blog-card">
+              <img src="{% static 'app/images/blog-img-2.webp' %}" alt="img-blog">
+              <h2 class="title-blog">{% trans "Технології в дії: як електротаксі змінюють правила гри" %}</h2>
+              <p class="description-blog">{% trans "Електротаксі - це новий вимір мобільності, який змінює правила гри в транспортній індустрії." %}</p>
+              <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
+            </div>
+            <div class="blog-card">
+              <img src="{% static 'app/images/blog-img-3.webp' %}" alt="img-blog">
+              <h2 class="title-blog">{% trans "Поруч і завжди доступні: Важливість ефективної підтримки в електротаксі" %}</h2>
+              <p class="description-blog">{% trans "Електротаксі - це не просто транспортний засіб; це мобільний сервіс, який змінює наше сприйняття громадського транспорту." %}</p>
+              <a class="btn-blog" href="#">{% trans "Читати більше" %}</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- end blog selection -->
+
+      <!-- client section -->
+
+      <section class="client_section layout_padding-bottom">
+        <div class="container">
+          <h2 class="title-block">{% trans "Відгуки" %}</h2>
+          <div class="client-cards">
+            <div class="client-card">
+              <div class="client-card-header">
+                <div class="rounded-image-container">
+                  <img src="{% static 'app/images/client-Ganna.webp' %}" class="client-img rounded-image" alt="">
+                </div>
+                <div class="client-name">
+                  <h2>{% trans "Ганна" %}</h2>
+                  <p>{% trans "Постійний клієнт" %}</p>
+                </div>
+              </div>
+              <div class="client-description">
+                <p class="client-description-text">
+                  {% trans "Я була приємно здивована електротаксі - комфорт, тиша та екологічність відчувається з перших хвилин поїздки." %}
+                  {% trans "Це дорожче, ніж традиційні таксі, але я раджу спробувати його хоча б раз, якщо ви можете собі це дозволити." %}
+                </p>
+              </div>
+            </div>
+            <div class="client-card">
+              <div class="client-card-header">
+                <div class="rounded-image-container">
+                  <img src="{% static 'app/images/client-Vasil.webp' %}" class="client-img rounded-image" alt="">
+                </div>
+                <div class="client-name">
+                  <h2>{% trans "Василь" %}</h2>
+                  <p>{% trans "Постійний клієнт" %}</p>
+                </div>
+              </div>
+              <div class="client-description">
+                <p class="client-description-text">
+                  {% trans "Я був приємно здивований, коли вперше використав електротаксі - це було так комфортно та тихо." %}
+                  {% trans "Я відчував себе більш екологічно свідомим, використовуючи таксі, що не виділяє викидів." %}
+                </p>
+              </div>
+            </div>
+            <div class="client-card">
+              <div class="client-card-header">
+                <div class="rounded-image-container">
+                  <img src="{% static 'app/images/client-Alina.webp' %}" class="client-img rounded-image" alt="">
+                </div>
+                <div class="client-name">
+                  <h2>{% trans "Аліна" %}</h2>
+                  <p>{% trans "Постійний клієнт" %}</p>
+                </div>
+              </div>
+              <div class="client-description">
+                <p class="client-description-text">
+                  {% trans "Я була дуже вражена чистотою в електротаксі. Це було дійсно приємним додатком до мого досвіду використання таксі." %}
+                  {% trans "Я би, безперечно, рекомендувала електротаксі тим, хто знаходиться в пошуку екологічних альтернатив." %}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="client-decorate-img">
+            <img src="{% static 'app/images/index-deckor-img-2.webp' %}" alt="" loading="lazy">
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- end client section -->
+  {% endblock %}
+</main>
+{% include 'footer.html' %}
+
+<script>
+	let ajaxPostUrl = "{% url 'post_request' %}";
+	let ajaxGetUrl = "{% url 'get_request' %}";
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" defer></script>
+<script src="{% static 'app/js/defer-google-maps.js' %}" defer></script>
+<script src="{% static 'app/js/jquery.mask.min.js' %}" defer></script>
+<script src="{% static 'app/js/cookies.js' %}" defer></script>
+<script src="{% static 'app/js/custom.js' %}" defer></script>
+
+<script type="text/javascript">
+	(function (d, w, s) {
+		let widgetHash = 'nyn8tk2xlz378e7n7kd3', gcw = d.createElement(s);
+		gcw.type = 'text/javascript';
+		gcw.async = true;
+		gcw.src = '//widgets.binotel.com/getcall/widgets/' + widgetHash + '.js';
+		let sn = d.getElementsByTagName(s)[0];
+		sn.parentNode.insertBefore(gcw, sn);
+	})(document, window, 'script');
+</script>
+
+</body>
+</html>

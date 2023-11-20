@@ -1,0 +1,355 @@
+{% extends "fake_uklon/base.html" %}
+{% block link %}
+    <link href="/static/fake_uklon/fleet-revenue.css" rel="stylesheet">
+    <link href="/static/fake_uklon/partner-base.css" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+<header class="navbar main-header" role="navigation">
+        <div class="container override-container clearfix">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-nav.nav-collapse">
+                <span class="sr-only">Toggler</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a id="main-menu-toggle" class="hidden-xs open">
+                <i class="fa fa-bars"></i>
+            </a>
+            <a class="col-lg-2 col-md-2 col-sm-1 col-xs-12" title="Uklon Partner" href="https://partner.uklon.com.ua/">
+                <span class="sr-only">UKLON</span>
+            </a>
+            <div class="nav-no-collapse header-nav account-nav-bar">
+              <div class="pull-right">
+                <a class="btn account">
+                  <div class="avatar">
+                    <div class="user-avatar" data-uid="14f19b9d-4372-4bcf-9823-31e8fb79d080"></div>
+                  </div>
+                  <div class="user">
+                    <span class="name">380681373335</span>
+                  </div>
+                </a>
+              </div>
+            </div>
+        </div>
+    </header>
+    <div id="main-content" class="container">
+        <div class="settings hidden">
+            <input id="ssl_domain_url" name="ssl_domain_url" type="hidden" value="https://uklon.com.ua">
+        </div>
+        <div class="row">
+          <div id="sidebar-left" class="col-sm-1 col-md-2">
+
+
+
+<div id="navbar-area" class="nav-collapse sidebar-nav collapse navbar-collapse" data-fleet="14f19b9d43724bcf982331e8fb79d080">
+  <ul class="nav nav-tabs nav-stacked">
+    <li class="header">
+      <a class="dropmenu visible-lg" href="https://partner.uklon.com.ua/partner/finances?page=1&amp;pageSize=20&amp;startDate=1659301200&amp;endDate=1664053200#" title="The driver&#39;s rating is the arithmetic average of the last 100 passenger estimates">
+        <div class="clearfix">
+          <div class="pull-left hidden-xs">
+            <div class="driver-rate-label">
+              Current rating
+            </div>
+            <div id="fleet-rating" data-url="/partner/home/rating">
+              <span class="fa fa-lg fa-star"></span>
+              <span class="fa fa-lg fa-star"></span>
+              <span class="fa fa-lg fa-star"></span>
+              <span class="fa fa-lg fa-star"></span>
+              <span class="fa fa-lg fa-star-half-o"></span>
+            </div>
+          </div>
+          <div class="pull-left hidden-xs">
+            <span class="driver-menu-rate">4.97</span>
+          </div>
+        </div>
+      </a>
+      <a class="visible-lg" title="Dashboard" href="https://partner.uklon.com.ua/partner">
+        <span class="visible-md-block visible-lg-block text-left">Куцко</span>
+      </a>
+    </li>
+      <li class="account-nav">
+        <a href="https://partner.uklon.com.ua/partner/finances?page=1&amp;pageSize=20&amp;startDate=1659301200&amp;endDate=1664053200#" data-toggle="collapse" data-target=".account-menu" aria-expanded="false">
+          <i class="menu-icon"></i>
+          <span class="hidden-sm">Fleet</span>
+          <i class="menu-icon "></i>
+          <i class="menu-icon " style="display: none;"></i>
+        </a>
+      </li>
+  </ul>
+  <ul class="nav nav-tabs nav-stacked account-menu collapse">
+      <li>
+        <a href="https://partner.uklon.com.ua/driver/profile" title="Account">
+          <i class="menu-icon icon-driver"></i>
+          <span class="hidden-sm">Account</span>
+        </a>
+      </li>
+      </ul>
+  <ul class="nav nav-tabs nav-stacked main-menu collapse in ">
+    <li>
+      <a class="dropmenu" href="https://partner.uklon.com.ua/" title="Management">
+        <i class="fa fa-cogs"></i><span class="hidden-sm">Management</span>
+      </a>
+      <ul>
+          <li>
+              <a href="https://partner.uklon.com.ua/partner/vehicle" title="Drivers">
+                  <i class="fa fa-drivers-license"></i><span class="hidden-sm">Drivers</span>
+              </a>
+          </li>
+          <li class="hide">
+              <a class="disabled text-muted" href="https://partner.uklon.com.ua/partner/finances?page=1&amp;pageSize=20&amp;startDate=1659301200&amp;endDate=1664053200#">
+                  <i class="fa fa-map"></i><span class="hidden-sm text-muted">Карта активности</span>
+              </a>
+          </li>
+              <li>
+                  <a href="https://partner.uklon.com.ua/partner/fleet-drivers" title="Contacts list">
+                      <i class="fa fa-drivers-license"></i><span class="hidden-sm">Contacts list</span>
+                  </a>
+              </li>
+      </ul>
+    </li>
+    <li>
+      <a class="dropmenu" href="https://partner.uklon.com.ua/" title="Reports">
+        <i class="fa fa-cubes"></i><span class="hidden-sm">Reports</span>
+      </a>
+      <ul style="display: block;">
+        <li>
+          <a href="https://partner.uklon.com.ua/partner/rides" title="Rides">
+            <i class="fa fa-road"></i>
+            <span class="hidden-sm">
+              Rides
+            </span>
+          </a>
+        </li>
+        <li class="active">
+          <a href="https://partner.uklon.com.ua/partner/finances" title="Payments">
+            <i class="fa fa-money"></i>
+            <span class="hidden-sm">
+              Payments
+            </span>
+          </a>
+        </li>
+      </ul>
+    </li>
+    <li>
+      <a class="dropmenu" href="https://partner.uklon.com.ua/" title="Finances">
+        <i class="fa fa-credit-card"></i><span class="hidden-sm">Finances</span>
+      </a>
+      <ul style="display: block;">
+        <li>
+          <a id="uwalletBallance" href="https://partner.uklon.com.ua/partner/wallet" data-url="/api/v1/drivers/14f19b9d-4372-4bcf-9823-31e8fb79d080/uwallet/balance">
+            <span class="hidden-sm">
+              Fleet wallet
+            </span>
+            <span class="label hidden-sm" data-source="u-wallet" data-format="{0} {1}">0.84 UAH</span>
+          </a>
+        </li>
+        <li>
+          <a href="https://partner.uklon.com.ua/partner/drivers-balance" data-url="/api/v1/drivers/14f19b9d-4372-4bcf-9823-31e8fb79d080/uwallet/balance">
+            <span class="hidden-sm">
+              Drivers Wallets
+            </span>
+          </a>
+        </li>
+      </ul>
+    </li>
+    <li>
+      <a class="dropmenu" href="https://partner.uklon.com.ua/" title="Legal">
+        <i class="fa fa-legal"></i><span class="hidden-sm">Legal</span>
+      </a>
+      <ul style="display: block;">
+          <li>
+              <a href="https://partner.uklon.com.ua/document/offerfordriver" target="_blank" title="Public offer">
+                  <span class="hidden-sm">
+                      Public offer
+                  </span>
+              </a>
+          </li>
+          <li>
+              <a href="https://driver-update.uklon.com.ua/baza_znan" title="Terms and conditions" target="_blank">
+                  <span class="hidden-sm">
+                      Terms and conditions
+                  </span>
+              </a>
+          </li>
+      </ul>
+    </li>
+    <li class="logout-nav">
+
+        <i class="menu-icon "></i>
+        <span class="hidden-sm">Sign out</span>
+      </a>
+    </li>
+<form action="https://partner.uklon.com.ua/account/logout" id="logoutForm" method="post"></form>  </ul>
+</div>
+          </div>
+            <div id="content" class="col-sm-11 col-md-10">
+                <div class="container">
+
+<div class="row animated fadeInRight top-navigation">
+    <ul class="breadcrumb" role="menu">
+        <li>
+            <a href="https://partner.uklon.com.ua/partner" title="Dashboard">Dashboard</a>
+        </li>
+        <li class="active">
+            Payments
+        </li>
+    </ul>
+</div>
+
+<div id="panelToolbar" class="row rides-filter">
+    <div class="panel-body">
+<form action="https://partner.uklon.com.ua/partner/finances/search" class="payment-filter-form" method="post">            <div class="row">
+                <div class="col-sm-9">
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <div class="form-group">
+                                <label class="sr-only">From</label>
+                                <div class="input-group col-md-10">
+                                    <input type="text" name="StartDate" value="{{start}}" class="datetimepicker form-control" autocomplete="off">
+                                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xs-6">
+                            <div class="form-group ">
+                                <label class="sr-only">To</label>
+                                <div class="input-group col-md-10">
+                                    <input type="text" name="EndDate" value="{{end}}" class="datetimepicker form-control" autocomplete="off">
+                                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <div class="form-group">
+                                <label class="sr-only">Signal</label>
+                                <div class="col-md-10" style="padding: 0;">
+                                    <select class="selectpicker form-control bs-select-hidden" data-container="body" data-live-search="true" id="driverid" name="driverid"><option value="">None driver selected</option>
+<option value="15f63673-b932-457b-8431-44fa88c00170">372350</option>
+<option value="6bf75830-5a25-41a6-8949-b2d7ad98d8ef">324460</option>
+<option value="477f17e3-4e80-4b98-a2af-609f86ace552">368808</option>
+<option value="a1e43005-1c66-4ee1-aac6-4429fdfcd543">374707</option>
+<option value="9900c0e9-ca02-4402-8e00-c12a65db418a">372353</option>
+<option value="b3a412cc-20ea-4829-9f77-3d44aa9ffe68">362612</option>
+<option value="99ece989-010c-4f4d-9f0c-8c4baf0abba2">357339</option>
+</select><div class="btn-group bootstrap-select form-control"><button type="button" class="btn dropdown-toggle btn-default" data-toggle="dropdown" data-id="driverid" title="None driver selected"><span class="filter-option pull-left">None driver selected</span>&nbsp;<span class="bs-caret"><span class="caret"></span></span></button><div class="dropdown-menu open"><div class="bs-searchbox"><input type="text" class="form-control" autocomplete="off"></div><ul class="dropdown-menu inner" role="menu"><li data-original-index="0" class="selected"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">None driver selected</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="1"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">372350</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="2"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">324460</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="3"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">368808</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="4"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">374707</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="5"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">372353</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="6"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">362612</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="7"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">357339</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li></ul></div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xs-6">
+                            <div class="form-group">
+                                <label class="sr-only">Vehicle</label>
+                                <div class="col-md-10" style="padding: 0;">
+                                    <select class="selectpicker form-control bs-select-hidden" data-container="body" data-live-search="true" id="vehicleid" name="vehicleid"><option value="">None vehicle selected</option>
+<option value="74f01ca5-c4f2-496e-b497-da98b57487a5">AA3107YA</option>
+<option value="a9f68ce6-719e-4a23-932b-5a0a1ba95353">KA8443EA</option>
+<option value="593f1991-59e2-41f1-bae6-c654cca9291f">KA1644CT</option>
+<option value="cb2ece86-2dc8-4299-ba5e-1b5d2094a1ad">AA3410YA</option>
+<option value="af621b4c-e0f2-4d56-a9e5-377d916c5621">AA3108YA</option>
+<option value="d8403dd7-a06c-43df-a5a3-0a7d0121b8a6">KA4897EM</option>
+<option value="b3e9d809-cc34-49fa-8ee7-f237a34533f0">KA6047EI</option>
+</select><div class="btn-group bootstrap-select form-control"><button type="button" class="btn dropdown-toggle btn-default" data-toggle="dropdown" data-id="vehicleid" title="None vehicle selected"><span class="filter-option pull-left">None vehicle selected</span>&nbsp;<span class="bs-caret"><span class="caret"></span></span></button><div class="dropdown-menu open"><div class="bs-searchbox"><input type="text" class="form-control" autocomplete="off"></div><ul class="dropdown-menu inner" role="menu"><li data-original-index="0" class="selected"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">None vehicle selected</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="1"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">AA3107YA</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="2"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">KA8443EA</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="3"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">KA1644CT</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="4"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">AA3410YA</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="5"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">AA3108YA</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="6"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">KA4897EM</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="7"><a tabindex="0" class="" style="" data-tokens="null"><span class="text">KA6047EI</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li></ul></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-md-3 text-right">
+                    <div class="dropdown hidden-xs dropdown-menu-right" title="Export">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="typesExport" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-download"></i>&nbsp;Export&nbsp;
+                            <span class="caret"></span>
+                        </button>
+
+                        <ul id="exportData" class="dropdown-menu dropdown-menu-right" aria-labelledby="typesExport">
+                            <li><a class="text-lowercase" data-format="xlsx"><i class="fa fa-file-excel-o"></i>&nbsp; excel</a></li>
+
+                        </ul>
+                    </div>
+
+                    <input type="submit" value="Filter" class="btn btn-primary uk-btn-primary">
+                </div>
+            </div>
+</form>    </div>
+</div>
+
+<div id="fleetPayments" class="row table-container" data-url="/partner/finances/search?page=1&amp;pageSize=20&amp;startDate=1663534800&amp;endDate=1664053200">    <table class="table table-striped table-responsive">
+        <thead>
+            <tr class="tr-finances">
+                <th></th>
+                <th>Signal</th>
+                <th>Licence plate</th>
+                <th>Rides</th>
+                <th>Mileage</th>
+                <th>Total cashless</th>
+                <th>Total cash</th>
+                <th>Total cost</th>
+                <th>Total Fee</th>
+                <th>Profit</th>
+                <th class="hide">Bonus</th>
+            </tr>
+        </thead>
+        <tbody>
+                {% for driver in drivers %}
+                <tr data-driverid="477f17e3-4e80-4b98-a2af-609f86ace552">
+                    <td>
+                      <strong>
+                        <a class="text-primary" href="https://partner.uklon.com.ua/driver/477f17e3-4e80-4b98-a2af-609f86ace552/profile" target="_parent" title="Profile">Driver Куцко Сергій</a>
+                      </strong>
+                    </td>
+                    <td>
+                        {{ driver.signal }}
+                    </td>
+                    <td>
+                        {{driver.licence_plate}}
+                    </td>
+                    <td>{{driver.total_rides}}</td>
+                    <td>{{driver.total_distance}}</td>
+                    <td>{{driver.total_amount_cach_less}}</td>
+                    <td>
+                        {{driver.total_amount_cach}}
+                    </td>
+                    <td>
+                        {{driver.total_amount}}
+                    </td>
+                    <td>
+                        {{driver.total_amount_without_comission}}
+                    </td>
+                     <td>
+                        {{driver.profit}}
+                    </td>
+                    <td class="hide">{{driver.bonuses}}</td>
+                </tr>
+                {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="9" id="paymentPager" class="hide">
+                    <div class="pull-right pagination-container"><ul class="pagination"><li class="disabled PagedList-skipToPrevious"><a rel="prev">«</a></li><li class="disabled PagedList-skipToNext"><a rel="next">»</a></li></ul></div>
+
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+<input id="exportUrl" name="exportUrl" type="hidden" value="/partner/export/fares?page=1&amp;pageSize=20&amp;startDate=1659301200&amp;endDate=1664053200"><input id="currentUrl" name="currentUrl" type="hidden" value="/partner/finances?page=1&amp;pageSize=20&amp;startDate=1659301200&amp;endDate=1664053200"></div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="clearfix"></div>
+
+    <footer>
+        <div class="row">
+            <div class="col-xs-8 col-sm-6 col-md-4 col-lg-2">
+                © 2022 <a href="https://uklon.com.ua/" class="text-info">uklon</a> ™
+            </div>
+            <div class="col-xs-4 col-sm-6 col-md-8 col-lg-10 text-right">
+                <span title="Version" class="label label-info">2.30.0.0</span>
+            </div>
+        </div>
+    </footer>
+{% endblock %}

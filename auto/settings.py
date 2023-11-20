@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+from google.oauth2 import service_account
+import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +23,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6k_khpqqm)b)nkws+c!jf)0_cx)#dhurwe7%g$$2k3yo3951+z'
-
+SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['snowy-wood-371.fly.dev', 'localhost']
+DEBUG = bool(os.environ['DEBUG'])
+ALLOWED_HOSTS = os.environ['ALLOWED_HOSTS'].split(' ')
+CSRF_TRUSTED_ORIGINS = os.environ['CSRF_TRUSTED_ORIGINS'].split(' ')
 
 
 # Application definition
@@ -37,14 +39,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-# add these lines:
     'django_extensions',
     'app.apps.AppConfig',
+    'fake_uklon',
+    'polymorphic',
+    'fake_uber',
+    'taxi_service',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'api',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -72,17 +81,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'auto.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'), conn_max_age=240),
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -106,21 +107,67 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'uk-ua'
 
-TIME_ZONE = 'UTC'
+
+TIME_ZONE = "Europe/Kiev"
 
 USE_I18N = True
 
+USE_L10N = True
+
 USE_TZ = True
 
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+STATIC_ROOT = BASE_DIR / 'data/staticfiles'
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.0/howto/static-files/
+try:
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+        os.path.join(BASE_DIR, "credentials.json"))
+except FileNotFoundError:
+    pass
 
-STATIC_URL = 'static/'
+DEFAULT_FILE_STORAGE = "auto.gcloud.GoogleCloudMediaFileStorage"
+GS_PROJECT_ID = "ninja-taxi-9aa7d"
+GS_BUCKET_NAME = 'jobdriver-bucket'
+MEDIA_ROOT = "media/"
+UPLOAD_ROOT = 'media/uploads/'
+MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
 
+LOCALE_PATHS = (
+    os.path.join(BASE_DIR, 'locale/'),
+)
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+
+}
+
+CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
+CELERY_RESULT_BACKEND = os.environ['CELERY_RESULT_BACKEND']
+
+CELERY_IMPORTS = [
+    'auto.tasks',
+]
+
+SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
+APPEND_SLASH = False
+
+# Налаштування для відправки листів
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = str(os.getenv('EMAIL_USER'))
+EMAIL_HOST_PASSWORD = str(os.getenv('EMAIL_PASSWORD'))

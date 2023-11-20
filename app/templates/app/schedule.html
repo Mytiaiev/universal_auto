@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Charts</title>
+	<style>
+		body {
+			font-family: Arial, Helvetica, sans-serif;
+			background-color: #f4f4f4;
+		}
+		h1 {
+			text-align: center;
+			margin-top: 50px;
+		}
+		.container {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			align-items: center;
+			margin-top: 50px;
+		}
+		.chart {
+			margin: 20px;
+			box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+			background-color: white;
+			padding: 20px;
+			border-radius: 10px;
+			text-align: center;
+			width: 600px;
+			height: 300px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			position: relative;
+		}
+		.chart h2 {
+			margin: 0;
+		}
+		.chart canvas {
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+	</style>
+</head>
+<body>
+	<h1>Charts</h1>
+	<div class="container">
+		<div class="chart">
+			<h2>Chart 1</h2>
+			<canvas id="chart1"></canvas>
+            	<p>За вчора</p>
+		</div>
+		<div class="chart">
+			<h2>Chart 2</h2>
+			<canvas id="chart2"></canvas>
+          <p>За минулий тиждень</p>
+		</div>
+		<div class="chart">
+			<h2>Chart 3</h2>
+			<canvas id="chart3"></canvas>
+            	<p>За минулий місяць</p>
+		</div>
+		<div class="chart">
+			<h2>Chart 4</h2>
+			<canvas id="chart4"></canvas>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script>
+		// Chart 1 data and layout
+		var chart1Data = {
+			labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+			datasets: [
+				{
+					label: 'Dataset 1',
+					data: [65, 59, 80, 81, 56, 55, 40],
+					backgroundColor: 'rgba(255, 99, 132, 0.2)',
+					borderColor: 'rgba(255, 99, 132, 1)',
+					borderWidth: 1
+				},
+				{
+					label: 'Dataset 2',
+					data: [28, 48, 40, 19, 86, 27, 90],
+					backgroundColor: 'rgba(54, 162, 235, 0.2)',
+					borderColor: 'rgba(54, 162, 235, 1)',
+					borderWidth: 1
+				}
+			]
+		};
+

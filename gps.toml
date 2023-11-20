@@ -1,0 +1,44 @@
+# fly.toml app configuration file generated for gps on 2023-07-03T19:47:13+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "gps"
+primary_region = "otp"
+kill_signal = "SIGINT"
+kill_timeout = "5s"
+
+[experimental]
+  auto_rollback = true
+
+[env]
+  DEBUG = ""
+  ECHO_PORT = "44300"
+  PORT = "80"
+
+[processes]
+  gps = "python3 manage.py runscript async_gps_server"
+
+[[services]]
+  protocol = "udp"
+  internal_port = 44300
+  processes = ["gps"]
+
+  [[services.ports]]
+    port = 44300
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 10
+    soft_limit = 5
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 44300
+  processes = ["gps"]
+
+  [[services.ports]]
+    port = 44300
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 10
+    soft_limit = 5

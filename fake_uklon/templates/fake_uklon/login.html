@@ -1,0 +1,59 @@
+{% extends "fake_uklon/base.html" %}
+
+{% block body %}
+<header class="header">
+<div class="container">
+    <div class="logo-icon-base">
+        <div class="logo-block">
+            <div class="clearfix">
+                <div class="pull-left">
+                    <a href="" title="Uklon - Сервис заказ авто онлайн." class="logo_icon">
+                        <img src="/static/fake_uklon/logo.png" class="logo-uklon" alt="Uklon">
+                    </a>
+                </div>
+                <div class="logo-text pull-left sr-only">
+                    <span class="logo-label">UKLON</span>
+                    <span class="logo-sub-label">Сервис умных водителей</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</header>
+<div id="main-block">
+<div class="container-fluid">
+
+  <div  class="row partner-wrap driver-block ng-star-inserted">
+    <div  class="container">
+        <div  class="row">
+            <div  class="col-xs-12 col-sm-12 col-md-6 col-lg-6 animated fadeInRight registration-wrapper">
+                <div  class="row" id="registration"><!----><!---->
+                    <div  class="col-xs-12 col-sm-9 ng-star-inserted" id="login-block">
+                        <form  method="post" autocomplete="off" class="ng-pristine ng-invalid ng-touched">
+                            {% csrf_token %}
+                            <div  class="form-group">
+                                <input autocomplete="new-password" class="form-control ng-pristine ng-invalid ng-touched" name="login" required="" type="text" placeholder="Телефон или e-mail" aria-required="true">
+                            </div>
+                            <div class="form-group has-feedback">
+                                <input autocomplete="new-password" class="form-control ng-untouched ng-pristine ng-invalid" name="loginPassword" required="" type="password" placeholder="Ваш пароль" aria-required="true">
+                            </div>
+                            <div class="checkbox form-group"><input autocomplete="new-password" class="custom-checkbox checkbox-shadow ng-untouched ng-pristine ng-valid" data-val="true" id="rememberMe" name="RememberMe" type="checkbox" value="true">
+                                <label for="rememberMe"> Запомнить </label>
+                                <a class="reset-password-link"> Забыли пароль? </a>
+                            </div>
+                            <div  class="form-group text-center">
+                                <button class="btn btn-orange btn-login" name="Login" type="submit" value="Войти">Войти</button>
+                                <label  class="registration-label"> Нет аккаунта?
+                                    <a target="_blank" href=""> Зарегистрироваться </a>
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
